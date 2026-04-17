@@ -27,6 +27,7 @@ void AppWindow::setupUi()
 {
     setWindowTitle("字幕编辑");
     resize(1440, 900);
+    setMinimumSize(960, 600);
 
     // Setup QWindowKit window agent
     d->windowAgent = new QWK::WidgetWindowAgent(this);
