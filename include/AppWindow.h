@@ -1,6 +1,7 @@
 #pragma once
 
 #include <QMainWindow>
+#include <memory>
 
 class AppWindow : public QMainWindow
 {
@@ -12,9 +13,8 @@ public:
 
 private:
     void setupUi();
-    void setupTitleBar();
 
 private:
     struct Private;
-    Private* d;
+    std::unique_ptr<Private> d;
 };

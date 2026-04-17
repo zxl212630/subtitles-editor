@@ -1,75 +1,70 @@
 #include "AppWindow.h"
 
 #include <QWidget>
-#include <QHBoxLayout>
 #include <QLabel>
+#include <QHBoxLayout>
 #include <QFrame>
+
+#include <QWindowKit/QWKWidgets/widgetwindowagent.h>
 
 struct AppWindow::Private
 {
+    QWK::WidgetWindowAgent* windowAgent = nullptr;
     QFrame* titleBar = nullptr;
+    QLabel* titleLabel = nullptr;
 };
 
 AppWindow::AppWindow(QWidget* parent)
     : QMainWindow(parent)
-    , d(new Private)
+    , d(std::make_unique<Private>())
 {
     setupUi();
 }
 
-AppWindow::~AppWindow()
-{
-    delete d;
-}
+AppWindow::~AppWindow() = default;
 
 void AppWindow::setupUi()
 {
     setWindowTitle("字幕编辑");
     resize(1440, 900);
 
-    setupTitleBar();
+    // Setup QWindowKit window agent
+    d->windowAgent = new QWK::WidgetWindowAgent(this);
+    d->windowAgent->setup(this);
 
-    // Central widget placeholder
-    auto* central = new QWidget(this);
-    setCentralWidget(central);
-}
-
-void AppWindow::setupTitleBar()
-{
-    // Title bar placeholder - 后续与 QwindowKit 集成
+    // Create title bar
     d->titleBar = new QFrame(this);
     d->titleBar->setFixedHeight(36);
     d->titleBar->setObjectName("TitleBar");
+    d->titleBar->setStyleSheet(R"(
+        QFrame#TitleBar {
+            background-color: #252526;
+        }
+    )");
 
     auto* layout = new QHBoxLayout(d->titleBar);
     layout->setContentsMargins(12, 0, 12, 0);
 
-    auto* title = new QLabel("字幕编辑", d->titleBar);
-    title->setObjectName("TitleText");
+    // Title centered
+    d->titleLabel = new QLabel("字幕编辑", d->titleBar);
+    d->titleLabel->setAlignment(Qt::AlignCenter);
+    d->titleLabel->setStyleSheet(R"(
+        QLabel {
+            color: #FFFFFF;
+            font-family: Inter, sans-serif;
+            font-size: 16px;
+            font-weight: 600;
+            background: transparent;
+        }
+    )");
+    layout->addWidget(d->titleLabel);
 
-    layout->addWidget(title);
-    layout->addStretch();
-
-    // Window controls placeholder (macOS style)
-    auto* controls = new QHBoxLayout();
-    controls->setSpacing(8);
-
-    auto* minimize = new QFrame(d->titleBar);
-    minimize->setFixedSize(12, 12);
-    minimize->setObjectName("Minimize");
-
-    auto* maximize = new QFrame(d->titleBar);
-    maximize->setFixedSize(12, 12);
-    maximize->setObjectName("Maximize");
-
-    auto* close = new QFrame(d->titleBar);
-    close->setFixedSize(12, 12);
-    close->setObjectName("Close");
-
-    controls->addWidget(minimize);
-    controls->addWidget(maximize);
-    controls->addWidget(close);
-    layout->addLayout(controls);
-
+    // Set menu widget and title bar
     setMenuWidget(d->titleBar);
+    d->windowAgent->setTitleBar(d->titleBar);
+
+    // Central widget
+    auto* central = new QWidget(this);
+    central->setStyleSheet("background-color: #1E1E1E;");
+    setCentralWidget(central);
 }

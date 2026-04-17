@@ -12,30 +12,27 @@ set(CMAKE_AUTOUIC ON)
 # SDK Paths
 # ============================================================
 set(Qt6_ROOT "/Users/zxl/Tools/Qt/6.5.8")
-set(QWINDOWKIT_ROOT "/Users/zxl/Tools/Qt/QwindowKit")
+set(QWindowKit_ROOT "/Users/zxl/Tools/Qt/QwindowKit/Qt6")
 set(FFMPEG_ROOT "/Users/zxl/Tools/ffmpeg/8.0")
 
 # ============================================================
 # Qt6
 # ============================================================
-set(CMAKE_PREFIX_PATH "${QT6_ROOT};${CMAKE_PREFIX_PATH}")
+set(CMAKE_PREFIX_PATH "${Qt6_ROOT};${CMAKE_PREFIX_PATH}")
 find_package(Qt6 REQUIRED COMPONENTS Core Gui Widgets)
 
 # ============================================================
-# QwindowKit (as Qt plugin or external library)
+# QWindowKit (Qt6 build)
 # ============================================================
-#预留QwindowKit集成接口
-set(QWINDOWKIT_INCLUDE_DIR "${QWINDOWKIT_ROOT}/include")
-set(QWINDOWKIT_LIBRARY "${QWINDOWKIT_ROOT}/lib/${CMAKE_LIBRARY_OUTPUT_DIRECTORY}")
+set(CMAKE_PREFIX_PATH "${QWindowKit_ROOT}/lib/cmake;${CMAKE_PREFIX_PATH}")
+find_package(QWindowKit REQUIRED COMPONENTS Widgets)
 
 # ============================================================
 # FFmpeg
 # ============================================================
-set(FFmpeg_ROOT "${FFMPEG_ROOT}")
 set(FFMPEG_INCLUDE_DIR "${FFMPEG_ROOT}/include")
 set(FFMPEG_LIBRARY_DIR "${FFMPEG_ROOT}/lib")
 
-# Try finding FFmpeg components
 find_path(AVCODEC_INCLUDE_DIR libavcodec/avcodec.h PATHS "${FFMPEG_INCLUDE_DIR}")
 find_path(AVFORMAT_INCLUDE_DIR libavformat/avformat.h PATHS "${FFMPEG_INCLUDE_DIR}")
 find_path(AVUTIL_INCLUDE_DIR libavutil/avutil.h PATHS "${FFMPEG_INCLUDE_DIR}")
@@ -61,14 +58,13 @@ add_executable(${PROJECT_NAME} ${SOURCES} ${HEADERS})
 target_include_directories(${PROJECT_NAME} PRIVATE
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src>
-    "${QT6_ROOT}/include"
-    "${QWINDOWKIT_INCLUDE_DIR}"
+    "${Qt6_ROOT}/include"
+    "${QWindowKit_ROOT}/include"
     "${FFMPEG_INCLUDE_DIR}"
 )
 
 target_link_directories(${PROJECT_NAME} PRIVATE
-    "${QT6_ROOT}/lib"
-    "${QWINDOWKIT_LIBRARY}"
+    "${Qt6_ROOT}/lib"
     "${FFMPEG_LIBRARY_DIR}"
 )
 
@@ -79,7 +75,13 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
     Qt::Widgets
 )
 
-# FFmpeg dependencies (placeholders - will be updated when libs are found)
+# QWindowKit dependencies
+target_link_libraries(${PROJECT_NAME} PRIVATE
+    QWindowKit::Core
+    QWindowKit::Widgets
+)
+
+# FFmpeg dependencies
 if(AVCODEC_INCLUDE_DIR AND AVFORMAT_INCLUDE_DIR AND AVUTIL_INCLUDE_DIR)
     target_link_libraries(${PROJECT_NAME} PRIVATE
         avcodec
