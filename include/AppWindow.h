@@ -13,6 +13,11 @@ public:
 
 private:
     void setupUi();
+    void setupTitleBar();
+    void setupMainContent();
+    void setupVideoPreviewPanel();
+    void setupSubtitleListPanel();
+    void setupTimelinePanel();
 
 private:
     struct Private;
