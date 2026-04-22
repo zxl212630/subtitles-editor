@@ -97,21 +97,8 @@ void AppWindow::setupTitleBar()
     layout->setSpacing(8);
     layout->setAlignment(Qt::AlignVCenter);
 
-    auto* closeBtn = new QPushButton(d->titleBar);
-    closeBtn->setFixedSize(12, 12);
-    closeBtn->setStyleSheet("QPushButton { background-color: #ff5f57; border-radius: 6px; border: none; }");
-    layout->addWidget(closeBtn);
-
-    auto* minBtn = new QPushButton(d->titleBar);
-    minBtn->setFixedSize(12, 12);
-    minBtn->setStyleSheet("QPushButton { background-color: #febc2e; border-radius: 6px; border: none; }");
-    layout->addWidget(minBtn);
-
-    auto* maxBtn = new QPushButton(d->titleBar);
-    maxBtn->setFixedSize(12, 12);
-    maxBtn->setStyleSheet("QPushButton { background-color: #28c840; border-radius: 6px; border: none; }");
-    layout->addWidget(maxBtn);
-
+    // QWindowKit handles the native traffic light buttons on macOS
+    // Use expanding spacer on both sides to center the title
     auto* leftSpacer = new QWidget(d->titleBar);
     leftSpacer->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Preferred);
     layout->addWidget(leftSpacer);
