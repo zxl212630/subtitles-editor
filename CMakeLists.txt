@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.20)
 project(subtitles-editor VERSION 0.1.0 LANGUAGES CXX)
 
-set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(CMAKE_AUTOMOC ON)
@@ -9,11 +9,11 @@ set(CMAKE_AUTORCC ON)
 set(CMAKE_AUTOUIC ON)
 
 # ============================================================
-# SDK Paths
+# SDK Paths (可通过 -D 参数覆盖，如: -DQt6_ROOT=/path/to/qt)
 # ============================================================
-set(Qt6_ROOT "/Users/zxl/Tools/Qt/6.5.8")
-set(QWindowKit_ROOT "/Users/zxl/Tools/Qt/QwindowKit/Qt6")
-set(FFMPEG_ROOT "/Users/zxl/Tools/ffmpeg/8.0")
+set(Qt6_ROOT "$ENV{HOME}/Tools/Qt/6.5.8" CACHE PATH "Qt6 installation root")
+set(QWindowKit_ROOT "$ENV{HOME}/Tools/Qt/QwindowKit/Qt6" CACHE PATH "QWindowKit installation root")
+set(FFMPEG_ROOT "$ENV{HOME}/Tools/ffmpeg/8.0" CACHE PATH "FFmpeg installation root")
 
 # ============================================================
 # Qt6
