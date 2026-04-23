@@ -144,18 +144,22 @@ void TimelinePanel::drawVideoTrack(QPainter& painter, int y)
 void TimelinePanel::drawPlayhead(QPainter& painter)
 {
     int x = TRACK_HEAD_WIDTH + msToPixels(currentTimeMs_);
-    painter.setPen(QColor("#f59e0b"));
-    painter.drawLine(x, 0, x, height());
+    const int triangleTop = 19;
+    const int triangleTip = 31;
 
-    // Triangle pointer
+    // Triangle pointer below time labels
     painter.setPen(Qt::NoPen);
     painter.setBrush(QColor("#f59e0b"));
     QPointF triangle[3] = {
-        QPointF(x - 5, -5),
-        QPointF(x + 5, -5),
-        QPointF(x, 5)
+        QPointF(x - 7, triangleTop),
+        QPointF(x + 7, triangleTop),
+        QPointF(x, triangleTip)
     };
     painter.drawPolygon(triangle, 3);
+
+    // Vertical line starts from triangle tip
+    painter.setPen(QColor("#f59e0b"));
+    painter.drawLine(x, triangleTip, x, height());
 }
 
 void TimelinePanel::mousePressEvent(QMouseEvent* event)
