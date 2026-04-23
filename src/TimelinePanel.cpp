@@ -18,7 +18,6 @@ TimelinePanel::TimelinePanel(QWidget* parent)
             border-radius: 10px;
         }
     )");
-    setFixedHeight(220);
 }
 
 void TimelinePanel::setTrack(SubtitleTrack* track)

@@ -132,6 +132,8 @@ void AppWindow::setupSplitterLayout()
     d->topSplitter->setStretchFactor(1, 0);
     d->topSplitter->setHandleWidth(10);
     d->topSplitter->setStyleSheet("QSplitter::handle { background-color: #0a0a0a; }");
+    d->topSplitter->setCollapsible(0, false);
+    d->topSplitter->setCollapsible(1, false);
     d->subtitleListPanel->setMinimumWidth(300);
     d->videoPreviewPanel->setMinimumWidth(400);
     d->topSplitter->setSizes({852, 558});
@@ -144,7 +146,11 @@ void AppWindow::setupSplitterLayout()
     d->verticalSplitter->setStretchFactor(1, 0);
     d->verticalSplitter->setHandleWidth(10);
     d->verticalSplitter->setStyleSheet("QSplitter::handle { background-color: #0a0a0a; }");
-    d->timelinePanel->setFixedHeight(220);
+    d->verticalSplitter->setCollapsible(0, false);
+    d->verticalSplitter->setCollapsible(1, false);
+    d->timelinePanel->setMinimumHeight(150);
+    d->timelinePanel->setMaximumHeight(400);
+    d->verticalSplitter->setSizes({680, 220});
 
     // Set central widget
     auto* central = new QWidget(this);
