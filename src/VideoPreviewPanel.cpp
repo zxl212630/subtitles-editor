@@ -120,15 +120,22 @@ void VideoPreviewPanel::setupUi()
     // Elastic spacer
     auto* tbSpacer = new QWidget(toolbar);
     tbSpacer->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Preferred);
+    tbSpacer->setStyleSheet("background: transparent;");
     tbLayout->addWidget(tbSpacer);
 
-    // Format buttons
-    tbLayout->addWidget(createIconBtn(toolbar, "B", 28, 28));
-    tbLayout->addWidget(createIconBtn(toolbar, "I", 28, 28));
-    tbLayout->addWidget(createIconBtn(toolbar, "U", 28, 28));
-    tbLayout->addWidget(createIconBtn(toolbar, QString(QChar(0x2261)), 28, 28));
-    tbLayout->addWidget(createIconBtn(toolbar, QString(QChar(0x2261)), 28, 28));
-    tbLayout->addWidget(createIconBtn(toolbar, QString(QChar(0x2261)), 28, 28));
+    // Format buttons group (tighter internal spacing)
+    auto* btnGroup = new QWidget(toolbar);
+    btnGroup->setStyleSheet("background: transparent;");
+    auto* btnGroupLayout = new QHBoxLayout(btnGroup);
+    btnGroupLayout->setContentsMargins(0, 0, 0, 0);
+    btnGroupLayout->setSpacing(6);
+    btnGroupLayout->addWidget(createIconBtn(btnGroup, "B", 28, 28));
+    btnGroupLayout->addWidget(createIconBtn(btnGroup, "I", 28, 28));
+    btnGroupLayout->addWidget(createIconBtn(btnGroup, "U", 28, 28));
+    btnGroupLayout->addWidget(createIconBtn(btnGroup, QString(QChar(0x2261)), 28, 28));
+    btnGroupLayout->addWidget(createIconBtn(btnGroup, QString(QChar(0x2261)), 28, 28));
+    btnGroupLayout->addWidget(createIconBtn(btnGroup, QString(QChar(0x2261)), 28, 28));
+    tbLayout->addWidget(btnGroup);
 
     layout->addWidget(toolbar);
 
