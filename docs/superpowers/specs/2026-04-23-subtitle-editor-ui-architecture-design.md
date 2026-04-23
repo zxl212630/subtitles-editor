@@ -44,9 +44,23 @@ AppWindow (QMainWindow)
 **文件：** `src/VideoPreviewPanel.h`, `src/VideoPreviewPanel.cpp`
 
 **职责：**
-- 顶部工具栏：字体选择、字号选择、B/I/U、左/中/右对齐
+- 顶部工具栏：字体选择（QComboBox）、字号选择（QComboBox）、B/I/U、左/中/右对齐
 - 中部视频显示区：当前为 `#000000` 黑色占位矩形（后续替换为视频渲染）
 - 底部控制条：播放/暂停/上一帧/下一帧、进度条、时间显示、音量、全屏
+
+**字体选择下拉框：**
+- 使用 `QFontDatabase::families()` 获取系统所有字体
+- 过滤掉以 `.` 开头的隐藏字体和空名字体
+- 按字母排序后填充 `QComboBox`
+- 默认选中 `"Arial"`（如系统存在），否则选第一个
+- 切换字体时发射 `fontChanged(const QString& family)` 信号
+
+**字号选择下拉框：**
+- 预设值：`8, 9, 10, 11, 12, 14, 16, 18, 20, 22, 24, 28, 32, 36, 40, 48, 56, 64, 72`
+- 使用 `QComboBox`，允许编辑（用户可输入自定义字号）
+- 输入非数字时自动回退到上一个有效值
+- 默认选中 `24`
+- 切换字号时发射 `fontSizeChanged(int size)` 信号
 
 **当前占位行为：**
 - 点击播放按钮：无实际视频，仅切换图标状态
@@ -152,6 +166,44 @@ private:
 };
 ```
 
+### 4.4 AsrServiceBase（抽象 ASR 接口）
+
+```cpp
+// include/AsrServiceBase.h
+class AsrServiceBase : public QObject {
+    Q_OBJECT
+public:
+    struct TranscriptSegment {
+        QString text;
+        qint64 startMs = 0;
+        qint64 endMs = 0;
+    };
+
+    struct TranscriptResult {
+        bool success = false;
+        QString errorMessage;
+        QList<TranscriptSegment> segments;
+    };
+
+    explicit AsrServiceBase(QObject* parent = nullptr) : QObject(parent) {}
+    virtual ~AsrServiceBase() = default;
+
+    // 纯虚接口：调用在线 ASR 服务
+    virtual void transcribe(const QString& audioFilePath) = 0;
+
+signals:
+    void transcribeFinished(const TranscriptResult& result);
+    void transcribeProgress(int percent);  // 0-100
+};
+```
+
+**设计原则：**
+- 异步接口：所有实现都是非阻塞的，通过 `transcribeFinished` 信号返回结果
+- 统一返回格式：内部数据结构，与具体厂商的 JSON 格式无关
+- 错误处理：`result.success` 标识是否成功，`errorMessage` 提供可读错误信息
+- 厂商实现类：`TencentAsrService`、`ByteDanceAsrService`、`XunfeiAsrService` 等继承此类，各自处理 HTTP 请求、鉴权、JSON 解析
+- AppWindow 持有 `AsrServiceBase*` 指针，运行时决定注入哪个厂商实例
+
 ---
 
 ## 5. 数据流
@@ -159,15 +211,15 @@ private:
 ### 5.1 ASR 导入
 
 ```
-用户触发导入（文件选择 / 拖拽 / ASR API 调用）
+用户触发导入（文件选择 / 拖拽）
     ↓
-AppWindow 调用 ASR Service（大模型接口）
+AppWindow 调用 AsrServiceBase::transcribe(audioFilePath)（异步）
     ↓
-返回 JSON：{segments: [{text, start, end}, ...]}
+AsrServiceBase::transcribeFinished(result)
     ↓
-AppWindow::importSubtitles(json)
+AppWindow::onTranscribeFinished(result)
     ↓
-SubtitleTrack::clear() + 循环 addItem()
+result.segments → 循环转换为 SubtitleItem → SubtitleTrack::addItem()
     ↓
 SubtitleTrack::dataChanged()
     ↓
@@ -247,6 +299,8 @@ public:
 | `src/TimelinePanel.cpp` | 新增 | 时间线面板实现 |
 | `include/SubtitleExporter.h` | 新增 | 导出接口声明 |
 | `src/SubtitleExporter.cpp` | 新增 | 导出接口实现（占位） |
+| `include/AsrServiceBase.h` | 新增 | ASR 抽象基类 |
+| `src/AsrServiceBase.cpp` | 新增 | ASR 抽象基类实现（空实现或默认逻辑） |
 
 ---
 
@@ -256,7 +310,7 @@ public:
 |------|------|
 | 视频解码与渲染 | VideoPreviewPanel 保留黑色占位区，后续接入 FFmpeg/QMediaPlayer |
 | 实际播放控制 | 播放/暂停按钮仅切换 UI 状态，不与视频同步 |
-| ASR API 接入 | 提供 `importSubtitles(json)` 接口，实际网络调用后续实现 |
+| ASR 厂商具体实现 | `AsrServiceBase` 抽象基类本次搭建，腾讯/字节/讯飞的具体 HTTP 调用后续实现 |
 | 字幕编辑（双击改文本/时间码） | 列表项编辑功能后续实现 |
 | 导出格式完整实现 | 导出接口框架搭建，各格式细节后续按规范实现 |
 | 预设/自定义/动画标签页 | 目前仅为占位按钮 |
