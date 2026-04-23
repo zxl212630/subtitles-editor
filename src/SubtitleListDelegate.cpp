@@ -1,0 +1,88 @@
+#include "SubtitleListDelegate.h"
+
+#include "SubtitleListModel.h"
+
+#include <QPainter>
+#include <QStyleOptionViewItem>
+#include <QFontDatabase>
+
+SubtitleListDelegate::SubtitleListDelegate(QObject* parent)
+    : QStyledItemDelegate(parent)
+{
+}
+
+void SubtitleListDelegate::paint(QPainter* painter, const QStyleOptionViewItem& option, const QModelIndex& index) const
+{
+    painter->save();
+
+    const bool isSelected = option.state & QStyle::State_Selected;
+    const QRect rect = option.rect;
+
+    // Background
+    if (isSelected) {
+        painter->setPen(Qt::NoPen);
+        painter->setBrush(QColor("#1f2937"));
+        painter->drawRoundedRect(rect.adjusted(4, 2, -4, -2), 5, 5);
+    }
+
+    // Data
+    QString startTime = index.data(SubtitleListModel::StartTimeRole).toString();
+    QString endTime = index.data(SubtitleListModel::EndTimeRole).toString();
+    QString text = index.data(SubtitleListModel::TextRole).toString();
+
+    // Timecode area (left)
+    QRect timeRect(rect.left() + 12, rect.top() + 10, 100, 36);
+    painter->setPen(QColor("#858e9f"));
+    QFont timeFont = painter->font();
+    timeFont.setFamily("Inter");
+    timeFont.setPointSize(11);
+    painter->setFont(timeFont);
+    painter->drawText(timeRect.left(), timeRect.top() + 12, startTime);
+    painter->drawText(timeRect.left(), timeRect.top() + 26, endTime);
+
+    // Text area (middle)
+    int textLeft = timeRect.right() + 12;
+    int textRight = rect.right() - 12 - 36 - 12; // right padding - buttons - gap
+    QRect textRect(textLeft, rect.top(), qMax(50, textRight - textLeft), rect.height());
+    painter->setPen(QColor("#d1d5db"));
+    QFont textFont = painter->font();
+    textFont.setFamily("Inter");
+    textFont.setPointSize(12);
+    painter->setFont(textFont);
+    painter->drawText(textRect, Qt::AlignVCenter | Qt::AlignLeft, text);
+
+    // Action buttons area (right)
+    int btnY = rect.top() + rect.height() / 2 - 7;
+    int btnX = rect.right() - 12 - 36;
+
+    // Split button (scissors icon)
+    painter->setPen(QColor("#6b7280"));
+    painter->setBrush(Qt::NoBrush);
+    QFont iconFont = painter->font();
+    iconFont.setPointSize(10);
+    painter->setFont(iconFont);
+    painter->drawText(btnX, btnY + 10, "\u2702"); // scissors
+
+    // Delete button (x icon)
+    painter->drawText(btnX + 22, btnY + 10, "\u2715"); // x mark
+
+    painter->restore();
+}
+
+QSize SubtitleListDelegate::sizeHint(const QStyleOptionViewItem& /*option*/, const QModelIndex& /*index*/) const
+{
+    return QSize(200, 56);
+}
+
+QString SubtitleListDelegate::formatTime(qint64 ms)
+{
+    const int hours = ms / 3600000;
+    const int minutes = (ms % 3600000) / 60000;
+    const int seconds = (ms % 60000) / 1000;
+    const int frames = (ms % 1000) / 10; // hundredths of a second
+    return QString("%1:%2:%3:%4")
+        .arg(hours, 2, 10, QChar('0'))
+        .arg(minutes, 2, 10, QChar('0'))
+        .arg(seconds, 2, 10, QChar('0'))
+        .arg(frames, 2, 10, QChar('0'));
+}

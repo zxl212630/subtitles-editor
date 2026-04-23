@@ -44,10 +44,27 @@ find_path(SWSCALE_INCLUDE_DIR libswscale/swscale.h PATHS "${FFMPEG_INCLUDE_DIR}"
 set(SOURCES
     src/main.cpp
     src/AppWindow.cpp
+    src/SubtitleTrack.cpp
+    src/AsrServiceBase.cpp
+    src/SubtitleExporter.cpp
+    src/SubtitleListModel.cpp
+    src/SubtitleListDelegate.cpp
+    src/VideoPreviewPanel.cpp
+    src/SubtitleListPanel.cpp
+    src/TimelinePanel.cpp
 )
 
 set(HEADERS
     include/AppWindow.h
+    include/SubtitleItem.h
+    include/SubtitleTrack.h
+    include/AsrServiceBase.h
+    include/SubtitleExporter.h
+    include/SubtitleListModel.h
+    include/SubtitleListDelegate.h
+    include/VideoPreviewPanel.h
+    include/SubtitleListPanel.h
+    include/TimelinePanel.h
 )
 
 # ============================================================

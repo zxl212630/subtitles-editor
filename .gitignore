@@ -25,3 +25,4 @@ cmake-build-release/
 # Generated
 compile_commands.json
 .worktrees/
+doc/plan_verify*.png
