@@ -11,11 +11,11 @@ TimelinePanel::TimelinePanel(QWidget* parent)
     : QWidget(parent)
 {
     setObjectName("TimelinePanel");
+    setAttribute(Qt::WA_StyledBackground);
     setStyleSheet(R"(
         QWidget#TimelinePanel {
             background-color: #1e1e1e;
             border-radius: 10px;
-            border: 1px solid #333333;
         }
     )");
     setFixedHeight(220);

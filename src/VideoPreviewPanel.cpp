@@ -37,11 +37,11 @@ VideoPreviewPanel::VideoPreviewPanel(QWidget* parent)
 void VideoPreviewPanel::setupUi()
 {
     setObjectName("VideoPreviewPanel");
+    setAttribute(Qt::WA_StyledBackground);
     setStyleSheet(R"(
         QWidget#VideoPreviewPanel {
             background-color: #1e1e1e;
             border-radius: 10px;
-            border: 1px solid #333333;
         }
     )");
 
