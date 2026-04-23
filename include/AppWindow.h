@@ -3,6 +3,12 @@
 #include <QMainWindow>
 #include <memory>
 
+class VideoPreviewPanel;
+class SubtitleListPanel;
+class TimelinePanel;
+class SubtitleTrack;
+class QSplitter;
+
 class AppWindow : public QMainWindow
 {
     Q_OBJECT
@@ -14,10 +20,8 @@ public:
 private:
     void setupUi();
     void setupTitleBar();
-    void setupMainContent();
-    void setupVideoPreviewPanel();
-    void setupSubtitleListPanel();
-    void setupTimelinePanel();
+    void setupSplitterLayout();
+    void setupDummyData();
 
 private:
     struct Private;
