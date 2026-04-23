@@ -96,28 +96,37 @@ void SubtitleListPanel::setupUi()
     sbLayout->setContentsMargins(0, 0, 0, 0);
     sbLayout->setAlignment(Qt::AlignVCenter);
 
-    auto* searchIcon = new QLabel(searchBar);
-    searchIcon->setText("\u2315"); // ⌕ search icon
-    searchIcon->setStyleSheet("color: #6b7280; font-size: 14px; background: transparent;");
-    searchIcon->setFixedSize(20, 20);
-    searchIcon->setAlignment(Qt::AlignCenter);
-    sbLayout->addWidget(searchIcon);
+    // Search input container (icon + text inside a single frame)
+    auto* searchInput = new QFrame(searchBar);
+    searchInput->setFixedHeight(28);
+    searchInput->setStyleSheet("background-color: #141414; border-radius: 5px;");
+    auto* siLayout = new QHBoxLayout(searchInput);
+    siLayout->setContentsMargins(4, 0, 8, 0);
+    siLayout->setSpacing(6);
+    siLayout->setAlignment(Qt::AlignVCenter);
 
-    searchEdit_ = new QLineEdit(searchBar);
+    auto* searchIcon = new QLabel(searchInput);
+    searchIcon->setText("\u2315"); // ⌕ search icon
+    searchIcon->setStyleSheet("color: #6b7280; font-size: 24px; background: transparent;");
+    searchIcon->setFixedSize(24, 24);
+    searchIcon->setAlignment(Qt::AlignCenter);
+    siLayout->addWidget(searchIcon);
+
+    searchEdit_ = new QLineEdit(searchInput);
     searchEdit_->setPlaceholderText("请输入查找内容");
     searchEdit_->setFixedHeight(28);
     searchEdit_->setStyleSheet(R"(
         QLineEdit {
-            background-color: #141414;
+            background-color: transparent;
             color: #d1d5db;
             border: none;
-            border-radius: 5px;
-            padding-left: 8px;
             font-family: Inter, sans-serif;
             font-size: 12px;
         }
     )");
-    sbLayout->addWidget(searchEdit_);
+    siLayout->addWidget(searchEdit_);
+
+    sbLayout->addWidget(searchInput);
     pcLayout->addWidget(searchBar);
 
     connect(searchEdit_, &QLineEdit::textChanged, this, [this](const QString& text) {

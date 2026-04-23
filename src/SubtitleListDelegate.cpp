@@ -52,19 +52,22 @@ void SubtitleListDelegate::paint(QPainter* painter, const QStyleOptionViewItem& 
     painter->drawText(textRect, Qt::AlignVCenter | Qt::AlignLeft, text);
 
     // Action buttons area (right)
-    int btnY = rect.top() + rect.height() / 2 - 7;
+    const int btnBox = 18;
+    int btnY = rect.top() + (rect.height() - btnBox) / 2;
     int btnX = rect.right() - 12 - 36;
 
     // Split button (scissors icon)
     painter->setPen(QColor("#6b7280"));
     painter->setBrush(Qt::NoBrush);
     QFont iconFont = painter->font();
-    iconFont.setPointSize(10);
+    iconFont.setPointSize(12);
     painter->setFont(iconFont);
-    painter->drawText(btnX, btnY + 10, "\u2702"); // scissors
+    QRect scissorsRect(btnX, btnY, btnBox, btnBox);
+    painter->drawText(scissorsRect, Qt::AlignCenter, "\u2702"); // scissors
 
     // Delete button (x icon)
-    painter->drawText(btnX + 22, btnY + 10, "\u2715"); // x mark
+    QRect deleteRect(btnX + 22, btnY, btnBox, btnBox);
+    painter->drawText(deleteRect, Qt::AlignCenter, "\u2715"); // x mark
 
     painter->restore();
 }
