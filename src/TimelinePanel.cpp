@@ -3,6 +3,7 @@
 #include "SubtitleItem.h"
 
 #include <QPainter>
+#include <QPainterPath>
 #include <QMouseEvent>
 #include <QFontDatabase>
 
@@ -14,10 +15,10 @@ TimelinePanel::TimelinePanel(QWidget* parent)
         QWidget#TimelinePanel {
             background-color: #1e1e1e;
             border-radius: 10px;
+            border: 1px solid #333333;
         }
     )");
-    setMinimumHeight(150);
-    setMaximumHeight(400);
+    setFixedHeight(220);
 }
 
 void TimelinePanel::setTrack(SubtitleTrack* track)
@@ -38,6 +39,11 @@ void TimelinePanel::paintEvent(QPaintEvent* /*event*/)
 {
     QPainter painter(this);
     painter.setRenderHint(QPainter::Antialiasing);
+
+    // Clip to rounded rect so border-radius works with paintEvent
+    QPainterPath clipPath;
+    clipPath.addRoundedRect(rect().adjusted(1, 1, -1, -1), 10, 10);
+    painter.setClipPath(clipPath);
 
     // Background
     painter.fillRect(rect(), QColor("#1e1e1e"));

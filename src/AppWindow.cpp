@@ -44,6 +44,9 @@ void AppWindow::setupUi()
     resize(1440, 900);
     setMinimumSize(960, 600);
 
+    // Window background (#151515) shows around edges and between panels
+    setStyleSheet("QMainWindow { background-color: #151515; }");
+
     d->windowAgent = new QWK::WidgetWindowAgent(this);
     d->windowAgent->setup(this);
 
@@ -141,8 +144,7 @@ void AppWindow::setupSplitterLayout()
     d->verticalSplitter->setStretchFactor(1, 0);
     d->verticalSplitter->setHandleWidth(10);
     d->verticalSplitter->setStyleSheet("QSplitter::handle { background-color: #0a0a0a; }");
-    d->timelinePanel->setMinimumHeight(150);
-    d->timelinePanel->setMaximumHeight(400);
+    d->timelinePanel->setFixedHeight(220);
 
     // Set central widget
     auto* central = new QWidget(this);

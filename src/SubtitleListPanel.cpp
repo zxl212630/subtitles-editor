@@ -31,6 +31,7 @@ void SubtitleListPanel::setupUi()
         QWidget#SubtitleListPanel {
             background-color: #1e1e1e;
             border-radius: 10px;
+            border: 1px solid #333333;
         }
     )");
 
