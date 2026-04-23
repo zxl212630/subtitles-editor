@@ -1,5 +1,6 @@
 #include "SubtitleListPanel.h"
 #include "SubtitleListModel.h"
+#include "SubtitleListDelegate.h"
 #include "SubtitleTrack.h"
 
 #include <QVBoxLayout>
@@ -94,6 +95,13 @@ void SubtitleListPanel::setupUi()
     sbLayout->setContentsMargins(0, 0, 0, 0);
     sbLayout->setAlignment(Qt::AlignVCenter);
 
+    auto* searchIcon = new QLabel(searchBar);
+    searchIcon->setText("\u2315"); // ⌕ search icon
+    searchIcon->setStyleSheet("color: #6b7280; font-size: 14px; background: transparent;");
+    searchIcon->setFixedSize(20, 20);
+    searchIcon->setAlignment(Qt::AlignCenter);
+    sbLayout->addWidget(searchIcon);
+
     searchEdit_ = new QLineEdit(searchBar);
     searchEdit_->setPlaceholderText("请输入查找内容");
     searchEdit_->setFixedHeight(28);
@@ -137,16 +145,22 @@ void SubtitleListPanel::setupUi()
     thLayout->setSpacing(12);
     thLayout->setAlignment(Qt::AlignVCenter);
 
-    auto* headerTime = new QLabel("时间码", tableHeader);
+    auto* headerLeft = new QFrame(tableHeader);
+    headerLeft->setStyleSheet("background-color: transparent; border: none;");
+    auto* hlLayout = new QHBoxLayout(headerLeft);
+    hlLayout->setContentsMargins(0, 0, 0, 0);
+    hlLayout->setSpacing(80);
+    hlLayout->setAlignment(Qt::AlignVCenter);
+
+    auto* headerTime = new QLabel("时间码", headerLeft);
     headerTime->setStyleSheet("color: #9ca3af; font-family: Inter, sans-serif; font-size: 11px; background: transparent;");
-    thLayout->addWidget(headerTime);
+    hlLayout->addWidget(headerTime);
 
-    thLayout->addStretch();
-
-    auto* headerText = new QLabel("字幕", tableHeader);
+    auto* headerText = new QLabel("字幕", headerLeft);
     headerText->setStyleSheet("color: #9ca3af; font-family: Inter, sans-serif; font-size: 11px; background: transparent;");
-    thLayout->addWidget(headerText);
+    hlLayout->addWidget(headerText);
 
+    thLayout->addWidget(headerLeft);
     thLayout->addStretch();
 
     auto* headerAction = new QLabel("操作", tableHeader);
@@ -169,8 +183,8 @@ void SubtitleListPanel::setupUi()
             border: none;
         }
         QListView::item:selected {
-            background-color: #1f2937;
-            border-radius: 5px;
+            background-color: transparent;
+            border: none;
         }
     )");
     listView_->setSelectionMode(QAbstractItemView::SingleSelection);
@@ -178,6 +192,9 @@ void SubtitleListPanel::setupUi()
 
     model_ = new SubtitleListModel(this);
     listView_->setModel(model_);
+
+    delegate_ = new SubtitleListDelegate(this);
+    listView_->setItemDelegate(delegate_);
 
     connect(listView_, &QListView::clicked, this, &SubtitleListPanel::onItemClicked);
 

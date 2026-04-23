@@ -104,7 +104,7 @@ QString SubtitleListModel::formatTime(qint64 ms)
     const int hours = ms / 3600000;
     const int minutes = (ms % 3600000) / 60000;
     const int seconds = (ms % 60000) / 1000;
-    const int frames = (ms % 1000) / 40; // approx 25fps
+    const int frames = (ms % 1000) / 10; // hundredths of a second
     return QString("%1:%2:%3:%4")
         .arg(hours, 2, 10, QChar('0'))
         .arg(minutes, 2, 10, QChar('0'))

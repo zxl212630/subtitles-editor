@@ -48,6 +48,7 @@ set(SOURCES
     src/AsrServiceBase.cpp
     src/SubtitleExporter.cpp
     src/SubtitleListModel.cpp
+    src/SubtitleListDelegate.cpp
     src/VideoPreviewPanel.cpp
     src/SubtitleListPanel.cpp
     src/TimelinePanel.cpp
@@ -60,6 +61,7 @@ set(HEADERS
     include/AsrServiceBase.h
     include/SubtitleExporter.h
     include/SubtitleListModel.h
+    include/SubtitleListDelegate.h
     include/VideoPreviewPanel.h
     include/SubtitleListPanel.h
     include/TimelinePanel.h

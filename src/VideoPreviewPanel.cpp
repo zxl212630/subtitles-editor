@@ -133,19 +133,40 @@ void VideoPreviewPanel::setupUi()
     layout->addWidget(toolbar);
 
     // --- Video display area ---
-    auto* videoArea = new QFrame(this);
-    videoArea->setStyleSheet("background-color: transparent; border: none;");
-    videoArea->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
-    auto* vaLayout = new QVBoxLayout(videoArea);
+    videoArea_ = new QFrame(this);
+    videoArea_->setStyleSheet("background-color: transparent; border: none;");
+    videoArea_->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
+    auto* vaLayout = new QVBoxLayout(videoArea_);
     vaLayout->setContentsMargins(40, 0, 40, 0);
     vaLayout->setAlignment(Qt::AlignCenter);
 
-    auto* blackRect = new QFrame(videoArea);
+    auto* blackRect = new QFrame(videoArea_);
     blackRect->setStyleSheet("background-color: #000000; border: none;");
     blackRect->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
     vaLayout->addWidget(blackRect);
 
-    layout->addWidget(videoArea, 1);
+    // Drag handles (absolute positioned over videoArea)
+    // Positions are relative to videoArea content (excluding 40px left/right padding)
+    auto addHandle = [&](int x, int y) {
+        auto* h = new QFrame(videoArea_);
+        h->setFixedSize(6, 6);
+        h->setStyleSheet("background-color: #38bdf8; border-radius: 1px;");
+        h->move(x, y);
+        handles_.append(h);
+        return h;
+    };
+
+    // Initial positions; will be updated in resizeEvent
+    addHandle(0, 0); // TL
+    addHandle(0, 0); // TM
+    addHandle(0, 0); // TR
+    addHandle(0, 0); // ML
+    addHandle(0, 0); // MR
+    addHandle(0, 0); // BL
+    addHandle(0, 0); // BM
+    addHandle(0, 0); // BR
+
+    layout->addWidget(videoArea_, 1);
 
     // --- Playback control bar ---
     auto* controlBar = new QFrame(this);
@@ -222,4 +243,33 @@ void VideoPreviewPanel::populateSizeCombo()
         sizeCombo_->addItem(QString::number(s));
     }
     sizeCombo_->setCurrentText("24");
+}
+
+void VideoPreviewPanel::updateHandlePositions()
+{
+    if (!videoArea_ || handles_.size() != 8) return;
+
+    int w = videoArea_->width();
+    int h = videoArea_->height();
+    int left = 48;   // 40 padding + 8 offset
+    int right = w - 48;
+    int midX = w / 2 - 3;
+    int top = 40;
+    int midY = h / 2 - 3;
+    int bottom = h - 40;
+
+    handles_[0]->move(left, top);    // TL
+    handles_[1]->move(midX, top);    // TM
+    handles_[2]->move(right, top);   // TR
+    handles_[3]->move(left, midY);   // ML
+    handles_[4]->move(right, midY);  // MR
+    handles_[5]->move(left, bottom); // BL
+    handles_[6]->move(midX, bottom); // BM
+    handles_[7]->move(right, bottom); // BR
+}
+
+void VideoPreviewPanel::resizeEvent(QResizeEvent* event)
+{
+    QWidget::resizeEvent(event);
+    updateHandlePositions();
 }

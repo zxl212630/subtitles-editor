@@ -4,6 +4,7 @@
 
 class SubtitleTrack;
 class SubtitleListModel;
+class SubtitleListDelegate;
 class QListView;
 class QLineEdit;
 class QPushButton;
@@ -27,6 +28,7 @@ private:
 
     SubtitleTrack* track_ = nullptr;
     SubtitleListModel* model_ = nullptr;
+    SubtitleListDelegate* delegate_ = nullptr;
     QListView* listView_ = nullptr;
     QLineEdit* searchEdit_ = nullptr;
 };

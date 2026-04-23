@@ -127,10 +127,11 @@ void AppWindow::setupSplitterLayout()
     d->topSplitter->addWidget(d->subtitleListPanel);
     d->topSplitter->setStretchFactor(0, 1);
     d->topSplitter->setStretchFactor(1, 0);
-    d->topSplitter->setHandleWidth(1);
+    d->topSplitter->setHandleWidth(10);
     d->topSplitter->setStyleSheet("QSplitter::handle { background-color: #0a0a0a; }");
     d->subtitleListPanel->setMinimumWidth(300);
     d->videoPreviewPanel->setMinimumWidth(400);
+    d->topSplitter->setSizes({852, 558});
 
     // Vertical splitter
     d->verticalSplitter = new QSplitter(Qt::Vertical, this);
@@ -138,7 +139,7 @@ void AppWindow::setupSplitterLayout()
     d->verticalSplitter->addWidget(d->timelinePanel);
     d->verticalSplitter->setStretchFactor(0, 1);
     d->verticalSplitter->setStretchFactor(1, 0);
-    d->verticalSplitter->setHandleWidth(1);
+    d->verticalSplitter->setHandleWidth(10);
     d->verticalSplitter->setStyleSheet("QSplitter::handle { background-color: #0a0a0a; }");
     d->timelinePanel->setMinimumHeight(150);
     d->timelinePanel->setMaximumHeight(400);
