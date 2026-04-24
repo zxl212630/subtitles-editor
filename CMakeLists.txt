@@ -53,6 +53,7 @@ set(SOURCES
     src/SubtitleListPanel.cpp
     src/TimelinePanel.cpp
     src/ConfigManager.cpp
+    src/AudioTranscoder.cpp
 )
 
 set(HEADERS
@@ -67,6 +68,7 @@ set(HEADERS
     include/SubtitleListPanel.h
     include/TimelinePanel.h
     include/ConfigManager.h
+    include/AudioTranscoder.h
 )
 
 set(RESOURCES
