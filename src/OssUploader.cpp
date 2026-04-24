@@ -53,6 +53,14 @@ QString OssUploader::computeSignature(const QString &stringToSign) {
 }
 
 void OssUploader::upload(const QString &localFilePath) {
+  // Validate credentials
+  if (ossAccessKeyId_.isEmpty() || ossAccessKeySecret_.isEmpty() ||
+      ossBucket_.isEmpty() || ossRegion_.isEmpty()) {
+    emit uploadFailed("OSS credentials not configured. Please check config.ini at: " +
+                      ConfigManager::instance().configFilePath());
+    return;
+  }
+
   QFile *file = new QFile(localFilePath, this);
   if (!file->open(QIODevice::ReadOnly)) {
     emit uploadFailed("Cannot open file: " + localFilePath);

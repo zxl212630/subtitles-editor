@@ -7,6 +7,10 @@ class ConfigManager {
 public:
   static ConfigManager &instance();
 
+  // Check if all required config is present
+  bool isValid() const;
+  QString configFilePath() const;
+
   // FFmpeg
   QString ffmpegPath() const;
 
@@ -27,5 +31,6 @@ private:
 
   QString getString(const QString &group, const QString &key) const;
 
+  QString configFilePath_;
   mutable QSettings settings_;
 };

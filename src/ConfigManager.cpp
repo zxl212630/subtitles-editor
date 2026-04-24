@@ -1,5 +1,8 @@
 #include "ConfigManager.h"
 #include <QCoreApplication>
+#include <QDir>
+#include <QFile>
+#include <QStandardPaths>
 
 ConfigManager &ConfigManager::instance() {
   static ConfigManager inst;
@@ -7,7 +10,37 @@ ConfigManager &ConfigManager::instance() {
 }
 
 ConfigManager::ConfigManager()
-    : settings_("config.ini", QSettings::IniFormat) {}
+    : configFilePath_([] {
+        QString configDir = QStandardPaths::writableLocation(QStandardPaths::AppConfigLocation);
+        QDir().mkpath(configDir);
+        QString path = configDir + "/config.ini";
+
+        // If config doesn't exist, copy from template
+        if (!QFile::exists(path)) {
+          QString templatePath = QCoreApplication::applicationDirPath() + "/config.ini.template";
+          if (QFile::exists(templatePath)) {
+            QFile::copy(templatePath, path);
+          }
+        }
+        return path;
+      }()),
+      settings_(configFilePath_, QSettings::IniFormat) {}
+
+bool ConfigManager::isValid() const {
+  // Check all required keys
+  return !getString("ffmpeg", "path").isEmpty() &&
+         !getString("tencent_asr", "secret_id").isEmpty() &&
+         !getString("tencent_asr", "secret_key").isEmpty() &&
+         !getString("tencent_asr", "app_id").isEmpty() &&
+         !getString("aliyun_oss", "access_key_id").isEmpty() &&
+         !getString("aliyun_oss", "access_key_secret").isEmpty() &&
+         !getString("aliyun_oss", "bucket").isEmpty() &&
+         !getString("aliyun_oss", "region").isEmpty();
+}
+
+QString ConfigManager::configFilePath() const {
+  return configFilePath_;
+}
 
 QString ConfigManager::ffmpegPath() const {
   return getString("ffmpeg", "path");
