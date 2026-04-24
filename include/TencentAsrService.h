@@ -29,4 +29,6 @@ private:
   QString appId_;
   QString currentTaskId_;
   QNetworkAccessManager *networkManager_;
+  int pollingAttempts_ = 0;
+  static constexpr int kMaxPollingAttempts = 60;
 };

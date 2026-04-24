@@ -34,6 +34,9 @@ void TencentAsrService::createRecTask(const QString &audioUrl) {
   QNetworkRequest request(url);
   request.setRawHeader("Content-Type", "application/json");
   request.setRawHeader("X-TC-Action", "CreateRecTask");
+  request.setRawHeader("X-TC-Timestamp", QString::number(QDateTime::currentSecsSinceEpoch()).toUtf8());
+  request.setRawHeader("X-TC-Version", "2019-06-14");
+  request.setRawHeader("X-TC-Region", "");
 
   QNetworkReply *reply =
       networkManager_->post(request, QJsonDocument(payload).toJson());
@@ -43,6 +46,15 @@ void TencentAsrService::createRecTask(const QString &audioUrl) {
 }
 
 void TencentAsrService::onTaskCreated(QNetworkReply *reply) {
+  if (reply->error() != QNetworkReply::NoError) {
+    TranscriptResult result;
+    result.success = false;
+    result.errorMessage = "Network error: " + reply->errorString();
+    emit transcribeFinished(result);
+    reply->deleteLater();
+    return;
+  }
+
   QByteArray data = reply->readAll();
   QJsonDocument doc = QJsonDocument::fromJson(data);
   QJsonObject resp = doc.object();
@@ -70,6 +82,9 @@ void TencentAsrService::queryTaskStatus(const QString &taskId) {
   QNetworkRequest request(url);
   request.setRawHeader("Content-Type", "application/json");
   request.setRawHeader("X-TC-Action", "DescribeTaskStatus");
+  request.setRawHeader("X-TC-Timestamp", QString::number(QDateTime::currentSecsSinceEpoch()).toUtf8());
+  request.setRawHeader("X-TC-Version", "2019-06-14");
+  request.setRawHeader("X-TC-Region", "");
 
   QNetworkReply *reply =
       networkManager_->post(request, QJsonDocument(payload).toJson());
@@ -79,6 +94,25 @@ void TencentAsrService::queryTaskStatus(const QString &taskId) {
 }
 
 void TencentAsrService::onResultQueried(QNetworkReply *reply) {
+  if (reply->error() != QNetworkReply::NoError) {
+    TranscriptResult result;
+    result.success = false;
+    result.errorMessage = "Network error: " + reply->errorString();
+    emit transcribeFinished(result);
+    reply->deleteLater();
+    return;
+  }
+
+  if (++pollingAttempts_ > kMaxPollingAttempts) {
+    TranscriptResult result;
+    result.success = false;
+    result.errorMessage = "ASR polling timeout";
+    emit transcribeFinished(result);
+    pollingAttempts_ = 0;
+    reply->deleteLater();
+    return;
+  }
+
   QByteArray data = reply->readAll();
   QJsonDocument doc = QJsonDocument::fromJson(data);
   QJsonObject resp = doc.object();
