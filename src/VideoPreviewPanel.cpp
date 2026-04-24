@@ -75,10 +75,20 @@ void VideoPreviewPanel::setupUi()
             border: none;
             border-radius: 4px;
             padding-left: 8px;
+            padding-right: 20px;
             font-family: Inter, sans-serif;
             font-size: 12px;
         }
-        QComboBox::drop-down { border: none; width: 20px; }
+        QComboBox::drop-down {
+            border: none;
+            width: 20px;
+            subcontrol-position: center right;
+        }
+        QComboBox::down-arrow {
+            image: url(:/icons/down-arrow.svg);
+            width: 14px;
+            height: 14px;
+        }
         QComboBox QAbstractItemView {
             background-color: #141414;
             color: #d1d5db;
@@ -93,7 +103,7 @@ void VideoPreviewPanel::setupUi()
 
     // Size combo
     sizeCombo_ = new QComboBox(toolbar);
-    sizeCombo_->setFixedSize(60, 28);
+    sizeCombo_->setFixedSize(70, 28);
     sizeCombo_->setEditable(true);
     sizeCombo_->setStyleSheet(R"(
         QComboBox {
@@ -102,10 +112,20 @@ void VideoPreviewPanel::setupUi()
             border: none;
             border-radius: 4px;
             padding-left: 8px;
+            padding-right: 20px;
             font-family: Inter, sans-serif;
             font-size: 12px;
         }
-        QComboBox::drop-down { border: none; width: 20px; }
+        QComboBox::drop-down {
+            border: none;
+            width: 20px;
+            subcontrol-position: center right;
+        }
+        QComboBox::down-arrow {
+            image: url(:/icons/down-arrow.svg);
+            width: 14px;
+            height: 14px;
+        }
     )");
     populateSizeCombo();
     tbLayout->addWidget(sizeCombo_);

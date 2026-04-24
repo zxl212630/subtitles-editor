@@ -67,10 +67,14 @@ set(HEADERS
     include/TimelinePanel.h
 )
 
+set(RESOURCES
+    resources/resources.qrc
+)
+
 # ============================================================
 # Executable
 # ============================================================
-add_executable(${PROJECT_NAME} ${SOURCES} ${HEADERS})
+add_executable(${PROJECT_NAME} ${SOURCES} ${HEADERS} ${RESOURCES})
 
 target_include_directories(${PROJECT_NAME} PRIVATE
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
