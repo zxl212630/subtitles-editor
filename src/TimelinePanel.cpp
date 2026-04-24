@@ -203,6 +203,17 @@ void TimelinePanel::dropEvent(QDropEvent* event)
     QUrl url = mime->urls().first();
     QString localPath = url.toLocalFile();
 
+    qDebug() << "=== TimelinePanel::dropEvent ===";
+    qDebug() << "Dropped file:" << localPath;
+
+    startAsrPipeline(localPath);
+}
+
+void TimelinePanel::startAsrPipeline(const QString& localPath)
+{
+    qDebug() << "=== Starting ASR Pipeline ===";
+    qDebug() << "File:" << localPath;
+
     // Trigger ASR pipeline
     AudioTranscoder* transcoder = new AudioTranscoder(this);
     OssUploader* uploader = new OssUploader(this);
@@ -211,8 +222,15 @@ void TimelinePanel::dropEvent(QDropEvent* event)
     connect(transcoder, &AudioTranscoder::transcodingFinished, uploader, &OssUploader::upload);
     connect(uploader, &OssUploader::uploadFinished, asrService, &TencentAsrService::transcribe);
     connect(asrService, &AsrServiceBase::transcribeFinished, this, [this, transcoder, uploader, asrService](const AsrServiceBase::TranscriptResult& result) {
+        qDebug() << "=== ASR Finished ===";
+        qDebug() << "Success:" << result.success;
+        qDebug() << "Segments count:" << result.segments.size();
+        if (!result.success) {
+            qDebug() << "Error:" << result.errorMessage;
+        }
         if (result.success) {
             for (const auto& seg : result.segments) {
+                qDebug() << "Segment:" << seg.startMs << "-" << seg.endMs << ":" << seg.text;
                 SubtitleItem item;
                 item.id = QUuid::createUuid().toString();
                 item.text = seg.text;
@@ -241,5 +259,8 @@ void TimelinePanel::dropEvent(QDropEvent* event)
         asrService->deleteLater();
     });
 
-    transcoder->transcode(localPath);
+    // Fixed test path for debugging
+    QString testPath = "/Users/zxl/Documents/创影测试/智能唱词/唱词测试素材/李少波唱词/李少波上唱词.mp4";
+    qDebug() << "Using test path:" << testPath;
+    transcoder->transcode(testPath);
 }

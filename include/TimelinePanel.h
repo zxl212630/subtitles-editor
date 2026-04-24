@@ -33,6 +33,7 @@ private:
     void drawSubtitleTrack(QPainter& painter, int y);
     void drawVideoTrack(QPainter& painter, int y);
     void drawPlayhead(QPainter& painter);
+    void startAsrPipeline(const QString& localPath);
 
     qint64 pixelsToMs(int px) const;
     int msToPixels(qint64 ms) const;
