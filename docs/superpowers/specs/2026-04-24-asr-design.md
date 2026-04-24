@@ -21,13 +21,17 @@
 - 职责：上传文件到阿里云 OSS
 - 输入：本地文件路径
 - 输出：OSS 文件 URL
-- 依赖：阿里云 OSS SDK 或 API
+- 依赖：Qt QNetworkAccessManager（使用 REST API）
+- API：OSS PutObject API
 
 ### 3. TencentAsrService
 - 职责：调用腾讯云 ASR 接口
 - 输入：OSS 文件 URL
 - 输出：`QList<TranscriptSegment>` (text, startMs, endMs)
 - 信号：`transcribeFinished`, `transcribeProgress`
+- 依赖：Qt QNetworkAccessManager（使用 REST API）
+- API：CreateRecTask → DescribeTaskStatus 轮询
+- 注意：需要 16k 采样率音频
 
 ### 4. SubtitleOverlay（未来扩展）
 - 职责：字幕叠加显示在视频画面上
