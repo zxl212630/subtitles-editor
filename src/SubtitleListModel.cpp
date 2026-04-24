@@ -22,7 +22,9 @@ void SubtitleListModel::setTrack(SubtitleTrack* track)
 void SubtitleListModel::setFilterText(const QString& text)
 {
     filterText_ = text;
+    beginResetModel();
     rebuildFilteredIndices();
+    endResetModel();
 }
 
 int SubtitleListModel::rowCount(const QModelIndex& /*parent*/) const
