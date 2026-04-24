@@ -52,6 +52,7 @@ set(SOURCES
     src/VideoPreviewPanel.cpp
     src/SubtitleListPanel.cpp
     src/TimelinePanel.cpp
+    src/ConfigManager.cpp
 )
 
 set(HEADERS
@@ -65,6 +66,7 @@ set(HEADERS
     include/VideoPreviewPanel.h
     include/SubtitleListPanel.h
     include/TimelinePanel.h
+    include/ConfigManager.h
 )
 
 set(RESOURCES
