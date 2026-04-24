@@ -22,6 +22,36 @@ QString OssUploader::generateOssPath(const QString &localPath) {
   return "asr/" + timestamp + "_" + info.fileName();
 }
 
+QByteArray OssUploader::hmacSha1(const QByteArray &key,
+                                 const QByteArray &data) {
+  const int blockSize = 64;
+  QByteArray ipad(blockSize, 0);
+  QByteArray opad(blockSize, 0);
+
+  QByteArray keyData = key;
+  if (keyData.length() > blockSize) {
+    keyData = QCryptographicHash::hash(keyData, QCryptographicHash::Sha1);
+  }
+
+  for (int i = 0; i < blockSize; i++) {
+    ipad[i] = keyData[i] ^ 0x36;
+    opad[i] = keyData[i] ^ 0x5c;
+  }
+
+  QByteArray innerData = ipad + data;
+  QByteArray innerHash =
+      QCryptographicHash::hash(innerData, QCryptographicHash::Sha1);
+  QByteArray outerData = opad + innerHash;
+  return QCryptographicHash::hash(outerData, QCryptographicHash::Sha1);
+}
+
+QString OssUploader::computeSignature(const QString &stringToSign) {
+  QByteArray key = ossAccessKeySecret_.toUtf8();
+  QByteArray data = stringToSign.toUtf8();
+  QByteArray hash = hmacSha1(key, data);
+  return hash.toBase64();
+}
+
 void OssUploader::upload(const QString &localFilePath) {
   QFile *file = new QFile(localFilePath, this);
   if (!file->open(QIODevice::ReadOnly)) {
@@ -35,6 +65,22 @@ void OssUploader::upload(const QString &localFilePath) {
   QString urlStr = endpoint + "/" + ossPath;
 
   QNetworkRequest request((QUrl(urlStr)));
+
+  // Build string to sign for signature
+  QString contentType = "audio/wav";
+  QString date =
+      QDateTime::currentDateTimeUtc().toString("ddd, dd MMM yyyy HH:mm:ss") +
+      " GMT";
+  QString stringToSign = QString("PUT\n\n%1\n%2\n/%3/%4")
+                             .arg(contentType)
+                             .arg(date)
+                             .arg(ossBucket_)
+                             .arg(ossPath);
+
+  QString signature = computeSignature(stringToSign);
+  QString authHeader = QString("OSS %1:%2").arg(ossAccessKeyId_).arg(signature);
+  request.setRawHeader("Authorization", authHeader.toUtf8());
+  request.setRawHeader("Date", date.toUtf8());
   request.setRawHeader("Content-Type", "audio/wav");
 
   QNetworkAccessManager *manager = new QNetworkAccessManager(this);

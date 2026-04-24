@@ -20,6 +20,8 @@ public slots:
 
 private:
   QString generateOssPath(const QString &localPath);
+  QByteArray hmacSha1(const QByteArray &key, const QByteArray &data);
+  QString computeSignature(const QString &stringToSign);
 
   QString ossBucket_;
   QString ossRegion_;
