@@ -210,7 +210,7 @@ void TimelinePanel::dropEvent(QDropEvent* event)
 
     connect(transcoder, &AudioTranscoder::transcodingFinished, uploader, &OssUploader::upload);
     connect(uploader, &OssUploader::uploadFinished, asrService, &TencentAsrService::transcribe);
-    connect(asrService, &AsrServiceBase::transcribeFinished, this, [this](const AsrServiceBase::TranscriptResult& result) {
+    connect(asrService, &AsrServiceBase::transcribeFinished, this, [this, transcoder, uploader, asrService](const AsrServiceBase::TranscriptResult& result) {
         if (result.success) {
             for (const auto& seg : result.segments) {
                 SubtitleItem item;
@@ -221,6 +221,24 @@ void TimelinePanel::dropEvent(QDropEvent* event)
                 track_->addItem(item);
             }
         }
+        // Clean up service objects
+        transcoder->deleteLater();
+        uploader->deleteLater();
+        asrService->deleteLater();
+    });
+
+    connect(transcoder, &AudioTranscoder::transcodingFailed, this, [this, transcoder, uploader, asrService](const QString& error) {
+        qWarning() << "Transcoding failed:" << error;
+        transcoder->deleteLater();
+        uploader->deleteLater();
+        asrService->deleteLater();
+    });
+
+    connect(uploader, &OssUploader::uploadFailed, this, [this, transcoder, uploader, asrService](const QString& error) {
+        qWarning() << "Upload failed:" << error;
+        transcoder->deleteLater();
+        uploader->deleteLater();
+        asrService->deleteLater();
     });
 
     transcoder->transcode(localPath);
