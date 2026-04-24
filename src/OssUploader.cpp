@@ -25,13 +25,20 @@ QString OssUploader::generateOssPath(const QString &localPath) {
 QByteArray OssUploader::hmacSha1(const QByteArray &key,
                                  const QByteArray &data) {
   const int blockSize = 64;
-  QByteArray ipad(blockSize, 0);
-  QByteArray opad(blockSize, 0);
-
   QByteArray keyData = key;
+
+  // If key > blockSize, hash it
   if (keyData.length() > blockSize) {
     keyData = QCryptographicHash::hash(keyData, QCryptographicHash::Sha1);
   }
+
+  // Pad key with zeros to blockSize
+  while (keyData.length() < blockSize) {
+    keyData.append('\0');
+  }
+
+  QByteArray ipad(blockSize, 0);
+  QByteArray opad(blockSize, 0);
 
   for (int i = 0; i < blockSize; i++) {
     ipad[i] = keyData[i] ^ 0x36;
