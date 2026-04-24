@@ -1,17 +1,20 @@
 #include "TimelinePanel.h"
 #include "SubtitleTrack.h"
 #include "SubtitleItem.h"
+#include "QUuid"
 
 #include <QPainter>
 #include <QPainterPath>
 #include <QMouseEvent>
 #include <QFontDatabase>
+#include <QMimeData>
 
 TimelinePanel::TimelinePanel(QWidget* parent)
     : QWidget(parent)
 {
     setObjectName("TimelinePanel");
     setAttribute(Qt::WA_StyledBackground);
+    setAcceptDrops(true);
     setStyleSheet(R"(
         QWidget#TimelinePanel {
             background-color: #1e1e1e;
@@ -183,4 +186,42 @@ qint64 TimelinePanel::pixelsToMs(int px) const
 int TimelinePanel::msToPixels(qint64 ms) const
 {
     return static_cast<int>(ms * PIXELS_PER_SECOND / 1000);
+}
+
+void TimelinePanel::dragEnterEvent(QDragEnterEvent* event)
+{
+    if (event->mimeData()->hasUrls()) {
+        event->acceptProposedAction();
+    }
+}
+
+void TimelinePanel::dropEvent(QDropEvent* event)
+{
+    const QMimeData* mime = event->mimeData();
+    if (!mime->hasUrls()) return;
+
+    QUrl url = mime->urls().first();
+    QString localPath = url.toLocalFile();
+
+    // Trigger ASR pipeline
+    AudioTranscoder* transcoder = new AudioTranscoder(this);
+    OssUploader* uploader = new OssUploader(this);
+    TencentAsrService* asrService = new TencentAsrService(this);
+
+    connect(transcoder, &AudioTranscoder::transcodingFinished, uploader, &OssUploader::upload);
+    connect(uploader, &OssUploader::uploadFinished, asrService, &TencentAsrService::transcribe);
+    connect(asrService, &AsrServiceBase::transcribeFinished, this, [this](const AsrServiceBase::TranscriptResult& result) {
+        if (result.success) {
+            for (const auto& seg : result.segments) {
+                SubtitleItem item;
+                item.id = QUuid::createUuid().toString();
+                item.text = seg.text;
+                item.startMs = seg.startMs;
+                item.endMs = seg.endMs;
+                track_->addItem(item);
+            }
+        }
+    });
+
+    transcoder->transcode(localPath);
 }

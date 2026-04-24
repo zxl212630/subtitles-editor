@@ -2,6 +2,11 @@
 
 #include <QWidget>
 
+#include "AudioTranscoder.h"
+#include "OssUploader.h"
+#include "TencentAsrService.h"
+#include "SubtitleItem.h"
+
 class SubtitleTrack;
 
 class TimelinePanel : public QWidget
@@ -20,6 +25,8 @@ signals:
 protected:
     void paintEvent(QPaintEvent* event) override;
     void mousePressEvent(QMouseEvent* event) override;
+    void dragEnterEvent(QDragEnterEvent* event) override;
+    void dropEvent(QDropEvent* event) override;
 
 private:
     void drawRuler(QPainter& painter);
