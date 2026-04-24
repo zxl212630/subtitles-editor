@@ -19,7 +19,7 @@ set(FFMPEG_ROOT "$ENV{HOME}/Tools/ffmpeg/8.0" CACHE PATH "FFmpeg installation ro
 # Qt6
 # ============================================================
 set(CMAKE_PREFIX_PATH "${Qt6_ROOT};${CMAKE_PREFIX_PATH}")
-find_package(Qt6 REQUIRED COMPONENTS Core Gui Widgets)
+find_package(Qt6 REQUIRED COMPONENTS Core Gui Widgets Network)
 
 # ============================================================
 # QWindowKit (Qt6 build)
@@ -54,6 +54,7 @@ set(SOURCES
     src/TimelinePanel.cpp
     src/ConfigManager.cpp
     src/AudioTranscoder.cpp
+    src/OssUploader.cpp
 )
 
 set(HEADERS
@@ -69,6 +70,7 @@ set(HEADERS
     include/TimelinePanel.h
     include/ConfigManager.h
     include/AudioTranscoder.h
+    include/OssUploader.h
 )
 
 set(RESOURCES
@@ -98,6 +100,7 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
     Qt::Core
     Qt::Gui
     Qt::Widgets
+    Qt::Network
 )
 
 # QWindowKit dependencies
