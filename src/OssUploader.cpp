@@ -2,6 +2,7 @@
 #include "ConfigManager.h"
 #include <QCryptographicHash>
 #include <QDateTime>
+#include <QDebug>
 #include <QFile>
 #include <QFileInfo>
 #include <QNetworkAccessManager>
@@ -74,6 +75,9 @@ void OssUploader::upload(const QString &localFilePath) {
     return;
   }
 
+  QByteArray fileData = file->readAll();
+  file->close();
+
   QString ossPath = generateOssPath(localFilePath);
   QString endpoint =
       "https://" + ossBucket_ + ".oss-" + ossRegion_ + ".aliyuncs.com";
@@ -81,25 +85,36 @@ void OssUploader::upload(const QString &localFilePath) {
 
   QNetworkRequest request((QUrl(urlStr)));
 
-  // Build string to sign for signature
+  // Build string to sign - Alibaba Cloud OSS format:
+  // PUT\n\n{contentType}\n{date}\n/{bucket}/{object}
   QString contentType = "audio/wav";
   QString date =
       QDateTime::currentDateTimeUtc().toString("ddd, dd MMM yyyy HH:mm:ss") +
       " GMT";
+
+  // IMPORTANT: StringToSign must have exactly these newlines:
+  // PUT\n
+  // \n (empty Content-MD5)
+  // {contentType}\n
+  // {date}\n
+  // /{bucket}/{object}
   QString stringToSign = QString("PUT\n\n%1\n%2\n/%3/%4")
                              .arg(contentType)
                              .arg(date)
                              .arg(ossBucket_)
                              .arg(ossPath);
 
+  qDebug() << "StringToSign:" << stringToSign;
+
   QString signature = computeSignature(stringToSign);
   QString authHeader = QString("OSS %1:%2").arg(ossAccessKeyId_).arg(signature);
   request.setRawHeader("Authorization", authHeader.toUtf8());
   request.setRawHeader("Date", date.toUtf8());
   request.setRawHeader("Content-Type", "audio/wav");
+  request.setRawHeader("Content-Length", QByteArray::number(fileData.size()));
 
   QNetworkAccessManager *manager = new QNetworkAccessManager(this);
-  QNetworkReply *reply = manager->put(request, file->readAll());
+  QNetworkReply *reply = manager->put(request, fileData);
 
   connect(reply, &QNetworkReply::uploadProgress, this,
           [this](qint64 bytesSent, qint64 bytesTotal) {
@@ -113,7 +128,12 @@ void OssUploader::upload(const QString &localFilePath) {
     if (reply->error() == QNetworkReply::NoError) {
       emit uploadFinished(urlStr);
     } else {
-      emit uploadFailed("Upload failed: " + reply->errorString());
+      QString errorMsg = QString("Upload failed: %1").arg(reply->errorString());
+      QByteArray response = reply->readAll();
+      if (!response.isEmpty()) {
+        errorMsg += QString(" | Response: %1").arg(QString::fromUtf8(response));
+      }
+      emit uploadFailed(errorMsg);
     }
     reply->deleteLater();
   });
