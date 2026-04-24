@@ -46,6 +46,7 @@ set(SOURCES
     src/AppWindow.cpp
     src/SubtitleTrack.cpp
     src/AsrServiceBase.cpp
+    src/TencentAsrService.cpp
     src/SubtitleExporter.cpp
     src/SubtitleListModel.cpp
     src/SubtitleListDelegate.cpp
@@ -62,6 +63,7 @@ set(HEADERS
     include/SubtitleItem.h
     include/SubtitleTrack.h
     include/AsrServiceBase.h
+    include/TencentAsrService.h
     include/SubtitleExporter.h
     include/SubtitleListModel.h
     include/SubtitleListDelegate.h
