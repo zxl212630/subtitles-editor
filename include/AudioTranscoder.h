@@ -11,7 +11,6 @@ public:
 
 signals:
   void transcodingStarted();
-  void transcodingProgress(int percent);
   void transcodingFinished(const QString &outputPath);
   void transcodingFailed(const QString &errorMessage);
 
