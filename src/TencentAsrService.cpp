@@ -306,12 +306,13 @@ void TencentAsrService::onResultQueried(QNetworkReply *reply) {
       reply->deleteLater();
       return;
     }
-    int status = response["Status"].toInt();
+    QJsonObject dataObj = response["Data"].toObject();
+    int status = dataObj["Status"].toInt();
     qDebug() << "Polling attempt" << pollingAttempts_ << "- Status:" << status;
 
     if (status == 2) { // 完成
       result.success = true;
-      QJsonArray resultDetail = response["ResultDetail"].toArray();
+      QJsonArray resultDetail = dataObj["ResultDetail"].toArray();
       parseResultDetail(resultDetail, result.segments);
       emit transcribeFinished(result);
     } else if (status == 3 || status == 4) { // 失败
