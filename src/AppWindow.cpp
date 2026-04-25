@@ -165,6 +165,8 @@ void AppWindow::setupSplitterLayout() {
   centralLayout->setSpacing(0);
   centralLayout->addWidget(d->verticalSplitter);
   setCentralWidget(central);
+
+  setupDummyData();
 }
 
 void AppWindow::setupDummyData() {
