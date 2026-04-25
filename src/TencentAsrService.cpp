@@ -3,6 +3,7 @@
 #include <QCryptographicHash>
 #include <QDateTime>
 #include <QDebug>
+#include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QNetworkAccessManager>
@@ -310,8 +311,8 @@ void TencentAsrService::onResultQueried(QNetworkReply *reply) {
 
     if (status == 2) { // 完成
       result.success = true;
-      QString resultStr = response["Result"].toString();
-      parseResultText(resultStr, result.segments);
+      QJsonArray resultDetail = response["ResultDetail"].toArray();
+      parseResultDetail(resultDetail, result.segments);
       emit transcribeFinished(result);
     } else if (status == 3 || status == 4) { // 失败
       result.success = false;
@@ -333,18 +334,16 @@ void TencentAsrService::onResultQueried(QNetworkReply *reply) {
   reply->deleteLater();
 }
 
-void TencentAsrService::parseResultText(const QString &resultStr,
-                                        QList<TranscriptSegment> &segments) {
-  // 腾讯云 Result 格式: [start,end,"text"][start,end,"text"]...
-  QRegularExpression re("\\[(\\d+),(\\d+),\"([^\"]+)\"\\]");
-  QRegularExpressionMatchIterator it = re.globalMatch(resultStr);
-
-  while (it.hasNext()) {
-    QRegularExpressionMatch match = it.next();
+void TencentAsrService::parseResultDetail(
+    const QJsonArray &resultDetail, QList<TranscriptSegment> &segments) {
+  for (const QJsonValue &val : resultDetail) {
+    QJsonObject sentence = val.toObject();
     TranscriptSegment seg;
-    seg.startMs = match.capturedView(1).toLongLong();
-    seg.endMs = match.capturedView(2).toLongLong();
-    seg.text = match.capturedView(3).toString();
-    segments.append(seg);
+    seg.text = sentence["FinalSentence"].toString();
+    seg.startMs = sentence["StartMs"].toVariant().toLongLong();
+    seg.endMs = sentence["EndMs"].toVariant().toLongLong();
+    if (!seg.text.isEmpty()) {
+      segments.append(seg);
+    }
   }
 }

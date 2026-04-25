@@ -1,6 +1,7 @@
 #pragma once
 
 #include "AsrServiceBase.h"
+#include <QJsonArray>
 #include <QNetworkReply>
 
 class QNetworkAccessManager;
@@ -21,8 +22,8 @@ private slots:
 private:
   void createRecTask(const QString &audioUrl);
   void queryTaskStatus(const QString &taskId);
-  void parseResultText(const QString &resultStr,
-                       QList<TranscriptSegment> &segments);
+  void parseResultDetail(const QJsonArray &resultDetail,
+                         QList<TranscriptSegment> &segments);
   QByteArray signTC3(const QByteArray &key, const QByteArray &data);
   QJsonObject payload(const QString &audioUrl);
 
