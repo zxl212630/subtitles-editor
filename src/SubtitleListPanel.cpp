@@ -218,6 +218,8 @@ void SubtitleListPanel::setupUi() {
 
   connect(listView_, &QListView::clicked, this,
           &SubtitleListPanel::onItemClicked);
+  connect(listView_, &QListView::doubleClicked, this,
+          &SubtitleListPanel::onItemDoubleClicked);
 
   lcLayout->addWidget(listView_);
   pcLayout->addWidget(listContainer);
@@ -228,10 +230,25 @@ void SubtitleListPanel::onItemClicked(const QModelIndex &index) {
   if (!index.isValid())
     return;
   QString id = model_->data(index, SubtitleListModel::IdRole).toString();
+  qint64 startMs =
+      model_->data(index, SubtitleListModel::StartMsRole).toLongLong();
   if (track_) {
     track_->selectItem(id);
   }
   emit itemSelected(id);
+  emit itemSeekRequested(id, startMs);
+}
+
+void SubtitleListPanel::onItemDoubleClicked(const QModelIndex &index) {
+  if (!index.isValid())
+    return;
+  QString id = model_->data(index, SubtitleListModel::IdRole).toString();
+  qint64 startMs =
+      model_->data(index, SubtitleListModel::StartMsRole).toLongLong();
+  if (track_) {
+    track_->selectItem(id);
+  }
+  emit itemDoubleClicked(id, startMs);
 }
 
 bool SubtitleListPanel::eventFilter(QObject *watched, QEvent *event) {

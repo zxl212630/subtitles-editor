@@ -39,6 +39,15 @@ void TimelinePanel::setTrack(SubtitleTrack *track) {
   update();
 }
 
+void TimelinePanel::setCurrentTime(qint64 ms) {
+  if (ms < 0)
+    ms = 0;
+  if (ms > totalDurationMs_)
+    ms = totalDurationMs_;
+  currentTimeMs_ = ms;
+  update();
+}
+
 void TimelinePanel::paintEvent(QPaintEvent * /*event*/) {
   QPainter painter(this);
   painter.setRenderHint(QPainter::Antialiasing);

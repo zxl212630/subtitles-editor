@@ -20,10 +20,13 @@ public:
 signals:
   void itemSelected(const QString &id);
   void itemDeleteRequested(const QString &id);
+  void itemSeekRequested(const QString &id, qint64 startMs);
+  void itemDoubleClicked(const QString &id, qint64 startMs);
 
 private:
   void setupUi();
   void onItemClicked(const QModelIndex &index);
+  void onItemDoubleClicked(const QModelIndex &index);
   bool eventFilter(QObject *watched, QEvent *event) override;
 
   SubtitleTrack *track_ = nullptr;

@@ -112,6 +112,11 @@ void AppWindow::setupSplitterLayout() {
             d->timelinePanel->update();
           });
 
+  connect(d->subtitleListPanel, &SubtitleListPanel::itemSeekRequested,
+          d->timelinePanel, [this](const QString & /*id*/, qint64 startMs) {
+            d->timelinePanel->setCurrentTime(startMs);
+          });
+
   connect(d->timelinePanel, &TimelinePanel::timeClicked, this,
           [this](qint64 ms) {
             Q_UNUSED(ms)

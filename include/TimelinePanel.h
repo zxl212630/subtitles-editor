@@ -16,6 +16,7 @@ public:
   explicit TimelinePanel(QWidget *parent = nullptr);
 
   void setTrack(SubtitleTrack *track);
+  void setCurrentTime(qint64 ms);
 
 signals:
   void timeClicked(qint64 ms);
