@@ -1,35 +1,34 @@
 #pragma once
 
-#include <QObject>
-#include <QList>
-#include <QString>
 #include "SubtitleItem.h"
+#include <QList>
+#include <QObject>
+#include <QString>
 
-class SubtitleTrack : public QObject
-{
-    Q_OBJECT
+class SubtitleTrack : public QObject {
+  Q_OBJECT
 
 public:
-    explicit SubtitleTrack(QObject* parent = nullptr);
+  explicit SubtitleTrack(QObject *parent = nullptr);
 
-    void clear();
-    void addItem(const SubtitleItem& item);
-    void removeItem(const QString& id);
-    void updateItem(const QString& id, const SubtitleItem& newItem);
-    void selectItem(const QString& id);
+  void clear();
+  void addItem(const SubtitleItem &item);
+  void removeItem(const QString &id);
+  void updateItem(const QString &id, const SubtitleItem &newItem);
+  void selectItem(const QString &id);
 
-    const QList<SubtitleItem>& items() const;
-    const SubtitleItem* selectedItem() const;
-    const SubtitleItem* findItem(const QString& id) const;
+  const QList<SubtitleItem> &items() const;
+  const SubtitleItem *selectedItem() const;
+  const SubtitleItem *findItem(const QString &id) const;
 
 signals:
-    void itemAdded(const SubtitleItem& item);
-    void itemRemoved(const QString& id);
-    void itemUpdated(const QString& id);
-    void itemSelected(const QString& id);
-    void dataChanged();
+  void itemAdded(const SubtitleItem &item);
+  void itemRemoved(const QString &id);
+  void itemUpdated(const QString &id);
+  void itemSelected(const QString &id);
+  void dataChanged();
 
 private:
-    QList<SubtitleItem> items_;
-    QString selectedId_;
+  QList<SubtitleItem> items_;
+  QString selectedId_;
 };

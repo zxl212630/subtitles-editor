@@ -43,10 +43,11 @@ void AudioTranscoder::transcode(const QString &inputPath) {
         process->deleteLater();
       });
 
-  connect(process, &QProcess::errorOccurred, this, [this, process](QProcess::ProcessError error) {
-    emit transcodingFailed("Process error: " + QString::number(error));
-    process->deleteLater();
-  });
+  connect(process, &QProcess::errorOccurred, this,
+          [this, process](QProcess::ProcessError error) {
+            emit transcodingFailed("Process error: " + QString::number(error));
+            process->deleteLater();
+          });
 
   emit transcodingStarted();
   process->start(ffmpegPath_, args);

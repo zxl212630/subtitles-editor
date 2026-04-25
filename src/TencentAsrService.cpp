@@ -73,14 +73,16 @@ void TencentAsrService::createRecTask(const QString &audioUrl) {
   QString canonicalUri = "/";
   QString canonicalQueryString = "";
   QString canonicalHeaders = "content-type:application/json\n"
-                             "host:" + host + "\n"
+                             "host:" +
+                             host +
+                             "\n"
                              "x-tc-action:createrectask\n\n";
-  QString signedHeaders =
-      "content-type;host;x-tc-action";
-  QByteArray payloadBytes = QJsonDocument(payload(audioUrl)).toJson(QJsonDocument::Compact);
-  QString hashedRequestPayload = QString(
-      QCryptographicHash::hash(payloadBytes, QCryptographicHash::Sha256)
-          .toHex());
+  QString signedHeaders = "content-type;host;x-tc-action";
+  QByteArray payloadBytes =
+      QJsonDocument(payload(audioUrl)).toJson(QJsonDocument::Compact);
+  QString hashedRequestPayload =
+      QString(QCryptographicHash::hash(payloadBytes, QCryptographicHash::Sha256)
+                  .toHex());
 
   QString canonicalRequest = httpRequestMethod + "\n" + canonicalUri + "\n" +
                              canonicalQueryString + "\n" + canonicalHeaders +
@@ -214,12 +216,12 @@ void TencentAsrService::queryTaskStatus(const QString &taskId) {
                              host +
                              "\n"
                              "x-tc-action:describetaskstatus\n\n";
-  QString signedHeaders =
-      "content-type;host;x-tc-action";
+  QString signedHeaders = "content-type;host;x-tc-action";
 
   QJsonObject queryPayload;
   queryPayload["TaskId"] = taskId.toLongLong();
-  QByteArray payloadBytes = QJsonDocument(queryPayload).toJson(QJsonDocument::Compact);
+  QByteArray payloadBytes =
+      QJsonDocument(queryPayload).toJson(QJsonDocument::Compact);
   QString hashedRequestPayload =
       QString(QCryptographicHash::hash(payloadBytes, QCryptographicHash::Sha256)
                   .toHex());
@@ -335,8 +337,8 @@ void TencentAsrService::onResultQueried(QNetworkReply *reply) {
   reply->deleteLater();
 }
 
-void TencentAsrService::parseResultDetail(
-    const QJsonArray &resultDetail, QList<TranscriptSegment> &segments) {
+void TencentAsrService::parseResultDetail(const QJsonArray &resultDetail,
+                                          QList<TranscriptSegment> &segments) {
   for (const QJsonValue &val : resultDetail) {
     QJsonObject sentence = val.toObject();
     TranscriptSegment seg;

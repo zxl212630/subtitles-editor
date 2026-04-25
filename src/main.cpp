@@ -1,13 +1,12 @@
-#include <QApplication>
 #include "AppWindow.h"
+#include <QApplication>
 
-int main(int argc, char* argv[])
-{
-    QApplication app(argc, argv);
-    app.setApplicationName("Subtitles Editor");
+int main(int argc, char *argv[]) {
+  QApplication app(argc, argv);
+  app.setApplicationName("Subtitles Editor");
 
-    AppWindow window;
-    window.show();
+  AppWindow window;
+  window.show();
 
-    return app.exec();
+  return app.exec();
 }

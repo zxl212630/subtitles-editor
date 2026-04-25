@@ -9,21 +9,20 @@ class TimelinePanel;
 class SubtitleTrack;
 class QSplitter;
 
-class AppWindow : public QMainWindow
-{
-    Q_OBJECT
+class AppWindow : public QMainWindow {
+  Q_OBJECT
 
 public:
-    explicit AppWindow(QWidget* parent = nullptr);
-    ~AppWindow() override;
+  explicit AppWindow(QWidget *parent = nullptr);
+  ~AppWindow() override;
 
 private:
-    void setupUi();
-    void setupTitleBar();
-    void setupSplitterLayout();
-    void setupDummyData();
+  void setupUi();
+  void setupTitleBar();
+  void setupSplitterLayout();
+  void setupDummyData();
 
 private:
-    struct Private;
-    std::unique_ptr<Private> d;
+  struct Private;
+  std::unique_ptr<Private> d;
 };

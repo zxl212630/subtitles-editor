@@ -11,13 +11,15 @@ ConfigManager &ConfigManager::instance() {
 
 ConfigManager::ConfigManager()
     : configFilePath_([] {
-        QString configDir = QStandardPaths::writableLocation(QStandardPaths::AppConfigLocation);
+        QString configDir =
+            QStandardPaths::writableLocation(QStandardPaths::AppConfigLocation);
         QDir().mkpath(configDir);
         QString path = configDir + "/config.ini";
 
         // If config doesn't exist, copy from template
         if (!QFile::exists(path)) {
-          QString templatePath = QCoreApplication::applicationDirPath() + "/config.ini.template";
+          QString templatePath =
+              QCoreApplication::applicationDirPath() + "/config.ini.template";
           if (QFile::exists(templatePath)) {
             QFile::copy(templatePath, path);
           }
@@ -38,9 +40,7 @@ bool ConfigManager::isValid() const {
          !getString("aliyun_oss", "region").isEmpty();
 }
 
-QString ConfigManager::configFilePath() const {
-  return configFilePath_;
-}
+QString ConfigManager::configFilePath() const { return configFilePath_; }
 
 QString ConfigManager::ffmpegPath() const {
   return getString("ffmpeg", "path");
