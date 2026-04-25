@@ -1,48 +1,44 @@
 #include "SubtitleListPanel.h"
-#include "SubtitleListModel.h"
 #include "SubtitleListDelegate.h"
+#include "SubtitleListModel.h"
 #include "SubtitleTrack.h"
 
-#include <QVBoxLayout>
-#include <QHBoxLayout>
-#include <QListView>
-#include <QLineEdit>
-#include <QLabel>
-#include <QPushButton>
 #include <QFrame>
+#include <QHBoxLayout>
 #include <QHeaderView>
+#include <QLabel>
+#include <QLineEdit>
+#include <QListView>
+#include <QPushButton>
+#include <QVBoxLayout>
 
-SubtitleListPanel::SubtitleListPanel(QWidget* parent)
-    : QWidget(parent)
-{
-    setupUi();
+SubtitleListPanel::SubtitleListPanel(QWidget *parent) : QWidget(parent) {
+  setupUi();
 }
 
-void SubtitleListPanel::setTrack(SubtitleTrack* track)
-{
-    track_ = track;
-    model_->setTrack(track);
+void SubtitleListPanel::setTrack(SubtitleTrack *track) {
+  track_ = track;
+  model_->setTrack(track);
 }
 
-void SubtitleListPanel::setupUi()
-{
-    setObjectName("SubtitleListPanel");
-    setAttribute(Qt::WA_StyledBackground);
-    setStyleSheet(R"(
+void SubtitleListPanel::setupUi() {
+  setObjectName("SubtitleListPanel");
+  setAttribute(Qt::WA_StyledBackground);
+  setStyleSheet(R"(
         QWidget#SubtitleListPanel {
             background-color: #1e1e1e;
             border-radius: 10px;
         }
     )");
 
-    auto* layout = new QVBoxLayout(this);
-    layout->setContentsMargins(0, 0, 0, 0);
-    layout->setSpacing(0);
+  auto *layout = new QVBoxLayout(this);
+  layout->setContentsMargins(0, 0, 0, 0);
+  layout->setSpacing(0);
 
-    // --- Panel header (tabs) ---
-    auto* panelHeader = new QFrame(this);
-    panelHeader->setFixedHeight(40);
-    panelHeader->setStyleSheet(R"(
+  // --- Panel header (tabs) ---
+  auto *panelHeader = new QFrame(this);
+  panelHeader->setFixedHeight(40);
+  panelHeader->setStyleSheet(R"(
         QFrame {
             background-color: #262626;
             border-top-left-radius: 10px;
@@ -50,17 +46,17 @@ void SubtitleListPanel::setupUi()
             border: none;
         }
     )");
-    auto* phLayout = new QHBoxLayout(panelHeader);
-    phLayout->setContentsMargins(12, 6, 0, 6);
-    phLayout->setSpacing(4);
-    phLayout->setAlignment(Qt::AlignLeft | Qt::AlignVCenter);
+  auto *phLayout = new QHBoxLayout(panelHeader);
+  phLayout->setContentsMargins(12, 6, 0, 6);
+  phLayout->setSpacing(4);
+  phLayout->setAlignment(Qt::AlignLeft | Qt::AlignVCenter);
 
-    auto addTab = [&](const QString& text, bool active) {
-        auto* tab = new QPushButton(text, panelHeader);
-        tab->setFixedSize(60, 28);
-        QString bg = active ? "#333333" : "#262626";
-        QString fg = active ? "#e5e5e5" : "#9ca3af";
-        tab->setStyleSheet(QString(R"(
+  auto addTab = [&](const QString &text, bool active) {
+    auto *tab = new QPushButton(text, panelHeader);
+    tab->setFixedSize(60, 28);
+    QString bg = active ? "#333333" : "#262626";
+    QString fg = active ? "#e5e5e5" : "#9ca3af";
+    tab->setStyleSheet(QString(R"(
             QPushButton {
                 background-color: %1;
                 color: %2;
@@ -69,53 +65,55 @@ void SubtitleListPanel::setupUi()
                 font-family: Inter, sans-serif;
                 font-size: 12px;
             }
-        )").arg(bg, fg));
-        phLayout->addWidget(tab);
-    };
+        )")
+                           .arg(bg, fg));
+    phLayout->addWidget(tab);
+  };
 
-    addTab("字幕", true);
-    addTab("预设", false);
-    addTab("自定义", false);
-    addTab("动画", false);
-    phLayout->addStretch();
-    layout->addWidget(panelHeader);
+  addTab("字幕", true);
+  addTab("预设", false);
+  addTab("自定义", false);
+  addTab("动画", false);
+  phLayout->addStretch();
+  layout->addWidget(panelHeader);
 
-    // --- Panel content ---
-    auto* panelContent = new QFrame(this);
-    panelContent->setStyleSheet("background-color: transparent; border: none;");
-    panelContent->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
-    auto* pcLayout = new QVBoxLayout(panelContent);
-    pcLayout->setContentsMargins(12, 12, 12, 12);
-    pcLayout->setSpacing(0);
+  // --- Panel content ---
+  auto *panelContent = new QFrame(this);
+  panelContent->setStyleSheet("background-color: transparent; border: none;");
+  panelContent->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
+  auto *pcLayout = new QVBoxLayout(panelContent);
+  pcLayout->setContentsMargins(12, 12, 12, 12);
+  pcLayout->setSpacing(0);
 
-    // Search bar
-    auto* searchBar = new QFrame(panelContent);
-    searchBar->setFixedHeight(40);
-    searchBar->setStyleSheet("background-color: transparent; border: none;");
-    auto* sbLayout = new QHBoxLayout(searchBar);
-    sbLayout->setContentsMargins(0, 0, 0, 0);
-    sbLayout->setAlignment(Qt::AlignVCenter);
+  // Search bar
+  auto *searchBar = new QFrame(panelContent);
+  searchBar->setFixedHeight(40);
+  searchBar->setStyleSheet("background-color: transparent; border: none;");
+  auto *sbLayout = new QHBoxLayout(searchBar);
+  sbLayout->setContentsMargins(0, 0, 0, 0);
+  sbLayout->setAlignment(Qt::AlignVCenter);
 
-    // Search input container (icon + text inside a single frame)
-    auto* searchInput = new QFrame(searchBar);
-    searchInput->setFixedHeight(28);
-    searchInput->setStyleSheet("background-color: #141414; border-radius: 5px;");
-    auto* siLayout = new QHBoxLayout(searchInput);
-    siLayout->setContentsMargins(4, 0, 8, 0);
-    siLayout->setSpacing(6);
-    siLayout->setAlignment(Qt::AlignVCenter);
+  // Search input container (icon + text inside a single frame)
+  auto *searchInput = new QFrame(searchBar);
+  searchInput->setFixedHeight(28);
+  searchInput->setStyleSheet("background-color: #141414; border-radius: 5px;");
+  auto *siLayout = new QHBoxLayout(searchInput);
+  siLayout->setContentsMargins(4, 0, 8, 0);
+  siLayout->setSpacing(6);
+  siLayout->setAlignment(Qt::AlignVCenter);
 
-    auto* searchIcon = new QLabel(searchInput);
-    searchIcon->setText("\u2315"); // ⌕ search icon
-    searchIcon->setStyleSheet("color: #6b7280; font-size: 24px; background: transparent;");
-    searchIcon->setFixedSize(24, 24);
-    searchIcon->setAlignment(Qt::AlignCenter);
-    siLayout->addWidget(searchIcon);
+  auto *searchIcon = new QLabel(searchInput);
+  searchIcon->setText("\u2315"); // ⌕ search icon
+  searchIcon->setStyleSheet(
+      "color: #6b7280; font-size: 24px; background: transparent;");
+  searchIcon->setFixedSize(24, 24);
+  searchIcon->setAlignment(Qt::AlignCenter);
+  siLayout->addWidget(searchIcon);
 
-    searchEdit_ = new QLineEdit(searchInput);
-    searchEdit_->setPlaceholderText("请输入查找内容");
-    searchEdit_->setFixedHeight(28);
-    searchEdit_->setStyleSheet(R"(
+  searchEdit_ = new QLineEdit(searchInput);
+  searchEdit_->setPlaceholderText("请输入查找内容");
+  searchEdit_->setFixedHeight(28);
+  searchEdit_->setStyleSheet(R"(
         QLineEdit {
             background-color: transparent;
             color: #d1d5db;
@@ -124,64 +122,66 @@ void SubtitleListPanel::setupUi()
             font-size: 12px;
         }
     )");
-    siLayout->addWidget(searchEdit_);
+  siLayout->addWidget(searchEdit_);
 
-    sbLayout->addWidget(searchInput);
-    pcLayout->addWidget(searchBar);
+  sbLayout->addWidget(searchInput);
+  pcLayout->addWidget(searchBar);
 
-    connect(searchEdit_, &QLineEdit::textChanged, this, [this](const QString& text) {
-        model_->setFilterText(text);
-    });
+  connect(searchEdit_, &QLineEdit::textChanged, this,
+          [this](const QString &text) { model_->setFilterText(text); });
 
-    // List container
-    auto* listContainer = new QFrame(panelContent);
-    listContainer->setStyleSheet(R"(
+  // List container
+  auto *listContainer = new QFrame(panelContent);
+  listContainer->setStyleSheet(R"(
         QFrame {
             background-color: #141414;
             border-radius: 5px;
         }
     )");
-    listContainer->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
-    auto* lcLayout = new QVBoxLayout(listContainer);
-    lcLayout->setContentsMargins(0, 0, 0, 0);
-    lcLayout->setSpacing(0);
+  listContainer->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
+  auto *lcLayout = new QVBoxLayout(listContainer);
+  lcLayout->setContentsMargins(0, 0, 0, 0);
+  lcLayout->setSpacing(0);
 
-    // Table header
-    auto* tableHeader = new QFrame(listContainer);
-    tableHeader->setFixedHeight(32);
-    tableHeader->setStyleSheet("background-color: transparent; border: none;");
-    auto* thLayout = new QHBoxLayout(tableHeader);
-    thLayout->setContentsMargins(12, 0, 12, 0);
-    thLayout->setSpacing(12);
-    thLayout->setAlignment(Qt::AlignVCenter);
+  // Table header
+  auto *tableHeader = new QFrame(listContainer);
+  tableHeader->setFixedHeight(32);
+  tableHeader->setStyleSheet("background-color: transparent; border: none;");
+  auto *thLayout = new QHBoxLayout(tableHeader);
+  thLayout->setContentsMargins(12, 0, 12, 0);
+  thLayout->setSpacing(12);
+  thLayout->setAlignment(Qt::AlignVCenter);
 
-    auto* headerLeft = new QFrame(tableHeader);
-    headerLeft->setStyleSheet("background-color: transparent; border: none;");
-    auto* hlLayout = new QHBoxLayout(headerLeft);
-    hlLayout->setContentsMargins(0, 0, 0, 0);
-    hlLayout->setSpacing(80);
-    hlLayout->setAlignment(Qt::AlignVCenter);
+  auto *headerLeft = new QFrame(tableHeader);
+  headerLeft->setStyleSheet("background-color: transparent; border: none;");
+  auto *hlLayout = new QHBoxLayout(headerLeft);
+  hlLayout->setContentsMargins(0, 0, 0, 0);
+  hlLayout->setSpacing(80);
+  hlLayout->setAlignment(Qt::AlignVCenter);
 
-    auto* headerTime = new QLabel("时间码", headerLeft);
-    headerTime->setStyleSheet("color: #9ca3af; font-family: Inter, sans-serif; font-size: 11px; background: transparent;");
-    hlLayout->addWidget(headerTime);
+  auto *headerTime = new QLabel("时间码", headerLeft);
+  headerTime->setStyleSheet("color: #9ca3af; font-family: Inter, sans-serif; "
+                            "font-size: 11px; background: transparent;");
+  hlLayout->addWidget(headerTime);
 
-    auto* headerText = new QLabel("字幕", headerLeft);
-    headerText->setStyleSheet("color: #9ca3af; font-family: Inter, sans-serif; font-size: 11px; background: transparent;");
-    hlLayout->addWidget(headerText);
+  auto *headerText = new QLabel("字幕", headerLeft);
+  headerText->setStyleSheet("color: #9ca3af; font-family: Inter, sans-serif; "
+                            "font-size: 11px; background: transparent;");
+  hlLayout->addWidget(headerText);
 
-    thLayout->addWidget(headerLeft);
-    thLayout->addStretch();
+  thLayout->addWidget(headerLeft);
+  thLayout->addStretch();
 
-    auto* headerAction = new QLabel("操作", tableHeader);
-    headerAction->setStyleSheet("color: #9ca3af; font-family: Inter, sans-serif; font-size: 11px; background: transparent;");
-    thLayout->addWidget(headerAction);
+  auto *headerAction = new QLabel("操作", tableHeader);
+  headerAction->setStyleSheet("color: #9ca3af; font-family: Inter, sans-serif; "
+                              "font-size: 11px; background: transparent;");
+  thLayout->addWidget(headerAction);
 
-    lcLayout->addWidget(tableHeader);
+  lcLayout->addWidget(tableHeader);
 
-    // Subtitle list
-    listView_ = new QListView(listContainer);
-    listView_->setStyleSheet(R"(
+  // Subtitle list
+  listView_ = new QListView(listContainer);
+  listView_->setStyleSheet(R"(
         QListView {
             background-color: transparent;
             border: none;
@@ -197,53 +197,67 @@ void SubtitleListPanel::setupUi()
             border: none;
         }
     )");
-    listView_->setSelectionMode(QAbstractItemView::SingleSelection);
-    listView_->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+  listView_->setSelectionMode(QAbstractItemView::SingleSelection);
+  listView_->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
 
-    model_ = new SubtitleListModel(this);
-    listView_->setModel(model_);
+  model_ = new SubtitleListModel(this);
+  listView_->setModel(model_);
 
-    delegate_ = new SubtitleListDelegate(this);
-    listView_->setItemDelegate(delegate_);
+  delegate_ = new SubtitleListDelegate(this);
+  listView_->setItemDelegate(delegate_);
 
-    connect(delegate_, &SubtitleListDelegate::deleteClicked, this, [this](const QString& id) {
-        if (track_) {
-            track_->removeItem(id);
-        }
-    });
+  connect(delegate_, &SubtitleListDelegate::deleteClicked, this,
+          [this](const QString &id) {
+            if (track_) {
+              track_->removeItem(id);
+            }
+          });
 
-    listView_->setMouseTracking(true);
-    listView_->installEventFilter(this);
+  listView_->setMouseTracking(true);
+  listView_->viewport()->installEventFilter(this);
 
-    connect(listView_, &QListView::clicked, this, &SubtitleListPanel::onItemClicked);
+  connect(listView_, &QListView::clicked, this,
+          &SubtitleListPanel::onItemClicked);
 
-    lcLayout->addWidget(listView_);
-    pcLayout->addWidget(listContainer);
-    layout->addWidget(panelContent);
+  lcLayout->addWidget(listView_);
+  pcLayout->addWidget(listContainer);
+  layout->addWidget(panelContent);
 }
 
-void SubtitleListPanel::onItemClicked(const QModelIndex& index)
-{
-    if (!index.isValid()) return;
-    QString id = model_->data(index, SubtitleListModel::IdRole).toString();
-    if (track_) {
-        track_->selectItem(id);
-    }
-    emit itemSelected(id);
+void SubtitleListPanel::onItemClicked(const QModelIndex &index) {
+  if (!index.isValid())
+    return;
+  QString id = model_->data(index, SubtitleListModel::IdRole).toString();
+  if (track_) {
+    track_->selectItem(id);
+  }
+  emit itemSelected(id);
 }
 
-bool SubtitleListPanel::eventFilter(QObject* watched, QEvent* event)
-{
-    if (watched == listView_) {
-        if (event->type() == QEvent::MouseMove) {
-            auto* me = static_cast<QMouseEvent*>(event);
-            QModelIndex index = listView_->indexAt(me->pos());
-            delegate_->setHoveredIndex(index);
-            return true;
-        } else if (event->type() == QEvent::Leave) {
-            delegate_->setHoveredIndex(QModelIndex());
-            return true;
+bool SubtitleListPanel::eventFilter(QObject *watched, QEvent *event) {
+  if (watched == listView_->viewport()) {
+    if (event->type() == QEvent::MouseMove) {
+      auto *me = static_cast<QMouseEvent *>(event);
+      QModelIndex index = listView_->indexAt(me->pos());
+      int button = 0;
+      if (index.isValid()) {
+        QStyleOptionViewItem option;
+        option.initFrom(listView_);
+        option.rect = listView_->visualRect(index);
+        QRect splitRect = delegate_->splitButtonRect(option);
+        QRect deleteRect = delegate_->deleteButtonRect(option);
+        if (splitRect.contains(me->pos())) {
+          button = 1;
+        } else if (deleteRect.contains(me->pos())) {
+          button = 2;
         }
+      }
+      delegate_->setHoveredIndex(index, button);
+      return false;
+    } else if (event->type() == QEvent::Leave) {
+      delegate_->setHoveredIndex(QModelIndex(), 0);
+      return false;
     }
-    return QWidget::eventFilter(watched, event);
+  }
+  return QWidget::eventFilter(watched, event);
 }
