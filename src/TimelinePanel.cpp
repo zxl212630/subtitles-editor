@@ -1,21 +1,20 @@
 #include "TimelinePanel.h"
-#include "SubtitleTrack.h"
-#include "SubtitleItem.h"
 #include "QUuid"
+#include "SubtitleItem.h"
+#include "SubtitleTrack.h"
 
-#include <QPainter>
-#include <QPainterPath>
-#include <QMouseEvent>
 #include <QFontDatabase>
 #include <QMimeData>
+#include <QMouseEvent>
+#include <QPainter>
+#include <QPainterPath>
+#include <QTimer>
 
-TimelinePanel::TimelinePanel(QWidget* parent)
-    : QWidget(parent)
-{
-    setObjectName("TimelinePanel");
-    setAttribute(Qt::WA_StyledBackground);
-    setAcceptDrops(true);
-    setStyleSheet(R"(
+TimelinePanel::TimelinePanel(QWidget *parent) : QWidget(parent) {
+  setObjectName("TimelinePanel");
+  setAttribute(Qt::WA_StyledBackground);
+  setAcceptDrops(true);
+  setStyleSheet(R"(
         QWidget#TimelinePanel {
             background-color: #1e1e1e;
             border-radius: 10px;
@@ -23,244 +22,259 @@ TimelinePanel::TimelinePanel(QWidget* parent)
     )");
 }
 
-void TimelinePanel::setTrack(SubtitleTrack* track)
-{
-    if (track_) {
-        disconnect(track_, &SubtitleTrack::dataChanged, this, QOverload<>::of(&TimelinePanel::update));
-        disconnect(track_, &SubtitleTrack::itemSelected, this, QOverload<>::of(&TimelinePanel::update));
-    }
-    track_ = track;
-    if (track_) {
-        connect(track_, &SubtitleTrack::dataChanged, this, QOverload<>::of(&TimelinePanel::update));
-        connect(track_, &SubtitleTrack::itemSelected, this, QOverload<>::of(&TimelinePanel::update));
-    }
-    update();
+void TimelinePanel::setTrack(SubtitleTrack *track) {
+  if (track_) {
+    disconnect(track_, &SubtitleTrack::dataChanged, this,
+               QOverload<>::of(&TimelinePanel::update));
+    disconnect(track_, &SubtitleTrack::itemSelected, this,
+               QOverload<>::of(&TimelinePanel::update));
+  }
+  track_ = track;
+  if (track_) {
+    connect(track_, &SubtitleTrack::dataChanged, this,
+            QOverload<>::of(&TimelinePanel::update));
+    connect(track_, &SubtitleTrack::itemSelected, this,
+            QOverload<>::of(&TimelinePanel::update));
+  }
+  update();
 }
 
-void TimelinePanel::paintEvent(QPaintEvent* /*event*/)
-{
-    QPainter painter(this);
-    painter.setRenderHint(QPainter::Antialiasing);
+void TimelinePanel::paintEvent(QPaintEvent * /*event*/) {
+  QPainter painter(this);
+  painter.setRenderHint(QPainter::Antialiasing);
 
-    // Clip to rounded rect so border-radius works with paintEvent
-    QPainterPath clipPath;
-    clipPath.addRoundedRect(rect().adjusted(1, 1, -1, -1), 10, 10);
-    painter.setClipPath(clipPath);
+  // Clip to rounded rect so border-radius works with paintEvent
+  QPainterPath clipPath;
+  clipPath.addRoundedRect(rect().adjusted(1, 1, -1, -1), 10, 10);
+  painter.setClipPath(clipPath);
 
-    // Background
-    painter.fillRect(rect(), QColor("#1e1e1e"));
+  // Background
+  painter.fillRect(rect(), QColor("#1e1e1e"));
 
-    drawRuler(painter);
-    drawSubtitleTrack(painter, RULER_HEIGHT);
-    drawVideoTrack(painter, RULER_HEIGHT + SUBTITLE_TRACK_HEIGHT);
-    drawPlayhead(painter);
+  drawRuler(painter);
+  drawSubtitleTrack(painter, RULER_HEIGHT);
+  drawVideoTrack(painter, RULER_HEIGHT + SUBTITLE_TRACK_HEIGHT);
+  drawPlayhead(painter);
 }
 
-void TimelinePanel::drawRuler(QPainter& painter)
-{
-    painter.setPen(QColor("#6b7280"));
-    QFont font = painter.font();
-    font.setPointSize(8);
-    painter.setFont(font);
+void TimelinePanel::drawRuler(QPainter &painter) {
+  painter.setPen(QColor("#6b7280"));
+  QFont font = painter.font();
+  font.setPointSize(8);
+  painter.setFont(font);
 
-    int contentWidth = width() - TRACK_HEAD_WIDTH;
-    int seconds = totalDurationMs_ / 1000;
-    for (int s = 0; s <= seconds; ++s) {
-        int x = TRACK_HEAD_WIDTH + s * PIXELS_PER_SECOND;
-        if (x > width()) break;
+  int contentWidth = width() - TRACK_HEAD_WIDTH;
+  int seconds = totalDurationMs_ / 1000;
+  for (int s = 0; s <= seconds; ++s) {
+    int x = TRACK_HEAD_WIDTH + s * PIXELS_PER_SECOND;
+    if (x > width())
+      break;
 
-        QString label = QString("00:00:%1:00").arg(s, 2, 10, QChar('0'));
-        painter.drawText(x - 20, 8, 60, 14, Qt::AlignCenter, label);
+    QString label = QString("00:00:%1:00").arg(s, 2, 10, QChar('0'));
+    painter.drawText(x - 20, 8, 60, 14, Qt::AlignCenter, label);
 
-        painter.setPen(QColor("#333333"));
-        painter.drawLine(x, 24, x, 34);
-        painter.setPen(QColor("#6b7280"));
-    }
-
-    // Minor ticks
-    painter.setPen(QColor("#404040"));
-    for (int s = 0; s < seconds; ++s) {
-        int midX = TRACK_HEAD_WIDTH + s * PIXELS_PER_SECOND + PIXELS_PER_SECOND / 2;
-        painter.drawLine(midX, 28, midX, 31);
-    }
-}
-
-void TimelinePanel::drawSubtitleTrack(QPainter& painter, int y)
-{
-    // Track background
-    painter.fillRect(TRACK_HEAD_WIDTH, y, width() - TRACK_HEAD_WIDTH, SUBTITLE_TRACK_HEIGHT, QColor("#2a2a2a"));
-
-    // Track head
-    painter.setPen(Qt::NoPen);
-    painter.fillRect(0, y, TRACK_HEAD_WIDTH, SUBTITLE_TRACK_HEIGHT, QColor("#262626"));
-    painter.setPen(QColor("#9ca3af"));
-    QFont font = painter.font();
-    font.setPointSize(10);
-    painter.setFont(font);
-    painter.drawText(12, y + 18, "T  字幕1");
-
-    // Separator
     painter.setPen(QColor("#333333"));
-    painter.drawLine(TRACK_HEAD_WIDTH, y + SUBTITLE_TRACK_HEIGHT - 1, width(), y + SUBTITLE_TRACK_HEIGHT - 1);
+    painter.drawLine(x, 24, x, 34);
+    painter.setPen(QColor("#6b7280"));
+  }
 
-    if (!track_) return;
-
-    // Subtitle bars
-    for (const auto& item : track_->items()) {
-        int x = TRACK_HEAD_WIDTH + msToPixels(item.startMs);
-        int w = msToPixels(item.endMs - item.startMs);
-        if (w < 4) w = 4;
-
-        QColor barColor = item.selected ? QColor("#0ea5e9") : QColor("#38bdf8");
-        painter.setPen(Qt::NoPen);
-        painter.setBrush(barColor);
-        painter.drawRoundedRect(x, y + 2, w, SUBTITLE_TRACK_HEIGHT - 4, 4, 4);
-
-        painter.setPen(QColor("#e5e5e5"));
-        QFont barFont = painter.font();
-        barFont.setPointSize(9);
-        painter.setFont(barFont);
-        painter.drawText(x + 8, y + 18, item.text);
-    }
+  // Minor ticks
+  painter.setPen(QColor("#404040"));
+  for (int s = 0; s < seconds; ++s) {
+    int midX = TRACK_HEAD_WIDTH + s * PIXELS_PER_SECOND + PIXELS_PER_SECOND / 2;
+    painter.drawLine(midX, 28, midX, 31);
+  }
 }
 
-void TimelinePanel::drawVideoTrack(QPainter& painter, int y)
-{
-    painter.fillRect(TRACK_HEAD_WIDTH, y, width() - TRACK_HEAD_WIDTH, VIDEO_TRACK_HEIGHT, QColor("#2a2a2a"));
+void TimelinePanel::drawSubtitleTrack(QPainter &painter, int y) {
+  // Track background
+  painter.fillRect(TRACK_HEAD_WIDTH, y, width() - TRACK_HEAD_WIDTH,
+                   SUBTITLE_TRACK_HEIGHT, QColor("#2a2a2a"));
 
-    painter.setPen(Qt::NoPen);
-    painter.fillRect(0, y, TRACK_HEAD_WIDTH, VIDEO_TRACK_HEIGHT, QColor("#262626"));
-    painter.setPen(QColor("#9ca3af"));
-    QFont font = painter.font();
-    font.setPointSize(10);
-    painter.setFont(font);
-    painter.drawText(12, y + 18, "F  视频1");
+  // Track head
+  painter.setPen(Qt::NoPen);
+  painter.fillRect(0, y, TRACK_HEAD_WIDTH, SUBTITLE_TRACK_HEIGHT,
+                   QColor("#262626"));
+  painter.setPen(QColor("#9ca3af"));
+  QFont font = painter.font();
+  font.setPointSize(10);
+  painter.setFont(font);
+  painter.drawText(12, y + 18, "T  字幕1");
 
-    // Placeholder video bar
+  // Separator
+  painter.setPen(QColor("#333333"));
+  painter.drawLine(TRACK_HEAD_WIDTH, y + SUBTITLE_TRACK_HEIGHT - 1, width(),
+                   y + SUBTITLE_TRACK_HEIGHT - 1);
+
+  if (!track_)
+    return;
+
+  // Subtitle bars
+  for (const auto &item : track_->items()) {
+    int x = TRACK_HEAD_WIDTH + msToPixels(item.startMs);
+    int w = msToPixels(item.endMs - item.startMs);
+    if (w < 4)
+      w = 4;
+
+    QColor barColor = item.selected ? QColor("#0ea5e9") : QColor("#38bdf8");
     painter.setPen(Qt::NoPen);
-    painter.setBrush(QColor("#0284c7"));
-    painter.drawRoundedRect(TRACK_HEAD_WIDTH + 4, y + 2, 400, VIDEO_TRACK_HEIGHT - 4, 4, 4);
+    painter.setBrush(barColor);
+    painter.drawRoundedRect(x, y + 2, w, SUBTITLE_TRACK_HEIGHT - 4, 4, 4);
+
     painter.setPen(QColor("#e5e5e5"));
-    painter.drawText(TRACK_HEAD_WIDTH + 16, y + 50, "video.mp4");
+    QFont barFont = painter.font();
+    barFont.setPointSize(9);
+    painter.setFont(barFont);
+    painter.drawText(x + 8, y + 18, item.text);
+  }
 }
 
-void TimelinePanel::drawPlayhead(QPainter& painter)
-{
-    int x = TRACK_HEAD_WIDTH + msToPixels(currentTimeMs_);
-    const int triangleTop = 19;
-    const int triangleTip = 31;
+void TimelinePanel::drawVideoTrack(QPainter &painter, int y) {
+  painter.fillRect(TRACK_HEAD_WIDTH, y, width() - TRACK_HEAD_WIDTH,
+                   VIDEO_TRACK_HEIGHT, QColor("#2a2a2a"));
 
-    // Triangle pointer below time labels
-    painter.setPen(Qt::NoPen);
-    painter.setBrush(QColor("#f59e0b"));
-    QPointF triangle[3] = {
-        QPointF(x - 7, triangleTop),
-        QPointF(x + 7, triangleTop),
-        QPointF(x, triangleTip)
-    };
-    painter.drawPolygon(triangle, 3);
+  painter.setPen(Qt::NoPen);
+  painter.fillRect(0, y, TRACK_HEAD_WIDTH, VIDEO_TRACK_HEIGHT,
+                   QColor("#262626"));
+  painter.setPen(QColor("#9ca3af"));
+  QFont font = painter.font();
+  font.setPointSize(10);
+  painter.setFont(font);
+  painter.drawText(12, y + 18, "F  视频1");
 
-    // Vertical line starts from triangle tip
-    painter.setPen(QColor("#f59e0b"));
-    painter.drawLine(x, triangleTip, x, height());
+  // Placeholder video bar
+  painter.setPen(Qt::NoPen);
+  painter.setBrush(QColor("#0284c7"));
+  painter.drawRoundedRect(TRACK_HEAD_WIDTH + 4, y + 2, 400,
+                          VIDEO_TRACK_HEIGHT - 4, 4, 4);
+  painter.setPen(QColor("#e5e5e5"));
+  painter.drawText(TRACK_HEAD_WIDTH + 16, y + 50, "video.mp4");
 }
 
-void TimelinePanel::mousePressEvent(QMouseEvent* event)
-{
-    if (event->x() < TRACK_HEAD_WIDTH) return;
+void TimelinePanel::drawPlayhead(QPainter &painter) {
+  int x = TRACK_HEAD_WIDTH + msToPixels(currentTimeMs_);
+  const int triangleTop = 19;
+  const int triangleTip = 31;
 
-    qint64 ms = pixelsToMs(event->x() - TRACK_HEAD_WIDTH);
-    if (ms < 0) ms = 0;
-    if (ms > totalDurationMs_) ms = totalDurationMs_;
+  // Triangle pointer below time labels
+  painter.setPen(Qt::NoPen);
+  painter.setBrush(QColor("#f59e0b"));
+  QPointF triangle[3] = {QPointF(x - 7, triangleTop),
+                         QPointF(x + 7, triangleTop), QPointF(x, triangleTip)};
+  painter.drawPolygon(triangle, 3);
 
-    currentTimeMs_ = ms;
-    emit timeClicked(ms);
-    update();
+  // Vertical line starts from triangle tip
+  painter.setPen(QColor("#f59e0b"));
+  painter.drawLine(x, triangleTip, x, height());
 }
 
-qint64 TimelinePanel::pixelsToMs(int px) const
-{
-    return static_cast<qint64>(px) * 1000 / PIXELS_PER_SECOND;
+void TimelinePanel::mousePressEvent(QMouseEvent *event) {
+  if (event->x() < TRACK_HEAD_WIDTH)
+    return;
+
+  qint64 ms = pixelsToMs(event->x() - TRACK_HEAD_WIDTH);
+  if (ms < 0)
+    ms = 0;
+  if (ms > totalDurationMs_)
+    ms = totalDurationMs_;
+
+  currentTimeMs_ = ms;
+  emit timeClicked(ms);
+  update();
 }
 
-int TimelinePanel::msToPixels(qint64 ms) const
-{
-    return static_cast<int>(ms * PIXELS_PER_SECOND / 1000);
+qint64 TimelinePanel::pixelsToMs(int px) const {
+  return static_cast<qint64>(px) * 1000 / PIXELS_PER_SECOND;
 }
 
-void TimelinePanel::dragEnterEvent(QDragEnterEvent* event)
-{
-    if (event->mimeData()->hasUrls()) {
-        event->acceptProposedAction();
-    }
+int TimelinePanel::msToPixels(qint64 ms) const {
+  return static_cast<int>(ms * PIXELS_PER_SECOND / 1000);
 }
 
-void TimelinePanel::dropEvent(QDropEvent* event)
-{
-    const QMimeData* mime = event->mimeData();
-    if (!mime->hasUrls()) return;
-
-    QUrl url = mime->urls().first();
-    QString localPath = url.toLocalFile();
-
-    qDebug() << "=== TimelinePanel::dropEvent ===";
-    qDebug() << "Dropped file:" << localPath;
-
-    startAsrPipeline(localPath);
+void TimelinePanel::dragEnterEvent(QDragEnterEvent *event) {
+  if (event->mimeData()->hasUrls()) {
+    event->acceptProposedAction();
+  }
 }
 
-void TimelinePanel::startAsrPipeline(const QString& localPath)
-{
-    qDebug() << "=== Starting ASR Pipeline ===";
-    qDebug() << "File:" << localPath;
+void TimelinePanel::dropEvent(QDropEvent *event) {
+  const QMimeData *mime = event->mimeData();
+  if (!mime->hasUrls())
+    return;
 
-    // Trigger ASR pipeline
-    AudioTranscoder* transcoder = new AudioTranscoder(this);
-    OssUploader* uploader = new OssUploader(this);
-    TencentAsrService* asrService = new TencentAsrService(this);
+  QUrl url = mime->urls().first();
+  QString localPath = url.toLocalFile();
 
-    connect(transcoder, &AudioTranscoder::transcodingFinished, uploader, &OssUploader::upload);
-    connect(uploader, &OssUploader::uploadFinished, asrService, &TencentAsrService::transcribe);
-    connect(asrService, &AsrServiceBase::transcribeFinished, this, [this, transcoder, uploader, asrService](const AsrServiceBase::TranscriptResult& result) {
-        qDebug() << "=== ASR Finished ===";
-        qDebug() << "Success:" << result.success;
-        qDebug() << "Segments count:" << result.segments.size();
-        if (!result.success) {
-            qDebug() << "Error:" << result.errorMessage;
-        }
-        if (result.success) {
-            for (const auto& seg : result.segments) {
-                qDebug() << "Segment:" << seg.startMs << "-" << seg.endMs << ":" << seg.text;
+  qDebug() << "=== TimelinePanel::dropEvent ===";
+  qDebug() << "Dropped file:" << localPath;
+
+  startAsrPipeline(localPath);
+}
+
+void TimelinePanel::startAsrPipeline(const QString &localPath) {
+  qDebug() << "=== Starting ASR Pipeline ===";
+  qDebug() << "File:" << localPath;
+
+  // Trigger ASR pipeline
+  AudioTranscoder *transcoder = new AudioTranscoder(this);
+  OssUploader *uploader = new OssUploader(this);
+  TencentAsrService *asrService = new TencentAsrService(this);
+
+  // Connect pipeline
+  connect(transcoder, &AudioTranscoder::transcodingFinished, uploader,
+          &OssUploader::upload);
+  connect(uploader, &OssUploader::uploadFinished, asrService,
+          &TencentAsrService::transcribe);
+  connect(asrService, &AsrServiceBase::transcribeFinished, this,
+          [this, transcoder, uploader,
+           asrService](const AsrServiceBase::TranscriptResult &result) {
+            if (!result.success) {
+              qWarning() << "ASR failed:" << result.errorMessage;
+              emit asrFailed(
+                  QString("语音识别失败: %1").arg(result.errorMessage));
+            } else {
+              qDebug() << "=== ASR Finished ===";
+              qDebug() << "Segments count:" << result.segments.size();
+              for (const auto &seg : result.segments) {
+                qDebug() << "Segment:" << seg.startMs << "-" << seg.endMs << ":"
+                         << seg.text;
                 SubtitleItem item;
                 item.id = QUuid::createUuid().toString();
                 item.text = seg.text;
                 item.startMs = seg.startMs;
                 item.endMs = seg.endMs;
                 track_->addItem(item);
+              }
+              emit asrSucceeded();
             }
-        }
-        // Clean up service objects
-        transcoder->deleteLater();
-        uploader->deleteLater();
-        asrService->deleteLater();
-    });
+            transcoder->deleteLater();
+            uploader->deleteLater();
+            asrService->deleteLater();
+          });
 
-    connect(transcoder, &AudioTranscoder::transcodingFailed, this, [this, transcoder, uploader, asrService](const QString& error) {
-        qWarning() << "Transcoding failed:" << error;
-        transcoder->deleteLater();
-        uploader->deleteLater();
-        asrService->deleteLater();
-    });
+  connect(transcoder, &AudioTranscoder::transcodingFailed, this,
+          [this, uploader, asrService](const QString &error) {
+            qWarning() << "Transcoding failed:" << error;
+            emit asrFailed(QString("转码失败: %1").arg(error));
+            uploader->deleteLater();
+            asrService->deleteLater();
+          });
 
-    connect(uploader, &OssUploader::uploadFailed, this, [this, transcoder, uploader, asrService](const QString& error) {
-        qWarning() << "Upload failed:" << error;
-        transcoder->deleteLater();
-        uploader->deleteLater();
-        asrService->deleteLater();
-    });
+  connect(uploader, &OssUploader::uploadFailed, this,
+          [this, transcoder, asrService](const QString &error) {
+            qWarning() << "Upload failed:" << error;
+            QString displayError = error;
+            if (error.contains("AccessDenied")) {
+              displayError = " OSS 上传失败：权限不足。请检查 RAM 用户的 "
+                             "oss:PutObject 权限是否已授权。";
+            } else if (error.contains("Connection closed")) {
+              displayError =
+                  " OSS 上传失败：连接被拒绝。请检查 OSS Bucket 权限设置。";
+            }
+            emit asrFailed(displayError);
+            transcoder->deleteLater();
+            asrService->deleteLater();
+          });
 
-    // Fixed test path for debugging
-    QString testPath = "/Users/zxl/Documents/创影测试/智能唱词/唱词测试素材/李少波唱词/李少波上唱词.mp4";
-    qDebug() << "Using test path:" << testPath;
-    transcoder->transcode(testPath);
+  transcoder->transcode(localPath);
 }

@@ -11,6 +11,7 @@
 #include <QVBoxLayout>
 #include <QFrame>
 #include <QSplitter>
+#include <QMessageBox>
 #include <QWindowKit/QWKWidgets/widgetwindowagent.h>
 #include <QUuid>
 
@@ -123,6 +124,14 @@ void AppWindow::setupSplitterLayout()
                 Q_UNUSED(ms)
                 // TODO: update video preview time display
             });
+
+    connect(d->timelinePanel, &TimelinePanel::asrFailed, this, [](const QString& error) {
+        QMessageBox::critical(nullptr, "语音识别失败", error);
+    });
+
+    connect(d->timelinePanel, &TimelinePanel::asrSucceeded, this, []() {
+        QMessageBox::information(nullptr, "语音识别完成", "字幕已成功生成！");
+    });
 
     // Top horizontal splitter
     d->topSplitter = new QSplitter(Qt::Horizontal, this);

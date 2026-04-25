@@ -20,7 +20,8 @@ OssUploader::OssUploader(QObject *parent) : QObject(parent) {
 QString OssUploader::generateOssPath(const QString &localPath) {
   QFileInfo info(localPath);
   QString timestamp = QString::number(QDateTime::currentMSecsSinceEpoch());
-  return "asr/" + timestamp + "_" + info.fileName();
+  // Use timestamp-based name to avoid Chinese characters in OSS path
+  return "asr/" + timestamp + "_audio.wav";
 }
 
 QByteArray OssUploader::hmacSha1(const QByteArray &key,
@@ -106,17 +107,23 @@ void OssUploader::upload(const QString &localFilePath) {
       QDateTime::currentDateTimeUtc().toString("ddd, dd MMM yyyy HH:mm:ss") +
       " GMT";
 
+  // Calculate Content-MD5 first (needed for signature)
+  QByteArray contentMd5 = QCryptographicHash::hash(fileData, QCryptographicHash::Md5).toBase64();
+  qDebug() << "Content-MD5:" << contentMd5;
+
   // StringToSign format:
   // PUT\n
-  // \n (empty Content-MD5)
+  // {Content-MD5}\n
   // {contentType}\n
   // {date}\n
   // /{bucket}/{object}
-  QString stringToSign = QString("PUT\n\n%1\n%2\n/%3/%4")
-                             .arg(contentType)
-                             .arg(date)
-                             .arg(ossBucket_)
-                             .arg(ossPath);
+  //
+  // Note: Object key in URL should be URL-encoded when signing
+  QString stringToSign = "PUT\n";
+  stringToSign += QString::fromLatin1(contentMd5) + "\n";
+  stringToSign += contentType + "\n";
+  stringToSign += date + "\n";
+  stringToSign += "/" + ossBucket_ + "/" + ossPath;
 
   qDebug() << "=== Signature Calculation ===";
   qDebug() << "StringToSign (raw):" << stringToSign;
@@ -136,9 +143,9 @@ void OssUploader::upload(const QString &localFilePath) {
   qDebug() << "Authorization header:" << authHeader;
 
   request.setRawHeader("Authorization", authHeader.toUtf8());
+  request.setRawHeader("Content-Type", contentType.toUtf8());
+  request.setRawHeader("Content-MD5", contentMd5);
   request.setRawHeader("Date", date.toUtf8());
-  request.setRawHeader("Content-Type", "audio/wav");
-  request.setRawHeader("Content-Length", QByteArray::number(fileData.size()));
 
   qDebug() << "=== Sending Request ===";
 

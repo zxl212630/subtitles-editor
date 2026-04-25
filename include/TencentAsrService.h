@@ -23,6 +23,8 @@ private:
   void queryTaskStatus(const QString &taskId);
   void parseResultText(const QString &resultStr,
                        QList<TranscriptSegment> &segments);
+  QByteArray signTC3(const QByteArray &key, const QByteArray &data);
+  QJsonObject payload(const QString &audioUrl);
 
   QString secretId_;
   QString secretKey_;

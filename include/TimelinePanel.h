@@ -21,6 +21,8 @@ public:
 signals:
     void timeClicked(qint64 ms);
     void itemSelected(const QString& id);
+    void asrFailed(const QString& error);
+    void asrSucceeded();
 
 protected:
     void paintEvent(QPaintEvent* event) override;

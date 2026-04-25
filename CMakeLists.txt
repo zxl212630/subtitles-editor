@@ -132,6 +132,22 @@ if(APPLE)
 endif()
 
 # ============================================================
+# Test executable
+# ============================================================
+add_executable(test_asr_pipeline tests/test_asr_pipeline.cpp)
+
+target_include_directories(test_asr_pipeline PRIVATE
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src>
+    "${Qt6_ROOT}/include"
+)
+
+target_link_libraries(test_asr_pipeline PRIVATE
+    Qt::Core
+    Qt::Network
+)
+
+# ============================================================
 # Install
 # ============================================================
 install(TARGETS ${PROJECT_NAME} DESTINATION bin)

@@ -1,5 +1,8 @@
 #include "TencentAsrService.h"
 #include "ConfigManager.h"
+#include <QCryptographicHash>
+#include <QDateTime>
+#include <QDebug>
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QNetworkAccessManager>
@@ -21,28 +24,140 @@ void TencentAsrService::transcribe(const QString &audioUrl) {
   createRecTask(audioUrl);
 }
 
+QByteArray TencentAsrService::signTC3(const QByteArray &key,
+                                      const QByteArray &data) {
+  int blockSize = 64;
+
+  // If key > blockSize, hash it
+  QByteArray keyData = key;
+  if (keyData.length() > blockSize) {
+    keyData = QCryptographicHash::hash(keyData, QCryptographicHash::Sha256);
+  }
+
+  // Pad key with zeros to blockSize
+  while (keyData.length() < blockSize) {
+    keyData.append('\0');
+  }
+
+  QByteArray ipad(blockSize, 0x36);
+  QByteArray opad(blockSize, 0x5c);
+
+  for (int i = 0; i < blockSize; i++) {
+    ipad[i] = keyData[i] ^ 0x36;
+    opad[i] = keyData[i] ^ 0x5c;
+  }
+
+  QByteArray innerData = ipad + data;
+  QByteArray innerHash =
+      QCryptographicHash::hash(innerData, QCryptographicHash::Sha256);
+  QByteArray outerData = opad + innerHash;
+  return QCryptographicHash::hash(outerData, QCryptographicHash::Sha256);
+}
+
 void TencentAsrService::createRecTask(const QString &audioUrl) {
-  QUrl url("https://asr.tencentcloudapi.com/");
+  qDebug() << "=== Creating ASR Task ===";
+  qDebug() << "SecretId:" << secretId_;
+  qDebug() << "AppId:" << appId_;
+  qDebug() << "Audio URL:" << audioUrl;
 
-  QJsonObject payload;
-  payload["AppId"] = appId_;
-  payload["ChannelNum"] = 1;
-  payload["EngineType"] = "16k_zh";
-  payload["Url"] = audioUrl;
-  payload["SourceType"] = 0; // 0=URL
+  QString host = "asr.tencentcloudapi.com";
+  QString path = "/";
+  QString timestamp = QString::number(QDateTime::currentSecsSinceEpoch());
+  QString date = QDateTime::currentDateTimeUtc().toString("yyyy-MM-dd");
+  QString service = host.split(".").first();
 
+  // Build canonical request
+  // All headers sorted alphabetically, lowercase, each ending with newline
+  QString httpRequestMethod = "POST";
+  QString canonicalUri = "/";
+  QString canonicalQueryString = "";
+  QString canonicalHeaders = "content-type:application/json; charset=utf-8\n"
+                             "host:" +
+                             host +
+                             "\n"
+                             "x-tc-action:CreateRecTask\n"
+                             "x-tc-region:ap-guangzhou\n"
+                             "x-tc-timestamp:" +
+                             timestamp +
+                             "\n"
+                             "x-tc-version:2019-06-14\n";
+  QString signedHeaders =
+      "content-type;host;x-tc-action;x-tc-region;x-tc-timestamp;x-tc-version";
+  QString hashedRequestPayload = QString(
+      QCryptographicHash::hash(QJsonDocument(payload(audioUrl)).toJson(),
+                               QCryptographicHash::Sha256)
+          .toHex());
+
+  QString canonicalRequest = httpRequestMethod + "\n" + canonicalUri + "\n" +
+                             canonicalQueryString + "\n" + canonicalHeaders +
+                             signedHeaders + "\n" + hashedRequestPayload;
+
+  qDebug() << "=== Canonical Request ===";
+  qDebug() << canonicalRequest;
+
+  // Build string to sign
+  QString algorithm = "TC3-HMAC-SHA256";
+  QString credentialScope = date + "/" + service + "/tc3_request";
+  QString hashedCanonicalRequest =
+      QString(QCryptographicHash::hash(canonicalRequest.toUtf8(),
+                                       QCryptographicHash::Sha256)
+                  .toHex());
+
+  QString stringToSign = algorithm + "\n" + timestamp + "\n" + credentialScope +
+                         "\n" + hashedCanonicalRequest;
+
+  qDebug() << "=== String to Sign ===";
+  qDebug() << stringToSign;
+
+  // TC3-HMAC-SHA256 signature: 4-step key derivation
+  // Step 1: HMAC("TC3" + secretKey, date)
+  QByteArray secretDate = signTC3(("TC3" + secretKey_).toUtf8(), date.toUtf8());
+  // Step 2: HMAC(secretDate, service)
+  QByteArray secretService = signTC3(secretDate, service.toUtf8());
+  // Step 3: HMAC(secretService, "tc3_request")
+  QByteArray secretSigning = signTC3(secretService, QByteArray("tc3_request"));
+  // Step 4: HMAC(secretSigning, canonicalRequest)
+  QByteArray signature = signTC3(secretSigning, canonicalRequest.toUtf8());
+  QString signatureStr = QString(signature.toHex());
+
+  // Build authorization header
+  QString authorization =
+      QString(
+          "TC3-HMAC-SHA256 Credential=%1/%2, SignedHeaders=%3, Signature=%4")
+          .arg(secretId_)
+          .arg(credentialScope)
+          .arg(signedHeaders)
+          .arg(signatureStr);
+
+  qDebug() << "=== Authorization ===";
+  qDebug() << authorization;
+
+  QUrl url("https://" + host);
   QNetworkRequest request(url);
-  request.setRawHeader("Content-Type", "application/json");
+  request.setRawHeader("Content-Type", "application/json; charset=utf-8");
+  request.setRawHeader("Host", host.toUtf8());
   request.setRawHeader("X-TC-Action", "CreateRecTask");
-  request.setRawHeader("X-TC-Timestamp", QString::number(QDateTime::currentSecsSinceEpoch()).toUtf8());
+  request.setRawHeader("X-TC-Timestamp", timestamp.toUtf8());
   request.setRawHeader("X-TC-Version", "2019-06-14");
-  request.setRawHeader("X-TC-Region", "");
+  request.setRawHeader("X-TC-Region", "ap-guangzhou");
+  request.setRawHeader("Authorization", authorization.toUtf8());
 
-  QNetworkReply *reply =
-      networkManager_->post(request, QJsonDocument(payload).toJson());
+  QByteArray payloadBytes = QJsonDocument(payload(audioUrl)).toJson();
+  qDebug() << "Request payload:" << QString::fromUtf8(payloadBytes);
 
+  QNetworkReply *reply = networkManager_->post(request, payloadBytes);
   connect(reply, &QNetworkReply::finished, this,
           [this, reply]() { onTaskCreated(reply); });
+}
+
+QJsonObject TencentAsrService::payload(const QString &audioUrl) {
+  QJsonObject obj;
+  obj["AppId"] = appId_;
+  obj["ChannelNum"] = 1;
+  obj["EngineType"] = "16k_zh";
+  obj["Url"] = audioUrl;
+  obj["SourceType"] = 0; // 0=URL
+  return obj;
 }
 
 void TencentAsrService::onTaskCreated(QNetworkReply *reply) {
@@ -56,39 +171,112 @@ void TencentAsrService::onTaskCreated(QNetworkReply *reply) {
   }
 
   QByteArray data = reply->readAll();
+  qDebug() << "=== CreateRecTask Response ===";
+  qDebug() << "Raw response:" << QString::fromUtf8(data);
   QJsonDocument doc = QJsonDocument::fromJson(data);
   QJsonObject resp = doc.object();
 
   if (resp.contains("Response")) {
     QJsonObject response = resp["Response"].toObject();
-    currentTaskId_ = QString::number(response["TaskId"].toDouble());
+    if (response.contains("Error")) {
+      QString errorMsg = response["Error"].toObject()["Message"].toString();
+      TranscriptResult result;
+      result.success = false;
+      result.errorMessage = "CreateRecTask failed: " + errorMsg;
+      emit transcribeFinished(result);
+      reply->deleteLater();
+      return;
+    }
+    qDebug() << "Response object:" << response;
+    currentTaskId_ =
+        QString::number(response["TaskId"].toVariant().toLongLong());
+    qDebug() << "Task created, TaskId:" << currentTaskId_;
     queryTaskStatus(currentTaskId_);
   } else {
     TranscriptResult result;
     result.success = false;
-    result.errorMessage = "CreateRecTask failed";
+    result.errorMessage = "CreateRecTask failed: " + QString::fromUtf8(data);
     emit transcribeFinished(result);
   }
   reply->deleteLater();
 }
 
 void TencentAsrService::queryTaskStatus(const QString &taskId) {
-  QUrl url("https://asr.tencentcloudapi.com/");
+  qDebug() << "=== Querying Task Status ===";
+  qDebug() << "TaskId:" << taskId;
 
-  QJsonObject payload;
-  payload["AppId"] = appId_;
-  payload["TaskId"] = taskId.toLongLong();
+  QString host = "asr.tencentcloudapi.com";
+  QString path = "/";
+  QString timestamp = QString::number(QDateTime::currentSecsSinceEpoch());
+  QString date = QDateTime::currentDateTimeUtc().toString("yyyy-MM-dd");
 
+  // Build canonical request for query
+  // All headers sorted alphabetically, lowercase, each ending with newline
+  QString httpRequestMethod = "POST";
+  QString canonicalUri = "/";
+  QString canonicalQueryString = "";
+  QString canonicalHeaders = "content-type:application/json; charset=utf-8\n"
+                             "host:" +
+                             host +
+                             "\n"
+                             "x-tc-action:DescribeTaskStatus\n"
+                             "x-tc-region:ap-guangzhou\n"
+                             "x-tc-timestamp:" +
+                             timestamp +
+                             "\n"
+                             "x-tc-version:2019-06-14\n";
+  QString signedHeaders =
+      "content-type;host;x-tc-action;x-tc-region;x-tc-timestamp;x-tc-version";
+
+  QJsonObject queryPayload;
+  queryPayload["AppId"] = appId_;
+  queryPayload["TaskId"] = taskId.toLongLong();
+  QByteArray payloadBytes = QJsonDocument(queryPayload).toJson();
+  QString hashedRequestPayload =
+      QString(QCryptographicHash::hash(payloadBytes, QCryptographicHash::Sha256)
+                  .toHex());
+
+  QString canonicalRequest = httpRequestMethod + "\n" + canonicalUri + "\n" +
+                             canonicalQueryString + "\n" + canonicalHeaders +
+                             signedHeaders + "\n" + hashedRequestPayload;
+
+  QString algorithm = "TC3-HMAC-SHA256";
+  QString service = host.split(".").first();
+  QString credentialScope = date + "/" + service + "/tc3_request";
+  QString hashedCanonicalRequest =
+      QString(QCryptographicHash::hash(canonicalRequest.toUtf8(),
+                                       QCryptographicHash::Sha256)
+                  .toHex());
+
+  QString stringToSign = algorithm + "\n" + timestamp + "\n" + credentialScope +
+                         "\n" + hashedCanonicalRequest;
+
+  // TC3-HMAC-SHA256 signature: 4-step key derivation
+  QByteArray secretDate = signTC3(("TC3" + secretKey_).toUtf8(), date.toUtf8());
+  QByteArray secretService = signTC3(secretDate, service.toUtf8());
+  QByteArray secretSigning = signTC3(secretService, QByteArray("tc3_request"));
+  QByteArray signature = signTC3(secretSigning, canonicalRequest.toUtf8());
+  QString signatureStr = QString(signature.toHex());
+
+  QString authorization =
+      QString(
+          "TC3-HMAC-SHA256 Credential=%1/%2, SignedHeaders=%3, Signature=%4")
+          .arg(secretId_)
+          .arg(credentialScope)
+          .arg(signedHeaders)
+          .arg(signatureStr);
+
+  QUrl url("https://" + host);
   QNetworkRequest request(url);
-  request.setRawHeader("Content-Type", "application/json");
+  request.setRawHeader("Content-Type", "application/json; charset=utf-8");
+  request.setRawHeader("Host", host.toUtf8());
   request.setRawHeader("X-TC-Action", "DescribeTaskStatus");
-  request.setRawHeader("X-TC-Timestamp", QString::number(QDateTime::currentSecsSinceEpoch()).toUtf8());
+  request.setRawHeader("X-TC-Timestamp", timestamp.toUtf8());
   request.setRawHeader("X-TC-Version", "2019-06-14");
-  request.setRawHeader("X-TC-Region", "");
+  request.setRawHeader("X-TC-Region", "ap-guangzhou");
+  request.setRawHeader("Authorization", authorization.toUtf8());
 
-  QNetworkReply *reply =
-      networkManager_->post(request, QJsonDocument(payload).toJson());
-
+  QNetworkReply *reply = networkManager_->post(request, payloadBytes);
   connect(reply, &QNetworkReply::finished, this,
           [this, reply, taskId]() { onResultQueried(reply); });
 }
@@ -103,8 +291,15 @@ void TencentAsrService::onResultQueried(QNetworkReply *reply) {
     return;
   }
 
+  QByteArray data = reply->readAll();
+  qDebug() << "=== QueryTaskStatus Response ===";
+  qDebug() << "Raw response:" << QString::fromUtf8(data);
+  QJsonDocument doc = QJsonDocument::fromJson(data);
+  QJsonObject resp = doc.object();
+
+  TranscriptResult result;
+
   if (++pollingAttempts_ > kMaxPollingAttempts) {
-    TranscriptResult result;
     result.success = false;
     result.errorMessage = "ASR polling timeout";
     emit transcribeFinished(result);
@@ -113,15 +308,18 @@ void TencentAsrService::onResultQueried(QNetworkReply *reply) {
     return;
   }
 
-  QByteArray data = reply->readAll();
-  QJsonDocument doc = QJsonDocument::fromJson(data);
-  QJsonObject resp = doc.object();
-
-  TranscriptResult result;
-
   if (resp.contains("Response")) {
     QJsonObject response = resp["Response"].toObject();
+    if (response.contains("Error")) {
+      QString errorMsg = response["Error"].toObject()["Message"].toString();
+      result.success = false;
+      result.errorMessage = "Query failed: " + errorMsg;
+      emit transcribeFinished(result);
+      reply->deleteLater();
+      return;
+    }
     int status = response["Status"].toInt();
+    qDebug() << "Polling attempt" << pollingAttempts_ << "- Status:" << status;
 
     if (status == 2) { // 完成
       result.success = true;
@@ -130,7 +328,8 @@ void TencentAsrService::onResultQueried(QNetworkReply *reply) {
       emit transcribeFinished(result);
     } else if (status == 3 || status == 4) { // 失败
       result.success = false;
-      result.errorMessage = "ASR task failed";
+      result.errorMessage =
+          "ASR task failed, status: " + QString::number(status);
       emit transcribeFinished(result);
     } else {
       // 继续轮询
@@ -141,7 +340,7 @@ void TencentAsrService::onResultQueried(QNetworkReply *reply) {
     }
   } else {
     result.success = false;
-    result.errorMessage = "Query failed";
+    result.errorMessage = "Query failed: " + QString::fromUtf8(data);
     emit transcribeFinished(result);
   }
   reply->deleteLater();
@@ -150,7 +349,6 @@ void TencentAsrService::onResultQueried(QNetworkReply *reply) {
 void TencentAsrService::parseResultText(const QString &resultStr,
                                         QList<TranscriptSegment> &segments) {
   // 腾讯云 Result 格式: [start,end,"text"][start,end,"text"]...
-  // Use escaped double quotes inside character class
   QRegularExpression re("\\[(\\d+),(\\d+),\"([^\"]+)\"\\]");
   QRegularExpressionMatchIterator it = re.globalMatch(resultStr);
 
