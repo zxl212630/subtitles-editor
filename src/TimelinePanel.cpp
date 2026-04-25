@@ -239,6 +239,7 @@ void TimelinePanel::startAsrPipeline(const QString &localPath) {
             } else {
               qDebug() << "=== ASR Finished ===";
               qDebug() << "Segments count:" << result.segments.size();
+              track_->clear(); // 清空旧字幕数据
               for (const auto &seg : result.segments) {
                 qDebug() << "Segment:" << seg.startMs << "-" << seg.endMs << ":"
                          << seg.text;
