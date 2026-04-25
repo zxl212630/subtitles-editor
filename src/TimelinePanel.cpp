@@ -223,8 +223,12 @@ void TimelinePanel::startAsrPipeline(const QString &localPath) {
   // Connect pipeline
   connect(transcoder, &AudioTranscoder::transcodingFinished, uploader,
           &OssUploader::upload);
+  // Use presignedUrl for ASR (public accessible URL with signature)
   connect(uploader, &OssUploader::uploadFinished, asrService,
-          &TencentAsrService::transcribe);
+          [asrService](const QString &, const QString &presignedUrl) {
+            qDebug() << "Using presigned URL for ASR:" << presignedUrl;
+            asrService->transcribe(presignedUrl);
+          });
   connect(asrService, &AsrServiceBase::transcribeFinished, this,
           [this, transcoder, uploader,
            asrService](const AsrServiceBase::TranscriptResult &result) {

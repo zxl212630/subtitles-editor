@@ -12,7 +12,7 @@ public:
 signals:
   void uploadStarted();
   void uploadProgress(int percent);
-  void uploadFinished(const QString &ossUrl);
+  void uploadFinished(const QString &ossUrl, const QString &presignedUrl);
   void uploadFailed(const QString &errorMessage);
 
 public slots:
@@ -20,6 +20,7 @@ public slots:
 
 private:
   QString generateOssPath(const QString &localPath);
+  QString generatePresignedUrl(const QString &ossPath);
   QByteArray hmacSha1(const QByteArray &key, const QByteArray &data);
   QString computeSignature(const QString &stringToSign);
 

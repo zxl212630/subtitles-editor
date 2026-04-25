@@ -9,6 +9,7 @@
 #include <QNetworkReply>
 #include <QNetworkRequest>
 #include <QUrl>
+#include <QUrlQuery>
 
 OssUploader::OssUploader(QObject *parent) : QObject(parent) {
   ossAccessKeyId_ = ConfigManager::instance().ossAccessKeyId();
@@ -59,6 +60,46 @@ QString OssUploader::computeSignature(const QString &stringToSign) {
   QByteArray data = stringToSign.toUtf8();
   QByteArray hash = hmacSha1(key, data);
   return hash.toBase64();
+}
+
+QString OssUploader::generatePresignedUrl(const QString &ossPath) {
+  // Generate presigned URL for public access
+  // Format: https://bucket.region.aliyuncs.com/path?Expires=timestamp&OSSAccessKeyId=key&Signature=signature
+
+  QString endpoint =
+      "https://" + ossBucket_ + ".oss-" + ossRegion_ + ".aliyuncs.com";
+
+  // Expires in 1 hour (3600 seconds)
+  qint64 expireTimestamp = QDateTime::currentSecsSinceEpoch() + 3600;
+
+  // StringToSign format for GET: GET\n\n\n{expires}\n/{bucket}/{object}
+  // Note: ossPath should be URL-encoded in the string to sign
+  QString stringToSign = QString("GET\n\n\n%1\n/%2/%3")
+      .arg(expireTimestamp)
+      .arg(ossBucket_)
+      .arg(ossPath);
+
+  qDebug() << "=== Presigned URL StringToSign ===";
+  qDebug() << stringToSign;
+
+  // Compute signature using HMAC-SHA1
+  QByteArray key = ossAccessKeySecret_.toUtf8();
+  QByteArray data = stringToSign.toUtf8();
+  QByteArray signatureBytes = hmacSha1(key, data);
+  QString signature = QString::fromLatin1(signatureBytes.toBase64());
+
+  qDebug() << "Signature (base64):" << signature;
+
+  // Build URL manually with proper query parameters
+  QString urlStr = QString("%1/%2?Expires=%3&OSSAccessKeyId=%4&Signature=%5")
+      .arg(endpoint)
+      .arg(ossPath)
+      .arg(expireTimestamp)
+      .arg(ossAccessKeyId_)
+      .arg(QString::fromLatin1(QUrl::toPercentEncoding(signature)));
+
+  qDebug() << "Final presigned URL:" << urlStr;
+  return urlStr;
 }
 
 void OssUploader::upload(const QString &localFilePath) {
@@ -161,15 +202,17 @@ void OssUploader::upload(const QString &localFilePath) {
             }
           });
 
-  connect(reply, &QNetworkReply::finished, this, [this, reply, urlStr]() {
+  connect(reply, &QNetworkReply::finished, this, [this, reply, urlStr, ossPath]() {
     qDebug() << "=== Request Finished ===";
     qDebug() << "Error:" << reply->error() << reply->errorString();
     QByteArray response = reply->readAll();
     qDebug() << "Response body:" << response;
 
     if (reply->error() == QNetworkReply::NoError) {
+      QString presignedUrl = generatePresignedUrl(ossPath);
       qDebug() << "Upload SUCCESS! URL:" << urlStr;
-      emit uploadFinished(urlStr);
+      qDebug() << "Presigned URL:" << presignedUrl;
+      emit uploadFinished(urlStr, presignedUrl);
     } else {
       QString errorMsg = QString("Upload failed: %1").arg(reply->errorString());
       if (!response.isEmpty()) {
