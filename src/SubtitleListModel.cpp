@@ -64,6 +64,41 @@ QVariant SubtitleListModel::data(const QModelIndex &index, int role) const {
   }
 }
 
+Qt::ItemFlags SubtitleListModel::flags(const QModelIndex &index) const {
+  if (!index.isValid())
+    return Qt::NoItemFlags;
+  return QAbstractListModel::flags(index) | Qt::ItemIsEditable;
+}
+
+bool SubtitleListModel::setData(const QModelIndex &index, const QVariant &value,
+                                int role) {
+  if (!track_ || !index.isValid() || index.row() >= filteredIndices_.size())
+    return false;
+
+  const int originalIndex = filteredIndices_[index.row()];
+  const auto &items = track_->items();
+  if (originalIndex >= items.size())
+    return false;
+
+  const auto &item = items[originalIndex];
+
+  if (role == Qt::EditRole || role == TextRole) {
+    SubtitleItem newItem = item;
+    newItem.text = value.toString();
+
+    // Temporarily disconnect to avoid full model reset on text edit
+    disconnect(track_, &SubtitleTrack::dataChanged, this,
+               &SubtitleListModel::onDataChanged);
+    track_->updateItem(item.id, newItem);
+    connect(track_, &SubtitleTrack::dataChanged, this,
+            &SubtitleListModel::onDataChanged);
+
+    emit dataChanged(index, index, {TextRole, Qt::DisplayRole});
+    return true;
+  }
+  return false;
+}
+
 QHash<int, QByteArray> SubtitleListModel::roleNames() const {
   QHash<int, QByteArray> roles;
   roles[IdRole] = "id";

@@ -17,6 +17,14 @@ public:
                    const QStyleOptionViewItem &option,
                    const QModelIndex &index) override;
 
+  QWidget *createEditor(QWidget *parent, const QStyleOptionViewItem &option,
+                        const QModelIndex &index) const override;
+  void setEditorData(QWidget *editor, const QModelIndex &index) const override;
+  void setModelData(QWidget *editor, QAbstractItemModel *model,
+                    const QModelIndex &index) const override;
+  void updateEditorGeometry(QWidget *editor, const QStyleOptionViewItem &option,
+                            const QModelIndex &index) const override;
+
   void setHoveredIndex(const QModelIndex &index, int button = 0);
   QRect splitButtonRect(const QStyleOptionViewItem &option) const;
   QRect deleteButtonRect(const QStyleOptionViewItem &option) const;

@@ -6,6 +6,7 @@
 #include <QFrame>
 #include <QHBoxLayout>
 #include <QHeaderView>
+#include <QItemSelectionModel>
 #include <QLabel>
 #include <QLineEdit>
 #include <QListView>

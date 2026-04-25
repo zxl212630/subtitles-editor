@@ -2,9 +2,11 @@
 
 #include "SubtitleListModel.h"
 
+#include <QKeyEvent>
 #include <QMouseEvent>
 #include <QPainter>
 #include <QStyleOptionViewItem>
+#include <QTextEdit>
 
 SubtitleListDelegate::SubtitleListDelegate(QObject *parent)
     : QStyledItemDelegate(parent) {}
@@ -157,3 +159,74 @@ bool SubtitleListDelegate::editorEvent(QEvent *event, QAbstractItemModel *model,
 
   return QStyledItemDelegate::editorEvent(event, model, option, index);
 }
+
+class SubtitleTextEdit : public QTextEdit {
+  Q_OBJECT
+public:
+  explicit SubtitleTextEdit(QWidget *parent = nullptr) : QTextEdit(parent) {}
+
+signals:
+  void editingFinished();
+
+protected:
+  void keyPressEvent(QKeyEvent *event) override {
+    if (event->key() == Qt::Key_Return || event->key() == Qt::Key_Enter) {
+      if (event->modifiers() & Qt::AltModifier) {
+        insertPlainText("\n");
+      } else {
+        emit editingFinished();
+      }
+      return;
+    }
+    QTextEdit::keyPressEvent(event);
+  }
+};
+
+QWidget *
+SubtitleListDelegate::createEditor(QWidget *parent,
+                                   const QStyleOptionViewItem & /*option*/,
+                                   const QModelIndex & /*index*/) const {
+  auto *editor = new SubtitleTextEdit(parent);
+  editor->setStyleSheet(
+      "QTextEdit { background-color: #1a1a1a; color: #d1d5db; "
+      "border: 1px solid #0ea5e9; border-radius: 4px; padding: 2px 6px; "
+      "font-family: Inter, sans-serif; font-size: 12px; }");
+  editor->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+  editor->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+
+  auto *self = const_cast<SubtitleListDelegate *>(this);
+  connect(editor, &SubtitleTextEdit::editingFinished, self, [self, editor]() {
+    emit self->commitData(editor);
+    emit self->closeEditor(editor, QAbstractItemDelegate::SubmitModelCache);
+  });
+
+  return editor;
+}
+
+void SubtitleListDelegate::setEditorData(QWidget *editor,
+                                         const QModelIndex &index) const {
+  QString text = index.data(SubtitleListModel::TextRole).toString();
+  auto *textEdit = static_cast<SubtitleTextEdit *>(editor);
+  textEdit->setPlainText(text);
+}
+
+void SubtitleListDelegate::setModelData(QWidget *editor,
+                                        QAbstractItemModel *model,
+                                        const QModelIndex &index) const {
+  auto *textEdit = static_cast<SubtitleTextEdit *>(editor);
+  model->setData(index, textEdit->toPlainText(), Qt::EditRole);
+}
+
+void SubtitleListDelegate::updateEditorGeometry(
+    QWidget *editor, const QStyleOptionViewItem &option,
+    const QModelIndex & /*index*/) const {
+  const QRect rect = option.rect;
+  QRect timeRect(rect.left() + 12, rect.top() + 10, 100, 36);
+  int textLeft = timeRect.right() + 12;
+  int textRight = rect.right() - 12 - 36 - 12;
+  int textWidth = qMax(50, textRight - textLeft);
+  QRect editRect(textLeft, rect.top() + 8, textWidth, rect.height() - 16);
+  editor->setGeometry(editRect);
+}
+
+#include "SubtitleListDelegate.moc"
