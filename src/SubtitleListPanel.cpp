@@ -206,6 +206,15 @@ void SubtitleListPanel::setupUi()
     delegate_ = new SubtitleListDelegate(this);
     listView_->setItemDelegate(delegate_);
 
+    connect(delegate_, &SubtitleListDelegate::deleteClicked, this, [this](const QString& id) {
+        if (track_) {
+            track_->removeItem(id);
+        }
+    });
+
+    listView_->setMouseTracking(true);
+    listView_->installEventFilter(this);
+
     connect(listView_, &QListView::clicked, this, &SubtitleListPanel::onItemClicked);
 
     lcLayout->addWidget(listView_);
@@ -221,4 +230,20 @@ void SubtitleListPanel::onItemClicked(const QModelIndex& index)
         track_->selectItem(id);
     }
     emit itemSelected(id);
+}
+
+bool SubtitleListPanel::eventFilter(QObject* watched, QEvent* event)
+{
+    if (watched == listView_) {
+        if (event->type() == QEvent::MouseMove) {
+            auto* me = static_cast<QMouseEvent*>(event);
+            QModelIndex index = listView_->indexAt(me->pos());
+            delegate_->setHoveredIndex(index);
+            return true;
+        } else if (event->type() == QEvent::Leave) {
+            delegate_->setHoveredIndex(QModelIndex());
+            return true;
+        }
+    }
+    return QWidget::eventFilter(watched, event);
 }

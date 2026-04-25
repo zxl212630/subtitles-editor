@@ -4,7 +4,7 @@
 
 #include <QPainter>
 #include <QStyleOptionViewItem>
-#include <QFontDatabase>
+#include <QMouseEvent>
 
 SubtitleListDelegate::SubtitleListDelegate(QObject* parent)
     : QStyledItemDelegate(parent)
@@ -17,6 +17,9 @@ void SubtitleListDelegate::paint(QPainter* painter, const QStyleOptionViewItem& 
 
     const bool isSelected = option.state & QStyle::State_Selected;
     const QRect rect = option.rect;
+
+    // Hover state - use manual tracking via hoveredIndex_
+    const bool isHovered = index == hoveredIndex_;
 
     // Background
     if (isSelected) {
@@ -56,8 +59,9 @@ void SubtitleListDelegate::paint(QPainter* painter, const QStyleOptionViewItem& 
     int btnY = rect.top() + (rect.height() - btnBox) / 2;
     int btnX = rect.right() - 12 - 36;
 
-    // Split button (scissors icon)
-    painter->setPen(QColor("#6b7280"));
+    // Split button (scissors icon) - hover brightens
+    QColor splitColor = isHovered ? QColor("#ffffff") : QColor("#6b7280");
+    painter->setPen(splitColor);
     painter->setBrush(Qt::NoBrush);
     QFont iconFont = painter->font();
     iconFont.setPointSize(12);
@@ -65,7 +69,9 @@ void SubtitleListDelegate::paint(QPainter* painter, const QStyleOptionViewItem& 
     QRect scissorsRect(btnX, btnY, btnBox, btnBox);
     painter->drawText(scissorsRect, Qt::AlignCenter, "\u2702"); // scissors
 
-    // Delete button (x icon)
+    // Delete button (x icon) - hover brightens (white instead of red)
+    QColor deleteColor = isHovered ? QColor("#ffffff") : QColor("#6b7280");
+    painter->setPen(deleteColor);
     QRect deleteRect(btnX + 22, btnY, btnBox, btnBox);
     painter->drawText(deleteRect, Qt::AlignCenter, "\u2715"); // x mark
 
@@ -88,4 +94,50 @@ QString SubtitleListDelegate::formatTime(qint64 ms)
         .arg(minutes, 2, 10, QChar('0'))
         .arg(seconds, 2, 10, QChar('0'))
         .arg(frames, 2, 10, QChar('0'));
+}
+
+QString SubtitleListDelegate::getIdAtIndex(const QModelIndex& index)
+{
+    return index.data(SubtitleListModel::IdRole).toString();
+}
+
+QRect SubtitleListDelegate::deleteButtonRect(const QStyleOptionViewItem& option) const
+{
+    const int btnBox = 18;
+    QRect rect = option.rect;
+    int btnY = rect.top() + (rect.height() - btnBox) / 2;
+    int btnX = rect.right() - 12 - 36 + 22; // scissors + gap
+    return QRect(btnX, btnY, btnBox, btnBox);
+}
+
+void SubtitleListDelegate::setHoveredIndex(const QModelIndex& index)
+{
+    if (hoveredIndex_ != index) {
+        QModelIndex old = hoveredIndex_;
+        hoveredIndex_ = index;
+        if (old.isValid()) {
+            emit sizeHintChanged(old);
+        }
+        if (index.isValid()) {
+            emit sizeHintChanged(index);
+        }
+    }
+}
+
+bool SubtitleListDelegate::editorEvent(QEvent* event, QAbstractItemModel* model, const QStyleOptionViewItem& option, const QModelIndex& index)
+{
+    if (!index.isValid())
+        return false;
+
+    if (event->type() == QEvent::MouseButtonRelease) {
+        auto* mouseEvent = static_cast<QMouseEvent*>(event);
+        QRect deleteBtn = deleteButtonRect(option);
+        if (deleteBtn.contains(mouseEvent->pos())) {
+            QString id = getIdAtIndex(index);
+            emit deleteClicked(id);
+            return true;
+        }
+    }
+
+    return QStyledItemDelegate::editorEvent(event, model, option, index);
 }

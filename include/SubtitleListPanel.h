@@ -25,6 +25,7 @@ signals:
 private:
     void setupUi();
     void onItemClicked(const QModelIndex& index);
+    bool eventFilter(QObject* watched, QEvent* event) override;
 
     SubtitleTrack* track_ = nullptr;
     SubtitleListModel* model_ = nullptr;

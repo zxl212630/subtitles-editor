@@ -53,7 +53,6 @@ void AppWindow::setupUi()
 
     setupTitleBar();
     setupSplitterLayout();
-    setupDummyData();
 
     setMenuWidget(d->titleBar);
     d->windowAgent->setTitleBar(d->titleBar);
