@@ -71,21 +71,14 @@ void TencentAsrService::createRecTask(const QString &audioUrl) {
   QString httpRequestMethod = "POST";
   QString canonicalUri = "/";
   QString canonicalQueryString = "";
-  QString canonicalHeaders = "content-type:application/json; charset=utf-8\n"
-                             "host:" +
-                             host +
-                             "\n"
-                             "x-tc-action:CreateRecTask\n"
-                             "x-tc-region:ap-guangzhou\n"
-                             "x-tc-timestamp:" +
-                             timestamp +
-                             "\n"
-                             "x-tc-version:2019-06-14\n";
+  QString canonicalHeaders = "content-type:application/json\n"
+                             "host:" + host + "\n"
+                             "x-tc-action:createrectask\n\n";
   QString signedHeaders =
-      "content-type;host;x-tc-action;x-tc-region;x-tc-timestamp;x-tc-version";
+      "content-type;host;x-tc-action";
+  QByteArray payloadBytes = QJsonDocument(payload(audioUrl)).toJson(QJsonDocument::Compact);
   QString hashedRequestPayload = QString(
-      QCryptographicHash::hash(QJsonDocument(payload(audioUrl)).toJson(),
-                               QCryptographicHash::Sha256)
+      QCryptographicHash::hash(payloadBytes, QCryptographicHash::Sha256)
           .toHex());
 
   QString canonicalRequest = httpRequestMethod + "\n" + canonicalUri + "\n" +
@@ -116,8 +109,8 @@ void TencentAsrService::createRecTask(const QString &audioUrl) {
   QByteArray secretService = signTC3(secretDate, service.toUtf8());
   // Step 3: HMAC(secretService, "tc3_request")
   QByteArray secretSigning = signTC3(secretService, QByteArray("tc3_request"));
-  // Step 4: HMAC(secretSigning, canonicalRequest)
-  QByteArray signature = signTC3(secretSigning, canonicalRequest.toUtf8());
+  // Step 4: HMAC(secretSigning, stringToSign)
+  QByteArray signature = signTC3(secretSigning, stringToSign.toUtf8());
   QString signatureStr = QString(signature.toHex());
 
   // Build authorization header
@@ -134,7 +127,7 @@ void TencentAsrService::createRecTask(const QString &audioUrl) {
 
   QUrl url("https://" + host);
   QNetworkRequest request(url);
-  request.setRawHeader("Content-Type", "application/json; charset=utf-8");
+  request.setRawHeader("Content-Type", "application/json");
   request.setRawHeader("Host", host.toUtf8());
   request.setRawHeader("X-TC-Action", "CreateRecTask");
   request.setRawHeader("X-TC-Timestamp", timestamp.toUtf8());
@@ -142,7 +135,6 @@ void TencentAsrService::createRecTask(const QString &audioUrl) {
   request.setRawHeader("X-TC-Region", "ap-guangzhou");
   request.setRawHeader("Authorization", authorization.toUtf8());
 
-  QByteArray payloadBytes = QJsonDocument(payload(audioUrl)).toJson();
   qDebug() << "Request payload:" << QString::fromUtf8(payloadBytes);
 
   QNetworkReply *reply = networkManager_->post(request, payloadBytes);
@@ -152,9 +144,9 @@ void TencentAsrService::createRecTask(const QString &audioUrl) {
 
 QJsonObject TencentAsrService::payload(const QString &audioUrl) {
   QJsonObject obj;
-  obj["AppId"] = appId_;
   obj["ChannelNum"] = 1;
-  obj["EngineType"] = "16k_zh";
+  obj["EngineModelType"] = "16k_zh";
+  obj["ResTextFormat"] = 3;
   obj["Url"] = audioUrl;
   obj["SourceType"] = 0; // 0=URL
   return obj;
@@ -188,8 +180,9 @@ void TencentAsrService::onTaskCreated(QNetworkReply *reply) {
       return;
     }
     qDebug() << "Response object:" << response;
+    QJsonObject dataObj = response["Data"].toObject();
     currentTaskId_ =
-        QString::number(response["TaskId"].toVariant().toLongLong());
+        QString::number(dataObj["TaskId"].toVariant().toLongLong());
     qDebug() << "Task created, TaskId:" << currentTaskId_;
     queryTaskStatus(currentTaskId_);
   } else {
@@ -215,23 +208,17 @@ void TencentAsrService::queryTaskStatus(const QString &taskId) {
   QString httpRequestMethod = "POST";
   QString canonicalUri = "/";
   QString canonicalQueryString = "";
-  QString canonicalHeaders = "content-type:application/json; charset=utf-8\n"
+  QString canonicalHeaders = "content-type:application/json\n"
                              "host:" +
                              host +
                              "\n"
-                             "x-tc-action:DescribeTaskStatus\n"
-                             "x-tc-region:ap-guangzhou\n"
-                             "x-tc-timestamp:" +
-                             timestamp +
-                             "\n"
-                             "x-tc-version:2019-06-14\n";
+                             "x-tc-action:describetaskstatus\n\n";
   QString signedHeaders =
-      "content-type;host;x-tc-action;x-tc-region;x-tc-timestamp;x-tc-version";
+      "content-type;host;x-tc-action";
 
   QJsonObject queryPayload;
-  queryPayload["AppId"] = appId_;
   queryPayload["TaskId"] = taskId.toLongLong();
-  QByteArray payloadBytes = QJsonDocument(queryPayload).toJson();
+  QByteArray payloadBytes = QJsonDocument(queryPayload).toJson(QJsonDocument::Compact);
   QString hashedRequestPayload =
       QString(QCryptographicHash::hash(payloadBytes, QCryptographicHash::Sha256)
                   .toHex());
@@ -255,7 +242,7 @@ void TencentAsrService::queryTaskStatus(const QString &taskId) {
   QByteArray secretDate = signTC3(("TC3" + secretKey_).toUtf8(), date.toUtf8());
   QByteArray secretService = signTC3(secretDate, service.toUtf8());
   QByteArray secretSigning = signTC3(secretService, QByteArray("tc3_request"));
-  QByteArray signature = signTC3(secretSigning, canonicalRequest.toUtf8());
+  QByteArray signature = signTC3(secretSigning, stringToSign.toUtf8());
   QString signatureStr = QString(signature.toHex());
 
   QString authorization =
@@ -268,7 +255,7 @@ void TencentAsrService::queryTaskStatus(const QString &taskId) {
 
   QUrl url("https://" + host);
   QNetworkRequest request(url);
-  request.setRawHeader("Content-Type", "application/json; charset=utf-8");
+  request.setRawHeader("Content-Type", "application/json");
   request.setRawHeader("Host", host.toUtf8());
   request.setRawHeader("X-TC-Action", "DescribeTaskStatus");
   request.setRawHeader("X-TC-Timestamp", timestamp.toUtf8());
