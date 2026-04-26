@@ -17,12 +17,14 @@ public:
 
   void setTrack(SubtitleTrack *track);
   void setCurrentTime(qint64 ms);
+  void setTotalDuration(qint64 ms);
 
 signals:
   void timeClicked(qint64 ms);
   void itemSelected(const QString &id);
   void asrFailed(const QString &error);
   void asrSucceeded();
+  void mediaFileDropped(const QString &path);
 
 protected:
   void paintEvent(QPaintEvent *event) override;
@@ -41,8 +43,8 @@ private:
   int msToPixels(qint64 ms) const;
 
   SubtitleTrack *track_ = nullptr;
-  qint64 totalDurationMs_ = 11000; // placeholder 11 seconds
-  qint64 currentTimeMs_ = 6040;    // placeholder ~6 seconds
+  qint64 totalDurationMs_ = 0;
+  qint64 currentTimeMs_ = 0;
   static constexpr int RULER_HEIGHT = 36;
   static constexpr int SUBTITLE_TRACK_HEIGHT = 48;
   static constexpr int VIDEO_TRACK_HEIGHT = 96;

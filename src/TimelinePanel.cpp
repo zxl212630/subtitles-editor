@@ -48,6 +48,11 @@ void TimelinePanel::setCurrentTime(qint64 ms) {
   update();
 }
 
+void TimelinePanel::setTotalDuration(qint64 ms) {
+  totalDurationMs_ = ms;
+  update();
+}
+
 void TimelinePanel::paintEvent(QPaintEvent * /*event*/) {
   QPainter painter(this);
   painter.setRenderHint(QPainter::Antialiasing);
@@ -151,11 +156,17 @@ void TimelinePanel::drawVideoTrack(QPainter &painter, int y) {
   painter.setFont(font);
   painter.drawText(12, y + 18, "F  视频1");
 
-  // Placeholder video bar
+  // Video bar (duration-based or placeholder)
   painter.setPen(Qt::NoPen);
   painter.setBrush(QColor("#0284c7"));
-  painter.drawRoundedRect(TRACK_HEAD_WIDTH + 4, y + 2, 400,
-                          VIDEO_TRACK_HEIGHT - 4, 4, 4);
+  if (totalDurationMs_ > 0) {
+    int videoWidth = msToPixels(totalDurationMs_);
+    painter.drawRoundedRect(TRACK_HEAD_WIDTH + 4, y + 2, videoWidth,
+                            VIDEO_TRACK_HEIGHT - 4, 4, 4);
+  } else {
+    painter.drawRoundedRect(TRACK_HEAD_WIDTH + 4, y + 2, 400,
+                            VIDEO_TRACK_HEIGHT - 4, 4, 4);
+  }
   painter.setPen(QColor("#e5e5e5"));
   painter.drawText(TRACK_HEAD_WIDTH + 16, y + 50, "video.mp4");
 }
@@ -216,6 +227,8 @@ void TimelinePanel::dropEvent(QDropEvent *event) {
 
   qDebug() << "=== TimelinePanel::dropEvent ===";
   qDebug() << "Dropped file:" << localPath;
+
+  emit mediaFileDropped(localPath);
 
   startAsrPipeline(localPath);
 }

@@ -7,6 +7,7 @@ class VideoPreviewPanel;
 class SubtitleListPanel;
 class TimelinePanel;
 class SubtitleTrack;
+class MediaPlayer;
 class QSplitter;
 
 class AppWindow : public QMainWindow {

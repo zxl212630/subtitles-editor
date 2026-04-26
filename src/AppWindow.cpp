@@ -1,5 +1,6 @@
 #include "AppWindow.h"
 #include "ConfigManager.h"
+#include "MediaPlayer.h"
 #include "SubtitleItem.h"
 #include "SubtitleListPanel.h"
 #include "SubtitleTrack.h"
@@ -28,6 +29,7 @@ struct AppWindow::Private {
   TimelinePanel *timelinePanel = nullptr;
 
   SubtitleTrack *subtitleTrack = nullptr;
+  MediaPlayer *mediaPlayer = nullptr;
 };
 
 AppWindow::AppWindow(QWidget *parent)
@@ -119,22 +121,67 @@ void AppWindow::setupSplitterLayout() {
   d->subtitleListPanel->setTrack(d->subtitleTrack);
   d->timelinePanel->setTrack(d->subtitleTrack);
 
+  // Create media player
+  d->mediaPlayer = new MediaPlayer(this);
+  d->videoPreviewPanel->setMediaPlayer(d->mediaPlayer);
+  d->videoPreviewPanel->setSubtitleTrack(d->subtitleTrack);
+
   // Connect cross-panel signals
+  // 1. Timeline -> MediaPlayer: file drop
+  connect(d->timelinePanel, &TimelinePanel::mediaFileDropped, d->mediaPlayer,
+          &MediaPlayer::load);
+
+  // 2. MediaPlayer -> Timeline: duration
+  connect(d->mediaPlayer, &MediaPlayer::mediaLoaded, d->timelinePanel,
+          &TimelinePanel::setTotalDuration);
+
+  // 3. MediaPlayer -> VideoPreview: seek display
+  connect(d->mediaPlayer, &MediaPlayer::mediaLoaded, d->videoPreviewPanel,
+          &VideoPreviewPanel::onMediaLoaded);
+
+  // 4. MediaPlayer -> Timeline: time sync
+  connect(d->mediaPlayer, &MediaPlayer::timeChanged, d->timelinePanel,
+          &TimelinePanel::setCurrentTime);
+
+  // 5. Timeline click -> MediaPlayer seek
+  connect(d->timelinePanel, &TimelinePanel::timeClicked, d->mediaPlayer,
+          &MediaPlayer::seek);
+
+  // 6. SubtitleList -> MediaPlayer seek
+  connect(d->subtitleListPanel, &SubtitleListPanel::itemSeekRequested,
+          d->mediaPlayer, [this](const QString &, qint64 ms) {
+            d->mediaPlayer->seek(ms);
+          });
+
+  // 7. SubtitleList -> Timeline sync
+  connect(d->subtitleListPanel, &SubtitleListPanel::itemSeekRequested,
+          d->timelinePanel, [this](const QString &, qint64 ms) {
+            d->timelinePanel->setCurrentTime(ms);
+          });
+
+  // 8. VideoPreview play -> MediaPlayer
+  connect(d->videoPreviewPanel, &VideoPreviewPanel::playRequested,
+          d->mediaPlayer, &MediaPlayer::play);
+
+  // 9. VideoPreview pause -> MediaPlayer
+  connect(d->videoPreviewPanel, &VideoPreviewPanel::pauseRequested,
+          d->mediaPlayer, &MediaPlayer::pause);
+
+  // 10. VideoPreview step -> MediaPlayer
+  connect(d->videoPreviewPanel, &VideoPreviewPanel::stepForwardRequested,
+          d->mediaPlayer, &MediaPlayer::stepForward);
+  connect(d->videoPreviewPanel, &VideoPreviewPanel::stepBackwardRequested,
+          d->mediaPlayer, &MediaPlayer::stepBackward);
+
+  // 11. SubtitleTrack data change -> VideoPreview subtitle refresh
+  connect(d->subtitleTrack, &SubtitleTrack::dataChanged, d->videoPreviewPanel,
+          &VideoPreviewPanel::updateSubtitleOverlay);
+
+  // Existing connections
   connect(d->subtitleListPanel, &SubtitleListPanel::itemSelected,
           d->timelinePanel, [this](const QString &id) {
             Q_UNUSED(id)
             d->timelinePanel->update();
-          });
-
-  connect(d->subtitleListPanel, &SubtitleListPanel::itemSeekRequested,
-          d->timelinePanel, [this](const QString & /*id*/, qint64 startMs) {
-            d->timelinePanel->setCurrentTime(startMs);
-          });
-
-  connect(d->timelinePanel, &TimelinePanel::timeClicked, this,
-          [this](qint64 ms) {
-            Q_UNUSED(ms)
-            // TODO: update video preview time display
           });
 
   connect(d->timelinePanel, &TimelinePanel::asrFailed, this,
