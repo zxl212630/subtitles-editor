@@ -84,13 +84,10 @@ bool FFmpegDecoder::open(const QString &path) {
         return false;
       }
       videoTimeBase_ = stream->time_base;
-      videoWidth_ = videoCodecCtx_->width;
-      videoHeight_ = videoCodecCtx_->height;
+      videoSize_ = QSize(videoCodecCtx_->width, videoCodecCtx_->height);
       hasVideo_ = true;
       if (stream->avg_frame_rate.den != 0) {
         fps_ = av_q2d(stream->avg_frame_rate);
-      } else if (stream->r_frame_rate.den != 0) {
-        fps_ = av_q2d(stream->r_frame_rate);
       }
     } else if (stream->codecpar->codec_type == AVMEDIA_TYPE_AUDIO &&
                audioStreamIdx_ == -1) {
@@ -141,6 +138,13 @@ bool FFmpegDecoder::open(const QString &path) {
     }
   }
 
+  if (!hasVideo_ && !hasAudio_) {
+    LOG_DEC(critical, "No video or audio streams found");
+    avformat_close_input(&fmtCtx_);
+    emit decodeError("No video or audio streams found");
+    return false;
+  }
+
   if (fmtCtx_->duration > 0) {
     durationMs_ = fmtCtx_->duration * 1000 / AV_TIME_BASE;
   } else if (hasVideo_ && fmtCtx_->streams[videoStreamIdx_]->duration > 0) {
@@ -155,8 +159,8 @@ bool FFmpegDecoder::open(const QString &path) {
 
   LOG_DEC(info, "Opened:" << path);
   LOG_DEC(info, "Duration:" << durationMs_ << "ms");
-  LOG_DEC(info, "Video:" << hasVideo_ << "size=" << videoWidth_ << "x"
-                         << videoHeight_ << "fps=" << fps_);
+  LOG_DEC(info, "Video:" << hasVideo_ << "size=" << videoSize_.width() << "x"
+                         << videoSize_.height() << "fps=" << fps_);
   LOG_DEC(info, "Audio:" << hasAudio_ << "rate=" << audioSampleRate_
                          << "channels=" << audioChannels_);
 
@@ -166,13 +170,16 @@ bool FFmpegDecoder::open(const QString &path) {
 void FFmpegDecoder::close() {
   stop();
   if (!wait(5000)) {
-    LOG_DEC(warning, "Thread did not stop in time, terminating");
-    terminate();
+    LOG_DEC(warning, "Thread did not stop in time");
   }
   clearQueues();
   if (swsCtx_) {
     sws_freeContext(swsCtx_);
     swsCtx_ = nullptr;
+  }
+  if (audioSwrCtx_) {
+    swr_free(&audioSwrCtx_);
+    audioSwrCtx_ = nullptr;
   }
   avcodec_free_context(&videoCodecCtx_);
   avcodec_free_context(&audioCodecCtx_);
@@ -184,10 +191,12 @@ void FFmpegDecoder::close() {
   audioTimeBase_ = {0, 0};
   durationMs_ = 0;
   fps_ = 0.0;
-  videoWidth_ = 0;
-  videoHeight_ = 0;
+  videoSize_ = QSize();
   audioSampleRate_ = 0;
   audioChannels_ = 0;
+  swrSampleRate_ = 0;
+  swrChannels_ = 0;
+  swrFormat_ = AV_SAMPLE_FMT_NONE;
   hasVideo_ = false;
   hasAudio_ = false;
 
@@ -237,7 +246,8 @@ qint64 FFmpegDecoder::durationMs() const { return durationMs_; }
 double FFmpegDecoder::fps() const { return fps_; }
 
 QSize FFmpegDecoder::videoSize() const {
-  return QSize(videoWidth_, videoHeight_);
+  QMutexLocker locker(&metadataMutex_);
+  return videoSize_;
 }
 
 bool FFmpegDecoder::hasVideo() const { return hasVideo_; }
@@ -249,11 +259,15 @@ int FFmpegDecoder::audioSampleRate() const { return audioSampleRate_; }
 int FFmpegDecoder::audioChannels() const { return audioChannels_; }
 
 void FFmpegDecoder::run() {
+  if (!fmtCtx_) {
+    LOG_DEC(warning, "run() called without open()");
+    return;
+  }
+
   running_.store(true);
   playing_.store(true);
 
   AVPacket *packet = av_packet_alloc();
-  AVFrame *frame = av_frame_alloc();
 
   while (running_.load()) {
     if (seekRequested_.load()) {
@@ -303,15 +317,27 @@ void FFmpegDecoder::run() {
   }
 
   av_packet_free(&packet);
-  av_frame_free(&frame);
   LOG_DEC(info, "Decoder thread stopped");
 }
 
 void FFmpegDecoder::performSeek(qint64 targetMs) {
+  int streamIdx = -1;
+  AVRational timeBase = {0, 0};
+  if (videoStreamIdx_ != -1) {
+    streamIdx = videoStreamIdx_;
+    timeBase = videoTimeBase_;
+  } else if (audioStreamIdx_ != -1) {
+    streamIdx = audioStreamIdx_;
+    timeBase = audioTimeBase_;
+  } else {
+    LOG_DEC(warning, "No stream available for seek");
+    return;
+  }
+
   int64_t target =
-      static_cast<int64_t>(targetMs / 1000.0 / av_q2d(videoTimeBase_));
+      static_cast<int64_t>(targetMs / 1000.0 / av_q2d(timeBase));
   int ret =
-      av_seek_frame(fmtCtx_, videoStreamIdx_, target, AVSEEK_FLAG_BACKWARD);
+      av_seek_frame(fmtCtx_, streamIdx, target, AVSEEK_FLAG_BACKWARD);
   if (ret < 0) {
     char errbuf[256];
     av_strerror(ret, errbuf, sizeof(errbuf));
@@ -340,42 +366,36 @@ void FFmpegDecoder::clearQueues() {
 
 bool FFmpegDecoder::decodeVideoPacket(AVPacket *packet) {
   int ret = avcodec_send_packet(videoCodecCtx_, packet);
-  if (ret < 0) {
-    if (ret != AVERROR_EOF) {
-      char errbuf[256];
-      av_strerror(ret, errbuf, sizeof(errbuf));
-      LOG_DEC(warning, "Video send packet error:" << errbuf);
-    }
-    return false;
-  }
-
   AVFrame *frame = av_frame_alloc();
-  while (avcodec_receive_frame(videoCodecCtx_, frame) == 0) {
-    qint64 pts = frame->pts;
+
+  auto processFrame = [&](AVFrame *f) {
+    qint64 pts = f->pts;
     if (pts == AV_NOPTS_VALUE) {
-      pts = frame->best_effort_timestamp;
+      pts = f->best_effort_timestamp;
     }
     qint64 ptsMs = static_cast<qint64>(pts * av_q2d(videoTimeBase_) * 1000.0);
 
-    int w = frame->width;
-    int h = frame->height;
+    int w = f->width;
+    int h = f->height;
 
-    if (!swsCtx_ || videoWidth_ != w || videoHeight_ != h) {
-      if (swsCtx_) {
-        sws_freeContext(swsCtx_);
+    {
+      QMutexLocker locker(&metadataMutex_);
+      if (!swsCtx_ || videoSize_.width() != w || videoSize_.height() != h) {
+        if (swsCtx_) {
+          sws_freeContext(swsCtx_);
+        }
+        swsCtx_ = sws_getContext(w, h, static_cast<AVPixelFormat>(f->format),
+                                 w, h, AV_PIX_FMT_RGBA, SWS_BILINEAR, nullptr,
+                                 nullptr, nullptr);
+        videoSize_ = QSize(w, h);
       }
-      swsCtx_ = sws_getContext(w, h, static_cast<AVPixelFormat>(frame->format),
-                               w, h, AV_PIX_FMT_RGBA, SWS_BILINEAR, nullptr,
-                               nullptr, nullptr);
-      videoWidth_ = w;
-      videoHeight_ = h;
     }
 
     QByteArray rgbaData(w * h * 4, 0);
     uint8_t *dstData[4] = {reinterpret_cast<uint8_t *>(rgbaData.data()),
                            nullptr, nullptr, nullptr};
     int dstLinesize[4] = {w * 4, 0, 0, 0};
-    sws_scale(swsCtx_, frame->data, frame->linesize, 0, h, dstData,
+    sws_scale(swsCtx_, f->data, f->linesize, 0, h, dstData,
               dstLinesize);
 
     DecodedVideoFrame vframe;
@@ -391,7 +411,33 @@ bool FFmpegDecoder::decodeVideoPacket(AVPacket *packet) {
       }
     }
 
-    av_frame_unref(frame);
+    av_frame_unref(f);
+  };
+
+  while (ret == AVERROR(EAGAIN)) {
+    while (avcodec_receive_frame(videoCodecCtx_, frame) == 0) {
+      processFrame(frame);
+    }
+    ret = avcodec_send_packet(videoCodecCtx_, packet);
+  }
+
+  if (ret < 0 && ret != AVERROR_EOF) {
+    char errbuf[256];
+    av_strerror(ret, errbuf, sizeof(errbuf));
+    LOG_DEC(warning, "Video send packet error:" << errbuf);
+    av_frame_free(&frame);
+    return false;
+  }
+
+  int receiveRet = avcodec_receive_frame(videoCodecCtx_, frame);
+  while (receiveRet == 0) {
+    processFrame(frame);
+    receiveRet = avcodec_receive_frame(videoCodecCtx_, frame);
+  }
+  if (receiveRet < 0 && receiveRet != AVERROR(EAGAIN) && receiveRet != AVERROR_EOF) {
+    char errbuf[256];
+    av_strerror(receiveRet, errbuf, sizeof(errbuf));
+    LOG_DEC(warning, "Video receive frame error:" << errbuf);
   }
 
   av_frame_free(&frame);
@@ -400,26 +446,44 @@ bool FFmpegDecoder::decodeVideoPacket(AVPacket *packet) {
 
 bool FFmpegDecoder::decodeAudioPacket(AVPacket *packet) {
   int ret = avcodec_send_packet(audioCodecCtx_, packet);
-  if (ret < 0) {
-    if (ret != AVERROR_EOF) {
-      char errbuf[256];
-      av_strerror(ret, errbuf, sizeof(errbuf));
-      LOG_DEC(warning, "Audio send packet error:" << errbuf);
-    }
-    return false;
-  }
-
   AVFrame *frame = av_frame_alloc();
-  while (avcodec_receive_frame(audioCodecCtx_, frame) == 0) {
+
+  auto processFrame = [&](AVFrame *f) {
     DecodedAudioFrame aframe;
-    convertAudioFrame(frame, aframe);
+    convertAudioFrame(f, aframe);
 
     {
       QMutexLocker locker(&audioQueueMutex_);
       audioQueue_.enqueue(std::move(aframe));
     }
 
-    av_frame_unref(frame);
+    av_frame_unref(f);
+  };
+
+  while (ret == AVERROR(EAGAIN)) {
+    while (avcodec_receive_frame(audioCodecCtx_, frame) == 0) {
+      processFrame(frame);
+    }
+    ret = avcodec_send_packet(audioCodecCtx_, packet);
+  }
+
+  if (ret < 0 && ret != AVERROR_EOF) {
+    char errbuf[256];
+    av_strerror(ret, errbuf, sizeof(errbuf));
+    LOG_DEC(warning, "Audio send packet error:" << errbuf);
+    av_frame_free(&frame);
+    return false;
+  }
+
+  int receiveRet = avcodec_receive_frame(audioCodecCtx_, frame);
+  while (receiveRet == 0) {
+    processFrame(frame);
+    receiveRet = avcodec_receive_frame(audioCodecCtx_, frame);
+  }
+  if (receiveRet < 0 && receiveRet != AVERROR(EAGAIN) && receiveRet != AVERROR_EOF) {
+    char errbuf[256];
+    av_strerror(receiveRet, errbuf, sizeof(errbuf));
+    LOG_DEC(warning, "Audio receive frame error:" << errbuf);
   }
 
   av_frame_free(&frame);
@@ -444,41 +508,56 @@ void FFmpegDecoder::convertAudioFrame(AVFrame *frame, DecodedAudioFrame &out) {
     return;
   }
 
-  SwrContext *swr = nullptr;
-  AVChannelLayout outLayout = frame->ch_layout;
-  int ret = swr_alloc_set_opts2(&swr, &outLayout, AV_SAMPLE_FMT_S16,
-                                out.sampleRate, &frame->ch_layout, inFormat,
-                                out.sampleRate, 0, nullptr);
-  if (ret < 0 || !swr) {
-    LOG_DEC(warning, "Failed to allocate SwrContext");
-    if (swr)
-      swr_free(&swr);
-    return;
+  bool needInit = false;
+  if (!audioSwrCtx_) {
+    needInit = true;
+  } else if (swrSampleRate_ != out.sampleRate ||
+             swrChannels_ != out.channels ||
+             swrFormat_ != inFormat) {
+    swr_free(&audioSwrCtx_);
+    needInit = true;
   }
 
-  ret = swr_init(swr);
-  if (ret < 0) {
-    LOG_DEC(warning, "Failed to initialize SwrContext");
-    swr_free(&swr);
-    return;
+  if (needInit) {
+    AVChannelLayout outLayout;
+    av_channel_layout_copy(&outLayout, &frame->ch_layout);
+    int ret = swr_alloc_set_opts2(&audioSwrCtx_, &outLayout, AV_SAMPLE_FMT_S16,
+                                  out.sampleRate, &frame->ch_layout, inFormat,
+                                  out.sampleRate, 0, nullptr);
+    av_channel_layout_uninit(&outLayout);
+    if (ret < 0 || !audioSwrCtx_) {
+      LOG_DEC(warning, "Failed to allocate SwrContext");
+      if (audioSwrCtx_)
+        swr_free(&audioSwrCtx_);
+      return;
+    }
+
+    ret = swr_init(audioSwrCtx_);
+    if (ret < 0) {
+      LOG_DEC(warning, "Failed to initialize SwrContext");
+      swr_free(&audioSwrCtx_);
+      return;
+    }
+
+    swrSampleRate_ = out.sampleRate;
+    swrChannels_ = out.channels;
+    swrFormat_ = inFormat;
   }
 
-  int maxOutSamples = swr_get_out_samples(swr, frame->nb_samples);
+  int maxOutSamples = swr_get_out_samples(audioSwrCtx_, frame->nb_samples);
   int maxOutSize = av_samples_get_buffer_size(
       nullptr, out.channels, maxOutSamples, AV_SAMPLE_FMT_S16, 1);
   QByteArray buffer(maxOutSize, 0);
   uint8_t *outData[1] = {reinterpret_cast<uint8_t *>(buffer.data())};
   int converted =
-      swr_convert(swr, outData, maxOutSamples,
+      swr_convert(audioSwrCtx_, outData, maxOutSamples,
                   const_cast<const uint8_t **>(frame->data), frame->nb_samples);
   if (converted < 0) {
     LOG_DEC(warning, "Failed to convert audio");
-    swr_free(&swr);
     return;
   }
 
   int actualSize = av_samples_get_buffer_size(nullptr, out.channels, converted,
                                               AV_SAMPLE_FMT_S16, 1);
   out.pcmData = buffer.left(actualSize);
-  swr_free(&swr);
 }

@@ -11,11 +11,13 @@
 struct AVFormatContext;
 struct AVCodecContext;
 struct SwsContext;
+struct SwrContext;
 struct AVPacket;
 struct AVFrame;
 
 extern "C" {
 #include <libavutil/rational.h>
+#include <libavutil/samplefmt.h>
 }
 
 struct DecodedVideoFrame {
@@ -78,6 +80,10 @@ private:
   AVCodecContext *videoCodecCtx_ = nullptr;
   AVCodecContext *audioCodecCtx_ = nullptr;
   SwsContext *swsCtx_ = nullptr;
+  SwrContext *audioSwrCtx_ = nullptr;
+  int swrSampleRate_ = 0;
+  int swrChannels_ = 0;
+  AVSampleFormat swrFormat_ = AV_SAMPLE_FMT_NONE;
 
   int videoStreamIdx_ = -1;
   int audioStreamIdx_ = -1;
@@ -87,8 +93,7 @@ private:
   // Metadata
   qint64 durationMs_ = 0;
   double fps_ = 0.0;
-  int videoWidth_ = 0;
-  int videoHeight_ = 0;
+  QSize videoSize_;
   int audioSampleRate_ = 0;
   int audioChannels_ = 0;
   bool hasVideo_ = false;
@@ -99,6 +104,8 @@ private:
   std::atomic<bool> playing_{false};
   std::atomic<bool> seekRequested_{false};
   std::atomic<qint64> seekTargetMs_{0};
+
+  mutable QMutex metadataMutex_;
 
   // Queues
   mutable QMutex videoQueueMutex_;
