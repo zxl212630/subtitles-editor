@@ -1,4 +1,5 @@
 #include "AppWindow.h"
+#include "ConfigManager.h"
 #include "SubtitleItem.h"
 #include "SubtitleListPanel.h"
 #include "SubtitleTrack.h"
@@ -32,6 +33,19 @@ struct AppWindow::Private {
 AppWindow::AppWindow(QWidget *parent)
     : QMainWindow(parent), d(std::make_unique<Private>()) {
   setupUi();
+  checkConfig();
+}
+
+void AppWindow::checkConfig() {
+  if (!ConfigManager::instance().isValid()) {
+    QString configPath = ConfigManager::instance().configFilePath();
+    QMessageBox::warning(
+        this, "配置缺失",
+        QString("未检测到有效配置文件，部分功能（如语音识别）将无法使用。\n\n"
+                "请在以下路径创建或编辑配置文件：\n%1\n\n"
+                "确保包含 ffmpeg、腾讯云 ASR 和阿里云 OSS 的必要配置项。")
+            .arg(configPath));
+  }
 }
 
 AppWindow::~AppWindow() = default;

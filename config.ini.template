@@ -1,5 +1,5 @@
 [ffmpeg]
-path=/Users/zxl/Tools/ffmpeg/8.0
+path=FFMPEG_PATH
 
 [tencent_asr]
 secret_id=YOUR_SECRET_ID

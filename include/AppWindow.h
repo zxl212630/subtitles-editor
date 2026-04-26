@@ -21,6 +21,7 @@ private:
   void setupTitleBar();
   void setupSplitterLayout();
   void setupDummyData();
+  void checkConfig();
 
 private:
   struct Private;
