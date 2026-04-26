@@ -60,6 +60,7 @@ set(SOURCES
     src/FFmpegDecoder.cpp
     src/QtAudioOutput.cpp
     src/SoftwareVideoRenderer.cpp
+    src/MediaPlayer.cpp
 )
 
 set(HEADERS
@@ -80,6 +81,7 @@ set(HEADERS
     include/FFmpegDecoder.h
     include/QtAudioOutput.h
     include/SoftwareVideoRenderer.h
+    include/MediaPlayer.h
 )
 
 set(RESOURCES
