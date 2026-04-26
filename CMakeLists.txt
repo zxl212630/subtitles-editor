@@ -59,6 +59,7 @@ set(SOURCES
     src/OssUploader.cpp
     src/FFmpegDecoder.cpp
     src/QtAudioOutput.cpp
+    src/SoftwareVideoRenderer.cpp
 )
 
 set(HEADERS
@@ -78,6 +79,7 @@ set(HEADERS
     include/OssUploader.h
     include/FFmpegDecoder.h
     include/QtAudioOutput.h
+    include/SoftwareVideoRenderer.h
 )
 
 set(RESOURCES
