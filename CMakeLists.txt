@@ -11,7 +11,7 @@ set(CMAKE_AUTOUIC ON)
 # ============================================================
 # SDK Paths (可通过 -D 参数覆盖，如: -DQt6_ROOT=/path/to/qt)
 # ============================================================
-set(Qt6_ROOT "$ENV{HOME}/Tools/Qt/6.5.8" CACHE PATH "Qt6 installation root")
+set(Qt6_ROOT "$ENV{HOME}/Tools/Qt/6.5.7" CACHE PATH "Qt6 installation root")
 set(QWindowKit_ROOT "$ENV{HOME}/Tools/Qt/QwindowKit/Qt6" CACHE PATH "QWindowKit installation root")
 set(FFMPEG_ROOT "$ENV{HOME}/Tools/ffmpeg/8.0" CACHE PATH "FFmpeg installation root")
 
@@ -19,7 +19,7 @@ set(FFMPEG_ROOT "$ENV{HOME}/Tools/ffmpeg/8.0" CACHE PATH "FFmpeg installation ro
 # Qt6
 # ============================================================
 set(CMAKE_PREFIX_PATH "${Qt6_ROOT};${CMAKE_PREFIX_PATH}")
-find_package(Qt6 REQUIRED COMPONENTS Core Gui Widgets Network)
+find_package(Qt6 REQUIRED COMPONENTS Core Gui Widgets Network Multimedia)
 
 # ============================================================
 # QWindowKit (Qt6 build)
@@ -58,6 +58,7 @@ set(SOURCES
     src/AudioTranscoder.cpp
     src/OssUploader.cpp
     src/FFmpegDecoder.cpp
+    src/QtAudioOutput.cpp
 )
 
 set(HEADERS
@@ -76,6 +77,7 @@ set(HEADERS
     include/AudioTranscoder.h
     include/OssUploader.h
     include/FFmpegDecoder.h
+    include/QtAudioOutput.h
 )
 
 set(RESOURCES
@@ -106,6 +108,7 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
     Qt::Gui
     Qt::Widgets
     Qt::Network
+    Qt::Multimedia
 )
 
 # QWindowKit dependencies
