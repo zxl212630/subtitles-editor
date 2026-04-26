@@ -1,7 +1,7 @@
 # 音视频预览功能设计文档
 
 **日期**: 2026-04-26  
-**功能**: 音视频预览（支持帧级精确 seek、流畅播放、字幕叠加）  
+**功能**: 音视频预览（支持接近帧级 seek、流畅播放、字幕叠加）  
 **状态**: 已审核待实现
 
 ---
@@ -12,7 +12,7 @@
 
 ### 目标
 - 拖入音视频后，视频画面立即显示，音频可播放
-- **帧级精确 seek**：点击时间轴任意位置，画面精确跳转到对应帧
+- **接近帧级 seek**：点击时间轴任意位置，画面跳转到目标时间附近的帧（通过 FFmpeg `av_seek_frame` 寻找最近关键帧解码，不保证精确到某一帧，但视觉上无感知偏差）
 - **流畅 seek**：拖动 playhead 或连续 seek 时不卡顿
 - **高效播放**：软解方案在 macOS M 系列上可流畅播放 4K H264/H265
 - **字幕叠加**：播放时实时显示当前时间对应的字幕文字
@@ -89,8 +89,9 @@ public:
     virtual bool open(const QString& path) = 0;
     virtual void close() = 0;
 
-    // 精确 seek 到 targetMs（毫秒）
-    // 内部自动寻找最近关键帧，返回实际 seek 到的位置
+    // 接近帧级 seek 到 targetMs（毫秒）
+    // 内部使用 FFmpeg av_seek_frame 寻找最近关键帧，然后解码到目标时间附近的帧
+    // 不保证精确到某一帧，但视觉上无感知偏差
     virtual qint64 seek(qint64 targetMs) = 0;
 
     // 解码一帧视频，返回 std::nullopt 表示 EOS 或需要更多 packet
@@ -156,6 +157,72 @@ public:
 };
 ```
 
+### 2.3 线程与队列模型
+
+#### 2.3.1 线程划分
+
+采用**三线程模型**：主线程（GUI）+ 解码线程 + 音频播放线程（QAudioSink 内部）。
+
+```
+主线程 (GUI Thread)
+  ├─ MediaPlayer (状态机管理、响应用户操作)
+  ├─ VideoPreviewPanel (接收渲染帧、字幕叠加)
+  ├─ TimelinePanel (接收事件、绘制)
+  │
+  │ 跨线程通信: QMutex + QQueue + QAtomicInt
+  ▼
+解码线程 (Decoder Thread)
+  ├─ FFmpegDecoder::run()
+  │   while (state != Stopped) {
+  │     if (seekRequested) { performSeek(); clearQueues(); }
+  │     if (state == Paused) { QThread::msleep(50); continue; }
+  │     av_read_frame(fmtCtx, &pkt);
+  │     if (video) { avcodec_send_packet(); avcodec_receive_frame(); enqueueVideoFrame(); }
+  │     if (audio) { avcodec_send_packet(); avcodec_receive_frame(); enqueueAudioFrame(); }
+  │     // queue 满时 sleep 释放 CPU
+  │     while (videoQueueSize() >= 3 || audioQueueSize() >= 10) { QThread::msleep(5); }
+  │   }
+  │
+  └─ 线程间通信:
+      · seekRequested: QAtomicInt (主线程写, 解码线程读)
+      · seekTargetMs: QAtomic<qint64> (主线程写, 解码线程读)
+      · state: QAtomicInt (主线程写, 解码线程读)
+      · videoFrameQueue: QMutex + QQueue<DecodedVideoFrame>
+      · audioFrameQueue: QMutex + QQueue<DecodedAudioFrame>
+
+音频播放 (QAudioSink 内部线程)
+  ├─ 主线程通过 write() 写入音频数据到 QAudioSink 缓冲区
+  ├─ QAudioSink 内部独立线程管理播放时机和硬件设备
+  └─ samplesPlayed() 查询已播放样本数 → 计算 audioClock
+
+视频渲染 (主线程)
+  ├─ MediaPlayer::onVideoFrameReady()
+  ├─ 从 videoFrameQueue dequeue 一帧
+  ├─ 计算 sync delay
+  ├─ 调用 videoRenderer_->renderFrame()
+  └─ 触发 VideoPreviewPanel::update() 叠加字幕
+```
+
+#### 2.3.2 队列策略
+
+| Queue | 类型 | 最大容量 | 满时行为 | 空时行为 |
+|-------|------|---------|---------|---------|
+| **videoFrameQueue** | `QQueue<DecodedVideoFrame>` (QMutex 保护) | 3 帧 | 解码线程 `QThread::msleep(5)` | 渲染等待（主线程不阻塞，保持上一帧） |
+| **audioFrameQueue** | `QQueue<DecodedAudioFrame>` (QMutex 保护) | 约 0.5 秒音频 | 解码线程 `QThread::msleep(5)` | 音频输出静音/等待 |
+
+**队列设计原则：**
+- **视频 queue 小（3帧）**：视频帧较大（1080p 一帧约 6MB），减少内存占用；且视频渲染在主线程，queue 过大无意义
+- **音频 queue 适中（~0.5秒）**：音频数据量小，需要一定缓冲避免播放卡顿；但过大会增加 seek 延迟
+- **Queue 满时解码线程 sleep**：避免 CPU 空转，降低功耗
+
+#### 2.3.3 线程安全规则
+
+1. **主线程 → 解码线程**：通过 `QAtomicInt` / `QAtomic<qint64>` 传递控制信号（seek、pause、play），无需锁
+2. **解码线程 → 主线程**：通过 `QMutex` 保护的 `QQueue` 传递数据帧
+3. **主线程读取 Queue 时**：使用 `QMutexLocker`，获取一帧后立即解锁，不长时间持有锁
+4. **解码线程写入 Queue 时**：同样 `QMutexLocker`，写入后立即解锁
+5. **音频播放**：`QAudioSink` 是线程安全的，主线程直接调用 `write()` 即可
+
 ---
 
 ## 3. 音视频同步方案
@@ -209,9 +276,9 @@ double videoPts = av_frame_get_best_effort_timestamp(frame) * av_q2d(videoStream
 double delayMs = (videoPts - audioClock) * 1000.0;
 
 if (delayMs > 5.0) {
-    // 精确 sleep 到显示时机，使用 QElapsedTimer 做 busy-wait（精度更高）
-    qint64 sleepUs = static_cast<qint64>(delayMs * 1000);
-    // busy-wait loop for microsecond precision
+    // 视频太早，sleep 到显示时机（不使用 busy-wait，±5ms 误差可接受）
+    qint64 sleepMs = static_cast<qint64>(delayMs);
+    QThread::msleep(sleepMs);
 } else if (delayMs < -40.0) {
     // 超过 40ms 偏差，丢帧
     dropCount_++;
@@ -470,7 +537,7 @@ void VideoPreviewPanel::paintSubtitle(QPainter& painter, qint64 currentTimeMs) {
 | 文件正常打开 | `[FFmpegDecoder] avformat_open_input() ret=0` |
 | 音视频流识别正确 | `streams video=N audio=M` |
 | 时长信息正确 | `duration=XXXms` 与文件实际时长一致 |
-| Seek 精确 | `seek() request target=T` → `displayedPts=T` |
+| Seek 接近帧级 | `seek() request target=T` → `displayedPts` 与 T 偏差 < 100ms（关键帧间隔内） |
 | 同步正常 | `delay` 值在 ±5ms 范围内，绝大多数为 `action=render` |
 | 无持续丢帧 | `action=drop` 不连续出现，dropCount 增长缓慢 |
 | 字幕正确叠加 | `[SubtitleOverlay] active` 的时间范围与字幕数据一致 |
