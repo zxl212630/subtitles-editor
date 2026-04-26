@@ -1,0 +1,484 @@
+#include "FFmpegDecoder.h"
+#include <QDebug>
+#include <QThread>
+
+extern "C" {
+#include <libavcodec/avcodec.h>
+#include <libavformat/avformat.h>
+#include <libavutil/avutil.h>
+#include <libavutil/imgutils.h>
+#include <libavutil/samplefmt.h>
+#include <libswresample/swresample.h>
+#include <libswscale/swscale.h>
+}
+
+#define LOG_DEC_info(msg) qInfo() << "[FFmpegDecoder]" << msg
+#define LOG_DEC_warning(msg) qWarning() << "[FFmpegDecoder]" << msg
+#define LOG_DEC_critical(msg) qCritical() << "[FFmpegDecoder]" << msg
+#define LOG_DEC_debug(msg) qDebug() << "[FFmpegDecoder]" << msg
+#define LOG_DEC(level, msg) LOG_DEC_##level(msg)
+
+FFmpegDecoder::FFmpegDecoder(QObject *parent) : QThread(parent) {}
+
+FFmpegDecoder::~FFmpegDecoder() { close(); }
+
+bool FFmpegDecoder::open(const QString &path) {
+  int ret = avformat_open_input(&fmtCtx_, path.toUtf8().constData(), nullptr,
+                                nullptr);
+  if (ret < 0) {
+    char errbuf[256];
+    av_strerror(ret, errbuf, sizeof(errbuf));
+    LOG_DEC(critical, "Failed to open input:" << errbuf);
+    emit decodeError(QString("Failed to open input: %1").arg(errbuf));
+    return false;
+  }
+
+  ret = avformat_find_stream_info(fmtCtx_, nullptr);
+  if (ret < 0) {
+    char errbuf[256];
+    av_strerror(ret, errbuf, sizeof(errbuf));
+    LOG_DEC(critical, "Failed to find stream info:" << errbuf);
+    avformat_close_input(&fmtCtx_);
+    emit decodeError(QString("Failed to find stream info: %1").arg(errbuf));
+    return false;
+  }
+
+  for (unsigned int i = 0; i < fmtCtx_->nb_streams; ++i) {
+    AVStream *stream = fmtCtx_->streams[i];
+    if (stream->codecpar->codec_type == AVMEDIA_TYPE_VIDEO &&
+        videoStreamIdx_ == -1) {
+      videoStreamIdx_ = static_cast<int>(i);
+      const AVCodec *codec = avcodec_find_decoder(stream->codecpar->codec_id);
+      if (!codec) {
+        LOG_DEC(critical, "Failed to find video decoder");
+        avformat_close_input(&fmtCtx_);
+        emit decodeError("Failed to find video decoder");
+        return false;
+      }
+      videoCodecCtx_ = avcodec_alloc_context3(codec);
+      if (!videoCodecCtx_) {
+        LOG_DEC(critical, "Failed to allocate video codec context");
+        avformat_close_input(&fmtCtx_);
+        emit decodeError("Failed to allocate video codec context");
+        return false;
+      }
+      ret = avcodec_parameters_to_context(videoCodecCtx_, stream->codecpar);
+      if (ret < 0) {
+        char errbuf[256];
+        av_strerror(ret, errbuf, sizeof(errbuf));
+        LOG_DEC(critical, "Failed to copy video codec parameters:" << errbuf);
+        avcodec_free_context(&videoCodecCtx_);
+        avformat_close_input(&fmtCtx_);
+        emit decodeError(
+            QString("Failed to copy video codec parameters: %1").arg(errbuf));
+        return false;
+      }
+      ret = avcodec_open2(videoCodecCtx_, codec, nullptr);
+      if (ret < 0) {
+        char errbuf[256];
+        av_strerror(ret, errbuf, sizeof(errbuf));
+        LOG_DEC(critical, "Failed to open video codec:" << errbuf);
+        avcodec_free_context(&videoCodecCtx_);
+        avformat_close_input(&fmtCtx_);
+        emit decodeError(QString("Failed to open video codec: %1").arg(errbuf));
+        return false;
+      }
+      videoTimeBase_ = stream->time_base;
+      videoWidth_ = videoCodecCtx_->width;
+      videoHeight_ = videoCodecCtx_->height;
+      hasVideo_ = true;
+      if (stream->avg_frame_rate.den != 0) {
+        fps_ = av_q2d(stream->avg_frame_rate);
+      } else if (stream->r_frame_rate.den != 0) {
+        fps_ = av_q2d(stream->r_frame_rate);
+      }
+    } else if (stream->codecpar->codec_type == AVMEDIA_TYPE_AUDIO &&
+               audioStreamIdx_ == -1) {
+      audioStreamIdx_ = static_cast<int>(i);
+      const AVCodec *codec = avcodec_find_decoder(stream->codecpar->codec_id);
+      if (!codec) {
+        LOG_DEC(critical, "Failed to find audio decoder");
+        avcodec_free_context(&videoCodecCtx_);
+        avformat_close_input(&fmtCtx_);
+        emit decodeError("Failed to find audio decoder");
+        return false;
+      }
+      audioCodecCtx_ = avcodec_alloc_context3(codec);
+      if (!audioCodecCtx_) {
+        LOG_DEC(critical, "Failed to allocate audio codec context");
+        avcodec_free_context(&videoCodecCtx_);
+        avformat_close_input(&fmtCtx_);
+        emit decodeError("Failed to allocate audio codec context");
+        return false;
+      }
+      ret = avcodec_parameters_to_context(audioCodecCtx_, stream->codecpar);
+      if (ret < 0) {
+        char errbuf[256];
+        av_strerror(ret, errbuf, sizeof(errbuf));
+        LOG_DEC(critical, "Failed to copy audio codec parameters:" << errbuf);
+        avcodec_free_context(&audioCodecCtx_);
+        avcodec_free_context(&videoCodecCtx_);
+        avformat_close_input(&fmtCtx_);
+        emit decodeError(
+            QString("Failed to copy audio codec parameters: %1").arg(errbuf));
+        return false;
+      }
+      ret = avcodec_open2(audioCodecCtx_, codec, nullptr);
+      if (ret < 0) {
+        char errbuf[256];
+        av_strerror(ret, errbuf, sizeof(errbuf));
+        LOG_DEC(critical, "Failed to open audio codec:" << errbuf);
+        avcodec_free_context(&audioCodecCtx_);
+        avcodec_free_context(&videoCodecCtx_);
+        avformat_close_input(&fmtCtx_);
+        emit decodeError(QString("Failed to open audio codec: %1").arg(errbuf));
+        return false;
+      }
+      audioTimeBase_ = stream->time_base;
+      audioSampleRate_ = audioCodecCtx_->sample_rate;
+      audioChannels_ = audioCodecCtx_->ch_layout.nb_channels;
+      hasAudio_ = true;
+    }
+  }
+
+  if (fmtCtx_->duration > 0) {
+    durationMs_ = fmtCtx_->duration * 1000 / AV_TIME_BASE;
+  } else if (hasVideo_ && fmtCtx_->streams[videoStreamIdx_]->duration > 0) {
+    durationMs_ =
+        static_cast<qint64>(fmtCtx_->streams[videoStreamIdx_]->duration *
+                            av_q2d(videoTimeBase_) * 1000);
+  } else if (hasAudio_ && fmtCtx_->streams[audioStreamIdx_]->duration > 0) {
+    durationMs_ =
+        static_cast<qint64>(fmtCtx_->streams[audioStreamIdx_]->duration *
+                            av_q2d(audioTimeBase_) * 1000);
+  }
+
+  LOG_DEC(info, "Opened:" << path);
+  LOG_DEC(info, "Duration:" << durationMs_ << "ms");
+  LOG_DEC(info, "Video:" << hasVideo_ << "size=" << videoWidth_ << "x"
+                         << videoHeight_ << "fps=" << fps_);
+  LOG_DEC(info, "Audio:" << hasAudio_ << "rate=" << audioSampleRate_
+                         << "channels=" << audioChannels_);
+
+  return true;
+}
+
+void FFmpegDecoder::close() {
+  stop();
+  if (!wait(5000)) {
+    LOG_DEC(warning, "Thread did not stop in time, terminating");
+    terminate();
+  }
+  clearQueues();
+  if (swsCtx_) {
+    sws_freeContext(swsCtx_);
+    swsCtx_ = nullptr;
+  }
+  avcodec_free_context(&videoCodecCtx_);
+  avcodec_free_context(&audioCodecCtx_);
+  avformat_close_input(&fmtCtx_);
+
+  videoStreamIdx_ = -1;
+  audioStreamIdx_ = -1;
+  videoTimeBase_ = {0, 0};
+  audioTimeBase_ = {0, 0};
+  durationMs_ = 0;
+  fps_ = 0.0;
+  videoWidth_ = 0;
+  videoHeight_ = 0;
+  audioSampleRate_ = 0;
+  audioChannels_ = 0;
+  hasVideo_ = false;
+  hasAudio_ = false;
+
+  LOG_DEC(info, "close() complete");
+}
+
+void FFmpegDecoder::requestSeek(qint64 targetMs) {
+  seekTargetMs_.store(targetMs);
+  seekRequested_.store(true);
+}
+
+void FFmpegDecoder::setPlaying(bool playing) { playing_.store(playing); }
+
+void FFmpegDecoder::stop() {
+  running_.store(false);
+  playing_.store(false);
+}
+
+std::optional<DecodedVideoFrame> FFmpegDecoder::dequeueVideoFrame() {
+  QMutexLocker locker(&videoQueueMutex_);
+  if (videoQueue_.isEmpty()) {
+    return std::nullopt;
+  }
+  return videoQueue_.dequeue();
+}
+
+std::optional<DecodedAudioFrame> FFmpegDecoder::dequeueAudioFrame() {
+  QMutexLocker locker(&audioQueueMutex_);
+  if (audioQueue_.isEmpty()) {
+    return std::nullopt;
+  }
+  return audioQueue_.dequeue();
+}
+
+int FFmpegDecoder::videoQueueSize() const {
+  QMutexLocker locker(&videoQueueMutex_);
+  return videoQueue_.size();
+}
+
+int FFmpegDecoder::audioQueueSize() const {
+  QMutexLocker locker(&audioQueueMutex_);
+  return audioQueue_.size();
+}
+
+qint64 FFmpegDecoder::durationMs() const { return durationMs_; }
+
+double FFmpegDecoder::fps() const { return fps_; }
+
+QSize FFmpegDecoder::videoSize() const {
+  return QSize(videoWidth_, videoHeight_);
+}
+
+bool FFmpegDecoder::hasVideo() const { return hasVideo_; }
+
+bool FFmpegDecoder::hasAudio() const { return hasAudio_; }
+
+int FFmpegDecoder::audioSampleRate() const { return audioSampleRate_; }
+
+int FFmpegDecoder::audioChannels() const { return audioChannels_; }
+
+void FFmpegDecoder::run() {
+  running_.store(true);
+  playing_.store(true);
+
+  AVPacket *packet = av_packet_alloc();
+  AVFrame *frame = av_frame_alloc();
+
+  while (running_.load()) {
+    if (seekRequested_.load()) {
+      performSeek(seekTargetMs_.load());
+      seekRequested_.store(false);
+    }
+
+    if (!playing_.load()) {
+      QThread::msleep(50);
+      continue;
+    }
+
+    bool videoFull = !hasVideo_ || videoQueueSize() >= MAX_VIDEO_QUEUE_SIZE;
+    bool audioFull = !hasAudio_ || audioQueueSize() >= MAX_AUDIO_QUEUE_MS;
+    if (videoFull && audioFull) {
+      QThread::msleep(5);
+      continue;
+    }
+
+    int ret = av_read_frame(fmtCtx_, packet);
+    if (ret < 0) {
+      if (ret == AVERROR_EOF) {
+        LOG_DEC(info, "EOF");
+        emit endOfStream();
+      } else {
+        char errbuf[256];
+        av_strerror(ret, errbuf, sizeof(errbuf));
+        LOG_DEC(warning, "Read frame error:" << errbuf);
+      }
+      break;
+    }
+
+    if (packet->stream_index == videoStreamIdx_) {
+      decodeVideoPacket(packet);
+    } else if (packet->stream_index == audioStreamIdx_) {
+      decodeAudioPacket(packet);
+    }
+
+    av_packet_unref(packet);
+  }
+
+  if (hasVideo_ && videoCodecCtx_) {
+    decodeVideoPacket(nullptr);
+  }
+  if (hasAudio_ && audioCodecCtx_) {
+    decodeAudioPacket(nullptr);
+  }
+
+  av_packet_free(&packet);
+  av_frame_free(&frame);
+  LOG_DEC(info, "Decoder thread stopped");
+}
+
+void FFmpegDecoder::performSeek(qint64 targetMs) {
+  int64_t target =
+      static_cast<int64_t>(targetMs / 1000.0 / av_q2d(videoTimeBase_));
+  int ret =
+      av_seek_frame(fmtCtx_, videoStreamIdx_, target, AVSEEK_FLAG_BACKWARD);
+  if (ret < 0) {
+    char errbuf[256];
+    av_strerror(ret, errbuf, sizeof(errbuf));
+    LOG_DEC(warning, "Seek failed:" << errbuf);
+  }
+  if (videoCodecCtx_) {
+    avcodec_flush_buffers(videoCodecCtx_);
+  }
+  if (audioCodecCtx_) {
+    avcodec_flush_buffers(audioCodecCtx_);
+  }
+  clearQueues();
+  LOG_DEC(info, "Seek complete target=" << targetMs << "ms");
+}
+
+void FFmpegDecoder::clearQueues() {
+  {
+    QMutexLocker locker(&videoQueueMutex_);
+    videoQueue_.clear();
+  }
+  {
+    QMutexLocker locker(&audioQueueMutex_);
+    audioQueue_.clear();
+  }
+}
+
+bool FFmpegDecoder::decodeVideoPacket(AVPacket *packet) {
+  int ret = avcodec_send_packet(videoCodecCtx_, packet);
+  if (ret < 0) {
+    if (ret != AVERROR_EOF) {
+      char errbuf[256];
+      av_strerror(ret, errbuf, sizeof(errbuf));
+      LOG_DEC(warning, "Video send packet error:" << errbuf);
+    }
+    return false;
+  }
+
+  AVFrame *frame = av_frame_alloc();
+  while (avcodec_receive_frame(videoCodecCtx_, frame) == 0) {
+    qint64 pts = frame->pts;
+    if (pts == AV_NOPTS_VALUE) {
+      pts = frame->best_effort_timestamp;
+    }
+    qint64 ptsMs = static_cast<qint64>(pts * av_q2d(videoTimeBase_) * 1000.0);
+
+    int w = frame->width;
+    int h = frame->height;
+
+    if (!swsCtx_ || videoWidth_ != w || videoHeight_ != h) {
+      if (swsCtx_) {
+        sws_freeContext(swsCtx_);
+      }
+      swsCtx_ = sws_getContext(w, h, static_cast<AVPixelFormat>(frame->format),
+                               w, h, AV_PIX_FMT_RGBA, SWS_BILINEAR, nullptr,
+                               nullptr, nullptr);
+      videoWidth_ = w;
+      videoHeight_ = h;
+    }
+
+    QByteArray rgbaData(w * h * 4, 0);
+    uint8_t *dstData[4] = {reinterpret_cast<uint8_t *>(rgbaData.data()),
+                           nullptr, nullptr, nullptr};
+    int dstLinesize[4] = {w * 4, 0, 0, 0};
+    sws_scale(swsCtx_, frame->data, frame->linesize, 0, h, dstData,
+              dstLinesize);
+
+    DecodedVideoFrame vframe;
+    vframe.ptsMs = ptsMs;
+    vframe.width = w;
+    vframe.height = h;
+    vframe.rgbaData = std::move(rgbaData);
+
+    {
+      QMutexLocker locker(&videoQueueMutex_);
+      if (videoQueue_.size() < MAX_VIDEO_QUEUE_SIZE) {
+        videoQueue_.enqueue(std::move(vframe));
+      }
+    }
+
+    av_frame_unref(frame);
+  }
+
+  av_frame_free(&frame);
+  return true;
+}
+
+bool FFmpegDecoder::decodeAudioPacket(AVPacket *packet) {
+  int ret = avcodec_send_packet(audioCodecCtx_, packet);
+  if (ret < 0) {
+    if (ret != AVERROR_EOF) {
+      char errbuf[256];
+      av_strerror(ret, errbuf, sizeof(errbuf));
+      LOG_DEC(warning, "Audio send packet error:" << errbuf);
+    }
+    return false;
+  }
+
+  AVFrame *frame = av_frame_alloc();
+  while (avcodec_receive_frame(audioCodecCtx_, frame) == 0) {
+    DecodedAudioFrame aframe;
+    convertAudioFrame(frame, aframe);
+
+    {
+      QMutexLocker locker(&audioQueueMutex_);
+      audioQueue_.enqueue(std::move(aframe));
+    }
+
+    av_frame_unref(frame);
+  }
+
+  av_frame_free(&frame);
+  return true;
+}
+
+void FFmpegDecoder::convertAudioFrame(AVFrame *frame, DecodedAudioFrame &out) {
+  qint64 pts = frame->pts;
+  if (pts == AV_NOPTS_VALUE) {
+    pts = frame->best_effort_timestamp;
+  }
+  out.ptsMs = static_cast<qint64>(pts * av_q2d(audioTimeBase_) * 1000.0);
+  out.sampleRate = frame->sample_rate;
+  out.channels = frame->ch_layout.nb_channels;
+
+  AVSampleFormat inFormat = static_cast<AVSampleFormat>(frame->format);
+  if (inFormat == AV_SAMPLE_FMT_S16) {
+    int dataSize = av_samples_get_buffer_size(
+        nullptr, out.channels, frame->nb_samples, AV_SAMPLE_FMT_S16, 1);
+    out.pcmData =
+        QByteArray(reinterpret_cast<const char *>(frame->data[0]), dataSize);
+    return;
+  }
+
+  SwrContext *swr = nullptr;
+  AVChannelLayout outLayout = frame->ch_layout;
+  int ret = swr_alloc_set_opts2(&swr, &outLayout, AV_SAMPLE_FMT_S16,
+                                out.sampleRate, &frame->ch_layout, inFormat,
+                                out.sampleRate, 0, nullptr);
+  if (ret < 0 || !swr) {
+    LOG_DEC(warning, "Failed to allocate SwrContext");
+    if (swr)
+      swr_free(&swr);
+    return;
+  }
+
+  ret = swr_init(swr);
+  if (ret < 0) {
+    LOG_DEC(warning, "Failed to initialize SwrContext");
+    swr_free(&swr);
+    return;
+  }
+
+  int maxOutSamples = swr_get_out_samples(swr, frame->nb_samples);
+  int maxOutSize = av_samples_get_buffer_size(
+      nullptr, out.channels, maxOutSamples, AV_SAMPLE_FMT_S16, 1);
+  QByteArray buffer(maxOutSize, 0);
+  uint8_t *outData[1] = {reinterpret_cast<uint8_t *>(buffer.data())};
+  int converted =
+      swr_convert(swr, outData, maxOutSamples,
+                  const_cast<const uint8_t **>(frame->data), frame->nb_samples);
+  if (converted < 0) {
+    LOG_DEC(warning, "Failed to convert audio");
+    swr_free(&swr);
+    return;
+  }
+
+  int actualSize = av_samples_get_buffer_size(nullptr, out.channels, converted,
+                                              AV_SAMPLE_FMT_S16, 1);
+  out.pcmData = buffer.left(actualSize);
+  swr_free(&swr);
+}

@@ -37,6 +37,7 @@ find_path(AVCODEC_INCLUDE_DIR libavcodec/avcodec.h PATHS "${FFMPEG_INCLUDE_DIR}"
 find_path(AVFORMAT_INCLUDE_DIR libavformat/avformat.h PATHS "${FFMPEG_INCLUDE_DIR}")
 find_path(AVUTIL_INCLUDE_DIR libavutil/avutil.h PATHS "${FFMPEG_INCLUDE_DIR}")
 find_path(SWSCALE_INCLUDE_DIR libswscale/swscale.h PATHS "${FFMPEG_INCLUDE_DIR}")
+find_path(SWRESAMPLE_INCLUDE_DIR libswresample/swresample.h PATHS "${FFMPEG_INCLUDE_DIR}")
 
 # ============================================================
 # Source files
@@ -56,6 +57,7 @@ set(SOURCES
     src/ConfigManager.cpp
     src/AudioTranscoder.cpp
     src/OssUploader.cpp
+    src/FFmpegDecoder.cpp
 )
 
 set(HEADERS
@@ -73,6 +75,7 @@ set(HEADERS
     include/ConfigManager.h
     include/AudioTranscoder.h
     include/OssUploader.h
+    include/FFmpegDecoder.h
 )
 
 set(RESOURCES
@@ -112,12 +115,13 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
 )
 
 # FFmpeg dependencies
-if(AVCODEC_INCLUDE_DIR AND AVFORMAT_INCLUDE_DIR AND AVUTIL_INCLUDE_DIR)
+if(AVCODEC_INCLUDE_DIR AND AVFORMAT_INCLUDE_DIR AND AVUTIL_INCLUDE_DIR AND SWRESAMPLE_INCLUDE_DIR)
     target_link_libraries(${PROJECT_NAME} PRIVATE
         avcodec
         avformat
         avutil
         swscale
+        swresample
     )
 endif()
 
