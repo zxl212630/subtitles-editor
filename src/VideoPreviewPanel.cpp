@@ -1,13 +1,27 @@
 #include "VideoPreviewPanel.h"
 
+#include "MediaPlayer.h"
+#include "SoftwareVideoRenderer.h"
+#include "SubtitleTrack.h"
+
 #include <QComboBox>
 #include <QFontDatabase>
 #include <QFrame>
 #include <QHBoxLayout>
 #include <QLabel>
+#include <QPainter>
 #include <QPushButton>
+#include <QTime>
 #include <QVBoxLayout>
 #include <QValidator>
+
+#define LOG_SUB_debug(msg) qDebug() << "[SubtitleOverlay]" << msg
+#define LOG_SUB(level, msg) LOG_SUB_##level(msg)
+
+static QString formatTime(qint64 ms) {
+  return QTime::fromMSecsSinceStartOfDay(static_cast<int>(ms))
+      .toString("hh:mm:ss.zzz");
+}
 
 static QPushButton *createIconBtn(QWidget *parent, const QString &text, int w,
                                   int h, const QString &bg = "#333333",
@@ -25,7 +39,7 @@ static QPushButton *createIconBtn(QWidget *parent, const QString &text, int w,
             font-weight: bold;
         }
     )")
-                         .arg(bg, color));
+                          .arg(bg, color));
   return btn;
 }
 
@@ -169,32 +183,11 @@ void VideoPreviewPanel::setupUi() {
   vaLayout->setContentsMargins(40, 0, 40, 0);
   vaLayout->setAlignment(Qt::AlignCenter);
 
-  auto *blackRect = new QFrame(videoArea_);
-  blackRect->setStyleSheet("background-color: #000000; border: none;");
-  blackRect->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
-  vaLayout->addWidget(blackRect);
+  videoRenderer_ = new SoftwareVideoRenderer(videoArea_);
+  videoRenderer_->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
+  vaLayout->addWidget(videoRenderer_, 1, Qt::AlignCenter);
 
-  // Drag handles (absolute positioned over videoArea)
-  // Positions are relative to videoArea content (excluding 40px left/right
-  // padding)
-  auto addHandle = [&](int x, int y) {
-    auto *h = new QFrame(videoArea_);
-    h->setFixedSize(6, 6);
-    h->setStyleSheet("background-color: #38bdf8; border-radius: 1px;");
-    h->move(x, y);
-    handles_.append(h);
-    return h;
-  };
-
-  // Initial positions; will be updated in resizeEvent
-  addHandle(0, 0); // TL
-  addHandle(0, 0); // TM
-  addHandle(0, 0); // TR
-  addHandle(0, 0); // ML
-  addHandle(0, 0); // MR
-  addHandle(0, 0); // BL
-  addHandle(0, 0); // BM
-  addHandle(0, 0); // BR
+  // Drag handles removed / hidden for now
 
   layout->addWidget(videoArea_, 1);
 
@@ -214,19 +207,24 @@ void VideoPreviewPanel::setupUi() {
   cbLayout->setSpacing(8);
   cbLayout->setAlignment(Qt::AlignVCenter);
 
-  auto addIconLabel = [&](const QString &text, int w, int h) {
-    auto *lbl = new QLabel(text, controlBar);
-    lbl->setFixedSize(w, h);
-    lbl->setAlignment(Qt::AlignCenter);
-    lbl->setStyleSheet("color: #d1d5db; font-family: Inter; font-size: 12px; "
-                       "background: transparent;");
-    cbLayout->addWidget(lbl);
-  };
+  stepBwdBtn_ = createIconBtn(controlBar, QString(QChar(0x23EE)), 28, 28);
+  playBtn_ = createIconBtn(controlBar, QString(QChar(0x25B6)), 28, 28);
+  pauseBtn_ = createIconBtn(controlBar, QString(QChar(0x25A0)), 28, 28);
+  stepFwdBtn_ = createIconBtn(controlBar, QString(QChar(0x23ED)), 28, 28);
 
-  addIconLabel(QString(QChar(0x23EE)), 16, 16);
-  addIconLabel(QString(QChar(0x23ED)), 16, 16);
-  addIconLabel(QString(QChar(0x25B6)), 16, 16);
-  addIconLabel(QString(QChar(0x25A0)), 14, 14);
+  cbLayout->addWidget(stepBwdBtn_);
+  cbLayout->addWidget(playBtn_);
+  cbLayout->addWidget(pauseBtn_);
+  cbLayout->addWidget(stepFwdBtn_);
+
+  connect(playBtn_, &QPushButton::clicked, this,
+          [this]() { emit playRequested(); });
+  connect(pauseBtn_, &QPushButton::clicked, this,
+          [this]() { emit pauseRequested(); });
+  connect(stepFwdBtn_, &QPushButton::clicked, this,
+          [this]() { emit stepForwardRequested(); });
+  connect(stepBwdBtn_, &QPushButton::clicked, this,
+          [this]() { emit stepBackwardRequested(); });
 
   // Progress bar container
   auto *progressContainer = new QFrame(controlBar);
@@ -239,13 +237,24 @@ void VideoPreviewPanel::setupUi() {
   progressFill->move(0, 0);
   cbLayout->addWidget(progressContainer);
 
-  timeLabel_ = new QLabel("00:00:00:00 / 00:00:00:00", controlBar);
-  timeLabel_->setStyleSheet("color: #d1d5db; font-family: Inter, sans-serif; "
-                            "font-size: 11px; background: transparent;");
-  cbLayout->addWidget(timeLabel_);
+  currentTimeLabel_ = new QLabel("00:00:00.000 / 00:00:00.000", controlBar);
+  currentTimeLabel_->setStyleSheet("color: #d1d5db; font-family: Inter, sans-serif; "
+                                   "font-size: 11px; background: transparent;");
+  cbLayout->addWidget(currentTimeLabel_);
 
-  addIconLabel("Vol", 24, 16);
-  addIconLabel("FS", 20, 16);
+  auto *volLabel = new QLabel("Vol", controlBar);
+  volLabel->setFixedSize(24, 16);
+  volLabel->setAlignment(Qt::AlignCenter);
+  volLabel->setStyleSheet("color: #d1d5db; font-family: Inter; font-size: 12px; "
+                          "background: transparent;");
+  cbLayout->addWidget(volLabel);
+
+  auto *fsLabel = new QLabel("FS", controlBar);
+  fsLabel->setFixedSize(20, 16);
+  fsLabel->setAlignment(Qt::AlignCenter);
+  fsLabel->setStyleSheet("color: #d1d5db; font-family: Inter; font-size: 12px; "
+                         "background: transparent;");
+  cbLayout->addWidget(fsLabel);
 
   layout->addWidget(controlBar);
 }
@@ -304,4 +313,82 @@ void VideoPreviewPanel::updateHandlePositions() {
 void VideoPreviewPanel::resizeEvent(QResizeEvent *event) {
   QWidget::resizeEvent(event);
   updateHandlePositions();
+}
+
+void VideoPreviewPanel::setMediaPlayer(MediaPlayer *player) {
+  if (mediaPlayer_) {
+    disconnect(mediaPlayer_, nullptr, this, nullptr);
+  }
+  mediaPlayer_ = player;
+  if (mediaPlayer_) {
+    connect(mediaPlayer_, &MediaPlayer::timeChanged, this,
+            &VideoPreviewPanel::onTimeChanged, Qt::QueuedConnection);
+  }
+}
+
+void VideoPreviewPanel::setSubtitleTrack(SubtitleTrack *track) {
+  subtitleTrack_ = track;
+}
+
+void VideoPreviewPanel::onMediaLoaded(qint64 durationMs, QSize videoSize) {
+  Q_UNUSED(videoSize)
+  totalDurationMs_ = durationMs;
+  if (videoRenderer_) {
+    videoRenderer_->clear();
+  }
+  onTimeChanged(0);
+}
+
+void VideoPreviewPanel::seekTo(qint64 ms) {
+  if (mediaPlayer_) {
+    mediaPlayer_->seek(ms);
+  }
+}
+
+void VideoPreviewPanel::updateSubtitleOverlay() {
+  paintSubtitle();
+}
+
+void VideoPreviewPanel::onTimeChanged(qint64 ms) {
+  if (currentTimeLabel_) {
+    currentTimeLabel_->setText(QString("%1 / %2")
+                                   .arg(formatTime(ms))
+                                   .arg(formatTime(totalDurationMs_)));
+  }
+  paintSubtitle();
+}
+
+void VideoPreviewPanel::paintSubtitle() {
+  if (!subtitleTrack_ || !mediaPlayer_ || !videoRenderer_)
+    return;
+
+  qint64 currentTimeMs = mediaPlayer_->currentTimeMs();
+  const SubtitleItem *activeItem = nullptr;
+  for (const auto &item : subtitleTrack_->items()) {
+    if (item.startMs <= currentTimeMs && currentTimeMs <= item.endMs) {
+      activeItem = &item;
+      break;
+    }
+  }
+
+  if (!activeItem || activeItem->text.isEmpty())
+    return;
+
+  LOG_SUB(debug, "active id=" << activeItem->id << " text=" << activeItem->text);
+
+  QPainter painter(videoRenderer_);
+  int fontSize = qMax(1, sizeCombo_->currentText().toInt());
+  QFont font(fontCombo_->currentText(), fontSize);
+  painter.setFont(font);
+
+  QRect textRect = videoRenderer_->rect().adjusted(40, 0, -40, -20);
+
+  painter.setPen(
+      QPen(Qt::black, 3, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin));
+  painter.drawText(textRect, Qt::AlignHCenter | Qt::AlignBottom,
+                   activeItem->text);
+
+  painter.setPen(Qt::white);
+  painter.drawText(textRect, Qt::AlignHCenter | Qt::AlignBottom,
+                   activeItem->text);
 }
