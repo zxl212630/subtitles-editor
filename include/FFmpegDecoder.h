@@ -5,6 +5,7 @@
 #include <QQueue>
 #include <QSize>
 #include <QThread>
+#include <QWaitCondition>
 #include <atomic>
 #include <optional>
 
@@ -52,6 +53,8 @@ public:
   std::optional<DecodedAudioFrame> dequeueAudioFrame();
   int videoQueueSize() const;
   int audioQueueSize() const;
+  qint64 videoQueueDurationMs() const;
+  qint64 audioQueueDurationMs() const;
 
   qint64 durationMs() const;
   double fps() const;
@@ -113,6 +116,9 @@ private:
   QQueue<DecodedVideoFrame> videoQueue_;
   QQueue<DecodedAudioFrame> audioQueue_;
 
-  static constexpr int MAX_VIDEO_QUEUE_SIZE = 3;
+  QMutex queueFullMutex_;
+  QWaitCondition queueNotFull_;
+
+  static constexpr int MAX_VIDEO_QUEUE_MS = 500;
   static constexpr int MAX_AUDIO_QUEUE_MS = 500;
 };

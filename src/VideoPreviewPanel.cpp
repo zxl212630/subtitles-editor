@@ -39,7 +39,7 @@ static QPushButton *createIconBtn(QWidget *parent, const QString &text, int w,
             font-weight: bold;
         }
     )")
-                          .arg(bg, color));
+                         .arg(bg, color));
   return btn;
 }
 
@@ -238,15 +238,17 @@ void VideoPreviewPanel::setupUi() {
   cbLayout->addWidget(progressContainer);
 
   currentTimeLabel_ = new QLabel("00:00:00.000 / 00:00:00.000", controlBar);
-  currentTimeLabel_->setStyleSheet("color: #d1d5db; font-family: Inter, sans-serif; "
-                                   "font-size: 11px; background: transparent;");
+  currentTimeLabel_->setStyleSheet(
+      "color: #d1d5db; font-family: Inter, sans-serif; "
+      "font-size: 11px; background: transparent;");
   cbLayout->addWidget(currentTimeLabel_);
 
   auto *volLabel = new QLabel("Vol", controlBar);
   volLabel->setFixedSize(24, 16);
   volLabel->setAlignment(Qt::AlignCenter);
-  volLabel->setStyleSheet("color: #d1d5db; font-family: Inter; font-size: 12px; "
-                          "background: transparent;");
+  volLabel->setStyleSheet(
+      "color: #d1d5db; font-family: Inter; font-size: 12px; "
+      "background: transparent;");
   cbLayout->addWidget(volLabel);
 
   auto *fsLabel = new QLabel("FS", controlBar);
@@ -345,20 +347,16 @@ void VideoPreviewPanel::seekTo(qint64 ms) {
   }
 }
 
-void VideoPreviewPanel::updateSubtitleOverlay() {
-  paintSubtitle();
-}
-
 void VideoPreviewPanel::onTimeChanged(qint64 ms) {
   if (currentTimeLabel_) {
     currentTimeLabel_->setText(QString("%1 / %2")
                                    .arg(formatTime(ms))
                                    .arg(formatTime(totalDurationMs_)));
   }
-  paintSubtitle();
+  updateSubtitleOverlay();
 }
 
-void VideoPreviewPanel::paintSubtitle() {
+void VideoPreviewPanel::updateSubtitleOverlay() {
   if (!subtitleTrack_ || !mediaPlayer_ || !videoRenderer_)
     return;
 
@@ -371,24 +369,16 @@ void VideoPreviewPanel::paintSubtitle() {
     }
   }
 
-  if (!activeItem || activeItem->text.isEmpty())
-    return;
-
-  LOG_SUB(debug, "active id=" << activeItem->id << " text=" << activeItem->text);
-
-  QPainter painter(videoRenderer_);
   int fontSize = qMax(1, sizeCombo_->currentText().toInt());
   QFont font(fontCombo_->currentText(), fontSize);
-  painter.setFont(font);
+  videoRenderer_->setSubtitleFont(font);
 
-  QRect textRect = videoRenderer_->rect().adjusted(40, 0, -40, -20);
+  if (!activeItem || activeItem->text.isEmpty()) {
+    videoRenderer_->setSubtitleText(QString());
+    return;
+  }
 
-  painter.setPen(
-      QPen(Qt::black, 3, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin));
-  painter.drawText(textRect, Qt::AlignHCenter | Qt::AlignBottom,
-                   activeItem->text);
-
-  painter.setPen(Qt::white);
-  painter.drawText(textRect, Qt::AlignHCenter | Qt::AlignBottom,
-                   activeItem->text);
+  LOG_SUB(debug,
+          "active id=" << activeItem->id << " text=" << activeItem->text);
+  videoRenderer_->setSubtitleText(activeItem->text);
 }

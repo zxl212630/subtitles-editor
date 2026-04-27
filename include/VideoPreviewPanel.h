@@ -20,6 +20,8 @@ public:
 
   void setMediaPlayer(MediaPlayer *player);
   void setSubtitleTrack(SubtitleTrack *track);
+
+  SoftwareVideoRenderer *videoRenderer() const { return videoRenderer_; }
   void onMediaLoaded(qint64 durationMs, QSize videoSize);
   void seekTo(qint64 ms);
   void updateSubtitleOverlay();
@@ -41,7 +43,6 @@ private:
   void populateFontCombo();
   void populateSizeCombo();
   void updateHandlePositions();
-  void paintSubtitle();
   void onTimeChanged(qint64 ms);
 
   QComboBox *fontCombo_ = nullptr;

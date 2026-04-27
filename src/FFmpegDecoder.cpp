@@ -220,7 +220,9 @@ std::optional<DecodedVideoFrame> FFmpegDecoder::dequeueVideoFrame() {
   if (videoQueue_.isEmpty()) {
     return std::nullopt;
   }
-  return videoQueue_.dequeue();
+  auto frame = videoQueue_.dequeue();
+  queueNotFull_.wakeAll();
+  return frame;
 }
 
 std::optional<DecodedAudioFrame> FFmpegDecoder::dequeueAudioFrame() {
@@ -228,7 +230,9 @@ std::optional<DecodedAudioFrame> FFmpegDecoder::dequeueAudioFrame() {
   if (audioQueue_.isEmpty()) {
     return std::nullopt;
   }
-  return audioQueue_.dequeue();
+  auto frame = audioQueue_.dequeue();
+  queueNotFull_.wakeAll();
+  return frame;
 }
 
 int FFmpegDecoder::videoQueueSize() const {
@@ -239,6 +243,20 @@ int FFmpegDecoder::videoQueueSize() const {
 int FFmpegDecoder::audioQueueSize() const {
   QMutexLocker locker(&audioQueueMutex_);
   return audioQueue_.size();
+}
+
+qint64 FFmpegDecoder::videoQueueDurationMs() const {
+  QMutexLocker locker(&videoQueueMutex_);
+  if (videoQueue_.size() < 2)
+    return 0;
+  return videoQueue_.back().ptsMs - videoQueue_.front().ptsMs;
+}
+
+qint64 FFmpegDecoder::audioQueueDurationMs() const {
+  QMutexLocker locker(&audioQueueMutex_);
+  if (audioQueue_.size() < 2)
+    return 0;
+  return audioQueue_.back().ptsMs - audioQueue_.front().ptsMs;
 }
 
 qint64 FFmpegDecoder::durationMs() const { return durationMs_; }
@@ -280,10 +298,11 @@ void FFmpegDecoder::run() {
       continue;
     }
 
-    bool videoFull = !hasVideo_ || videoQueueSize() >= MAX_VIDEO_QUEUE_SIZE;
-    bool audioFull = !hasAudio_ || audioQueueSize() >= MAX_AUDIO_QUEUE_MS;
+    bool videoFull = !hasVideo_ || videoQueueDurationMs() >= MAX_VIDEO_QUEUE_MS;
+    bool audioFull = !hasAudio_ || audioQueueDurationMs() >= MAX_AUDIO_QUEUE_MS;
     if (videoFull && audioFull) {
-      QThread::msleep(5);
+      QMutexLocker locker(&queueFullMutex_);
+      queueNotFull_.wait(&queueFullMutex_, 50);
       continue;
     }
 
@@ -334,10 +353,8 @@ void FFmpegDecoder::performSeek(qint64 targetMs) {
     return;
   }
 
-  int64_t target =
-      static_cast<int64_t>(targetMs / 1000.0 / av_q2d(timeBase));
-  int ret =
-      av_seek_frame(fmtCtx_, streamIdx, target, AVSEEK_FLAG_BACKWARD);
+  int64_t target = static_cast<int64_t>(targetMs / 1000.0 / av_q2d(timeBase));
+  int ret = av_seek_frame(fmtCtx_, streamIdx, target, AVSEEK_FLAG_BACKWARD);
   if (ret < 0) {
     char errbuf[256];
     av_strerror(ret, errbuf, sizeof(errbuf));
@@ -384,8 +401,8 @@ bool FFmpegDecoder::decodeVideoPacket(AVPacket *packet) {
         if (swsCtx_) {
           sws_freeContext(swsCtx_);
         }
-        swsCtx_ = sws_getContext(w, h, static_cast<AVPixelFormat>(f->format),
-                                 w, h, AV_PIX_FMT_RGBA, SWS_BILINEAR, nullptr,
+        swsCtx_ = sws_getContext(w, h, static_cast<AVPixelFormat>(f->format), w,
+                                 h, AV_PIX_FMT_RGBA, SWS_BILINEAR, nullptr,
                                  nullptr, nullptr);
         videoSize_ = QSize(w, h);
       }
@@ -395,8 +412,7 @@ bool FFmpegDecoder::decodeVideoPacket(AVPacket *packet) {
     uint8_t *dstData[4] = {reinterpret_cast<uint8_t *>(rgbaData.data()),
                            nullptr, nullptr, nullptr};
     int dstLinesize[4] = {w * 4, 0, 0, 0};
-    sws_scale(swsCtx_, f->data, f->linesize, 0, h, dstData,
-              dstLinesize);
+    sws_scale(swsCtx_, f->data, f->linesize, 0, h, dstData, dstLinesize);
 
     DecodedVideoFrame vframe;
     vframe.ptsMs = ptsMs;
@@ -406,9 +422,7 @@ bool FFmpegDecoder::decodeVideoPacket(AVPacket *packet) {
 
     {
       QMutexLocker locker(&videoQueueMutex_);
-      if (videoQueue_.size() < MAX_VIDEO_QUEUE_SIZE) {
-        videoQueue_.enqueue(std::move(vframe));
-      }
+      videoQueue_.enqueue(std::move(vframe));
     }
 
     av_frame_unref(f);
@@ -434,7 +448,8 @@ bool FFmpegDecoder::decodeVideoPacket(AVPacket *packet) {
     processFrame(frame);
     receiveRet = avcodec_receive_frame(videoCodecCtx_, frame);
   }
-  if (receiveRet < 0 && receiveRet != AVERROR(EAGAIN) && receiveRet != AVERROR_EOF) {
+  if (receiveRet < 0 && receiveRet != AVERROR(EAGAIN) &&
+      receiveRet != AVERROR_EOF) {
     char errbuf[256];
     av_strerror(receiveRet, errbuf, sizeof(errbuf));
     LOG_DEC(warning, "Video receive frame error:" << errbuf);
@@ -480,7 +495,8 @@ bool FFmpegDecoder::decodeAudioPacket(AVPacket *packet) {
     processFrame(frame);
     receiveRet = avcodec_receive_frame(audioCodecCtx_, frame);
   }
-  if (receiveRet < 0 && receiveRet != AVERROR(EAGAIN) && receiveRet != AVERROR_EOF) {
+  if (receiveRet < 0 && receiveRet != AVERROR(EAGAIN) &&
+      receiveRet != AVERROR_EOF) {
     char errbuf[256];
     av_strerror(receiveRet, errbuf, sizeof(errbuf));
     LOG_DEC(warning, "Audio receive frame error:" << errbuf);
@@ -511,8 +527,7 @@ void FFmpegDecoder::convertAudioFrame(AVFrame *frame, DecodedAudioFrame &out) {
   bool needInit = false;
   if (!audioSwrCtx_) {
     needInit = true;
-  } else if (swrSampleRate_ != out.sampleRate ||
-             swrChannels_ != out.channels ||
+  } else if (swrSampleRate_ != out.sampleRate || swrChannels_ != out.channels ||
              swrFormat_ != inFormat) {
     swr_free(&audioSwrCtx_);
     needInit = true;

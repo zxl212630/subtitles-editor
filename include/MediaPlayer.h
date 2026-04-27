@@ -1,8 +1,12 @@
 #pragma once
 
+#include "FFmpegDecoder.h"
+
+#include <QElapsedTimer>
 #include <QObject>
 #include <QSize>
 #include <QTimer>
+#include <optional>
 
 class FFmpegDecoder;
 class QtAudioOutput;
@@ -12,13 +16,7 @@ class MediaPlayer : public QObject {
   Q_OBJECT
 
 public:
-  enum State {
-    Stopped,
-    Loading,
-    Ready,
-    Playing,
-    Paused
-  };
+  enum State { Stopped, Loading, Ready, Playing, Paused };
   Q_ENUM(State)
 
   explicit MediaPlayer(QObject *parent = nullptr);
@@ -31,6 +29,8 @@ public:
   void seek(qint64 ms);
   void stepForward();
   void stepBackward();
+
+  void setVideoRenderer(SoftwareVideoRenderer *renderer);
 
   State state() const { return state_; }
   qint64 currentTimeMs() const { return currentTimeMs_; }
@@ -57,4 +57,9 @@ private:
   State state_ = Stopped;
   int droppedFrames_ = 0;
   int renderedFrames_ = 0;
+  std::optional<DecodedVideoFrame> pendingVideoFrame_;
+
+  QElapsedTimer playbackElapsedTimer_;
+  qint64 playbackStartTimeMs_ = 0;
+  bool playbackTimerRunning_ = false;
 };

@@ -15,7 +15,6 @@
 MediaPlayer::MediaPlayer(QObject *parent) : QObject(parent) {
   decoder_ = new FFmpegDecoder(this);
   audioOutput_ = new QtAudioOutput(this);
-  videoRenderer_ = new SoftwareVideoRenderer();
   playbackTimer_ = new QTimer(this);
 
   connect(decoder_, &FFmpegDecoder::decodeError, this,
@@ -28,9 +27,12 @@ MediaPlayer::MediaPlayer(QObject *parent) : QObject(parent) {
 
 MediaPlayer::~MediaPlayer() {
   stop();
-  delete videoRenderer_;
   delete audioOutput_;
   delete decoder_;
+}
+
+void MediaPlayer::setVideoRenderer(SoftwareVideoRenderer *renderer) {
+  videoRenderer_ = renderer;
 }
 
 bool MediaPlayer::load(const QString &path) {
@@ -63,8 +65,8 @@ bool MediaPlayer::load(const QString &path) {
   currentTimeMs_ = 0;
 
   emit mediaLoaded(decoder_->durationMs(), decoder_->videoSize());
-  LOG_MP(info, "load() success state=Ready duration="
-                  << decoder_->durationMs());
+  LOG_MP(info,
+         "load() success state=Ready duration=" << decoder_->durationMs());
 
   return true;
 }
@@ -74,8 +76,11 @@ void MediaPlayer::play() {
     state_ = Playing;
     emit stateChanged(Playing);
     decoder_->setPlaying(true);
+    playbackStartTimeMs_ = currentTimeMs_;
+    playbackElapsedTimer_.restart();
+    playbackTimerRunning_ = true;
     playbackTimer_->start(16);
-    LOG_MP(info, "play() state=Playing");
+    LOG_MP(info, "play() state=Playing startTime=" << playbackStartTimeMs_);
   }
 }
 
@@ -85,18 +90,23 @@ void MediaPlayer::pause() {
     emit stateChanged(Paused);
     decoder_->setPlaying(false);
     playbackTimer_->stop();
+    playbackTimerRunning_ = false;
     LOG_MP(info, "pause() state=Paused");
   }
 }
 
 void MediaPlayer::stop() {
   playbackTimer_->stop();
+  playbackTimerRunning_ = false;
   decoder_->stop();
   decoder_->wait(5000);
   audioOutput_->close();
-  videoRenderer_->clear();
+  if (videoRenderer_) {
+    videoRenderer_->clear();
+  }
   state_ = Stopped;
   currentTimeMs_ = 0;
+  pendingVideoFrame_ = std::nullopt;
   emit stateChanged(Stopped);
   LOG_MP(info, "stop() state=Stopped");
 }
@@ -112,6 +122,7 @@ void MediaPlayer::seek(qint64 ms) {
   decoder_->requestSeek(ms);
   audioOutput_->flush();
   currentTimeMs_ = ms;
+  pendingVideoFrame_ = std::nullopt;
 
   if (oldState == Playing) {
     play();
@@ -135,58 +146,70 @@ void MediaPlayer::stepBackward() {
 }
 
 void MediaPlayer::onPlaybackTimer() {
-  // 1. Process audio frames
-  while (auto aframe = decoder_->dequeueAudioFrame()) {
+  // 1. Process audio frames (check buffer space BEFORE dequeue to avoid
+  // losing frames)
+  while (decoder_->audioQueueSize() > 0) {
+    if (audioOutput_->bytesFree() < 2048) {
+      break;
+    }
+    auto aframe = decoder_->dequeueAudioFrame();
+    if (!aframe) {
+      break;
+    }
     audioOutput_->write(aframe->pcmData.constData(), aframe->pcmData.size());
-    LOG_MP(debug, "audio write() bytes=" << aframe->pcmData.size());
   }
 
-  // 2. Calculate audio clock
+  // 2. Calculate playback clock based on elapsed real time
   double audioClock = 0.0;
-  if (decoder_->hasAudio() && audioOutput_->isOpen()) {
+  if (playbackTimerRunning_) {
     audioClock =
-        audioOutput_->samplesPlayed() / double(decoder_->audioSampleRate());
+        (playbackStartTimeMs_ + playbackElapsedTimer_.elapsed()) / 1000.0;
   } else {
     audioClock = currentTimeMs_ / 1000.0;
   }
 
   // 3. Process video frame (sync)
-  auto vframe = decoder_->dequeueVideoFrame();
-  if (!vframe) {
+  if (!pendingVideoFrame_) {
+    pendingVideoFrame_ = decoder_->dequeueVideoFrame();
+  }
+  if (!pendingVideoFrame_) {
+    // Check for end of stream
+    if (decoder_->videoQueueSize() == 0 && decoder_->audioQueueSize() == 0 &&
+        decoder_->isFinished()) {
+      stop();
+      emit playbackFinished();
+    }
     return;
   }
 
-  double videoPts = vframe->ptsMs / 1000.0;
+  double videoPts = pendingVideoFrame_->ptsMs / 1000.0;
   double delayMs = (videoPts - audioClock) * 1000.0;
 
   bool shouldRender = true;
+  bool dropFrame = false;
   if (decoder_->hasAudio()) {
-    if (delayMs > 5.0) {
-      QThread::msleep(static_cast<int>(delayMs));
-    } else if (delayMs < -40.0) {
-      droppedFrames_++;
+    if (delayMs > 20.0) {
+      // Video is ahead, keep frame for next tick (do not block UI thread)
       shouldRender = false;
-      LOG_MP(debug, "sync videoPts=" << videoPts << " audioClock=" << audioClock
-                                     << " delay=" << delayMs << " action=drop");
+    } else if (delayMs < -40.0) {
+      dropFrame = true;
+      shouldRender = false;
+      droppedFrames_++;
     }
   }
 
   // 4. Render frame
   if (shouldRender) {
-    videoRenderer_->renderFrame(*vframe);
-    currentTimeMs_ = vframe->ptsMs;
+    if (videoRenderer_) {
+      videoRenderer_->renderFrame(*pendingVideoFrame_);
+    }
+    currentTimeMs_ = pendingVideoFrame_->ptsMs;
     emit timeChanged(currentTimeMs_);
     renderedFrames_++;
-    LOG_MP(debug, "sync videoPts=" << videoPts << " audioClock=" << audioClock
-                                   << " delay=" << delayMs
-                                   << " action=render");
   }
 
-  // 5. Check for end of stream
-  if (decoder_->videoQueueSize() == 0 && decoder_->audioQueueSize() == 0 &&
-      decoder_->isFinished()) {
-    stop();
-    emit playbackFinished();
+  if (shouldRender || dropFrame) {
+    pendingVideoFrame_ = std::nullopt;
   }
 }
 
@@ -197,7 +220,5 @@ void MediaPlayer::onDecoderError(const QString &error) {
 }
 
 void MediaPlayer::onEndOfStream() {
-  LOG_MP(info, "EOS");
-  emit playbackFinished();
-  stop();
+  LOG_MP(info, "EOS from decoder, letting playback drain remaining queues");
 }

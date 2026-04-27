@@ -18,20 +18,32 @@ bool QtAudioOutput::open(int sampleRate, int channels) {
   close();
 
   format_.setSampleRate(sampleRate);
-  format_.setChannelCount(channels);
   format_.setSampleFormat(QAudioFormat::Int16);
+  format_.setChannelConfig(
+      QAudioFormat::defaultChannelConfigForChannelCount(channels));
 
   QAudioDevice device = QMediaDevices::defaultAudioOutput();
   if (!device.isFormatSupported(format_)) {
-    LOG_AUDIO(warning, "Requested format not supported, using nearest format");
+    LOG_AUDIO(warning,
+              "Requested format not supported, using nearest format."
+              " requested sampleRate="
+                  << sampleRate << " channels=" << channels << " config="
+                  << format_.channelConfig() << " preferred sampleRate="
+                  << device.preferredFormat().sampleRate()
+                  << " channels=" << device.preferredFormat().channelCount());
     format_ = device.preferredFormat();
   }
 
   audioSink_ = new QAudioSink(device, format_, this);
+  // Buffer size for ~2 seconds of audio (use sink's actual format)
+  int bufferSize = audioSink_->format().sampleRate() *
+                   audioSink_->format().channelCount() *
+                   static_cast<int>(sizeof(int16_t)) * 2;
+  audioSink_->setBufferSize(bufferSize);
   ioDevice_ = audioSink_->start();
 
-  sampleRate_ = sampleRate;
-  channels_ = channels;
+  sampleRate_ = audioSink_->format().sampleRate();
+  channels_ = audioSink_->format().channelCount();
   totalBytesWritten_ = 0;
 
   return ioDevice_ != nullptr;
@@ -51,10 +63,22 @@ void QtAudioOutput::write(const void *data, size_t size) {
   if (!ioDevice_)
     return;
 
-  qint64 written = ioDevice_->write(static_cast<const char *>(data),
-                                    static_cast<qint64>(size));
-  totalBytesWritten_ += written;
-  LOG_AUDIO(debug, "write() bytes=" << written
+  qint64 remaining = static_cast<qint64>(size);
+  const char *ptr = static_cast<const char *>(data);
+  qint64 totalWritten = 0;
+
+  while (remaining > 0) {
+    qint64 written = ioDevice_->write(ptr, remaining);
+    if (written <= 0) {
+      break;
+    }
+    totalWritten += written;
+    ptr += written;
+    remaining -= written;
+  }
+
+  totalBytesWritten_ += totalWritten;
+  LOG_AUDIO(debug, "write() bytes=" << totalWritten << "/" << size
                                     << " totalPlayed=" << totalBytesWritten_);
 }
 
@@ -70,6 +94,18 @@ qint64 QtAudioOutput::samplesPlayed() const {
   if (channels_ == 0)
     return 0;
   return totalBytesWritten_ / (channels_ * static_cast<int>(sizeof(int16_t)));
+}
+
+qint64 QtAudioOutput::playedUSecs() const {
+  if (!audioSink_)
+    return 0;
+  return audioSink_->processedUSecs();
+}
+
+qint64 QtAudioOutput::bytesFree() const {
+  if (!audioSink_)
+    return 0;
+  return audioSink_->bytesFree();
 }
 
 void QtAudioOutput::setVolume(qreal volume) {

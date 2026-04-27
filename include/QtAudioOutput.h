@@ -20,6 +20,8 @@ public:
   void flush();
 
   qint64 samplesPlayed() const;
+  qint64 playedUSecs() const;
+  qint64 bytesFree() const;
   void setVolume(qreal volume);
   bool isOpen() const;
 

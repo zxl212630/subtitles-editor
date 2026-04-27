@@ -7,6 +7,7 @@
 #include "TimelinePanel.h"
 #include "VideoPreviewPanel.h"
 
+#include <QFile>
 #include <QFrame>
 #include <QHBoxLayout>
 #include <QLabel>
@@ -123,6 +124,7 @@ void AppWindow::setupSplitterLayout() {
 
   // Create media player
   d->mediaPlayer = new MediaPlayer(this);
+  d->mediaPlayer->setVideoRenderer(d->videoPreviewPanel->videoRenderer());
   d->videoPreviewPanel->setMediaPlayer(d->mediaPlayer);
   d->videoPreviewPanel->setSubtitleTrack(d->subtitleTrack);
 
@@ -149,9 +151,8 @@ void AppWindow::setupSplitterLayout() {
 
   // 6. SubtitleList -> MediaPlayer seek
   connect(d->subtitleListPanel, &SubtitleListPanel::itemSeekRequested,
-          d->mediaPlayer, [this](const QString &, qint64 ms) {
-            d->mediaPlayer->seek(ms);
-          });
+          d->mediaPlayer,
+          [this](const QString &, qint64 ms) { d->mediaPlayer->seek(ms); });
 
   // 7. SubtitleList -> Timeline sync
   connect(d->subtitleListPanel, &SubtitleListPanel::itemSeekRequested,
