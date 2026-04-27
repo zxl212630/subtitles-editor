@@ -236,6 +236,13 @@ void AppWindow::setupSplitterLayout() {
   setupDummyData();
 }
 
+void AppWindow::loadFile(const QString &path) {
+  if (d->mediaPlayer) {
+    d->mediaPlayer->load(path);
+    d->mediaPlayer->play();
+  }
+}
+
 void AppWindow::setupDummyData() {
   auto addItem = [&](const QString &text, qint64 start, qint64 end) {
     SubtitleItem item;

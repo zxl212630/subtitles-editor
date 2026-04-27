@@ -17,6 +17,9 @@ public:
   explicit AppWindow(QWidget *parent = nullptr);
   ~AppWindow() override;
 
+public slots:
+  void loadFile(const QString &path);
+
 private:
   void setupUi();
   void setupTitleBar();

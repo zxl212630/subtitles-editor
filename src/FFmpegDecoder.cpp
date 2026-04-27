@@ -559,14 +559,21 @@ void FFmpegDecoder::convertAudioFrame(AVFrame *frame, DecodedAudioFrame &out) {
     swrFormat_ = inFormat;
   }
 
-  int maxOutSamples = swr_get_out_samples(audioSwrCtx_, frame->nb_samples);
+  // For AAC and similar compressed formats, nb_samples may be 0.
+  // In that case, use a reasonable default buffer size to handle decoder delay.
+  int outSamples = frame->nb_samples;
+  if (outSamples == 0) {
+    outSamples = 8192;  // Default buffer for compressed audio with delay
+  }
+
+  int maxOutSamples = swr_get_out_samples(audioSwrCtx_, outSamples);
   int maxOutSize = av_samples_get_buffer_size(
       nullptr, out.channels, maxOutSamples, AV_SAMPLE_FMT_S16, 1);
   QByteArray buffer(maxOutSize, 0);
   uint8_t *outData[1] = {reinterpret_cast<uint8_t *>(buffer.data())};
   int converted =
       swr_convert(audioSwrCtx_, outData, maxOutSamples,
-                  const_cast<const uint8_t **>(frame->data), frame->nb_samples);
+                  const_cast<const uint8_t **>(frame->data), outSamples);
   if (converted < 0) {
     LOG_DEC(warning, "Failed to convert audio");
     return;

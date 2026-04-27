@@ -146,11 +146,14 @@ void MediaPlayer::stepBackward() {
 }
 
 void MediaPlayer::onPlaybackTimer() {
-  // 1. Process audio frames (check buffer space BEFORE dequeue to avoid
-  // losing frames)
+  // 1. Process audio frames (check buffer space BEFORE dequeue to avoid losing frames)
   while (decoder_->audioQueueSize() > 0) {
-    if (audioOutput_->bytesFree() < 2048) {
-      break;
+    // Only check bytesFree periodically to avoid overhead, or when queue is low
+    if (decoder_->audioQueueSize() > 5) {
+      qint64 bytesFree = audioOutput_->bytesFree();
+      if (bytesFree < 4096) {
+        break;  // Not enough space for a full frame
+      }
     }
     auto aframe = decoder_->dequeueAudioFrame();
     if (!aframe) {
