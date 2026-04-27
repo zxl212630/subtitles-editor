@@ -146,19 +146,23 @@ void MediaPlayer::stepBackward() {
 }
 
 void MediaPlayer::onPlaybackTimer() {
-  // 1. Process audio frames (check buffer space BEFORE dequeue to avoid losing frames)
+  // 1. Process audio frames
   while (decoder_->audioQueueSize() > 0) {
-    // Only check bytesFree periodically to avoid overhead, or when queue is low
-    if (decoder_->audioQueueSize() > 5) {
+    // When queue is very long (>10), be conservative and check buffer space
+    // This prevents the queue from growing unbounded if audio device is slow
+    if (decoder_->audioQueueSize() > 10) {
       qint64 bytesFree = audioOutput_->bytesFree();
-      if (bytesFree < 4096) {
-        break;  // Not enough space for a full frame
+      if (bytesFree < 4096) {  // Conservative minimum
+        break;
       }
     }
+
     auto aframe = decoder_->dequeueAudioFrame();
     if (!aframe) {
       break;
     }
+
+    // write() handles partial writes internally and blocks if buffer is full
     audioOutput_->write(aframe->pcmData.constData(), aframe->pcmData.size());
   }
 
