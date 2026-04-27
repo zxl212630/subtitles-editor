@@ -23,6 +23,8 @@ FFmpegDecoder::FFmpegDecoder(QObject *parent) : QThread(parent) {}
 FFmpegDecoder::~FFmpegDecoder() { close(); }
 
 bool FFmpegDecoder::open(const QString &path) {
+  close();
+
   int ret = avformat_open_input(&fmtCtx_, path.toUtf8().constData(), nullptr,
                                 nullptr);
   if (ret < 0) {
