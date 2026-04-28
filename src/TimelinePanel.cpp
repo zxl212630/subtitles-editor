@@ -11,18 +11,74 @@
 #include <QMouseEvent>
 #include <QPainter>
 #include <QPainterPath>
-#include <QTimer>
+#include <QScrollBar>
+#include <QVBoxLayout>
+#include <QWheelEvent>
+
+class TimelineCanvas : public QWidget {
+public:
+  explicit TimelineCanvas(TimelinePanel *panel, QWidget *parent = nullptr)
+      : QWidget(parent), panel_(panel) {
+    setAttribute(Qt::WA_StyledBackground);
+  }
+
+protected:
+  void paintEvent(QPaintEvent * /*event*/) override {
+    QPainter painter(this);
+    panel_->drawOnCanvas(painter);
+  }
+
+private:
+  TimelinePanel *panel_;
+};
 
 TimelinePanel::TimelinePanel(QWidget *parent) : QWidget(parent) {
   setObjectName("TimelinePanel");
   setAttribute(Qt::WA_StyledBackground);
   setAcceptDrops(true);
+
+  auto *layout = new QVBoxLayout(this);
+  layout->setContentsMargins(0, 0, 0, 0);
+  layout->setSpacing(0);
+
+  canvas_ = new TimelineCanvas(this, this);
+  canvas_->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
+  layout->addWidget(canvas_);
+
+  hScrollBar_ = new QScrollBar(Qt::Horizontal, this);
+  hScrollBar_->setFixedHeight(14);
+  hScrollBar_->setStyleSheet(R"(
+      QScrollBar:horizontal {
+          background: #1e1e1e;
+          height: 14px;
+          border-radius: 4px;
+      }
+      QScrollBar::handle:horizontal {
+          background: #4a4a4a;
+          border-radius: 4px;
+          min-width: 20px;
+      }
+      QScrollBar::handle:horizontal:hover {
+          background: #5a5a5a;
+      }
+      QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal {
+          width: 0px;
+          border: none;
+      }
+  )");
+  layout->addWidget(hScrollBar_);
+
+  connect(hScrollBar_, &QScrollBar::valueChanged, this, [this](int value) {
+    scrollOffsetX_ = value;
+    canvas_->update();
+  });
+
   setStyleSheet(R"(
-        QWidget#TimelinePanel {
-            background-color: #1e1e1e;
-            border-radius: 10px;
-        }
-    )");
+      QWidget#TimelinePanel {
+          background-color: #1e1e1e;
+          border-radius: 10px;
+      }
+  )");
 }
 
 void TimelinePanel::setTrack(SubtitleTrack *track) {
