@@ -45,6 +45,7 @@ private:
   void clampScrollOffset();
 
 protected:
+  friend class TimelineCanvas;
   void drawOnCanvas(QPainter &painter);
 
 private:
