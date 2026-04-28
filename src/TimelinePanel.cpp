@@ -143,6 +143,8 @@ void TimelinePanel::setCurrentTime(qint64 ms) {
 
 void TimelinePanel::setTotalDuration(qint64 ms) {
   totalDurationMs_ = ms;
+  clampScrollOffset();
+  updateScrollBar();
   canvas_->update();
 }
 
