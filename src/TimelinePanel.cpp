@@ -6,6 +6,7 @@
 #include "SubtitleTrack.h"
 #include "TencentAsrService.h"
 
+#include <QApplication>
 #include <QFontDatabase>
 #include <QMimeData>
 #include <QMouseEvent>
@@ -451,12 +452,23 @@ void TimelinePanel::startAsrPipeline(const QString &localPath) {
 }
 
 void TimelinePanel::wheelEvent(QWheelEvent *event) {
-  if (event->modifiers() & Qt::ControlModifier) {
+  // On macOS event->modifiers() may be empty for trackpad gestures,
+  // so also query the application-wide keyboard state.
+  bool ctrlPressed = (event->modifiers() & Qt::ControlModifier) ||
+                     (QApplication::keyboardModifiers() & Qt::ControlModifier);
+
+  if (ctrlPressed) {
     // Zoom
     QPoint pos = event->position().toPoint();
     qint64 t = xToTime(pos.x());
 
-    double factor = (event->angleDelta().y() > 0) ? 1.25 : 0.8;
+    int delta = event->angleDelta().y();
+    if (delta == 0)
+      delta = event->angleDelta().x();
+    if (delta == 0)
+      delta = event->pixelDelta().y();
+
+    double factor = (delta > 0) ? 1.25 : 0.8;
     double newPps = pixelsPerSecond_ * factor;
     newPps = qBound(10.0, newPps, 1000.0);
 
@@ -475,6 +487,8 @@ void TimelinePanel::wheelEvent(QWheelEvent *event) {
     // Support horizontal wheel / trackpad
     if (delta == 0)
       delta = event->angleDelta().x();
+    if (delta == 0)
+      delta = event->pixelDelta().y();
     scrollOffsetX_ -= delta;
     clampScrollOffset();
     hScrollBar_->setValue(scrollOffsetX_);
