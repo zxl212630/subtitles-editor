@@ -1,7 +1,10 @@
 #include "TimelinePanel.h"
+#include "AudioTranscoder.h"
+#include "OssUploader.h"
 #include "QUuid"
 #include "SubtitleItem.h"
 #include "SubtitleTrack.h"
+#include "TencentAsrService.h"
 
 #include <QFontDatabase>
 #include <QMimeData>

@@ -1,15 +1,10 @@
 #pragma once
 
-#include <QResizeEvent>
-#include <QScrollBar>
-#include <QWheelEvent>
 #include <QWidget>
 
-#include "AudioTranscoder.h"
-#include "OssUploader.h"
-#include "SubtitleItem.h"
-#include "TencentAsrService.h"
-
+class QResizeEvent;
+class QScrollBar;
+class QWheelEvent;
 class SubtitleTrack;
 class TimelineCanvas;
 
@@ -31,7 +26,6 @@ signals:
   void mediaFileDropped(const QString &path);
 
 protected:
-  void paintEvent(QPaintEvent *event) override;
   void mousePressEvent(QMouseEvent *event) override;
   void dragEnterEvent(QDragEnterEvent *event) override;
   void dropEvent(QDropEvent *event) override;
@@ -49,8 +43,11 @@ private:
   qint64 xToTime(int x) const;
   void updateScrollBar();
   void clampScrollOffset();
+
+protected:
   void drawOnCanvas(QPainter &painter);
 
+private:
   SubtitleTrack *track_ = nullptr;
   qint64 totalDurationMs_ = 0;
   qint64 currentTimeMs_ = 0;
