@@ -44,6 +44,10 @@ private:
   void updateScrollBar();
   void clampScrollOffset();
 
+  // Legacy helpers (to be removed in Task 4)
+  qint64 pixelsToMs(int px) const;
+  int msToPixels(qint64 ms) const;
+
 protected:
   friend class TimelineCanvas;
   void drawOnCanvas(QPainter &painter);

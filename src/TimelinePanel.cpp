@@ -81,6 +81,44 @@ TimelinePanel::TimelinePanel(QWidget *parent) : QWidget(parent) {
   )");
 }
 
+int TimelinePanel::timeToX(qint64 ms) const {
+  return TRACK_HEAD_WIDTH + static_cast<int>(ms * pixelsPerSecond_ / 1000.0) -
+         scrollOffsetX_;
+}
+
+qint64 TimelinePanel::xToTime(int x) const {
+  if (x < TRACK_HEAD_WIDTH)
+    return 0;
+  int relX = x - TRACK_HEAD_WIDTH + scrollOffsetX_;
+  return static_cast<qint64>(relX * 1000.0 / pixelsPerSecond_);
+}
+
+void TimelinePanel::clampScrollOffset() {
+  int canvasWidth = canvas_->width();
+  int contentWidth =
+      static_cast<int>(totalDurationMs_ * pixelsPerSecond_ / 1000.0);
+  int maxOffset = qMax(0, contentWidth - canvasWidth + TRACK_HEAD_WIDTH);
+  if (scrollOffsetX_ < 0)
+    scrollOffsetX_ = 0;
+  if (scrollOffsetX_ > maxOffset)
+    scrollOffsetX_ = maxOffset;
+}
+
+void TimelinePanel::updateScrollBar() {
+  int canvasWidth = canvas_->width();
+  int contentWidth =
+      static_cast<int>(totalDurationMs_ * pixelsPerSecond_ / 1000.0);
+  int maxOffset = qMax(0, contentWidth - canvasWidth + TRACK_HEAD_WIDTH);
+
+  hScrollBar_->setRange(0, maxOffset);
+  hScrollBar_->setPageStep(canvasWidth);
+  hScrollBar_->setSingleStep(static_cast<int>(pixelsPerSecond_)); // ~1 second
+
+  if (scrollOffsetX_ > maxOffset)
+    scrollOffsetX_ = maxOffset;
+  hScrollBar_->setValue(scrollOffsetX_);
+}
+
 void TimelinePanel::setTrack(SubtitleTrack *track) {
   if (track_) {
     disconnect(track_, &SubtitleTrack::dataChanged, this,
@@ -112,11 +150,10 @@ void TimelinePanel::setTotalDuration(qint64 ms) {
   update();
 }
 
-void TimelinePanel::paintEvent(QPaintEvent * /*event*/) {
-  QPainter painter(this);
+void TimelinePanel::drawOnCanvas(QPainter &painter) {
   painter.setRenderHint(QPainter::Antialiasing);
 
-  // Clip to rounded rect so border-radius works with paintEvent
+  // Clip to rounded rect so border-radius works with drawOnCanvas
   QPainterPath clipPath;
   clipPath.addRoundedRect(rect().adjusted(1, 1, -1, -1), 10, 10);
   painter.setClipPath(clipPath);
@@ -139,7 +176,7 @@ void TimelinePanel::drawRuler(QPainter &painter) {
   int contentWidth = width() - TRACK_HEAD_WIDTH;
   int seconds = totalDurationMs_ / 1000;
   for (int s = 0; s <= seconds; ++s) {
-    int x = TRACK_HEAD_WIDTH + s * PIXELS_PER_SECOND;
+    int x = TRACK_HEAD_WIDTH + s * pixelsPerSecond_;
     if (x > width())
       break;
 
@@ -154,7 +191,7 @@ void TimelinePanel::drawRuler(QPainter &painter) {
   // Minor ticks
   painter.setPen(QColor("#404040"));
   for (int s = 0; s < seconds; ++s) {
-    int midX = TRACK_HEAD_WIDTH + s * PIXELS_PER_SECOND + PIXELS_PER_SECOND / 2;
+    int midX = TRACK_HEAD_WIDTH + s * pixelsPerSecond_ + pixelsPerSecond_ / 2;
     painter.drawLine(midX, 28, midX, 31);
   }
 }
@@ -263,11 +300,11 @@ void TimelinePanel::mousePressEvent(QMouseEvent *event) {
 }
 
 qint64 TimelinePanel::pixelsToMs(int px) const {
-  return static_cast<qint64>(px) * 1000 / PIXELS_PER_SECOND;
+  return static_cast<qint64>(px) * 1000 / pixelsPerSecond_;
 }
 
 int TimelinePanel::msToPixels(qint64 ms) const {
-  return static_cast<int>(ms * PIXELS_PER_SECOND / 1000);
+  return static_cast<int>(ms * pixelsPerSecond_ / 1000);
 }
 
 void TimelinePanel::dragEnterEvent(QDragEnterEvent *event) {
@@ -364,3 +401,9 @@ void TimelinePanel::startAsrPipeline(const QString &localPath) {
 
   transcoder->transcode(localPath);
 }
+
+void TimelinePanel::wheelEvent(QWheelEvent * /*event*/) {
+  // TODO: Implement zoom/scroll wheel handling in Task 5
+}
+
+void TimelinePanel::resizeEvent(QResizeEvent * /*event*/) { updateScrollBar(); }
