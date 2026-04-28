@@ -117,19 +117,19 @@ void TimelinePanel::updateScrollBar() {
 
 void TimelinePanel::setTrack(SubtitleTrack *track) {
   if (track_) {
-    disconnect(track_, &SubtitleTrack::dataChanged, this,
-               QOverload<>::of(&TimelinePanel::update));
-    disconnect(track_, &SubtitleTrack::itemSelected, this,
-               QOverload<>::of(&TimelinePanel::update));
+    disconnect(track_, &SubtitleTrack::dataChanged, canvas_,
+               QOverload<>::of(&TimelineCanvas::update));
+    disconnect(track_, &SubtitleTrack::itemSelected, canvas_,
+               QOverload<>::of(&TimelineCanvas::update));
   }
   track_ = track;
   if (track_) {
-    connect(track_, &SubtitleTrack::dataChanged, this,
-            QOverload<>::of(&TimelinePanel::update));
-    connect(track_, &SubtitleTrack::itemSelected, this,
-            QOverload<>::of(&TimelinePanel::update));
+    connect(track_, &SubtitleTrack::dataChanged, canvas_,
+            QOverload<>::of(&TimelineCanvas::update));
+    connect(track_, &SubtitleTrack::itemSelected, canvas_,
+            QOverload<>::of(&TimelineCanvas::update));
   }
-  update();
+  canvas_->update();
 }
 
 void TimelinePanel::setCurrentTime(qint64 ms) {
@@ -138,12 +138,12 @@ void TimelinePanel::setCurrentTime(qint64 ms) {
   if (ms > totalDurationMs_)
     ms = totalDurationMs_;
   currentTimeMs_ = ms;
-  update();
+  canvas_->update();
 }
 
 void TimelinePanel::setTotalDuration(qint64 ms) {
   totalDurationMs_ = ms;
-  update();
+  canvas_->update();
 }
 
 void TimelinePanel::drawOnCanvas(QPainter &painter) {
@@ -236,7 +236,7 @@ void TimelinePanel::drawRuler(QPainter &painter) {
 
 void TimelinePanel::drawSubtitleTrack(QPainter &painter, int y) {
   // Track background
-  painter.fillRect(TRACK_HEAD_WIDTH, y, width() - TRACK_HEAD_WIDTH,
+  painter.fillRect(TRACK_HEAD_WIDTH, y, canvas_->width() - TRACK_HEAD_WIDTH,
                    SUBTITLE_TRACK_HEIGHT, QColor("#2a2a2a"));
 
   // Track head
@@ -251,8 +251,8 @@ void TimelinePanel::drawSubtitleTrack(QPainter &painter, int y) {
 
   // Separator
   painter.setPen(QColor("#333333"));
-  painter.drawLine(TRACK_HEAD_WIDTH, y + SUBTITLE_TRACK_HEIGHT - 1, width(),
-                   y + SUBTITLE_TRACK_HEIGHT - 1);
+  painter.drawLine(TRACK_HEAD_WIDTH, y + SUBTITLE_TRACK_HEIGHT - 1,
+                   canvas_->width(), y + SUBTITLE_TRACK_HEIGHT - 1);
 
   if (!track_)
     return;
@@ -284,7 +284,7 @@ void TimelinePanel::drawSubtitleTrack(QPainter &painter, int y) {
 }
 
 void TimelinePanel::drawVideoTrack(QPainter &painter, int y) {
-  painter.fillRect(TRACK_HEAD_WIDTH, y, width() - TRACK_HEAD_WIDTH,
+  painter.fillRect(TRACK_HEAD_WIDTH, y, canvas_->width() - TRACK_HEAD_WIDTH,
                    VIDEO_TRACK_HEIGHT, QColor("#2a2a2a"));
 
   painter.setPen(Qt::NoPen);
@@ -340,6 +340,8 @@ void TimelinePanel::mousePressEvent(QMouseEvent *event) {
   if (event->x() < TRACK_HEAD_WIDTH)
     return;
 
+  // event->x() is in panel coordinates; this works because canvas fills panel
+  // with zero margins
   qint64 ms = xToTime(event->x());
   if (ms < 0)
     ms = 0;
@@ -348,7 +350,7 @@ void TimelinePanel::mousePressEvent(QMouseEvent *event) {
 
   currentTimeMs_ = ms;
   emit timeClicked(ms);
-  update();
+  canvas_->update();
 }
 
 void TimelinePanel::dragEnterEvent(QDragEnterEvent *event) {
