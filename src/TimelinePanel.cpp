@@ -95,27 +95,21 @@ qint64 TimelinePanel::xToTime(int x) const {
 
 void TimelinePanel::clampScrollOffset() {
   int canvasWidth = canvas_->width();
-  int contentWidth =
-      static_cast<int>(totalDurationMs_ * pixelsPerSecond_ / 1000.0);
+  int contentWidth = static_cast<int>(totalDurationMs_ * pixelsPerSecond_ / 1000.0);
   int maxOffset = qMax(0, contentWidth - canvasWidth + TRACK_HEAD_WIDTH);
-  if (scrollOffsetX_ < 0)
-    scrollOffsetX_ = 0;
-  if (scrollOffsetX_ > maxOffset)
-    scrollOffsetX_ = maxOffset;
+  scrollOffsetX_ = qBound(0, scrollOffsetX_, maxOffset);
 }
 
 void TimelinePanel::updateScrollBar() {
+  clampScrollOffset();
+
   int canvasWidth = canvas_->width();
-  int contentWidth =
-      static_cast<int>(totalDurationMs_ * pixelsPerSecond_ / 1000.0);
+  int contentWidth = static_cast<int>(totalDurationMs_ * pixelsPerSecond_ / 1000.0);
   int maxOffset = qMax(0, contentWidth - canvasWidth + TRACK_HEAD_WIDTH);
 
   hScrollBar_->setRange(0, maxOffset);
   hScrollBar_->setPageStep(canvasWidth);
-  hScrollBar_->setSingleStep(static_cast<int>(pixelsPerSecond_)); // ~1 second
-
-  if (scrollOffsetX_ > maxOffset)
-    scrollOffsetX_ = maxOffset;
+  hScrollBar_->setSingleStep(static_cast<int>(pixelsPerSecond_));
   hScrollBar_->setValue(scrollOffsetX_);
 }
 
