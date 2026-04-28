@@ -1,5 +1,8 @@
 #pragma once
 
+#include <QResizeEvent>
+#include <QScrollBar>
+#include <QWheelEvent>
 #include <QWidget>
 
 #include "AudioTranscoder.h"
@@ -8,6 +11,7 @@
 #include "TencentAsrService.h"
 
 class SubtitleTrack;
+class TimelineCanvas;
 
 class TimelinePanel : public QWidget {
   Q_OBJECT
@@ -31,6 +35,8 @@ protected:
   void mousePressEvent(QMouseEvent *event) override;
   void dragEnterEvent(QDragEnterEvent *event) override;
   void dropEvent(QDropEvent *event) override;
+  void wheelEvent(QWheelEvent *event) override;
+  void resizeEvent(QResizeEvent *event) override;
 
 private:
   void drawRuler(QPainter &painter);
@@ -39,8 +45,11 @@ private:
   void drawPlayhead(QPainter &painter);
   void startAsrPipeline(const QString &localPath);
 
-  qint64 pixelsToMs(int px) const;
-  int msToPixels(qint64 ms) const;
+  int timeToX(qint64 ms) const;
+  qint64 xToTime(int x) const;
+  void updateScrollBar();
+  void clampScrollOffset();
+  void drawOnCanvas(QPainter &painter);
 
   SubtitleTrack *track_ = nullptr;
   qint64 totalDurationMs_ = 0;
@@ -49,5 +58,9 @@ private:
   static constexpr int SUBTITLE_TRACK_HEIGHT = 48;
   static constexpr int VIDEO_TRACK_HEIGHT = 96;
   static constexpr int TRACK_HEAD_WIDTH = 120;
-  static constexpr int PIXELS_PER_SECOND = 100;
+
+  double pixelsPerSecond_ = 100.0;
+  int scrollOffsetX_ = 0;
+  QScrollBar *hScrollBar_ = nullptr;
+  TimelineCanvas *canvas_ = nullptr;
 };
