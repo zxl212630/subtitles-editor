@@ -448,8 +448,37 @@ void TimelinePanel::startAsrPipeline(const QString &localPath) {
   transcoder->transcode(localPath);
 }
 
-void TimelinePanel::wheelEvent(QWheelEvent * /*event*/) {
-  // TODO: Implement zoom/scroll wheel handling in Task 5
+void TimelinePanel::wheelEvent(QWheelEvent *event) {
+  if (event->modifiers() & Qt::ControlModifier) {
+    // Zoom
+    QPoint pos = event->position().toPoint();
+    qint64 t = xToTime(pos.x());
+
+    double factor = (event->angleDelta().y() > 0) ? 1.25 : 0.8;
+    double newPps = pixelsPerSecond_ * factor;
+    newPps = qBound(10.0, newPps, 1000.0);
+
+    // Adjust scroll so the time under cursor stays at the same screen X
+    int cursorRelX = pos.x() - TRACK_HEAD_WIDTH;
+    double newScroll = (t * newPps / 1000.0) - cursorRelX;
+    scrollOffsetX_ = static_cast<int>(newScroll);
+
+    pixelsPerSecond_ = newPps;
+    clampScrollOffset();
+    updateScrollBar();
+    canvas_->update();
+  } else {
+    // Horizontal scroll
+    int delta = event->angleDelta().y();
+    // Support horizontal wheel / trackpad
+    if (delta == 0)
+      delta = event->angleDelta().x();
+    scrollOffsetX_ -= delta;
+    clampScrollOffset();
+    hScrollBar_->setValue(scrollOffsetX_);
+    canvas_->update();
+  }
+  event->accept();
 }
 
 void TimelinePanel::resizeEvent(QResizeEvent * /*event*/) { updateScrollBar(); }
