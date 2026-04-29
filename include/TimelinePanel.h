@@ -12,11 +12,14 @@ class TimelinePanel : public QWidget {
   Q_OBJECT
 
 public:
+  enum class PlayheadAnchor { LeftThird, Center, RightThird };
+
   explicit TimelinePanel(QWidget *parent = nullptr);
 
   void setTrack(SubtitleTrack *track);
   void setCurrentTime(qint64 ms);
   void setTotalDuration(qint64 ms);
+  void setPlayheadAnchor(PlayheadAnchor anchor);
 
 signals:
   void timeClicked(qint64 ms);
@@ -61,4 +64,5 @@ private:
   int scrollOffsetX_ = 0;
   QScrollBar *hScrollBar_ = nullptr;
   TimelineCanvas *canvas_ = nullptr;
+  PlayheadAnchor playheadAnchor_ = PlayheadAnchor::Center;
 };
