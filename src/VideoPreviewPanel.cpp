@@ -207,10 +207,10 @@ void VideoPreviewPanel::setupUi() {
   cbLayout->setSpacing(8);
   cbLayout->setAlignment(Qt::AlignVCenter);
 
-  stepBwdBtn_ = createIconBtn(controlBar, QString(QChar(0x25C2)), 28, 28);
+  stepBwdBtn_ = createIconBtn(controlBar, QStringLiteral("|◂◂"), 36, 28);
   playPauseBtn_ = createIconBtn(controlBar, QString(QChar(0x25B6)), 28, 28);
   stopBtn_ = createIconBtn(controlBar, QString(QChar(0x25A0)), 28, 28);
-  stepFwdBtn_ = createIconBtn(controlBar, QString(QChar(0x25B8)), 28, 28);
+  stepFwdBtn_ = createIconBtn(controlBar, QStringLiteral("▸▸|"), 36, 28);
 
   cbLayout->addWidget(stepBwdBtn_);
   cbLayout->addWidget(playPauseBtn_);
