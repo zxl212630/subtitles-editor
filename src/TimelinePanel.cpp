@@ -454,10 +454,10 @@ void TimelinePanel::startAsrPipeline(const QString &localPath) {
 void TimelinePanel::wheelEvent(QWheelEvent *event) {
   // On macOS event->modifiers() may be empty for trackpad gestures,
   // so also query the application-wide keyboard state.
-  bool ctrlPressed = (event->modifiers() & Qt::ControlModifier) ||
-                     (QApplication::keyboardModifiers() & Qt::ControlModifier);
+  bool zoomPressed = (event->modifiers() & Qt::MetaModifier) ||
+                     (QApplication::keyboardModifiers() & Qt::MetaModifier);
 
-  if (ctrlPressed) {
+  if (zoomPressed) {
     // Zoom
     QPoint pos = event->position().toPoint();
     qint64 t = xToTime(pos.x());
