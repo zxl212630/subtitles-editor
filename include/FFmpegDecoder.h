@@ -56,6 +56,7 @@ public:
   qint64 videoQueueDurationMs() const;
   qint64 audioQueueDurationMs() const;
   void clearAudioQueue();
+  void clearAllQueues();
 
   qint64 durationMs() const;
   double fps() const;
@@ -108,6 +109,9 @@ private:
   std::atomic<bool> playing_{false};
   std::atomic<bool> seekRequested_{false};
   std::atomic<qint64> seekTargetMs_{0};
+
+  QMutex playControlMutex_;
+  QWaitCondition playCondition_;
 
   mutable QMutex metadataMutex_;
 

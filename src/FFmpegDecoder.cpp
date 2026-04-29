@@ -174,7 +174,7 @@ void FFmpegDecoder::close() {
   if (!wait(5000)) {
     LOG_DEC(warning, "Thread did not stop in time");
   }
-  clearQueues();
+  clearAllQueues();
   if (swsCtx_) {
     sws_freeContext(swsCtx_);
     swsCtx_ = nullptr;
@@ -210,11 +210,25 @@ void FFmpegDecoder::requestSeek(qint64 targetMs) {
   seekRequested_.store(true);
 }
 
-void FFmpegDecoder::setPlaying(bool playing) { playing_.store(playing); }
+void FFmpegDecoder::setPlaying(bool playing) {
+  bool wasPlaying = playing_.exchange(playing);
+  if (playing && !wasPlaying) {
+    QMutexLocker locker(&playControlMutex_);
+    playCondition_.wakeAll();
+  }
+}
 
 void FFmpegDecoder::stop() {
   running_.store(false);
   playing_.store(false);
+  {
+    QMutexLocker locker(&playControlMutex_);
+    playCondition_.wakeAll();
+  }
+  {
+    QMutexLocker locker(&queueFullMutex_);
+    queueNotFull_.wakeAll();
+  }
 }
 
 std::optional<DecodedVideoFrame> FFmpegDecoder::dequeueVideoFrame() {
@@ -296,7 +310,10 @@ void FFmpegDecoder::run() {
     }
 
     if (!playing_.load()) {
-      QThread::msleep(50);
+      QMutexLocker locker(&playControlMutex_);
+      if (!playing_.load()) {
+        playCondition_.wait(&playControlMutex_, 50);
+      }
       continue;
     }
 
@@ -361,7 +378,7 @@ void FFmpegDecoder::performSeek(qint64 targetMs) {
   if (audioCodecCtx_) {
     avcodec_flush_buffers(audioCodecCtx_);
   }
-  clearQueues();
+  clearAllQueues();
   LOG_DEC(info, "Seek complete target=" << targetMs << "ms");
 }
 
@@ -370,7 +387,7 @@ void FFmpegDecoder::clearAudioQueue() {
   audioQueue_.clear();
 }
 
-void FFmpegDecoder::clearQueues() {
+void FFmpegDecoder::clearAllQueues() {
   {
     QMutexLocker locker(&videoQueueMutex_);
     videoQueue_.clear();

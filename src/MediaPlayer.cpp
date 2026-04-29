@@ -77,6 +77,9 @@ void MediaPlayer::play() {
     state_ = Playing;
     emit stateChanged(Playing);
 
+    decoder_->clearAllQueues();
+    pendingVideoFrame_ = std::nullopt;
+
     decoder_->setPlaying(true);
     playbackStartTimeMs_ = currentTimeMs_;
     playbackElapsedTimer_.restart();
@@ -132,7 +135,6 @@ void MediaPlayer::seek(qint64 ms) {
   if (oldState == Playing) {
     play();
   } else {
-    audioOutput_->flush();
     decoder_->setPlaying(true);
     seekPreviewMode_ = true;
     seekPreviewTimer_.start();
