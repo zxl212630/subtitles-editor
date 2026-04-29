@@ -55,6 +55,7 @@ public:
   int audioQueueSize() const;
   qint64 videoQueueDurationMs() const;
   qint64 audioQueueDurationMs() const;
+  void clearAudioQueue();
 
   qint64 durationMs() const;
   double fps() const;

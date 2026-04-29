@@ -20,6 +20,7 @@ public:
   void setCurrentTime(qint64 ms);
   void setTotalDuration(qint64 ms);
   void setPlayheadAnchor(PlayheadAnchor anchor);
+  void setPlaying(bool playing);
 
 signals:
   void timeClicked(qint64 ms);
@@ -65,4 +66,5 @@ private:
   QScrollBar *hScrollBar_ = nullptr;
   TimelineCanvas *canvas_ = nullptr;
   PlayheadAnchor playheadAnchor_ = PlayheadAnchor::Center;
+  bool isPlaying_ = false;
 };

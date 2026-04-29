@@ -141,35 +141,38 @@ void TimelinePanel::setCurrentTime(qint64 ms) {
   currentTimeMs_ = ms;
 
   // Auto-scroll during playback to keep playhead at configured anchor
-  // position within the viewport
-  int playheadX = timeToX(currentTimeMs_);
-  int viewportWidth = canvas_->width() - TRACK_HEAD_WIDTH;
-  int targetOffset = 0;
-  switch (playheadAnchor_) {
-  case PlayheadAnchor::LeftThird:
-    targetOffset = viewportWidth / 3;
-    break;
-  case PlayheadAnchor::Center:
-    targetOffset = viewportWidth / 2;
-    break;
-  case PlayheadAnchor::RightThird:
-    targetOffset = viewportWidth * 2 / 3;
-    break;
-  }
-  int targetX = TRACK_HEAD_WIDTH + targetOffset;
+  // position within the viewport. Do NOT auto-scroll on manual seek.
+  if (isPlaying_) {
+    int playheadX = timeToX(currentTimeMs_);
+    int viewportWidth = canvas_->width() - TRACK_HEAD_WIDTH;
+    int targetOffset = 0;
+    switch (playheadAnchor_) {
+    case PlayheadAnchor::LeftThird:
+      targetOffset = viewportWidth / 3;
+      break;
+    case PlayheadAnchor::Center:
+      targetOffset = viewportWidth / 2;
+      break;
+    case PlayheadAnchor::RightThird:
+      targetOffset = viewportWidth * 2 / 3;
+      break;
+    }
+    int targetX = TRACK_HEAD_WIDTH + targetOffset;
 
-  if (playheadX > targetX) {
-    // Playhead moved past target position, scroll left to keep it there
-    scrollOffsetX_ += (playheadX - targetX);
-    clampScrollOffset();
-    updateScrollBar();
-  } else if (playheadX < TRACK_HEAD_WIDTH) {
-    // Playhead is outside viewport on the left, scroll right to bring it to
-    // target
-    int contentX = static_cast<int>(currentTimeMs_ * pixelsPerSecond_ / 1000.0);
-    scrollOffsetX_ = contentX - targetOffset;
-    clampScrollOffset();
-    updateScrollBar();
+    if (playheadX > targetX) {
+      // Playhead moved past target position, scroll left to keep it there
+      scrollOffsetX_ += (playheadX - targetX);
+      clampScrollOffset();
+      updateScrollBar();
+    } else if (playheadX < TRACK_HEAD_WIDTH) {
+      // Playhead is outside viewport on the left, scroll right to bring it to
+      // target
+      int contentX =
+          static_cast<int>(currentTimeMs_ * pixelsPerSecond_ / 1000.0);
+      scrollOffsetX_ = contentX - targetOffset;
+      clampScrollOffset();
+      updateScrollBar();
+    }
   }
 
   canvas_->update();
@@ -178,6 +181,8 @@ void TimelinePanel::setCurrentTime(qint64 ms) {
 void TimelinePanel::setPlayheadAnchor(PlayheadAnchor anchor) {
   playheadAnchor_ = anchor;
 }
+
+void TimelinePanel::setPlaying(bool playing) { isPlaying_ = playing; }
 
 void TimelinePanel::setTotalDuration(qint64 ms) {
   totalDurationMs_ = ms;

@@ -62,4 +62,8 @@ private:
   QElapsedTimer playbackElapsedTimer_;
   qint64 playbackStartTimeMs_ = 0;
   bool playbackTimerRunning_ = false;
+
+  bool seekPreviewMode_ = false;
+  QElapsedTimer seekPreviewTimer_;
+  qint64 seekTargetMs_ = 0;
 };

@@ -342,21 +342,14 @@ void FFmpegDecoder::run() {
 }
 
 void FFmpegDecoder::performSeek(qint64 targetMs) {
-  int streamIdx = -1;
-  AVRational timeBase = {0, 0};
-  if (videoStreamIdx_ != -1) {
-    streamIdx = videoStreamIdx_;
-    timeBase = videoTimeBase_;
-  } else if (audioStreamIdx_ != -1) {
-    streamIdx = audioStreamIdx_;
-    timeBase = audioTimeBase_;
-  } else {
-    LOG_DEC(warning, "No stream available for seek");
+  if (!fmtCtx_) {
+    LOG_DEC(warning, "No format context for seek");
     return;
   }
 
-  int64_t target = static_cast<int64_t>(targetMs / 1000.0 / av_q2d(timeBase));
-  int ret = av_seek_frame(fmtCtx_, streamIdx, target, AVSEEK_FLAG_BACKWARD);
+  int64_t target = av_rescale_q(targetMs, AVRational{1, 1000}, AV_TIME_BASE_Q);
+  int ret = avformat_seek_file(fmtCtx_, -1, INT64_MIN, target, target,
+                               AVSEEK_FLAG_BACKWARD);
   if (ret < 0) {
     char errbuf[256];
     av_strerror(ret, errbuf, sizeof(errbuf));
@@ -370,6 +363,11 @@ void FFmpegDecoder::performSeek(qint64 targetMs) {
   }
   clearQueues();
   LOG_DEC(info, "Seek complete target=" << targetMs << "ms");
+}
+
+void FFmpegDecoder::clearAudioQueue() {
+  QMutexLocker locker(&audioQueueMutex_);
+  audioQueue_.clear();
 }
 
 void FFmpegDecoder::clearQueues() {
@@ -565,7 +563,7 @@ void FFmpegDecoder::convertAudioFrame(AVFrame *frame, DecodedAudioFrame &out) {
   // In that case, use a reasonable default buffer size to handle decoder delay.
   int outSamples = frame->nb_samples;
   if (outSamples == 0) {
-    outSamples = 8192;  // Default buffer for compressed audio with delay
+    outSamples = 8192; // Default buffer for compressed audio with delay
   }
 
   int maxOutSamples = swr_get_out_samples(audioSwrCtx_, outSamples);

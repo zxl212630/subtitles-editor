@@ -35,10 +35,10 @@ bool QtAudioOutput::open(int sampleRate, int channels) {
   }
 
   audioSink_ = new QAudioSink(device, format_, this);
-  // Buffer size for ~2 seconds of audio (use sink's actual format)
+  // Buffer size for ~200ms of audio (use sink's actual format)
   int bufferSize = audioSink_->format().sampleRate() *
                    audioSink_->format().channelCount() *
-                   static_cast<int>(sizeof(int16_t)) * 2;
+                   static_cast<int>(sizeof(int16_t)) / 5;
   audioSink_->setBufferSize(bufferSize);
   ioDevice_ = audioSink_->start();
 
@@ -85,9 +85,24 @@ void QtAudioOutput::write(const void *data, size_t size) {
 void QtAudioOutput::flush() {
   if (audioSink_) {
     audioSink_->reset();
+    ioDevice_ = audioSink_->start();
   }
   totalBytesWritten_ = 0;
-  LOG_AUDIO(debug, "flush() cleared");
+  LOG_AUDIO(debug, "flush() reset and restarted");
+}
+
+void QtAudioOutput::suspend() {
+  if (audioSink_) {
+    audioSink_->suspend();
+  }
+  LOG_AUDIO(debug, "suspend()");
+}
+
+void QtAudioOutput::resume() {
+  if (audioSink_) {
+    audioSink_->resume();
+  }
+  LOG_AUDIO(debug, "resume()");
 }
 
 qint64 QtAudioOutput::samplesPlayed() const {

@@ -18,6 +18,8 @@ public:
 
   void write(const void *data, size_t size);
   void flush();
+  void suspend();
+  void resume();
 
   qint64 samplesPlayed() const;
   qint64 playedUSecs() const;

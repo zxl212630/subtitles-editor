@@ -145,20 +145,22 @@ void AppWindow::setupSplitterLayout() {
   connect(d->mediaPlayer, &MediaPlayer::timeChanged, d->timelinePanel,
           &TimelinePanel::setCurrentTime);
 
+  // 4a. MediaPlayer -> Timeline: playback state for auto-scroll control
+  connect(d->mediaPlayer, &MediaPlayer::stateChanged, d->timelinePanel,
+          [this](MediaPlayer::State state) {
+            d->timelinePanel->setPlaying(state == MediaPlayer::Playing);
+          });
+
   // 5. Timeline click -> MediaPlayer seek
   connect(d->timelinePanel, &TimelinePanel::timeClicked, d->mediaPlayer,
           &MediaPlayer::seek);
 
   // 6. SubtitleList -> MediaPlayer seek
+  //    Timeline time is updated via MediaPlayer::timeChanged signal, no
+  //    direct connection needed.
   connect(d->subtitleListPanel, &SubtitleListPanel::itemSeekRequested,
           d->mediaPlayer,
           [this](const QString &, qint64 ms) { d->mediaPlayer->seek(ms); });
-
-  // 7. SubtitleList -> Timeline sync
-  connect(d->subtitleListPanel, &SubtitleListPanel::itemSeekRequested,
-          d->timelinePanel, [this](const QString &, qint64 ms) {
-            d->timelinePanel->setCurrentTime(ms);
-          });
 
   // 8. VideoPreview play/pause/stop -> MediaPlayer
   connect(d->videoPreviewPanel, &VideoPreviewPanel::playRequested,
@@ -169,8 +171,8 @@ void AppWindow::setupSplitterLayout() {
           d->mediaPlayer, &MediaPlayer::stop);
 
   // 9. MediaPlayer state -> VideoPreview button sync
-  connect(d->mediaPlayer, &MediaPlayer::stateChanged,
-          d->videoPreviewPanel, &VideoPreviewPanel::onPlaybackStateChanged);
+  connect(d->mediaPlayer, &MediaPlayer::stateChanged, d->videoPreviewPanel,
+          &VideoPreviewPanel::onPlaybackStateChanged);
 
   // 10. VideoPreview step -> MediaPlayer
   connect(d->videoPreviewPanel, &VideoPreviewPanel::stepForwardRequested,

@@ -73,25 +73,30 @@ bool MediaPlayer::load(const QString &path) {
 
 void MediaPlayer::play() {
   if (state_ == Ready || state_ == Paused) {
+    seekPreviewMode_ = false;
     state_ = Playing;
     emit stateChanged(Playing);
+
     decoder_->setPlaying(true);
     playbackStartTimeMs_ = currentTimeMs_;
     playbackElapsedTimer_.restart();
     playbackTimerRunning_ = true;
     playbackTimer_->start(16);
+    audioOutput_->resume();
     LOG_MP(info, "play() state=Playing startTime=" << playbackStartTimeMs_);
   }
 }
 
 void MediaPlayer::pause() {
   if (state_ == Playing) {
-    state_ = Paused;
-    emit stateChanged(Paused);
     decoder_->setPlaying(false);
     playbackTimer_->stop();
     playbackTimerRunning_ = false;
-    LOG_MP(info, "pause() state=Paused");
+    audioOutput_->suspend();
+
+    state_ = Paused;
+    emit stateChanged(Paused);
+    LOG_MP(info, "pause() state=Paused time=" << currentTimeMs_);
   }
 }
 
@@ -120,14 +125,22 @@ void MediaPlayer::seek(qint64 ms) {
   }
 
   decoder_->requestSeek(ms);
-  audioOutput_->flush();
   currentTimeMs_ = ms;
+  seekTargetMs_ = ms;
   pendingVideoFrame_ = std::nullopt;
 
   if (oldState == Playing) {
     play();
+  } else {
+    audioOutput_->flush();
+    decoder_->setPlaying(true);
+    seekPreviewMode_ = true;
+    seekPreviewTimer_.start();
+    playbackTimer_->start(16);
+    LOG_MP(info, "seek() preview mode started");
   }
 
+  emit timeChanged(currentTimeMs_);
   LOG_MP(info, "seek() complete");
 }
 
@@ -146,13 +159,51 @@ void MediaPlayer::stepBackward() {
 }
 
 void MediaPlayer::onPlaybackTimer() {
+  if (seekPreviewMode_) {
+    // Discard accumulated audio frames during preview
+    while (decoder_->audioQueueSize() > 0) {
+      decoder_->dequeueAudioFrame();
+    }
+
+    // Keep dequeuing video frames until we find one at or after target.
+    // Do NOT update currentTimeMs_ or emit timeChanged here — the timeline
+    // should stay at the seek target, not jump to the decoded frame pts.
+    while (decoder_->videoQueueSize() > 0) {
+      auto frame = decoder_->dequeueVideoFrame();
+      if (frame && frame->ptsMs >= seekTargetMs_) {
+        if (videoRenderer_) {
+          videoRenderer_->renderFrame(*frame);
+        }
+
+        decoder_->setPlaying(false);
+        playbackTimer_->stop();
+        seekPreviewMode_ = false;
+        LOG_MP(info, "seek preview frame rendered pts=" << frame->ptsMs);
+        return;
+      }
+    }
+
+    if (seekPreviewTimer_.elapsed() > 2000) {
+      // fallback: render the latest frame available
+      auto frame = decoder_->dequeueVideoFrame();
+      if (frame && videoRenderer_) {
+        videoRenderer_->renderFrame(*frame);
+      }
+      decoder_->setPlaying(false);
+      playbackTimer_->stop();
+      seekPreviewMode_ = false;
+      LOG_MP(warning, "seek preview timed out");
+    }
+    return;
+  }
+
   // 1. Process audio frames
   while (decoder_->audioQueueSize() > 0) {
     // When queue is very long (>10), be conservative and check buffer space
     // This prevents the queue from growing unbounded if audio device is slow
     if (decoder_->audioQueueSize() > 10) {
       qint64 bytesFree = audioOutput_->bytesFree();
-      if (bytesFree < 4096) {  // Conservative minimum
+      if (bytesFree < 4096) { // Conservative minimum
         break;
       }
     }
@@ -160,6 +211,13 @@ void MediaPlayer::onPlaybackTimer() {
     auto aframe = decoder_->dequeueAudioFrame();
     if (!aframe) {
       break;
+    }
+
+    // Skip audio frames that are before the current playback position.
+    // This happens after a seek when the decoder starts from a keyframe
+    // that is earlier than the seek target.
+    if (aframe->ptsMs < playbackStartTimeMs_) {
+      continue;
     }
 
     // write() handles partial writes internally and blocks if buffer is full
