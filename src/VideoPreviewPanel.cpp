@@ -207,10 +207,10 @@ void VideoPreviewPanel::setupUi() {
   cbLayout->setSpacing(8);
   cbLayout->setAlignment(Qt::AlignVCenter);
 
-  stepBwdBtn_ = createIconBtn(controlBar, QString(QChar(0x23EE)), 28, 28);
+  stepBwdBtn_ = createIconBtn(controlBar, QString(QChar(0x25C2)), 28, 28);
   playPauseBtn_ = createIconBtn(controlBar, QString(QChar(0x25B6)), 28, 28);
-  stopBtn_ = createIconBtn(controlBar, QString(QChar(0x23F9)), 28, 28);
-  stepFwdBtn_ = createIconBtn(controlBar, QString(QChar(0x23ED)), 28, 28);
+  stopBtn_ = createIconBtn(controlBar, QString(QChar(0x25A0)), 28, 28);
+  stepFwdBtn_ = createIconBtn(controlBar, QString(QChar(0x25B8)), 28, 28);
 
   cbLayout->addWidget(stepBwdBtn_);
   cbLayout->addWidget(playPauseBtn_);
@@ -392,7 +392,7 @@ void VideoPreviewPanel::onPlaybackStateChanged(MediaPlayer::State state) {
   isPlaying_ = (state == MediaPlayer::Playing);
   if (playPauseBtn_) {
     if (isPlaying_) {
-      playPauseBtn_->setText(QString(QChar(0x23F8))); // ⏸ pause
+      playPauseBtn_->setText(QStringLiteral("||")); // pause
     } else {
       playPauseBtn_->setText(QString(QChar(0x25B6))); // ▶ play
     }
