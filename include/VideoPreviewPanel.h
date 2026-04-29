@@ -3,12 +3,13 @@
 #include <QFontDatabase>
 #include <QWidget>
 
+#include "MediaPlayer.h"
+
 class QComboBox;
 class QLabel;
 class QFrame;
 class QPushButton;
 
-class MediaPlayer;
 class SoftwareVideoRenderer;
 class SubtitleTrack;
 
@@ -31,9 +32,13 @@ signals:
   void fontSizeChanged(int size);
   void playRequested();
   void pauseRequested();
+  void stopRequested();
   void seekRequested(qint64 ms);
   void stepForwardRequested();
   void stepBackwardRequested();
+
+public slots:
+  void onPlaybackStateChanged(MediaPlayer::State state);
 
 protected:
   void resizeEvent(QResizeEvent *event) override;
@@ -53,8 +58,8 @@ private:
   MediaPlayer *mediaPlayer_ = nullptr;
   SoftwareVideoRenderer *videoRenderer_ = nullptr;
   SubtitleTrack *subtitleTrack_ = nullptr;
-  QPushButton *playBtn_ = nullptr;
-  QPushButton *pauseBtn_ = nullptr;
+  QPushButton *playPauseBtn_ = nullptr;
+  QPushButton *stopBtn_ = nullptr;
   QPushButton *stepFwdBtn_ = nullptr;
   QPushButton *stepBwdBtn_ = nullptr;
   QLabel *currentTimeLabel_ = nullptr;

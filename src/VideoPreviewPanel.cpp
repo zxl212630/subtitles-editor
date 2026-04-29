@@ -208,19 +208,24 @@ void VideoPreviewPanel::setupUi() {
   cbLayout->setAlignment(Qt::AlignVCenter);
 
   stepBwdBtn_ = createIconBtn(controlBar, QString(QChar(0x23EE)), 28, 28);
-  playBtn_ = createIconBtn(controlBar, QString(QChar(0x25B6)), 28, 28);
-  pauseBtn_ = createIconBtn(controlBar, QString(QChar(0x25A0)), 28, 28);
+  playPauseBtn_ = createIconBtn(controlBar, QString(QChar(0x25B6)), 28, 28);
+  stopBtn_ = createIconBtn(controlBar, QString(QChar(0x23F9)), 28, 28);
   stepFwdBtn_ = createIconBtn(controlBar, QString(QChar(0x23ED)), 28, 28);
 
   cbLayout->addWidget(stepBwdBtn_);
-  cbLayout->addWidget(playBtn_);
-  cbLayout->addWidget(pauseBtn_);
+  cbLayout->addWidget(playPauseBtn_);
+  cbLayout->addWidget(stopBtn_);
   cbLayout->addWidget(stepFwdBtn_);
 
-  connect(playBtn_, &QPushButton::clicked, this,
-          [this]() { emit playRequested(); });
-  connect(pauseBtn_, &QPushButton::clicked, this,
-          [this]() { emit pauseRequested(); });
+  connect(playPauseBtn_, &QPushButton::clicked, this, [this]() {
+    if (isPlaying_) {
+      emit pauseRequested();
+    } else {
+      emit playRequested();
+    }
+  });
+  connect(stopBtn_, &QPushButton::clicked, this,
+          [this]() { emit stopRequested(); });
   connect(stepFwdBtn_, &QPushButton::clicked, this,
           [this]() { emit stepForwardRequested(); });
   connect(stepBwdBtn_, &QPushButton::clicked, this,
@@ -381,4 +386,15 @@ void VideoPreviewPanel::updateSubtitleOverlay() {
   LOG_SUB(debug,
           "active id=" << activeItem->id << " text=" << activeItem->text);
   videoRenderer_->setSubtitleText(activeItem->text);
+}
+
+void VideoPreviewPanel::onPlaybackStateChanged(MediaPlayer::State state) {
+  isPlaying_ = (state == MediaPlayer::Playing);
+  if (playPauseBtn_) {
+    if (isPlaying_) {
+      playPauseBtn_->setText(QString(QChar(0x23F8))); // ⏸ pause
+    } else {
+      playPauseBtn_->setText(QString(QChar(0x25B6))); // ▶ play
+    }
+  }
 }

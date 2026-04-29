@@ -160,13 +160,17 @@ void AppWindow::setupSplitterLayout() {
             d->timelinePanel->setCurrentTime(ms);
           });
 
-  // 8. VideoPreview play -> MediaPlayer
+  // 8. VideoPreview play/pause/stop -> MediaPlayer
   connect(d->videoPreviewPanel, &VideoPreviewPanel::playRequested,
           d->mediaPlayer, &MediaPlayer::play);
-
-  // 9. VideoPreview pause -> MediaPlayer
   connect(d->videoPreviewPanel, &VideoPreviewPanel::pauseRequested,
           d->mediaPlayer, &MediaPlayer::pause);
+  connect(d->videoPreviewPanel, &VideoPreviewPanel::stopRequested,
+          d->mediaPlayer, &MediaPlayer::stop);
+
+  // 9. MediaPlayer state -> VideoPreview button sync
+  connect(d->mediaPlayer, &MediaPlayer::stateChanged,
+          d->videoPreviewPanel, &VideoPreviewPanel::onPlaybackStateChanged);
 
   // 10. VideoPreview step -> MediaPlayer
   connect(d->videoPreviewPanel, &VideoPreviewPanel::stepForwardRequested,
