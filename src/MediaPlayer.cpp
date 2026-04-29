@@ -72,7 +72,16 @@ bool MediaPlayer::load(const QString &path) {
 }
 
 void MediaPlayer::play() {
-  if (state_ == Ready || state_ == Paused) {
+  if (state_ == Ready || state_ == Paused || state_ == Stopped) {
+    if (state_ == Stopped) {
+      if (decoder_->hasAudio()) {
+        audioOutput_->open(decoder_->audioSampleRate(), decoder_->audioChannels());
+      }
+      decoder_->requestSeek(currentTimeMs_);
+      decoder_->clearAllQueues();
+      decoder_->start();
+    }
+
     seekPreviewMode_ = false;
     state_ = Playing;
     emit stateChanged(Playing);
@@ -115,6 +124,7 @@ void MediaPlayer::stop() {
   state_ = Stopped;
   currentTimeMs_ = 0;
   pendingVideoFrame_ = std::nullopt;
+  emit timeChanged(0);
   emit stateChanged(Stopped);
   LOG_MP(info, "stop() state=Stopped");
 }

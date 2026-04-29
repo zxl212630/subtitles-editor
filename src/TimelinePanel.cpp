@@ -140,6 +140,12 @@ void TimelinePanel::setCurrentTime(qint64 ms) {
     ms = totalDurationMs_;
   currentTimeMs_ = ms;
 
+  // Reset scroll to start when time returns to zero
+  if (currentTimeMs_ == 0 && scrollOffsetX_ != 0) {
+    scrollOffsetX_ = 0;
+    updateScrollBar();
+  }
+
   // Auto-scroll during playback to keep playhead at configured anchor
   // position within the viewport. Do NOT auto-scroll on manual seek.
   if (isPlaying_) {
