@@ -16,13 +16,18 @@ public:
   void setSubtitleText(const QString &text);
   void setSubtitleFont(const QFont &font);
 
+  QSize videoSize() const { return videoSize_; }
+
 protected:
   void paintEvent(QPaintEvent *event) override;
+  bool hasHeightForWidth() const override { return true; }
+  int heightForWidth(int width) const override;
 
 private:
   QImage currentImage_;
   bool hasFrame_ = false;
   QMutex imageMutex_;
+  QSize videoSize_;
 
   QString subtitleText_;
   QFont subtitleFont_;

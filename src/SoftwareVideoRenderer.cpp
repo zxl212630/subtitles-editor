@@ -13,6 +13,8 @@ SoftwareVideoRenderer::SoftwareVideoRenderer(QWidget *parent)
     : QWidget(parent) {
   setAttribute(Qt::WA_OpaquePaintEvent);
   setMinimumSize(320, 180);
+  setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Preferred);
+  setStyleSheet("background-color: #1e1e1e;");
 }
 
 void SoftwareVideoRenderer::renderFrame(const DecodedVideoFrame &frame) {
@@ -24,6 +26,7 @@ void SoftwareVideoRenderer::renderFrame(const DecodedVideoFrame &frame) {
             .copy();
     hasFrame_ = true;
   }
+  videoSize_ = QSize(frame.width, frame.height);
   QMetaObject::invokeMethod(this, "update", Qt::QueuedConnection);
   LOG_RENDER(debug,
              "renderFrame() size=" << frame.width << "x" << frame.height);
@@ -34,7 +37,16 @@ void SoftwareVideoRenderer::clear() {
     QMutexLocker lock(&imageMutex_);
     hasFrame_ = false;
   }
+  videoSize_ = QSize();
   update();
+}
+
+int SoftwareVideoRenderer::heightForWidth(int width) const {
+  if (!videoSize_.isEmpty()) {
+    return qRound(static_cast<double>(width) * videoSize_.height() /
+                  videoSize_.width());
+  }
+  return width * 9 / 16;
 }
 
 void SoftwareVideoRenderer::setSubtitleText(const QString &text) {
@@ -59,7 +71,7 @@ void SoftwareVideoRenderer::paintEvent(QPaintEvent *event) {
   timer.start();
 
   QPainter painter(this);
-  painter.fillRect(rect(), Qt::black);
+  painter.fillRect(rect(), QColor("#1e1e1e"));
 
   QImage imageToDraw;
   bool hasFrame;

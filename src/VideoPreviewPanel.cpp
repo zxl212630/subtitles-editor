@@ -207,12 +207,10 @@ void VideoPreviewPanel::setupUi() {
   videoArea_->setStyleSheet("background-color: transparent; border: none;");
   videoArea_->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
   auto *vaLayout = new QVBoxLayout(videoArea_);
-  vaLayout->setContentsMargins(40, 0, 40, 0);
-  vaLayout->setAlignment(Qt::AlignCenter);
+  vaLayout->setContentsMargins(0, 0, 0, 0);
 
   videoRenderer_ = new SoftwareVideoRenderer(videoArea_);
-  videoRenderer_->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
-  vaLayout->addWidget(videoRenderer_, 1, Qt::AlignCenter);
+  vaLayout->addWidget(videoRenderer_);
 
   // Drag handles removed / hidden for now
 
