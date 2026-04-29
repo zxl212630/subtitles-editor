@@ -167,6 +167,10 @@ void TimelinePanel::drawOnCanvas(QPainter &painter) {
 }
 
 void TimelinePanel::drawRuler(QPainter &painter) {
+  painter.save();
+  painter.setClipRect(TRACK_HEAD_WIDTH, 0, canvas_->width() - TRACK_HEAD_WIDTH,
+                      RULER_HEIGHT);
+
   painter.setPen(QColor("#6b7280"));
   QFont font = painter.font();
   font.setPointSize(8);
@@ -198,6 +202,8 @@ void TimelinePanel::drawRuler(QPainter &painter) {
     int x = timeToX(static_cast<qint64>(s * 1000));
     if (x > canvasWidth)
       break;
+    if (x < TRACK_HEAD_WIDTH)
+      continue;
 
     int sec = static_cast<int>(s) % 60;
     int min = (static_cast<int>(s) / 60) % 60;
@@ -235,6 +241,8 @@ void TimelinePanel::drawRuler(QPainter &painter) {
       continue;
     painter.drawLine(x, 28, x, 31);
   }
+
+  painter.restore();
 }
 
 void TimelinePanel::drawSubtitleTrack(QPainter &painter, int y) {
@@ -260,6 +268,10 @@ void TimelinePanel::drawSubtitleTrack(QPainter &painter, int y) {
   if (!track_)
     return;
 
+  painter.save();
+  painter.setClipRect(TRACK_HEAD_WIDTH, y, canvas_->width() - TRACK_HEAD_WIDTH,
+                      SUBTITLE_TRACK_HEIGHT);
+
   // Subtitle bars
   for (const auto &item : track_->items()) {
     int x = timeToX(item.startMs);
@@ -280,10 +292,17 @@ void TimelinePanel::drawSubtitleTrack(QPainter &painter, int y) {
     QFont barFont = painter.font();
     barFont.setPointSize(9);
     painter.setFont(barFont);
-    if (x >= TRACK_HEAD_WIDTH) {
-      painter.drawText(x + 8, y + 18, item.text);
+
+    int textX = qMax(x + 8, TRACK_HEAD_WIDTH + 4);
+    int textMaxWidth = qMax(0, x + w - 4 - textX);
+    if (textMaxWidth > 0) {
+      QFontMetrics fm(barFont);
+      QString elided = fm.elidedText(item.text, Qt::ElideRight, textMaxWidth);
+      painter.drawText(textX, y + 18, elided);
     }
   }
+
+  painter.restore();
 }
 
 void TimelinePanel::drawVideoTrack(QPainter &painter, int y) {
@@ -298,6 +317,10 @@ void TimelinePanel::drawVideoTrack(QPainter &painter, int y) {
   font.setPointSize(10);
   painter.setFont(font);
   painter.drawText(12, y + 18, "F  视频1");
+
+  painter.save();
+  painter.setClipRect(TRACK_HEAD_WIDTH, y, canvas_->width() - TRACK_HEAD_WIDTH,
+                      VIDEO_TRACK_HEIGHT);
 
   // Video bar (duration-based or placeholder)
   painter.setPen(Qt::NoPen);
@@ -316,6 +339,8 @@ void TimelinePanel::drawVideoTrack(QPainter &painter, int y) {
   }
   painter.setPen(QColor("#e5e5e5"));
   painter.drawText(TRACK_HEAD_WIDTH + 16, y + 50, "video.mp4");
+
+  painter.restore();
 }
 
 void TimelinePanel::drawPlayhead(QPainter &painter) {
