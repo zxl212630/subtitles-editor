@@ -23,8 +23,8 @@ static QString formatTime(qint64 ms) {
       .toString("hh:mm:ss.zzz");
 }
 
-static QPushButton *createIconBtn(QWidget *parent, const QString &text, int w,
-                                  int h, const QString &bg = "#333333",
+static QPushButton *createTextBtn(QWidget *parent, const QString &text,
+                                  int w, int h, const QString &bg = "#333333",
                                   const QString &color = "#d1d5db") {
   auto *btn = new QPushButton(text, parent);
   btn->setFixedSize(w, h);
@@ -40,6 +40,33 @@ static QPushButton *createIconBtn(QWidget *parent, const QString &text, int w,
         }
     )")
                          .arg(bg, color));
+  return btn;
+}
+
+static QPushButton *createIconBtn(QWidget *parent, const QString &iconPath,
+                                  int w, int h,
+                                  const QString &hoverBg = "#333333") {
+  auto *btn = new QPushButton(parent);
+  btn->setFixedSize(w, h);
+  btn->setStyleSheet(QString(R"(
+        QPushButton {
+            background-color: transparent;
+            border: none;
+            border-radius: 4px;
+        }
+        QPushButton:hover {
+            background-color: %1;
+        }
+        QPushButton::icon {
+            width: 16px;
+            height: 16px;
+        }
+    )")
+                         .arg(hoverBg));
+  if (!iconPath.isEmpty()) {
+    btn->setIcon(QIcon(iconPath));
+    btn->setIconSize(QSize(16, 16));
+  }
   return btn;
 }
 
@@ -162,15 +189,15 @@ void VideoPreviewPanel::setupUi() {
   auto *btnGroupLayout = new QHBoxLayout(btnGroup);
   btnGroupLayout->setContentsMargins(0, 0, 0, 0);
   btnGroupLayout->setSpacing(6);
-  btnGroupLayout->addWidget(createIconBtn(btnGroup, "B", 28, 28));
-  btnGroupLayout->addWidget(createIconBtn(btnGroup, "I", 28, 28));
-  btnGroupLayout->addWidget(createIconBtn(btnGroup, "U", 28, 28));
+  btnGroupLayout->addWidget(createTextBtn(btnGroup, "B", 28, 28));
+  btnGroupLayout->addWidget(createTextBtn(btnGroup, "I", 28, 28));
+  btnGroupLayout->addWidget(createTextBtn(btnGroup, "U", 28, 28));
   btnGroupLayout->addWidget(
-      createIconBtn(btnGroup, QString(QChar(0x2261)), 28, 28));
+      createTextBtn(btnGroup, QString(QChar(0x2261)), 28, 28));
   btnGroupLayout->addWidget(
-      createIconBtn(btnGroup, QString(QChar(0x2261)), 28, 28));
+      createTextBtn(btnGroup, QString(QChar(0x2261)), 28, 28));
   btnGroupLayout->addWidget(
-      createIconBtn(btnGroup, QString(QChar(0x2261)), 28, 28));
+      createTextBtn(btnGroup, QString(QChar(0x2261)), 28, 28));
   tbLayout->addWidget(btnGroup);
 
   layout->addWidget(toolbar);
@@ -207,10 +234,11 @@ void VideoPreviewPanel::setupUi() {
   cbLayout->setSpacing(8);
   cbLayout->setAlignment(Qt::AlignVCenter);
 
-  stepBwdBtn_ = createIconBtn(controlBar, QStringLiteral("|◂◂"), 36, 28);
-  playPauseBtn_ = createIconBtn(controlBar, QString(QChar(0x25B6)), 28, 28);
-  stopBtn_ = createIconBtn(controlBar, QString(QChar(0x25A0)), 28, 28);
-  stepFwdBtn_ = createIconBtn(controlBar, QStringLiteral("▸▸|"), 36, 28);
+  stepBwdBtn_ =
+      createIconBtn(controlBar, ":/icons/step-backward.svg", 28, 28);
+  playPauseBtn_ = createIconBtn(controlBar, ":/icons/play.svg", 28, 28);
+  stopBtn_ = createIconBtn(controlBar, ":/icons/stop.svg", 28, 28);
+  stepFwdBtn_ = createIconBtn(controlBar, ":/icons/step-forward.svg", 28, 28);
 
   cbLayout->addWidget(stepBwdBtn_);
   cbLayout->addWidget(playPauseBtn_);
@@ -392,9 +420,9 @@ void VideoPreviewPanel::onPlaybackStateChanged(MediaPlayer::State state) {
   isPlaying_ = (state == MediaPlayer::Playing);
   if (playPauseBtn_) {
     if (isPlaying_) {
-      playPauseBtn_->setText(QStringLiteral("||")); // pause
+      playPauseBtn_->setIcon(QIcon(":/icons/pause.svg"));
     } else {
-      playPauseBtn_->setText(QString(QChar(0x25B6))); // ▶ play
+      playPauseBtn_->setIcon(QIcon(":/icons/play.svg"));
     }
   }
 }
