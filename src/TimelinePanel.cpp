@@ -139,6 +139,27 @@ void TimelinePanel::setCurrentTime(qint64 ms) {
   if (ms > totalDurationMs_)
     ms = totalDurationMs_;
   currentTimeMs_ = ms;
+
+  // Auto-scroll during playback to keep playhead visible at left 1/3 of
+  // viewport
+  int playheadX = timeToX(currentTimeMs_);
+  int viewportWidth = canvas_->width() - TRACK_HEAD_WIDTH;
+  int targetX = TRACK_HEAD_WIDTH + viewportWidth / 3;
+
+  if (playheadX > targetX) {
+    // Playhead moved past target position, scroll left to keep it there
+    scrollOffsetX_ += (playheadX - targetX);
+    clampScrollOffset();
+    updateScrollBar();
+  } else if (playheadX < TRACK_HEAD_WIDTH) {
+    // Playhead is outside viewport on the left, scroll right to bring it to
+    // target
+    int contentX = static_cast<int>(currentTimeMs_ * pixelsPerSecond_ / 1000.0);
+    scrollOffsetX_ = contentX - (targetX - TRACK_HEAD_WIDTH);
+    clampScrollOffset();
+    updateScrollBar();
+  }
+
   canvas_->update();
 }
 
