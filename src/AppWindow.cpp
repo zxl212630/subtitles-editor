@@ -51,7 +51,13 @@ void AppWindow::checkConfig() {
   }
 }
 
-AppWindow::~AppWindow() = default;
+AppWindow::~AppWindow() {
+  // MediaPlayer is destroyed first (last child). Its destructor calls
+  // stop() which emits stateChanged, triggering slots on still-alive
+  // children (timelinePanel, videoPreviewPanel). Disconnect all
+  // outbound signals so no slot fires during MediaPlayer destruction.
+  disconnect(d->mediaPlayer, nullptr, nullptr, nullptr);
+}
 
 void AppWindow::setupUi() {
   setWindowTitle("字幕编辑");
