@@ -57,27 +57,31 @@ void SubtitleListDelegate::paint(QPainter *painter,
   painter->drawText(textRect, Qt::AlignVCenter | Qt::AlignLeft, text);
 
   // Action buttons area (right)
-  const int btnBox = 18;
+  const int btnBox = 14;
   int btnY = rect.top() + (rect.height() - btnBox) / 2;
   int btnX = rect.right() - 12 - 36;
 
-  // Split button (scissors icon) - hover brightens
-  QColor splitColor = (isHovered && hoveredButton_ == 1) ? QColor("#ffffff")
-                                                         : QColor("#6b7280");
-  painter->setPen(splitColor);
-  painter->setBrush(Qt::NoBrush);
-  QFont iconFont = painter->font();
-  iconFont.setPointSize(12);
-  painter->setFont(iconFont);
-  QRect scissorsRect(btnX, btnY, btnBox, btnBox);
-  painter->drawText(scissorsRect, Qt::AlignCenter, "\u2702"); // scissors
+  auto drawIcon = [&](const QString &path, int x, bool hovered) {
+    QColor color = hovered ? QColor("#ffffff") : QColor("#6b7280");
+    QIcon icon(path);
+    QPixmap pix = icon.pixmap(btnBox, btnBox);
+    if (pix.isNull())
+      return;
+    // Recolor: replace all non-transparent pixels with target color
+    // CompositionMode_SourceIn keeps alpha, replaces RGB
+    QPainter tp(&pix);
+    tp.setRenderHint(QPainter::Antialiasing);
+    tp.setCompositionMode(QPainter::CompositionMode_SourceIn);
+    tp.fillRect(pix.rect(), color);
+    tp.end();
+    painter->drawPixmap(x, btnY, pix);
+  };
 
-  // Delete button (x icon) - hover brightens (white instead of red)
-  QColor deleteColor = (isHovered && hoveredButton_ == 2) ? QColor("#ffffff")
-                                                          : QColor("#6b7280");
-  painter->setPen(deleteColor);
-  QRect deleteRect(btnX + 22, btnY, btnBox, btnBox);
-  painter->drawText(deleteRect, Qt::AlignCenter, "\u2715"); // x mark
+  // Split button (scissors icon) - hover brightens
+  drawIcon(":/icons/scissors.svg", btnX, isHovered && hoveredButton_ == 1);
+
+  // Delete button (x icon) - hover brightens
+  drawIcon(":/icons/close.svg", btnX + 22, isHovered && hoveredButton_ == 2);
 
   painter->restore();
 }
@@ -105,7 +109,7 @@ QString SubtitleListDelegate::getIdAtIndex(const QModelIndex &index) {
 
 QRect SubtitleListDelegate::splitButtonRect(
     const QStyleOptionViewItem &option) const {
-  const int btnBox = 18;
+  const int btnBox = 14;
   QRect rect = option.rect;
   int btnY = rect.top() + (rect.height() - btnBox) / 2;
   int btnX = rect.right() - 12 - 36;
@@ -114,7 +118,7 @@ QRect SubtitleListDelegate::splitButtonRect(
 
 QRect SubtitleListDelegate::deleteButtonRect(
     const QStyleOptionViewItem &option) const {
-  const int btnBox = 18;
+  const int btnBox = 14;
   QRect rect = option.rect;
   int btnY = rect.top() + (rect.height() - btnBox) / 2;
   int btnX = rect.right() - 12 - 36 + 22; // scissors + gap

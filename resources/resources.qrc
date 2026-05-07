@@ -6,5 +6,7 @@
         <file>icons/stop.svg</file>
         <file>icons/step-backward.svg</file>
         <file>icons/step-forward.svg</file>
+        <file>icons/scissors.svg</file>
+        <file>icons/close.svg</file>
     </qresource>
 </RCC>
