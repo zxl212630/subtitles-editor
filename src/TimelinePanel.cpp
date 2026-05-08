@@ -416,16 +416,68 @@ void TimelinePanel::mousePressEvent(QMouseEvent *event) {
   if (event->x() < TRACK_HEAD_WIDTH)
     return;
 
-  // event->x() is in panel coordinates; this works because canvas fills panel
-  // with zero margins
-  qint64 ms = xToTime(event->x());
+  // Any click on the timeline starts a potential drag.
+  // If the user releases without moving, we fall back to click-to-seek.
+  isDragging_ = true;
+  dragMoved_ = false;
+  dragStartX_ = event->x();
+  dragThrottleTimer_.start();
+  canvas_->update();
+}
+
+void TimelinePanel::mouseMoveEvent(QMouseEvent *event) {
+  if (!isDragging_)
+    return;
+
+  int x = event->x();
+  if (x < TRACK_HEAD_WIDTH)
+    x = TRACK_HEAD_WIDTH;
+
+  // Detect actual movement (more than 3px from start)
+  if (!dragMoved_ && qAbs(x - dragStartX_) > 3) {
+    dragMoved_ = true;
+    emit dragSeekStarted();
+  }
+
+  if (!dragMoved_)
+    return;
+
+  // Throttle to avoid overwhelming the decoder
+  if (dragThrottleTimer_.elapsed() < DRAG_THROTTLE_MS)
+    return;
+
+  qint64 ms = xToTime(x);
   if (ms < 0)
     ms = 0;
   if (ms > totalDurationMs_)
     ms = totalDurationMs_;
 
   currentTimeMs_ = ms;
-  emit timeClicked(ms);
+  dragThrottleTimer_.start();
+  emit dragSeekMoved(ms);
+  canvas_->update();
+}
+
+void TimelinePanel::mouseReleaseEvent(QMouseEvent *event) {
+  Q_UNUSED(event)
+  if (!isDragging_)
+    return;
+
+  isDragging_ = false;
+
+  if (dragMoved_) {
+    // Was a real drag — end drag seek
+    emit dragSeekEnded();
+  } else {
+    // Was just a click (no movement) — do click-to-seek
+    qint64 ms = xToTime(dragStartX_);
+    if (ms < 0)
+      ms = 0;
+    if (ms > totalDurationMs_)
+      ms = totalDurationMs_;
+    currentTimeMs_ = ms;
+    emit timeClicked(ms);
+  }
   canvas_->update();
 }
 
@@ -448,7 +500,8 @@ void TimelinePanel::dropEvent(QDropEvent *event) {
 
   emit mediaFileDropped(localPath);
 
-  startAsrPipeline(localPath);
+  // TODO: re-enable ASR pipeline
+  // startAsrPipeline(localPath);
 }
 
 void TimelinePanel::startAsrPipeline(const QString &localPath) {

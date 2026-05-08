@@ -1,5 +1,6 @@
 #pragma once
 
+#include <QElapsedTimer>
 #include <QWidget>
 
 class QResizeEvent;
@@ -29,8 +30,15 @@ signals:
   void asrSucceeded();
   void mediaFileDropped(const QString &path);
 
+  // Drag seek signals
+  void dragSeekStarted();
+  void dragSeekMoved(qint64 ms);
+  void dragSeekEnded();
+
 protected:
   void mousePressEvent(QMouseEvent *event) override;
+  void mouseMoveEvent(QMouseEvent *event) override;
+  void mouseReleaseEvent(QMouseEvent *event) override;
   void dragEnterEvent(QDragEnterEvent *event) override;
   void dropEvent(QDropEvent *event) override;
   void wheelEvent(QWheelEvent *event) override;
@@ -67,4 +75,11 @@ private:
   TimelineCanvas *canvas_ = nullptr;
   PlayheadAnchor playheadAnchor_ = PlayheadAnchor::Center;
   bool isPlaying_ = false;
+
+  // Drag state
+  bool isDragging_ = false;
+  bool dragMoved_ = false;
+  int dragStartX_ = 0;
+  QElapsedTimer dragThrottleTimer_;
+  static constexpr int DRAG_THROTTLE_MS = 30;
 };

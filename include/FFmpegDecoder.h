@@ -49,6 +49,13 @@ public:
   void setPlaying(bool playing);
   void stop();
 
+  // High-speed seek for drag scrubbing. Must be called with decoder stopped.
+  // Returns the nearest keyframe at or before targetMs.
+  // Internally caches the last keyframe to skip redundant seeks within
+  // the same GOP (typically 2-5 seconds).
+  std::optional<DecodedVideoFrame> seekToKeyframe(qint64 targetMs);
+  void clearKeyframeCache();
+
   std::optional<DecodedVideoFrame> dequeueVideoFrame();
   std::optional<DecodedAudioFrame> dequeueAudioFrame();
   int videoQueueSize() const;
@@ -79,6 +86,7 @@ private:
   bool decodeVideoPacket(AVPacket *packet);
   bool decodeAudioPacket(AVPacket *packet);
   void convertAudioFrame(AVFrame *frame, DecodedAudioFrame &out);
+  std::optional<DecodedVideoFrame> decodeOneKeyframe(qint64 targetMs);
 
   // FFmpeg contexts
   AVFormatContext *fmtCtx_ = nullptr;
@@ -126,4 +134,10 @@ private:
 
   static constexpr int MAX_VIDEO_QUEUE_MS = 500;
   static constexpr int MAX_AUDIO_QUEUE_MS = 500;
+
+  // Keyframe cache for drag scrubbing
+  qint64 cachedKeyframeStartMs_ = -1;
+  qint64 cachedKeyframeEndMs_ = -1;
+  DecodedVideoFrame cachedKeyframe_;
+  bool hasCachedKeyframe_ = false;
 };

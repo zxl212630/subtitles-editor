@@ -30,6 +30,12 @@ public:
   void stepForward();
   void stepBackward();
 
+  // Drag seek: optimized for rapid sequential seeks during timeline drag.
+  // Uses keyframe-only decoding for maximum speed.
+  void beginDragSeek(qint64 ms);
+  void dragSeekTo(qint64 ms);
+  void endDragSeek();
+
   void setVideoRenderer(SoftwareVideoRenderer *renderer);
 
   State state() const { return state_; }
@@ -66,4 +72,7 @@ private:
   bool seekPreviewMode_ = false;
   QElapsedTimer seekPreviewTimer_;
   qint64 seekTargetMs_ = 0;
+
+  bool dragSeekMode_ = false;
+  bool wasPlayingBeforeDrag_ = false;
 };

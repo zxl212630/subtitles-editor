@@ -161,6 +161,16 @@ void AppWindow::setupSplitterLayout() {
   connect(d->timelinePanel, &TimelinePanel::timeClicked, d->mediaPlayer,
           &MediaPlayer::seek);
 
+  // 5a. Timeline drag -> MediaPlayer drag seek (keyframe-only, fast)
+  connect(d->timelinePanel, &TimelinePanel::dragSeekStarted, d->mediaPlayer,
+          [this]() {
+            d->mediaPlayer->beginDragSeek(d->mediaPlayer->currentTimeMs());
+          });
+  connect(d->timelinePanel, &TimelinePanel::dragSeekMoved, d->mediaPlayer,
+          &MediaPlayer::dragSeekTo);
+  connect(d->timelinePanel, &TimelinePanel::dragSeekEnded, d->mediaPlayer,
+          &MediaPlayer::endDragSeek);
+
   // 6. SubtitleList -> MediaPlayer seek
   //    Timeline time is updated via MediaPlayer::timeChanged signal, no
   //    direct connection needed.

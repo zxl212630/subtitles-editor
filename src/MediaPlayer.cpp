@@ -75,7 +75,8 @@ void MediaPlayer::play() {
   if (state_ == Ready || state_ == Paused || state_ == Stopped) {
     if (state_ == Stopped) {
       if (decoder_->hasAudio()) {
-        audioOutput_->open(decoder_->audioSampleRate(), decoder_->audioChannels());
+        audioOutput_->open(decoder_->audioSampleRate(),
+                           decoder_->audioChannels());
       }
       decoder_->requestSeek(currentTimeMs_);
       decoder_->clearAllQueues();
@@ -130,6 +131,11 @@ void MediaPlayer::stop() {
 }
 
 void MediaPlayer::seek(qint64 ms) {
+  // Ignore regular seeks during drag — use dragSeekTo instead
+  if (dragSeekMode_) {
+    return;
+  }
+
   LOG_MP(info, "seek() request target=" << ms << "ms");
 
   State oldState = state_;
@@ -168,6 +174,73 @@ void MediaPlayer::stepBackward() {
   if (fps > 0.0) {
     seek(currentTimeMs_ - static_cast<qint64>(1000.0 / fps));
   }
+}
+
+void MediaPlayer::beginDragSeek(qint64 ms) {
+  LOG_MP(info, "beginDragSeek() at " << ms << "ms");
+  wasPlayingBeforeDrag_ = (state_ == Playing);
+
+  // Stop everything cleanly
+  playbackTimer_->stop();
+  playbackTimerRunning_ = false;
+  if (audioOutput_) {
+    audioOutput_->suspend();
+  }
+  if (state_ == Playing) {
+    state_ = Paused;
+    emit stateChanged(Paused);
+  }
+
+  // Stop decoder thread entirely so UI thread can safely use fmtCtx_
+  decoder_->stop();
+  decoder_->wait(5000);
+  decoder_->clearAllQueues();
+  pendingVideoFrame_ = std::nullopt;
+
+  dragSeekMode_ = true;
+  seekPreviewMode_ = false;
+
+  currentTimeMs_ = ms;
+  emit timeChanged(currentTimeMs_);
+  LOG_MP(info, "beginDragSeek() ready, decoder stopped");
+}
+
+void MediaPlayer::dragSeekTo(qint64 ms) {
+  if (!dragSeekMode_) {
+    LOG_MP(warning, "dragSeekTo: not in drag mode");
+    return;
+  }
+
+  currentTimeMs_ = ms;
+  auto frame = decoder_->seekToKeyframe(ms);
+  if (frame) {
+    if (videoRenderer_) {
+      videoRenderer_->renderFrame(*frame);
+    }
+    LOG_MP(debug, "dragSeekTo: rendered frame pts=" << frame->ptsMs);
+  } else {
+    LOG_MP(warning, "dragSeekTo: no frame for " << ms << "ms");
+  }
+  emit timeChanged(currentTimeMs_);
+}
+
+void MediaPlayer::endDragSeek() {
+  LOG_MP(info, "endDragSeek()");
+  dragSeekMode_ = false;
+  seekPreviewMode_ = false;
+
+  if (wasPlayingBeforeDrag_) {
+    // Restart decoder thread and resume playback from current position
+    state_ = Ready;
+    play();
+  } else {
+    // Restart decoder thread so seek() works after drag.
+    // seek() calls setPlaying(true) but that won't restart a stopped thread.
+    decoder_->requestSeek(currentTimeMs_);
+    decoder_->clearAllQueues();
+    decoder_->start();
+  }
+  wasPlayingBeforeDrag_ = false;
 }
 
 void MediaPlayer::onPlaybackTimer() {
