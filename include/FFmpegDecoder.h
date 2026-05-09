@@ -56,6 +56,7 @@ public:
   qint64 videoQueueDurationMs() const;
   qint64 audioQueueDurationMs() const;
   void clearAudioQueue();
+  void clearVideoQueue();
   void clearAllQueues();
 
   qint64 durationMs() const;

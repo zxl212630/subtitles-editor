@@ -211,6 +211,7 @@ void FFmpegDecoder::close() {
 }
 
 void FFmpegDecoder::requestSeek(qint64 targetMs) {
+  clearVideoQueue();
   seekTargetMs_.store(targetMs);
   seekRequested_.store(true);
 }
@@ -390,6 +391,11 @@ void FFmpegDecoder::performSeek(qint64 targetMs) {
 void FFmpegDecoder::clearAudioQueue() {
   QMutexLocker locker(&audioQueueMutex_);
   audioQueue_.clear();
+}
+
+void FFmpegDecoder::clearVideoQueue() {
+  QMutexLocker locker(&videoQueueMutex_);
+  videoQueue_.clear();
 }
 
 void FFmpegDecoder::clearAllQueues() {
