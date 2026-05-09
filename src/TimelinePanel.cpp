@@ -496,7 +496,8 @@ void TimelinePanel::dropEvent(QDropEvent *event) {
 
   emit mediaFileDropped(localPath);
 
-  startAsrPipeline(localPath);
+  // TODO: re-enable ASR pipeline
+  // startAsrPipeline(localPath);
 }
 
 void TimelinePanel::startAsrPipeline(const QString &localPath) {

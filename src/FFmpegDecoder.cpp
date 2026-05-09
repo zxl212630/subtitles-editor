@@ -392,16 +392,17 @@ FFmpegDecoder::seekToKeyframe(qint64 targetMs) {
   QElapsedTimer totalTimer;
   totalTimer.start();
 
-  // If we have a cached frame and the target is at or before it, reuse it
-  if (hasDragFrame_ && dragLastPtsMs_ >= 0 && targetMs <= dragLastPtsMs_) {
+  // If we have a cached frame and the target is very close, reuse it
+  // Only cache within a small window (same frame at 25fps = 40ms)
+  static constexpr qint64 FRAME_CACHE_WINDOW_MS = 40;
+  if (hasDragFrame_ && dragLastPtsMs_ >= 0 &&
+      qAbs(targetMs - dragLastPtsMs_) <= FRAME_CACHE_WINDOW_MS) {
     return dragLastFrame_;
   }
 
-  // If target is ahead of last decoded position AND close enough, continue forward.
-  // For large jumps (>500ms), use keyframe seek instead of decoding many frames.
-  static constexpr qint64 MAX_FORWARD_JUMP_MS = 500;
-  if (dragLastPtsMs_ >= 0 && targetMs > dragLastPtsMs_ &&
-      (targetMs - dragLastPtsMs_) <= MAX_FORWARD_JUMP_MS) {
+  // If target is ahead of last decoded position, try continuing forward.
+  // For backward drags, fall through to full seek.
+  if (dragLastPtsMs_ >= 0 && targetMs > dragLastPtsMs_) {
     auto result = continueForward(targetMs);
     if (result) {
       dragLastFrame_ = *result;
@@ -416,9 +417,12 @@ FFmpegDecoder::seekToKeyframe(qint64 targetMs) {
   // Full seek + forward decode
   auto result = decodeOneKeyframe(targetMs);
   if (result) {
-    dragLastPtsMs_ = result->ptsMs;
-    dragLastFrame_ = *result;
-    hasDragFrame_ = true;
+    // Only update drag state if moving forward (don't overwrite cache on backward)
+    if (result->ptsMs > dragLastPtsMs_) {
+      dragLastPtsMs_ = result->ptsMs;
+      dragLastFrame_ = *result;
+      hasDragFrame_ = true;
+    }
   }
   LOG_DEC(debug, "seekToKeyframe DECODE target="
                      << targetMs
@@ -438,6 +442,8 @@ FFmpegDecoder::continueForward(qint64 targetMs) {
   AVPacket *packet = av_packet_alloc();
   AVFrame *frame = av_frame_alloc();
   std::optional<DecodedVideoFrame> result;
+  int framesDecoded = 0;
+  static constexpr int MAX_DECODE_FRAMES = 10;
 
   while (av_read_frame(fmtCtx_, packet) >= 0) {
     if (packet->stream_index != videoStreamIdx_) {
@@ -460,6 +466,7 @@ FFmpegDecoder::continueForward(qint64 targetMs) {
 
     int recvRet = avcodec_receive_frame(videoCodecCtx_, frame);
     if (recvRet == 0) {
+      framesDecoded++;
       qint64 pts = frame->pts;
       if (pts == AV_NOPTS_VALUE) {
         pts = frame->best_effort_timestamp;
@@ -469,6 +476,12 @@ FFmpegDecoder::continueForward(qint64 targetMs) {
 
       if (ptsMs < targetMs) {
         av_frame_unref(frame);
+        if (framesDecoded >= MAX_DECODE_FRAMES) {
+          // Too many frames to decode — give up, will fall back to keyframe
+          av_frame_free(&frame);
+          av_packet_free(&packet);
+          return std::nullopt;
+        }
         continue;
       }
 
