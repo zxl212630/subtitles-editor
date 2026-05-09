@@ -397,8 +397,11 @@ FFmpegDecoder::seekToKeyframe(qint64 targetMs) {
     return dragLastFrame_;
   }
 
-  // If target is ahead of last decoded position, try continuing forward
-  if (dragLastPtsMs_ >= 0 && targetMs > dragLastPtsMs_) {
+  // If target is ahead of last decoded position AND close enough, continue forward.
+  // For large jumps (>500ms), use keyframe seek instead of decoding many frames.
+  static constexpr qint64 MAX_FORWARD_JUMP_MS = 500;
+  if (dragLastPtsMs_ >= 0 && targetMs > dragLastPtsMs_ &&
+      (targetMs - dragLastPtsMs_) <= MAX_FORWARD_JUMP_MS) {
     auto result = continueForward(targetMs);
     if (result) {
       dragLastFrame_ = *result;
@@ -533,7 +536,6 @@ FFmpegDecoder::decodeOneKeyframe(qint64 targetMs) {
   AVPacket *packet = av_packet_alloc();
   AVFrame *frame = av_frame_alloc();
   std::optional<DecodedVideoFrame> result;
-  bool gotKeyframe = false;
 
   while (av_read_frame(fmtCtx_, packet) >= 0) {
     if (packet->stream_index != videoStreamIdx_) {
@@ -541,14 +543,10 @@ FFmpegDecoder::decodeOneKeyframe(qint64 targetMs) {
       continue;
     }
 
-    // After flush, codec needs a keyframe to start. Skip non-keyframes
-    // until we find the first keyframe.
-    if (!gotKeyframe) {
-      if (!(packet->flags & AV_PKT_FLAG_KEY)) {
-        av_packet_unref(packet);
-        continue;
-      }
-      gotKeyframe = true;
+    // After flush, codec needs a keyframe to decode. Skip non-keyframes.
+    if (!(packet->flags & AV_PKT_FLAG_KEY)) {
+      av_packet_unref(packet);
+      continue;
     }
 
     int sendRet = avcodec_send_packet(videoCodecCtx_, packet);
@@ -573,13 +571,6 @@ FFmpegDecoder::decodeOneKeyframe(qint64 targetMs) {
       qint64 ptsMs =
           static_cast<qint64>(pts * av_q2d(videoTimeBase_) * 1000.0);
 
-      // Keep decoding until we reach or pass the target time
-      if (ptsMs < targetMs) {
-        av_frame_unref(frame);
-        continue;
-      }
-
-      // This frame is at or past the target — convert and return it
       int w = frame->width;
       int h = frame->height;
 
