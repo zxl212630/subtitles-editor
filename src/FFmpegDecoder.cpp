@@ -392,11 +392,11 @@ FFmpegDecoder::seekToKeyframe(qint64 targetMs) {
   QElapsedTimer totalTimer;
   totalTimer.start();
 
-  // If we have a cached frame and the target is very close, reuse it
-  // Only cache within a small window (same frame at 25fps = 40ms)
-  static constexpr qint64 FRAME_CACHE_WINDOW_MS = 40;
+  // If we have a cached frame and the target is very close, reuse it.
+  // Only cache within a small window (same frame at 25fps = 40ms).
+  // This avoids re-decoding when the user hasn't moved enough to change frames.
   if (hasDragFrame_ && dragLastPtsMs_ >= 0 &&
-      qAbs(targetMs - dragLastPtsMs_) <= FRAME_CACHE_WINDOW_MS) {
+      qAbs(targetMs - dragLastPtsMs_) <= 40) {
     return dragLastFrame_;
   }
 

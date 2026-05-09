@@ -219,23 +219,19 @@ void MediaPlayer::dragSeekTo(qint64 ms) {
     return;
   }
 
-  QElapsedTimer timer;
-  timer.start();
+  // Update playhead position immediately (before decode) so it stays responsive
   currentTimeMs_ = ms;
+  emit timeChanged(currentTimeMs_);
+
+  // Decode the frame (this blocks the UI thread)
   auto frame = decoder_->seekToKeyframe(ms);
-  qint64 seekTime = timer.elapsed();
   if (frame) {
-    if (videoRenderer_) {
+    // Only render if this position is still the latest (not stale from a newer event)
+    if (currentTimeMs_ == ms && videoRenderer_) {
       videoRenderer_->renderFrame(*frame);
     }
-    LOG_MP(debug, "dragSeekTo ms=" << ms << " pts=" << frame->ptsMs
-                                   << " seek=" << seekTime
-                                   << "ms total=" << timer.elapsed() << "ms");
-  } else {
-    LOG_MP(warning,
-           "dragSeekTo: no frame for " << ms << "ms seek=" << seekTime << "ms");
+    LOG_MP(debug, "dragSeekTo ms=" << ms << " pts=" << frame->ptsMs);
   }
-  emit timeChanged(currentTimeMs_);
 }
 
 void MediaPlayer::endDragSeek() {
