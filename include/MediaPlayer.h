@@ -36,6 +36,7 @@ public:
 
   State state() const { return state_; }
   qint64 currentTimeMs() const { return currentTimeMs_; }
+  double decoderFps() const;
 
 signals:
   void stateChanged(State state);

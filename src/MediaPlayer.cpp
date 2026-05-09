@@ -195,6 +195,10 @@ void MediaPlayer::stopPreviewDragging() {
   seek(currentTimeMs_);
 }
 
+double MediaPlayer::decoderFps() const {
+  return decoder_ ? decoder_->fps() : 25.0;
+}
+
 void MediaPlayer::stepForward() {
   double fps = decoder_->fps();
   if (fps > 0.0) {

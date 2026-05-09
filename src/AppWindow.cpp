@@ -143,6 +143,12 @@ void AppWindow::setupSplitterLayout() {
   connect(d->mediaPlayer, &MediaPlayer::mediaLoaded, d->timelinePanel,
           &TimelinePanel::setTotalDuration);
 
+  // 2a. MediaPlayer -> Timeline: video fps for drag throttle
+  connect(d->mediaPlayer, &MediaPlayer::mediaLoaded, d->timelinePanel,
+          [this](qint64, QSize) {
+            d->timelinePanel->setVideoFps(d->mediaPlayer->decoderFps());
+          });
+
   // 3. MediaPlayer -> VideoPreview: seek display
   connect(d->mediaPlayer, &MediaPlayer::mediaLoaded, d->videoPreviewPanel,
           &VideoPreviewPanel::onMediaLoaded);
@@ -160,6 +166,14 @@ void AppWindow::setupSplitterLayout() {
   // 5. Timeline click -> MediaPlayer seek
   connect(d->timelinePanel, &TimelinePanel::timeClicked, d->mediaPlayer,
           &MediaPlayer::seek);
+
+  // 5a. Timeline drag -> MediaPlayer preview seek
+  connect(d->timelinePanel, &TimelinePanel::previewSeekRequested,
+          d->mediaPlayer, &MediaPlayer::previewSeek);
+
+  // 5b. Timeline drag end -> MediaPlayer commit final position
+  connect(d->timelinePanel, &TimelinePanel::dragSeekFinished, d->mediaPlayer,
+          &MediaPlayer::stopPreviewDragging);
 
   // 6. SubtitleList -> MediaPlayer seek
   //    Timeline time is updated via MediaPlayer::timeChanged signal, no
