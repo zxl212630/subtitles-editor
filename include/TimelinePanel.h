@@ -21,9 +21,12 @@ public:
   void setTotalDuration(qint64 ms);
   void setPlayheadAnchor(PlayheadAnchor anchor);
   void setPlaying(bool playing);
+  void setVideoFps(double fps);
 
 signals:
   void timeClicked(qint64 ms);
+  void previewSeekRequested(qint64 ms);
+  void dragSeekFinished(qint64 ms);
   void itemSelected(const QString &id);
   void asrFailed(const QString &error);
   void asrSucceeded();
@@ -31,6 +34,8 @@ signals:
 
 protected:
   void mousePressEvent(QMouseEvent *event) override;
+  void mouseMoveEvent(QMouseEvent *event) override;
+  void mouseReleaseEvent(QMouseEvent *event) override;
   void dragEnterEvent(QDragEnterEvent *event) override;
   void dropEvent(QDropEvent *event) override;
   void wheelEvent(QWheelEvent *event) override;
@@ -67,4 +72,12 @@ private:
   TimelineCanvas *canvas_ = nullptr;
   PlayheadAnchor playheadAnchor_ = PlayheadAnchor::Center;
   bool isPlaying_ = false;
+
+  // Drag-to-seek state
+  bool isDragging_ = false;
+  bool mousePressed_ = false;
+  int dragStartX_ = 0;
+  qint64 lastPreviewMs_ = 0;
+  double videoFps_ = 25.0;
+  static constexpr int DRAG_THRESHOLD_PX = 3;
 };

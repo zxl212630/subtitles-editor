@@ -7,6 +7,7 @@
 #include "TencentAsrService.h"
 
 #include <QApplication>
+#include <QDateTime>
 #include <QFontDatabase>
 #include <QMimeData>
 #include <QMouseEvent>
@@ -37,6 +38,7 @@ TimelinePanel::TimelinePanel(QWidget *parent) : QWidget(parent) {
   setObjectName("TimelinePanel");
   setAttribute(Qt::WA_StyledBackground);
   setAcceptDrops(true);
+  setMouseTracking(true);
 
   auto *layout = new QVBoxLayout(this);
   layout->setContentsMargins(0, 0, 0, 0);
@@ -189,6 +191,12 @@ void TimelinePanel::setPlayheadAnchor(PlayheadAnchor anchor) {
 }
 
 void TimelinePanel::setPlaying(bool playing) { isPlaying_ = playing; }
+
+void TimelinePanel::setVideoFps(double fps) {
+  if (fps > 0.0) {
+    videoFps_ = fps;
+  }
+}
 
 void TimelinePanel::setTotalDuration(qint64 ms) {
   totalDurationMs_ = ms;
@@ -413,20 +421,80 @@ void TimelinePanel::drawPlayhead(QPainter &painter) {
 }
 
 void TimelinePanel::mousePressEvent(QMouseEvent *event) {
+  if (event->button() != Qt::LeftButton)
+    return;
   if (event->x() < TRACK_HEAD_WIDTH)
     return;
 
-  // event->x() is in panel coordinates; this works because canvas fills panel
-  // with zero margins
+  mousePressed_ = true;
+  isDragging_ = false;
+  dragStartX_ = event->x();
+
   qint64 ms = xToTime(event->x());
   if (ms < 0)
     ms = 0;
   if (ms > totalDurationMs_)
     ms = totalDurationMs_;
 
+  // Update playhead position immediately (visual feedback)
   currentTimeMs_ = ms;
-  emit timeClicked(ms);
   canvas_->update();
+}
+
+void TimelinePanel::mouseMoveEvent(QMouseEvent *event) {
+  if (!mousePressed_)
+    return;
+  if (event->x() < TRACK_HEAD_WIDTH)
+    return;
+
+  // Check if we've crossed the drag threshold
+  if (!isDragging_) {
+    if (qAbs(event->x() - dragStartX_) < DRAG_THRESHOLD_PX)
+      return;
+    isDragging_ = true;
+    lastPreviewMs_ = currentTimeMs_;
+  }
+
+  qint64 ms = xToTime(event->x());
+  if (ms < 0)
+    ms = 0;
+  if (ms > totalDurationMs_)
+    ms = totalDurationMs_;
+
+  // Always update playhead position (instant, no delay)
+  currentTimeMs_ = ms;
+  canvas_->update();
+
+  // Throttle video preview based on frame rate
+  qint64 now = QDateTime::currentMSecsSinceEpoch();
+  qint64 intervalMs = static_cast<qint64>(1000.0 / videoFps_);
+  if (now - lastPreviewMs_ >= intervalMs) {
+    lastPreviewMs_ = now;
+    emit previewSeekRequested(ms);
+  }
+}
+
+void TimelinePanel::mouseReleaseEvent(QMouseEvent *event) {
+  if (event->button() != Qt::LeftButton)
+    return;
+
+  if (isDragging_) {
+    // Drag ended: emit signal to commit final position
+    emit dragSeekFinished(currentTimeMs_);
+    isDragging_ = false;
+  } else {
+    // Click (no drag): emit seek as before
+    qint64 ms = xToTime(event->x());
+    if (ms < 0)
+      ms = 0;
+    if (ms > totalDurationMs_)
+      ms = totalDurationMs_;
+    currentTimeMs_ = ms;
+    emit timeClicked(ms);
+    canvas_->update();
+  }
+
+  mousePressed_ = false;
 }
 
 void TimelinePanel::dragEnterEvent(QDragEnterEvent *event) {
