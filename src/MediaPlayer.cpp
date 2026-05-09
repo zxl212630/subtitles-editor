@@ -4,6 +4,7 @@
 #include "SoftwareVideoRenderer.h"
 
 #include <QDebug>
+#include <QElapsedTimer>
 #include <QThread>
 
 #define LOG_MP_info(msg) qInfo() << "[MediaPlayer]" << msg
@@ -177,6 +178,8 @@ void MediaPlayer::stepBackward() {
 }
 
 void MediaPlayer::beginDragSeek(qint64 ms) {
+  QElapsedTimer timer;
+  timer.start();
   LOG_MP(info, "beginDragSeek() at " << ms << "ms");
   wasPlayingBeforeDrag_ = (state_ == Playing);
 
@@ -193,16 +196,21 @@ void MediaPlayer::beginDragSeek(qint64 ms) {
 
   // Stop decoder thread entirely so UI thread can safely use fmtCtx_
   decoder_->stop();
+  qint64 stopTime = timer.elapsed();
   decoder_->wait(5000);
+  qint64 waitTime = timer.elapsed();
   decoder_->clearAllQueues();
   pendingVideoFrame_ = std::nullopt;
 
   dragSeekMode_ = true;
   seekPreviewMode_ = false;
+  decoder_->resetDragState();
 
   currentTimeMs_ = ms;
   emit timeChanged(currentTimeMs_);
-  LOG_MP(info, "beginDragSeek() ready, decoder stopped");
+  LOG_MP(debug, "beginDragSeek() ready stop="
+                    << stopTime << "ms wait=" << waitTime
+                    << "ms total=" << timer.elapsed() << "ms");
 }
 
 void MediaPlayer::dragSeekTo(qint64 ms) {
@@ -211,36 +219,43 @@ void MediaPlayer::dragSeekTo(qint64 ms) {
     return;
   }
 
+  QElapsedTimer timer;
+  timer.start();
   currentTimeMs_ = ms;
   auto frame = decoder_->seekToKeyframe(ms);
+  qint64 seekTime = timer.elapsed();
   if (frame) {
     if (videoRenderer_) {
       videoRenderer_->renderFrame(*frame);
     }
-    LOG_MP(debug, "dragSeekTo: rendered frame pts=" << frame->ptsMs);
+    LOG_MP(debug, "dragSeekTo ms=" << ms << " pts=" << frame->ptsMs
+                                   << " seek=" << seekTime
+                                   << "ms total=" << timer.elapsed() << "ms");
   } else {
-    LOG_MP(warning, "dragSeekTo: no frame for " << ms << "ms");
+    LOG_MP(warning,
+           "dragSeekTo: no frame for " << ms << "ms seek=" << seekTime << "ms");
   }
   emit timeChanged(currentTimeMs_);
 }
 
 void MediaPlayer::endDragSeek() {
+  QElapsedTimer timer;
+  timer.start();
   LOG_MP(info, "endDragSeek()");
   dragSeekMode_ = false;
   seekPreviewMode_ = false;
+  decoder_->resetDragState();
 
   if (wasPlayingBeforeDrag_) {
-    // Restart decoder thread and resume playback from current position
     state_ = Ready;
     play();
   } else {
-    // Restart decoder thread so seek() works after drag.
-    // seek() calls setPlaying(true) but that won't restart a stopped thread.
     decoder_->requestSeek(currentTimeMs_);
     decoder_->clearAllQueues();
     decoder_->start();
   }
   wasPlayingBeforeDrag_ = false;
+  LOG_MP(debug, "endDragSeek() done total=" << timer.elapsed() << "ms");
 }
 
 void MediaPlayer::onPlaybackTimer() {

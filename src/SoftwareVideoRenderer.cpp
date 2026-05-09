@@ -2,6 +2,7 @@
 
 #include <QElapsedTimer>
 #include <QPainter>
+#include <cstring>
 
 #define LOG_RENDER_info(msg) qInfo() << "[VideoRenderer]" << msg
 #define LOG_RENDER_warning(msg) qWarning() << "[VideoRenderer]" << msg
@@ -18,18 +19,28 @@ SoftwareVideoRenderer::SoftwareVideoRenderer(QWidget *parent)
 }
 
 void SoftwareVideoRenderer::renderFrame(const DecodedVideoFrame &frame) {
+  QElapsedTimer timer;
+  timer.start();
   {
     QMutexLocker lock(&imageMutex_);
-    currentImage_ =
-        QImage(reinterpret_cast<const uchar *>(frame.rgbaData.constData()),
-               frame.width, frame.height, QImage::Format_RGBA8888)
-            .copy();
+    // Reuse existing buffer if dimensions match (avoids 8MB alloc+copy)
+    if (!currentImage_.isNull() && currentImage_.width() == frame.width &&
+        currentImage_.height() == frame.height) {
+      memcpy(currentImage_.bits(), frame.rgbaData.constData(),
+             frame.width * frame.height * 4);
+    } else {
+      currentImage_ =
+          QImage(reinterpret_cast<const uchar *>(frame.rgbaData.constData()),
+                 frame.width, frame.height, QImage::Format_RGBA8888)
+              .copy();
+    }
     hasFrame_ = true;
   }
+  qint64 copyTime = timer.elapsed();
   videoSize_ = QSize(frame.width, frame.height);
   QMetaObject::invokeMethod(this, "update", Qt::QueuedConnection);
-  LOG_RENDER(debug,
-             "renderFrame() size=" << frame.width << "x" << frame.height);
+  LOG_RENDER(debug, "renderFrame() size=" << frame.width << "x" << frame.height
+                                          << " copy=" << copyTime << "ms");
 }
 
 void SoftwareVideoRenderer::clear() {

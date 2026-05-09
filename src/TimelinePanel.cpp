@@ -416,8 +416,6 @@ void TimelinePanel::mousePressEvent(QMouseEvent *event) {
   if (event->x() < TRACK_HEAD_WIDTH)
     return;
 
-  // Any click on the timeline starts a potential drag.
-  // If the user releases without moving, we fall back to click-to-seek.
   isDragging_ = true;
   dragMoved_ = false;
   dragStartX_ = event->x();
@@ -466,10 +464,8 @@ void TimelinePanel::mouseReleaseEvent(QMouseEvent *event) {
   isDragging_ = false;
 
   if (dragMoved_) {
-    // Was a real drag — end drag seek
     emit dragSeekEnded();
   } else {
-    // Was just a click (no movement) — do click-to-seek
     qint64 ms = xToTime(dragStartX_);
     if (ms < 0)
       ms = 0;
