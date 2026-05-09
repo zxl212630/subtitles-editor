@@ -156,6 +156,45 @@ void MediaPlayer::seek(qint64 ms) {
   LOG_MP(info, "seek() complete");
 }
 
+void MediaPlayer::previewSeek(qint64 ms) {
+  if (!decoder_ || !decoder_->hasVideo())
+    return;
+
+  if (!isPreviewDragging_) {
+    // First call during drag: initialize preview mode
+    if (state_ == Playing) {
+      pause();
+    }
+    isPreviewDragging_ = true;
+    seekPreviewMode_ = true;
+    seekTargetMs_ = ms;
+    currentTimeMs_ = ms;
+    decoder_->setPlaying(true);
+    seekPreviewTimer_.start();
+    if (!playbackTimerRunning_) {
+      playbackTimer_->start(16);
+      playbackTimerRunning_ = true;
+    }
+  } else {
+    // Subsequent calls: just update target (atomic, lightweight)
+    seekTargetMs_ = ms;
+    currentTimeMs_ = ms;
+  }
+
+  emit timeChanged(currentTimeMs_);
+}
+
+void MediaPlayer::stopPreviewDragging() {
+  if (!isPreviewDragging_)
+    return;
+
+  isPreviewDragging_ = false;
+
+  // Use existing seek() for a clean precise seek to final position
+  // seek() handles stopping preview mode, re-seeking, etc.
+  seek(currentTimeMs_);
+}
+
 void MediaPlayer::stepForward() {
   double fps = decoder_->fps();
   if (fps > 0.0) {
@@ -180,19 +219,26 @@ void MediaPlayer::onPlaybackTimer() {
     // Keep dequeuing video frames until we find one at or after target.
     // Do NOT update currentTimeMs_ or emit timeChanged here — the timeline
     // should stay at the seek target, not jump to the decoded frame pts.
-    while (decoder_->videoQueueSize() > 0) {
+    // Render the first available frame (don't chase exact target position).
+    // This ensures responsive preview during drag scrubbing.
+    if (decoder_->videoQueueSize() > 0) {
       auto frame = decoder_->dequeueVideoFrame();
-      if (frame && frame->ptsMs >= seekTargetMs_) {
-        if (videoRenderer_) {
-          videoRenderer_->renderFrame(*frame);
-        }
+      if (frame && videoRenderer_) {
+        videoRenderer_->renderFrame(*frame);
+      }
 
+      if (!isPreviewDragging_) {
+        // Not dragging: stop after showing one frame (normal seek preview)
         decoder_->setPlaying(false);
         playbackTimer_->stop();
+        playbackTimerRunning_ = false;
         seekPreviewMode_ = false;
-        LOG_MP(info, "seek preview frame rendered pts=" << frame->ptsMs);
-        return;
+        LOG_MP(info, "seek preview frame rendered pts=" << (frame ? frame->ptsMs : -1));
+      } else {
+        // Dragging: keep running, just reset the timer for next batch
+        seekPreviewTimer_.start();
       }
+      return;
     }
 
     if (seekPreviewTimer_.elapsed() > 2000) {

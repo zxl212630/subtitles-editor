@@ -27,6 +27,8 @@ public:
   void pause();
   void stop();
   void seek(qint64 ms);
+  void previewSeek(qint64 ms);
+  void stopPreviewDragging();
   void stepForward();
   void stepBackward();
 
@@ -66,4 +68,5 @@ private:
   bool seekPreviewMode_ = false;
   QElapsedTimer seekPreviewTimer_;
   qint64 seekTargetMs_ = 0;
+  bool isPreviewDragging_ = false;
 };
