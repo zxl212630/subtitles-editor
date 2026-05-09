@@ -85,6 +85,7 @@ bool FFmpegDecoder::open(const QString &path) {
         emit decodeError(QString("Failed to open video codec: %1").arg(errbuf));
         return false;
       }
+      reusableFrame_ = av_frame_alloc();
       videoTimeBase_ = stream->time_base;
       videoSize_ = QSize(videoCodecCtx_->width, videoCodecCtx_->height);
       hasVideo_ = true;
@@ -175,6 +176,10 @@ void FFmpegDecoder::close() {
     LOG_DEC(warning, "Thread did not stop in time");
   }
   clearAllQueues();
+  if (reusableFrame_) {
+    av_frame_free(&reusableFrame_);
+    reusableFrame_ = nullptr;
+  }
   if (swsCtx_) {
     sws_freeContext(swsCtx_);
     swsCtx_ = nullptr;
@@ -400,7 +405,6 @@ void FFmpegDecoder::clearAllQueues() {
 
 bool FFmpegDecoder::decodeVideoPacket(AVPacket *packet) {
   int ret = avcodec_send_packet(videoCodecCtx_, packet);
-  AVFrame *frame = av_frame_alloc();
 
   auto processFrame = [&](AVFrame *f) {
     qint64 pts = f->pts;
@@ -425,54 +429,43 @@ bool FFmpegDecoder::decodeVideoPacket(AVPacket *packet) {
       }
     }
 
-    QByteArray rgbaData(w * h * 4, 0);
-    uint8_t *dstData[4] = {reinterpret_cast<uint8_t *>(rgbaData.data()),
-                           nullptr, nullptr, nullptr};
+    // Reuse pre-allocated RGBA buffer
+    int bufSize = w * h * 4;
+    if (reusableRgbaBuffer_.size() != bufSize) {
+      reusableRgbaBuffer_.resize(bufSize);
+    }
+    uint8_t *dstData[4] = {
+        reinterpret_cast<uint8_t *>(reusableRgbaBuffer_.data()), nullptr,
+        nullptr, nullptr};
     int dstLinesize[4] = {w * 4, 0, 0, 0};
     sws_scale(swsCtx_, f->data, f->linesize, 0, h, dstData, dstLinesize);
 
-    DecodedVideoFrame vframe;
-    vframe.ptsMs = ptsMs;
-    vframe.width = w;
-    vframe.height = h;
-    vframe.rgbaData = std::move(rgbaData);
+    DecodedVideoFrame vf;
+    vf.ptsMs = ptsMs;
+    vf.width = w;
+    vf.height = h;
+    vf.rgbaData =
+        reusableRgbaBuffer_; // QByteArray is implicitly shared (copy-on-write)
 
-    {
-      QMutexLocker locker(&videoQueueMutex_);
-      videoQueue_.enqueue(std::move(vframe));
-    }
-
-    av_frame_unref(f);
+    QMutexLocker locker(&videoQueueMutex_);
+    videoQueue_.enqueue(std::move(vf));
+    queueNotFull_.wakeAll();
   };
 
-  while (ret == AVERROR(EAGAIN)) {
-    while (avcodec_receive_frame(videoCodecCtx_, frame) == 0) {
-      processFrame(frame);
+  while (true) {
+    ret = avcodec_receive_frame(videoCodecCtx_, reusableFrame_);
+    if (ret == AVERROR(EAGAIN) || ret == AVERROR_EOF) {
+      break;
     }
-    ret = avcodec_send_packet(videoCodecCtx_, packet);
+    if (ret < 0) {
+      char errbuf[256];
+      av_strerror(ret, errbuf, sizeof(errbuf));
+      LOG_DEC(warning, "Video decode error:" << errbuf);
+      return false;
+    }
+    processFrame(reusableFrame_);
+    av_frame_unref(reusableFrame_);
   }
-
-  if (ret < 0 && ret != AVERROR_EOF) {
-    char errbuf[256];
-    av_strerror(ret, errbuf, sizeof(errbuf));
-    LOG_DEC(warning, "Video send packet error:" << errbuf);
-    av_frame_free(&frame);
-    return false;
-  }
-
-  int receiveRet = avcodec_receive_frame(videoCodecCtx_, frame);
-  while (receiveRet == 0) {
-    processFrame(frame);
-    receiveRet = avcodec_receive_frame(videoCodecCtx_, frame);
-  }
-  if (receiveRet < 0 && receiveRet != AVERROR(EAGAIN) &&
-      receiveRet != AVERROR_EOF) {
-    char errbuf[256];
-    av_strerror(receiveRet, errbuf, sizeof(errbuf));
-    LOG_DEC(warning, "Video receive frame error:" << errbuf);
-  }
-
-  av_frame_free(&frame);
   return true;
 }
 
