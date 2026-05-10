@@ -70,4 +70,5 @@ private:
   QElapsedTimer seekPreviewTimer_;
   qint64 seekTargetMs_ = 0;
   bool isPreviewDragging_ = false;
+  bool previewFrameRendered_ = false;
 };

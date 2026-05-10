@@ -75,7 +75,8 @@ void MediaPlayer::play() {
   if (state_ == Ready || state_ == Paused || state_ == Stopped) {
     if (state_ == Stopped) {
       if (decoder_->hasAudio()) {
-        audioOutput_->open(decoder_->audioSampleRate(), decoder_->audioChannels());
+        audioOutput_->open(decoder_->audioSampleRate(),
+                           decoder_->audioChannels());
       }
       decoder_->requestSeek(currentTimeMs_);
       decoder_->clearAllQueues();
@@ -141,6 +142,7 @@ void MediaPlayer::seek(qint64 ms) {
   currentTimeMs_ = ms;
   seekTargetMs_ = ms;
   pendingVideoFrame_ = std::nullopt;
+  previewFrameRendered_ = false;
 
   if (oldState == Playing) {
     play();
@@ -169,18 +171,23 @@ void MediaPlayer::previewSeek(qint64 ms) {
     seekPreviewMode_ = true;
     seekTargetMs_ = ms;
     currentTimeMs_ = ms;
+    decoder_->requestSeek(ms);
     decoder_->setPlaying(true);
     seekPreviewTimer_.start();
     if (!playbackTimerRunning_) {
       playbackTimer_->start(16);
       playbackTimerRunning_ = true;
     }
+    LOG_MP(info, "previewSeek() drag started target=" << ms);
   } else {
-    // Subsequent calls: just update target (atomic, lightweight)
+    // Subsequent calls: update target and ensure decoder is running
     seekTargetMs_ = ms;
     currentTimeMs_ = ms;
+    decoder_->requestSeek(ms);
+    decoder_->setPlaying(true);
   }
 
+  previewFrameRendered_ = false;
   emit timeChanged(currentTimeMs_);
 }
 
@@ -225,10 +232,11 @@ void MediaPlayer::onPlaybackTimer() {
     // should stay at the seek target, not jump to the decoded frame pts.
     // Render the first available frame (don't chase exact target position).
     // This ensures responsive preview during drag scrubbing.
-    if (decoder_->videoQueueSize() > 0) {
+    if (decoder_->videoQueueSize() > 0 && !previewFrameRendered_) {
       auto frame = decoder_->dequeueVideoFrame();
       if (frame && videoRenderer_) {
         videoRenderer_->renderFrame(*frame);
+        previewFrameRendered_ = true;
       }
 
       if (!isPreviewDragging_) {
@@ -237,9 +245,12 @@ void MediaPlayer::onPlaybackTimer() {
         playbackTimer_->stop();
         playbackTimerRunning_ = false;
         seekPreviewMode_ = false;
-        LOG_MP(info, "seek preview frame rendered pts=" << (frame ? frame->ptsMs : -1));
+        LOG_MP(info, "seek preview frame rendered pts=" << (frame ? frame->ptsMs
+                                                                  : -1));
       } else {
-        // Dragging: keep running, just reset the timer for next batch
+        // Dragging: render one frame then pause decoder and clear queue
+        decoder_->setPlaying(false);
+        decoder_->clearVideoQueue();
         seekPreviewTimer_.start();
       }
       return;

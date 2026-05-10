@@ -438,6 +438,7 @@ void TimelinePanel::mousePressEvent(QMouseEvent *event) {
 
   // Update playhead position immediately (visual feedback)
   currentTimeMs_ = ms;
+  lastPreviewSystemTime_ = QDateTime::currentMSecsSinceEpoch();
   canvas_->update();
 }
 
@@ -452,7 +453,7 @@ void TimelinePanel::mouseMoveEvent(QMouseEvent *event) {
     if (qAbs(event->x() - dragStartX_) < DRAG_THRESHOLD_PX)
       return;
     isDragging_ = true;
-    lastPreviewMs_ = currentTimeMs_;
+    lastPreviewSystemTime_ = QDateTime::currentMSecsSinceEpoch();
   }
 
   qint64 ms = xToTime(event->x());
@@ -468,8 +469,8 @@ void TimelinePanel::mouseMoveEvent(QMouseEvent *event) {
   // Throttle video preview based on frame rate
   qint64 now = QDateTime::currentMSecsSinceEpoch();
   qint64 intervalMs = static_cast<qint64>(1000.0 / videoFps_);
-  if (now - lastPreviewMs_ >= intervalMs) {
-    lastPreviewMs_ = now;
+  if (now - lastPreviewSystemTime_ >= intervalMs) {
+    lastPreviewSystemTime_ = now;
     emit previewSeekRequested(ms);
   }
 }

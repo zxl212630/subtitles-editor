@@ -77,7 +77,7 @@ private:
   bool isDragging_ = false;
   bool mousePressed_ = false;
   int dragStartX_ = 0;
-  qint64 lastPreviewMs_ = 0;
+  qint64 lastPreviewSystemTime_ = 0;
   double videoFps_ = 25.0;
   static constexpr int DRAG_THRESHOLD_PX = 3;
 };
