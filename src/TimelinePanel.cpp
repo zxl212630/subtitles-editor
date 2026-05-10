@@ -114,7 +114,7 @@ void TimelinePanel::updateScrollBar() {
 
   hScrollBar_->setRange(0, maxOffset);
   hScrollBar_->setPageStep(canvasWidth);
-  hScrollBar_->setSingleStep(static_cast<int>(pixelsPerSecond_));
+  hScrollBar_->setSingleStep(qMax(1, static_cast<int>(pixelsPerSecond_)));
   hScrollBar_->setValue(scrollOffsetX_);
 }
 
@@ -613,7 +613,7 @@ void TimelinePanel::wheelEvent(QWheelEvent *event) {
 
     double factor = (delta > 0) ? 1.25 : 0.8;
     double newPps = pixelsPerSecond_ * factor;
-    newPps = qBound(10.0, newPps, 1000.0);
+    newPps = qBound(1.0, newPps, 1000.0);
 
     // Adjust scroll so the time under cursor stays at the same screen X
     int cursorRelX = pos.x() - TRACK_HEAD_WIDTH;
