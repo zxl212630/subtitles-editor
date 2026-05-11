@@ -1,5 +1,6 @@
 #include "FFmpegDecoder.h"
 #include <QDebug>
+#include <QElapsedTimer>
 #include <QThread>
 
 extern "C" {
@@ -11,6 +12,8 @@ extern "C" {
 #include <libswresample/swresample.h>
 #include <libswscale/swscale.h>
 }
+
+#define PROFILE_TIMING 1
 
 #define LOG_DEC_info(msg) qInfo() << "[FFmpegDecoder]" << msg
 #define LOG_DEC_warning(msg) qWarning() << "[FFmpegDecoder]" << msg
@@ -370,6 +373,11 @@ void FFmpegDecoder::performSeek(qint64 targetMs) {
     return;
   }
 
+#if PROFILE_TIMING
+  QElapsedTimer seekTimer;
+  seekTimer.start();
+#endif
+
   int64_t target = av_rescale_q(targetMs, AVRational{1, 1000}, AV_TIME_BASE_Q);
   int ret = avformat_seek_file(fmtCtx_, -1, INT64_MIN, target, target,
                                AVSEEK_FLAG_BACKWARD);
@@ -385,6 +393,13 @@ void FFmpegDecoder::performSeek(qint64 targetMs) {
     avcodec_flush_buffers(audioCodecCtx_);
   }
   clearAllQueues();
+
+#if PROFILE_TIMING
+  qint64 elapsed = seekTimer.nsecsElapsed() / 1000;
+  qInfo() << "[TIMING:seek] targetMs=" << targetMs
+          << " cost_us=" << elapsed;
+#endif
+
   LOG_DEC(info, "Seek complete target=" << targetMs << "ms");
 }
 
@@ -410,6 +425,15 @@ void FFmpegDecoder::clearAllQueues() {
 }
 
 bool FFmpegDecoder::decodeVideoPacket(AVPacket *packet) {
+#if PROFILE_TIMING
+  QElapsedTimer pktTimer;
+  pktTimer.start();
+  qint64 send_us = 0;
+  qint64 receive_us = 0;
+  qint64 scale_us = 0;
+  int frameCount = 0;
+#endif
+
   int ret = avcodec_send_packet(videoCodecCtx_, packet);
 
   auto processFrame = [&](AVFrame *f) {
@@ -435,6 +459,11 @@ bool FFmpegDecoder::decodeVideoPacket(AVPacket *packet) {
       }
     }
 
+#if PROFILE_TIMING
+    QElapsedTimer scaleTimer;
+    scaleTimer.start();
+#endif
+
     // Reuse pre-allocated RGBA buffer
     int bufSize = w * h * 4;
     if (reusableRgbaBuffer_.size() != bufSize) {
@@ -445,6 +474,10 @@ bool FFmpegDecoder::decodeVideoPacket(AVPacket *packet) {
         nullptr, nullptr};
     int dstLinesize[4] = {w * 4, 0, 0, 0};
     sws_scale(swsCtx_, f->data, f->linesize, 0, h, dstData, dstLinesize);
+
+#if PROFILE_TIMING
+    scale_us += scaleTimer.nsecsElapsed();
+#endif
 
     DecodedVideoFrame vf;
     vf.ptsMs = ptsMs;
@@ -459,6 +492,11 @@ bool FFmpegDecoder::decodeVideoPacket(AVPacket *packet) {
   };
 
   while (true) {
+#if PROFILE_TIMING
+    QElapsedTimer recvTimer;
+    recvTimer.start();
+#endif
+
     ret = avcodec_receive_frame(videoCodecCtx_, reusableFrame_);
     if (ret == AVERROR(EAGAIN) || ret == AVERROR_EOF) {
       break;
@@ -469,9 +507,28 @@ bool FFmpegDecoder::decodeVideoPacket(AVPacket *packet) {
       LOG_DEC(warning, "Video decode error:" << errbuf);
       return false;
     }
+
+#if PROFILE_TIMING
+    receive_us += recvTimer.nsecsElapsed();
+    frameCount++;
+#endif
+
     processFrame(reusableFrame_);
     av_frame_unref(reusableFrame_);
   }
+
+#if PROFILE_TIMING
+  if (frameCount > 0) {
+    send_us = pktTimer.nsecsElapsed() - receive_us - scale_us;
+    qInfo() << "[TIMING:decode] frames=" << frameCount
+            << " send_us=" << (send_us / 1000 / frameCount)
+            << " recv_us=" << (receive_us / 1000 / frameCount)
+            << " swscale_us=" << (scale_us / 1000 / frameCount)
+            << " per_frame_us="
+            << ((send_us + receive_us + scale_us) / 1000 / frameCount);
+  }
+#endif
+
   return true;
 }
 

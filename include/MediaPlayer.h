@@ -77,4 +77,5 @@ private:
   PreviewStrategy currentPreviewStrategy_ = PreviewStrategy::SeekChase;
   qint64 lastPreviewSeekMs_ = 0;
   qint64 lastRenderedPreviewPts_ = -1;
+  QElapsedTimer previewE2eTimer_;
 };

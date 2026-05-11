@@ -4,7 +4,10 @@
 #include "SoftwareVideoRenderer.h"
 
 #include <QDebug>
+#include <QElapsedTimer>
 #include <QThread>
+
+#define PROFILE_TIMING 1
 
 #define LOG_MP_info(msg) qInfo() << "[MediaPlayer]" << msg
 #define LOG_MP_warning(msg) qWarning() << "[MediaPlayer]" << msg
@@ -162,6 +165,10 @@ void MediaPlayer::previewSeek(qint64 ms) {
   if (!decoder_ || !decoder_->hasVideo())
     return;
 
+#if PROFILE_TIMING
+  previewE2eTimer_.restart();
+#endif
+
   if (!isPreviewDragging_) {
     // First call during drag: initialize preview mode
     if (state_ == Playing) {
@@ -209,7 +216,7 @@ void MediaPlayer::previewSeek(qint64 ms) {
       lastPreviewSeekMs_ = ms;
       lastRenderedPreviewPts_ = -1;
       LOG_MP(info, "previewSeek() medium reseek target=" << ms << " distance="
-                                                         << distance);
+                                                          << distance);
     } else {
       // Large forward (>3s): re-seek, render first keyframe only
       currentPreviewStrategy_ = PreviewStrategy::SeekFast;
@@ -217,7 +224,7 @@ void MediaPlayer::previewSeek(qint64 ms) {
       lastPreviewSeekMs_ = ms;
       lastRenderedPreviewPts_ = -1;
       LOG_MP(info, "previewSeek() large reseek target=" << ms << " distance="
-                                                        << distance);
+                                                         << distance);
     }
   }
 
@@ -279,10 +286,17 @@ void MediaPlayer::onPlaybackTimer() {
           videoRenderer_->renderFrame(*frame);
           lastRenderedPreviewPts_ = frame->ptsMs;
           previewFrameRendered_ = true;
+#if PROFILE_TIMING
+          qInfo() << "[TIMING:drag_e2e] strategy=SeekFast"
+                  << " target=" << seekTargetMs_
+                  << " rendered_pts=" << frame->ptsMs
+                  << " e2e_us=" << (previewE2eTimer_.nsecsElapsed() / 1000);
+#endif
         }
       } else {
         // Chase / SeekChase: loop dequeue until we find a frame at or after
         // the target. Frames earlier than target are dropped.
+        int dropped = 0;
         while (decoder_->videoQueueSize() > 0) {
           auto frame = decoder_->dequeueVideoFrame();
           if (!frame)
@@ -294,9 +308,20 @@ void MediaPlayer::onPlaybackTimer() {
             }
             lastRenderedPreviewPts_ = frame->ptsMs;
             previewFrameRendered_ = true;
+#if PROFILE_TIMING
+            const char *stratName =
+                currentPreviewStrategy_ == PreviewStrategy::Chase ? "Chase"
+                                                                  : "SeekChase";
+            qInfo() << "[TIMING:drag_e2e] strategy=" << stratName
+                    << " target=" << seekTargetMs_
+                    << " rendered_pts=" << frame->ptsMs
+                    << " dropped=" << dropped
+                    << " e2e_us=" << (previewE2eTimer_.nsecsElapsed() / 1000);
+#endif
             break;
           }
           // Frame is behind target: discard and continue chasing
+          dropped++;
         }
       }
     }
@@ -411,7 +436,20 @@ if (decoder_->hasAudio()) {
 // 4. Render frame
 if (shouldRender) {
   if (videoRenderer_) {
+#if PROFILE_TIMING
+    QElapsedTimer renderPerfTimer;
+    renderPerfTimer.start();
+#endif
     videoRenderer_->renderFrame(*pendingVideoFrame_);
+#if PROFILE_TIMING
+    static int renderLogCounter = 0;
+    if (++renderLogCounter % 60 == 0) {
+      qInfo() << "[TIMING:playback_render] frame#" << renderedFrames_
+              << " pts=" << pendingVideoFrame_->ptsMs
+              << " render_us=" << (renderPerfTimer.nsecsElapsed() / 1000)
+              << " dropped=" << droppedFrames_;
+    }
+#endif
   }
   currentTimeMs_ = pendingVideoFrame_->ptsMs;
   emit timeChanged(currentTimeMs_);

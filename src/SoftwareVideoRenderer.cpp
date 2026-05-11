@@ -3,6 +3,8 @@
 #include <QElapsedTimer>
 #include <QPainter>
 
+#define PROFILE_TIMING 1
+
 #define LOG_RENDER_info(msg) qInfo() << "[VideoRenderer]" << msg
 #define LOG_RENDER_warning(msg) qWarning() << "[VideoRenderer]" << msg
 #define LOG_RENDER_critical(msg) qCritical() << "[VideoRenderer]" << msg
@@ -18,6 +20,10 @@ SoftwareVideoRenderer::SoftwareVideoRenderer(QWidget *parent)
 }
 
 void SoftwareVideoRenderer::renderFrame(const DecodedVideoFrame &frame) {
+#if PROFILE_TIMING
+  QElapsedTimer copyTimer;
+  copyTimer.start();
+#endif
   {
     QMutexLocker lock(&imageMutex_);
     currentImage_ =
@@ -28,8 +34,18 @@ void SoftwareVideoRenderer::renderFrame(const DecodedVideoFrame &frame) {
   }
   videoSize_ = QSize(frame.width, frame.height);
   QMetaObject::invokeMethod(this, "update", Qt::QueuedConnection);
+
+#if PROFILE_TIMING
+  static int renderLogCounter2 = 0;
+  if (++renderLogCounter2 % 30 == 0) {
+    qInfo() << "[TIMING:render_copy] size=" << frame.width << "x"
+            << frame.height
+            << " copy_us=" << (copyTimer.nsecsElapsed() / 1000);
+  }
+#else
   LOG_RENDER(debug,
              "renderFrame() size=" << frame.width << "x" << frame.height);
+#endif
 }
 
 void SoftwareVideoRenderer::clear() {
@@ -128,5 +144,13 @@ void SoftwareVideoRenderer::paintEvent(QPaintEvent *event) {
     painter.drawText(textRect, Qt::AlignHCenter | Qt::AlignBottom, text);
   }
 
-  LOG_RENDER(debug, "paintEvent() cost=" << timer.elapsed() << "ms");
+#if PROFILE_TIMING
+  qint64 elapsed = timer.nsecsElapsed() / 1000;
+  static int paintLogCounter = 0;
+  if (++paintLogCounter % 30 == 0) {
+    qInfo() << "[TIMING:paint] size=" << width() << "x" << height()
+            << " image=" << imageToDraw.width() << "x" << imageToDraw.height()
+            << " paint_us=" << elapsed;
+  }
+#endif
 }
