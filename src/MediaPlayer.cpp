@@ -165,70 +165,28 @@ void MediaPlayer::previewSeek(qint64 ms) {
   if (!decoder_ || !decoder_->hasVideo())
     return;
 
-#if PROFILE_TIMING
-  previewE2eTimer_.restart();
-#endif
-
   if (!isPreviewDragging_) {
-    // First call during drag: initialize preview mode
     if (state_ == Playing) {
       pause();
     }
     isPreviewDragging_ = true;
     seekPreviewMode_ = true;
-    seekTargetMs_ = ms;
-    currentTimeMs_ = ms;
-    lastPreviewSeekMs_ = ms;
-    lastRenderedPreviewPts_ = -1;
-    currentPreviewStrategy_ = PreviewStrategy::SeekChase;
-    decoder_->requestSeek(ms);
-    decoder_->setPlaying(true);
     seekPreviewTimer_.start();
-    if (!playbackTimerRunning_) {
-      playbackTimer_->start(16);
-      playbackTimerRunning_ = true;
-    }
+    lastRenderedPreviewPts_ = -1;
     LOG_MP(info, "previewSeek() drag started target=" << ms);
-  } else {
-    // Subsequent calls: choose strategy based on distance and direction
-    seekTargetMs_ = ms;
-    currentTimeMs_ = ms;
-
-    qint64 distance = ms - lastPreviewSeekMs_;
-
-    if (ms < lastPreviewSeekMs_) {
-      // Backward drag: always re-seek and chase
-      currentPreviewStrategy_ = PreviewStrategy::SeekChase;
-      decoder_->requestSeek(ms);
-      lastPreviewSeekMs_ = ms;
-      lastRenderedPreviewPts_ = -1;
-      LOG_MP(info, "previewSeek() backward reseek target=" << ms);
-    } else if (distance < 300) {
-      // Small forward (<300ms): keep decoder running, chase exact frame
-      currentPreviewStrategy_ = PreviewStrategy::Chase;
-      decoder_->setPlaying(true);
-      LOG_MP(debug,
-             "previewSeek() chase target=" << ms << " distance=" << distance);
-    } else if (distance < 3000) {
-      // Medium forward (300ms-3s): re-seek then chase
-      currentPreviewStrategy_ = PreviewStrategy::SeekChase;
-      decoder_->requestSeek(ms);
-      lastPreviewSeekMs_ = ms;
-      lastRenderedPreviewPts_ = -1;
-      LOG_MP(info, "previewSeek() medium reseek target=" << ms << " distance="
-                                                          << distance);
-    } else {
-      // Large forward (>3s): re-seek, render first keyframe only
-      currentPreviewStrategy_ = PreviewStrategy::SeekFast;
-      decoder_->requestSeek(ms);
-      lastPreviewSeekMs_ = ms;
-      lastRenderedPreviewPts_ = -1;
-      LOG_MP(info, "previewSeek() large reseek target=" << ms << " distance="
-                                                         << distance);
-    }
   }
 
+  seekTargetMs_ = ms;
+  currentTimeMs_ = ms;
   previewFrameRendered_ = false;
+  decoder_->requestSeek(ms);
+  decoder_->setPlaying(true);
+
+  if (!playbackTimerRunning_) {
+    playbackTimer_->start(16);
+    playbackTimerRunning_ = true;
+  }
+
   emit timeChanged(currentTimeMs_);
 }
 
@@ -238,15 +196,10 @@ void MediaPlayer::stopPreviewDragging() {
 
   isPreviewDragging_ = false;
 
-  // Clear any residual frames produced during chasing so that the final
-  // seek() starts from a clean state.
   if (decoder_) {
-    decoder_->clearVideoQueue();
     decoder_->clearAudioQueue();
   }
 
-  // Use existing seek() for a clean precise seek to final position
-  // seek() handles stopping preview mode, re-seeking, etc.
   seek(currentTimeMs_);
 }
 
@@ -275,94 +228,72 @@ void MediaPlayer::onPlaybackTimer() {
       decoder_->dequeueAudioFrame();
     }
 
-    // Only attempt to render once per target change (prevent continuous
-    // playback when holding the mouse still).
-    if (!previewFrameRendered_) {
-      if (currentPreviewStrategy_ == PreviewStrategy::SeekFast) {
-        // Large forward: render the first available frame (keyframe) without
-        // chasing exact position. This guarantees immediate visual feedback.
-        auto frame = decoder_->dequeueVideoFrame();
-        if (frame && videoRenderer_) {
+    if (isPreviewDragging_) {
+      // Drag mode: render frames up to seekTargetMs_ to reach the
+      // drag position. Skip old frames (before last rendered) and
+      // discard frames past the target to prevent continuous playback
+      // when the mouse stops moving.
+      auto frame = decoder_->dequeueVideoFrame();
+      while (frame) {
+        if (frame->ptsMs > lastRenderedPreviewPts_ &&
+            frame->ptsMs <= seekTargetMs_ && videoRenderer_) {
           videoRenderer_->renderFrame(*frame);
           lastRenderedPreviewPts_ = frame->ptsMs;
-          previewFrameRendered_ = true;
-#if PROFILE_TIMING
-          qInfo() << "[TIMING:drag_e2e] strategy=SeekFast"
-                  << " target=" << seekTargetMs_
-                  << " rendered_pts=" << frame->ptsMs
-                  << " e2e_us=" << (previewE2eTimer_.nsecsElapsed() / 1000);
-#endif
         }
-      } else {
-        // Chase / SeekChase: loop dequeue until we find a frame at or after
-        // the target. Frames earlier than target are dropped.
-        int dropped = 0;
-        while (decoder_->videoQueueSize() > 0) {
-          auto frame = decoder_->dequeueVideoFrame();
-          if (!frame)
-            break;
-
-          if (frame->ptsMs >= seekTargetMs_) {
-            if (videoRenderer_) {
-              videoRenderer_->renderFrame(*frame);
-            }
-            lastRenderedPreviewPts_ = frame->ptsMs;
-            previewFrameRendered_ = true;
-#if PROFILE_TIMING
-            const char *stratName =
-                currentPreviewStrategy_ == PreviewStrategy::Chase ? "Chase"
-                                                                  : "SeekChase";
-            qInfo() << "[TIMING:drag_e2e] strategy=" << stratName
-                    << " target=" << seekTargetMs_
-                    << " rendered_pts=" << frame->ptsMs
-                    << " dropped=" << dropped
-                    << " e2e_us=" << (previewE2eTimer_.nsecsElapsed() / 1000);
-#endif
-            break;
-          }
-          // Frame is behind target: discard and continue chasing
-          dropped++;
-        }
+        frame = decoder_->dequeueVideoFrame();
       }
-    }
+      // Keep decoder running for next seek
+      decoder_->setPlaying(true);
 
-    if (previewFrameRendered_) {
-      // Rendered one frame for the current target: pause decoder and wait
-      // for the next target change.
-      decoder_->setPlaying(false);
-
-      if (!isPreviewDragging_) {
-        // Normal seek preview: finish
+      if (seekPreviewTimer_.elapsed() > 5000) {
+        decoder_->setPlaying(false);
         playbackTimer_->stop();
         playbackTimerRunning_ = false;
         seekPreviewMode_ = false;
-        LOG_MP(info,
-               "seek preview frame rendered pts=" << lastRenderedPreviewPts_);
-      } else {
-        // Dragging: wait for next mouse move
-        seekPreviewTimer_.start();
-        LOG_MP(info, "preview drag frame rendered target="
-                         << seekTargetMs_
-                         << " pts=" << lastRenderedPreviewPts_);
+        isPreviewDragging_ = false;
+        LOG_MP(warning, "drag preview timed out");
       }
       return;
     }
 
-    // Target frame not yet available: keep decoder running
-    decoder_->setPlaying(true);
-
-    if (seekPreviewTimer_.elapsed() > 2000) {
-      // Timeout fallback: render whatever is available and exit preview mode
+    // Non-drag seek preview (single click): drain frames until we reach
+    // the exact target position, then stop.
+    if (!previewFrameRendered_) {
       auto frame = decoder_->dequeueVideoFrame();
-      if (frame && videoRenderer_) {
-        videoRenderer_->renderFrame(*frame);
-        lastRenderedPreviewPts_ = frame->ptsMs;
+      while (frame) {
+        if (frame->ptsMs >= seekTargetMs_) {
+          if (videoRenderer_)
+            videoRenderer_->renderFrame(*frame);
+          previewFrameRendered_ = true;
+          break;
+        }
+        frame = decoder_->dequeueVideoFrame();
       }
-      decoder_->setPlaying(false);
-      playbackTimer_->stop();
-      playbackTimerRunning_ = false;
-      seekPreviewMode_ = false;
-      LOG_MP(warning, "seek preview timed out");
+
+      if (previewFrameRendered_) {
+        decoder_->setPlaying(false);
+        playbackTimer_->stop();
+        playbackTimerRunning_ = false;
+        seekPreviewMode_ = false;
+        LOG_MP(info, "seek preview frame rendered at "
+                       << seekTargetMs_ << "ms");
+        return;
+      }
+
+      // Target frame not yet available: keep decoder running
+      decoder_->setPlaying(true);
+
+      if (seekPreviewTimer_.elapsed() > 3000) {
+        auto lastFrame = decoder_->dequeueVideoFrame();
+        if (lastFrame && videoRenderer_) {
+          videoRenderer_->renderFrame(*lastFrame);
+        }
+        decoder_->setPlaying(false);
+        playbackTimer_->stop();
+        playbackTimerRunning_ = false;
+        seekPreviewMode_ = false;
+        LOG_MP(warning, "seek preview timed out");
+      }
     }
     return;
   }

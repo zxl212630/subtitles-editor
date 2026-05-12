@@ -71,11 +71,7 @@ private:
   qint64 seekTargetMs_ = 0;
   bool isPreviewDragging_ = false;
   bool previewFrameRendered_ = false;
-
-  // Preview drag strategy: Chase / SeekChase / SeekFast
-  enum class PreviewStrategy { Chase, SeekChase, SeekFast };
-  PreviewStrategy currentPreviewStrategy_ = PreviewStrategy::SeekChase;
-  qint64 lastPreviewSeekMs_ = 0;
   qint64 lastRenderedPreviewPts_ = -1;
+
   QElapsedTimer previewE2eTimer_;
 };
