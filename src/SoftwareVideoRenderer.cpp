@@ -2,7 +2,8 @@
 
 #include <QElapsedTimer>
 #include <QPainter>
-#include <cstring>
+
+#define PROFILE_TIMING 1
 
 #define LOG_RENDER_info(msg) qInfo() << "[VideoRenderer]" << msg
 #define LOG_RENDER_warning(msg) qWarning() << "[VideoRenderer]" << msg
@@ -19,28 +20,32 @@ SoftwareVideoRenderer::SoftwareVideoRenderer(QWidget *parent)
 }
 
 void SoftwareVideoRenderer::renderFrame(const DecodedVideoFrame &frame) {
-  QElapsedTimer timer;
-  timer.start();
+#if PROFILE_TIMING
+  QElapsedTimer copyTimer;
+  copyTimer.start();
+#endif
   {
     QMutexLocker lock(&imageMutex_);
-    // Reuse existing buffer if dimensions match (avoids 8MB alloc+copy)
-    if (!currentImage_.isNull() && currentImage_.width() == frame.width &&
-        currentImage_.height() == frame.height) {
-      memcpy(currentImage_.bits(), frame.rgbaData.constData(),
-             frame.width * frame.height * 4);
-    } else {
-      currentImage_ =
-          QImage(reinterpret_cast<const uchar *>(frame.rgbaData.constData()),
-                 frame.width, frame.height, QImage::Format_RGBA8888)
-              .copy();
-    }
+    currentImage_ =
+        QImage(reinterpret_cast<const uchar *>(frame.rgbaData.constData()),
+               frame.width, frame.height, QImage::Format_RGBA8888)
+            .copy();
     hasFrame_ = true;
   }
-  qint64 copyTime = timer.elapsed();
   videoSize_ = QSize(frame.width, frame.height);
   QMetaObject::invokeMethod(this, "update", Qt::QueuedConnection);
-  LOG_RENDER(debug, "renderFrame() size=" << frame.width << "x" << frame.height
-                                          << " copy=" << copyTime << "ms");
+
+#if PROFILE_TIMING
+  static int renderLogCounter2 = 0;
+  if (++renderLogCounter2 % 30 == 0) {
+    qInfo() << "[TIMING:render_copy] size=" << frame.width << "x"
+            << frame.height
+            << " copy_us=" << (copyTimer.nsecsElapsed() / 1000);
+  }
+#else
+  LOG_RENDER(debug,
+             "renderFrame() size=" << frame.width << "x" << frame.height);
+#endif
 }
 
 void SoftwareVideoRenderer::clear() {
@@ -139,5 +144,13 @@ void SoftwareVideoRenderer::paintEvent(QPaintEvent *event) {
     painter.drawText(textRect, Qt::AlignHCenter | Qt::AlignBottom, text);
   }
 
-  LOG_RENDER(debug, "paintEvent() cost=" << timer.elapsed() << "ms");
+#if PROFILE_TIMING
+  qint64 elapsed = timer.nsecsElapsed() / 1000;
+  static int paintLogCounter = 0;
+  if (++paintLogCounter % 30 == 0) {
+    qInfo() << "[TIMING:paint] size=" << width() << "x" << height()
+            << " image=" << imageToDraw.width() << "x" << imageToDraw.height()
+            << " paint_us=" << elapsed;
+  }
+#endif
 }

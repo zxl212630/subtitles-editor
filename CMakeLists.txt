@@ -19,7 +19,7 @@ set(FFMPEG_ROOT "$ENV{HOME}/Tools/ffmpeg/8.0" CACHE PATH "FFmpeg installation ro
 # Qt6
 # ============================================================
 set(CMAKE_PREFIX_PATH "${Qt6_ROOT};${CMAKE_PREFIX_PATH}")
-find_package(Qt6 REQUIRED COMPONENTS Core Gui Widgets Network Multimedia Concurrent)
+find_package(Qt6 REQUIRED COMPONENTS Core Gui Widgets Network Multimedia)
 
 # ============================================================
 # QWindowKit (Qt6 build)
@@ -58,7 +58,6 @@ set(SOURCES
     src/AudioTranscoder.cpp
     src/OssUploader.cpp
     src/FFmpegDecoder.cpp
-    src/KeyframePrefetcher.cpp
     src/QtAudioOutput.cpp
     src/SoftwareVideoRenderer.cpp
     src/MediaPlayer.cpp
@@ -80,7 +79,6 @@ set(HEADERS
     include/AudioTranscoder.h
     include/OssUploader.h
     include/FFmpegDecoder.h
-    include/KeyframePrefetcher.h
     include/QtAudioOutput.h
     include/SoftwareVideoRenderer.h
     include/MediaPlayer.h
@@ -115,7 +113,6 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
     Qt::Widgets
     Qt::Network
     Qt::Multimedia
-    Qt::Concurrent
 )
 
 # QWindowKit dependencies

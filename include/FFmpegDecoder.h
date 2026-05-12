@@ -48,13 +48,6 @@ public:
   void requestSeek(qint64 targetMs);
   void setPlaying(bool playing);
   void stop();
-  void resetDragState();
-
-  // High-speed seek for drag scrubbing. Must be called with decoder stopped.
-  // Returns the nearest keyframe at or before targetMs.
-  // Internally caches the last keyframe to skip redundant seeks within
-  // the same GOP (typically 2-5 seconds).
-  std::optional<DecodedVideoFrame> seekToKeyframe(qint64 targetMs);
 
   std::optional<DecodedVideoFrame> dequeueVideoFrame();
   std::optional<DecodedAudioFrame> dequeueAudioFrame();
@@ -63,6 +56,7 @@ public:
   qint64 videoQueueDurationMs() const;
   qint64 audioQueueDurationMs() const;
   void clearAudioQueue();
+  void clearVideoQueue();
   void clearAllQueues();
 
   qint64 durationMs() const;
@@ -86,8 +80,6 @@ private:
   bool decodeVideoPacket(AVPacket *packet);
   bool decodeAudioPacket(AVPacket *packet);
   void convertAudioFrame(AVFrame *frame, DecodedAudioFrame &out);
-  std::optional<DecodedVideoFrame> decodeOneKeyframe(qint64 targetMs);
-  std::optional<DecodedVideoFrame> continueForward(qint64 targetMs);
 
   // FFmpeg contexts
   AVFormatContext *fmtCtx_ = nullptr;
@@ -130,17 +122,13 @@ private:
   QQueue<DecodedVideoFrame> videoQueue_;
   QQueue<DecodedAudioFrame> audioQueue_;
 
+  // Reusable decode buffers (decoder thread only)
+  AVFrame *reusableFrame_ = nullptr;
+  QByteArray reusableRgbaBuffer_;
+
   QMutex queueFullMutex_;
   QWaitCondition queueNotFull_;
 
   static constexpr int MAX_VIDEO_QUEUE_MS = 500;
   static constexpr int MAX_AUDIO_QUEUE_MS = 500;
-
-  // Reusable RGBA buffer to avoid per-frame 8MB allocation
-  QByteArray reusableRgbaBuffer_;
-
-  // Drag scrubbing state: cache last decoded position to avoid re-seeking
-  qint64 dragLastPtsMs_ = -1;
-  DecodedVideoFrame dragLastFrame_;
-  bool hasDragFrame_ = false;
 };

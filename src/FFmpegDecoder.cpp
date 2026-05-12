@@ -13,6 +13,8 @@ extern "C" {
 #include <libswscale/swscale.h>
 }
 
+#define PROFILE_TIMING 1
+
 #define LOG_DEC_info(msg) qInfo() << "[FFmpegDecoder]" << msg
 #define LOG_DEC_warning(msg) qWarning() << "[FFmpegDecoder]" << msg
 #define LOG_DEC_critical(msg) qCritical() << "[FFmpegDecoder]" << msg
@@ -86,6 +88,7 @@ bool FFmpegDecoder::open(const QString &path) {
         emit decodeError(QString("Failed to open video codec: %1").arg(errbuf));
         return false;
       }
+      reusableFrame_ = av_frame_alloc();
       videoTimeBase_ = stream->time_base;
       videoSize_ = QSize(videoCodecCtx_->width, videoCodecCtx_->height);
       hasVideo_ = true;
@@ -176,6 +179,10 @@ void FFmpegDecoder::close() {
     LOG_DEC(warning, "Thread did not stop in time");
   }
   clearAllQueues();
+  if (reusableFrame_) {
+    av_frame_free(&reusableFrame_);
+    reusableFrame_ = nullptr;
+  }
   if (swsCtx_) {
     sws_freeContext(swsCtx_);
     swsCtx_ = nullptr;
@@ -207,6 +214,7 @@ void FFmpegDecoder::close() {
 }
 
 void FFmpegDecoder::requestSeek(qint64 targetMs) {
+  clearVideoQueue();
   seekTargetMs_.store(targetMs);
   seekRequested_.store(true);
 }
@@ -365,6 +373,11 @@ void FFmpegDecoder::performSeek(qint64 targetMs) {
     return;
   }
 
+#if PROFILE_TIMING
+  QElapsedTimer seekTimer;
+  seekTimer.start();
+#endif
+
   int64_t target = av_rescale_q(targetMs, AVRational{1, 1000}, AV_TIME_BASE_Q);
   int ret = avformat_seek_file(fmtCtx_, -1, INT64_MIN, target, target,
                                AVSEEK_FLAG_BACKWARD);
@@ -380,262 +393,24 @@ void FFmpegDecoder::performSeek(qint64 targetMs) {
     avcodec_flush_buffers(audioCodecCtx_);
   }
   clearAllQueues();
+
+#if PROFILE_TIMING
+  qint64 elapsed = seekTimer.nsecsElapsed() / 1000;
+  qInfo() << "[TIMING:seek] targetMs=" << targetMs
+          << " cost_us=" << elapsed;
+#endif
+
   LOG_DEC(info, "Seek complete target=" << targetMs << "ms");
-}
-
-std::optional<DecodedVideoFrame>
-FFmpegDecoder::seekToKeyframe(qint64 targetMs) {
-  if (!fmtCtx_ || !videoCodecCtx_ || !hasVideo_) {
-    return std::nullopt;
-  }
-
-  QElapsedTimer totalTimer;
-  totalTimer.start();
-
-  // If we have a cached frame and the target is very close, reuse it.
-  // Only cache within a small window (same frame at 25fps = 40ms).
-  // This avoids re-decoding when the user hasn't moved enough to change frames.
-  if (hasDragFrame_ && dragLastPtsMs_ >= 0 &&
-      qAbs(targetMs - dragLastPtsMs_) <= 40) {
-    return dragLastFrame_;
-  }
-
-  // If target is ahead of last decoded position, try continuing forward.
-  // For backward drags, fall through to full seek.
-  if (dragLastPtsMs_ >= 0 && targetMs > dragLastPtsMs_) {
-    auto result = continueForward(targetMs);
-    if (result) {
-      dragLastFrame_ = *result;
-      hasDragFrame_ = true;
-      LOG_DEC(debug, "seekToKeyframe FORWARD target="
-                         << targetMs << " pts=" << result->ptsMs
-                         << " total=" << totalTimer.elapsed() << "ms");
-      return result;
-    }
-  }
-
-  // Full seek + forward decode
-  auto result = decodeOneKeyframe(targetMs);
-  if (result) {
-    // Only update drag state if moving forward (don't overwrite cache on backward)
-    if (result->ptsMs > dragLastPtsMs_) {
-      dragLastPtsMs_ = result->ptsMs;
-      dragLastFrame_ = *result;
-      hasDragFrame_ = true;
-    }
-  }
-  LOG_DEC(debug, "seekToKeyframe DECODE target="
-                     << targetMs
-                     << "ms result_pts=" << (result ? result->ptsMs : -1)
-                     << " total=" << totalTimer.elapsed() << "ms");
-  return result;
-}
-
-void FFmpegDecoder::resetDragState() {
-  dragLastPtsMs_ = -1;
-  hasDragFrame_ = false;
-  dragLastFrame_ = {};
-}
-
-std::optional<DecodedVideoFrame>
-FFmpegDecoder::continueForward(qint64 targetMs) {
-  AVPacket *packet = av_packet_alloc();
-  AVFrame *frame = av_frame_alloc();
-  std::optional<DecodedVideoFrame> result;
-  int framesDecoded = 0;
-  static constexpr int MAX_DECODE_FRAMES = 10;
-
-  while (av_read_frame(fmtCtx_, packet) >= 0) {
-    if (packet->stream_index != videoStreamIdx_) {
-      av_packet_unref(packet);
-      continue;
-    }
-
-    int sendRet = avcodec_send_packet(videoCodecCtx_, packet);
-    av_packet_unref(packet);
-
-    if (sendRet < 0) {
-      if (sendRet == AVERROR(EAGAIN)) {
-        while (avcodec_receive_frame(videoCodecCtx_, frame) == 0) {
-          av_frame_unref(frame);
-        }
-        continue;
-      }
-      break;
-    }
-
-    int recvRet = avcodec_receive_frame(videoCodecCtx_, frame);
-    if (recvRet == 0) {
-      framesDecoded++;
-      qint64 pts = frame->pts;
-      if (pts == AV_NOPTS_VALUE) {
-        pts = frame->best_effort_timestamp;
-      }
-      qint64 ptsMs =
-          static_cast<qint64>(pts * av_q2d(videoTimeBase_) * 1000.0);
-
-      if (ptsMs < targetMs) {
-        av_frame_unref(frame);
-        if (framesDecoded >= MAX_DECODE_FRAMES) {
-          // Too many frames to decode — give up, will fall back to keyframe
-          av_frame_free(&frame);
-          av_packet_free(&packet);
-          return std::nullopt;
-        }
-        continue;
-      }
-
-      // Reached or passed target — convert and return
-      int w = frame->width;
-      int h = frame->height;
-
-      {
-        QMutexLocker locker(&metadataMutex_);
-        if (!swsCtx_ || videoSize_.width() != w || videoSize_.height() != h) {
-          if (swsCtx_) {
-            sws_freeContext(swsCtx_);
-          }
-          swsCtx_ = sws_getContext(
-              w, h, static_cast<AVPixelFormat>(frame->format), w, h,
-              AV_PIX_FMT_RGBA, SWS_FAST_BILINEAR, nullptr, nullptr, nullptr);
-          videoSize_ = QSize(w, h);
-        }
-      }
-
-      int rgbaSize = w * h * 4;
-      if (reusableRgbaBuffer_.size() != rgbaSize) {
-        reusableRgbaBuffer_ = QByteArray(rgbaSize, Qt::Uninitialized);
-      }
-      uint8_t *dstData[4] = {
-          reinterpret_cast<uint8_t *>(reusableRgbaBuffer_.data()),
-          nullptr, nullptr, nullptr};
-      int dstLinesize[4] = {w * 4, 0, 0, 0};
-      sws_scale(swsCtx_, frame->data, frame->linesize, 0, h, dstData,
-                dstLinesize);
-
-      DecodedVideoFrame vframe;
-      vframe.ptsMs = ptsMs;
-      vframe.width = w;
-      vframe.height = h;
-      vframe.rgbaData = reusableRgbaBuffer_;
-      result = std::move(vframe);
-
-      dragLastPtsMs_ = ptsMs;
-
-      av_frame_unref(frame);
-      break;
-    }
-  }
-
-  av_frame_free(&frame);
-  av_packet_free(&packet);
-  return result;
-}
-
-std::optional<DecodedVideoFrame>
-FFmpegDecoder::decodeOneKeyframe(qint64 targetMs) {
-  QElapsedTimer stepTimer;
-  stepTimer.start();
-
-  int64_t target = av_rescale_q(targetMs, AVRational{1, 1000}, AV_TIME_BASE_Q);
-  int ret = avformat_seek_file(fmtCtx_, -1, INT64_MIN, target, target,
-                               AVSEEK_FLAG_BACKWARD);
-  if (ret < 0) {
-    return std::nullopt;
-  }
-
-  avcodec_flush_buffers(videoCodecCtx_);
-
-  AVPacket *packet = av_packet_alloc();
-  AVFrame *frame = av_frame_alloc();
-  std::optional<DecodedVideoFrame> result;
-
-  while (av_read_frame(fmtCtx_, packet) >= 0) {
-    if (packet->stream_index != videoStreamIdx_) {
-      av_packet_unref(packet);
-      continue;
-    }
-
-    // After flush, codec needs a keyframe to decode. Skip non-keyframes.
-    if (!(packet->flags & AV_PKT_FLAG_KEY)) {
-      av_packet_unref(packet);
-      continue;
-    }
-
-    int sendRet = avcodec_send_packet(videoCodecCtx_, packet);
-    av_packet_unref(packet);
-
-    if (sendRet < 0) {
-      if (sendRet == AVERROR(EAGAIN)) {
-        while (avcodec_receive_frame(videoCodecCtx_, frame) == 0) {
-          av_frame_unref(frame);
-        }
-        continue;
-      }
-      break;
-    }
-
-    int recvRet = avcodec_receive_frame(videoCodecCtx_, frame);
-    if (recvRet == 0) {
-      qint64 pts = frame->pts;
-      if (pts == AV_NOPTS_VALUE) {
-        pts = frame->best_effort_timestamp;
-      }
-      qint64 ptsMs =
-          static_cast<qint64>(pts * av_q2d(videoTimeBase_) * 1000.0);
-
-      int w = frame->width;
-      int h = frame->height;
-
-      {
-        QMutexLocker locker(&metadataMutex_);
-        if (!swsCtx_ || videoSize_.width() != w || videoSize_.height() != h) {
-          if (swsCtx_) {
-            sws_freeContext(swsCtx_);
-          }
-          swsCtx_ = sws_getContext(
-              w, h, static_cast<AVPixelFormat>(frame->format), w, h,
-              AV_PIX_FMT_RGBA, SWS_FAST_BILINEAR, nullptr, nullptr, nullptr);
-          videoSize_ = QSize(w, h);
-        }
-      }
-
-      int rgbaSize = w * h * 4;
-      if (reusableRgbaBuffer_.size() != rgbaSize) {
-        reusableRgbaBuffer_ = QByteArray(rgbaSize, Qt::Uninitialized);
-      }
-      uint8_t *dstData[4] = {
-          reinterpret_cast<uint8_t *>(reusableRgbaBuffer_.data()),
-          nullptr, nullptr, nullptr};
-      int dstLinesize[4] = {w * 4, 0, 0, 0};
-      sws_scale(swsCtx_, frame->data, frame->linesize, 0, h, dstData,
-                dstLinesize);
-
-      DecodedVideoFrame vframe;
-      vframe.ptsMs = ptsMs;
-      vframe.width = w;
-      vframe.height = h;
-      vframe.rgbaData = reusableRgbaBuffer_;
-      result = std::move(vframe);
-
-      av_frame_unref(frame);
-      break;
-    }
-  }
-
-  av_frame_free(&frame);
-  av_packet_free(&packet);
-
-  LOG_DEC(debug, "decodeOneKeyframe target="
-                     << targetMs << "ms result_pts="
-                     << (result ? result->ptsMs : -1)
-                     << " took=" << stepTimer.elapsed() << "ms");
-  return result;
 }
 
 void FFmpegDecoder::clearAudioQueue() {
   QMutexLocker locker(&audioQueueMutex_);
   audioQueue_.clear();
+}
+
+void FFmpegDecoder::clearVideoQueue() {
+  QMutexLocker locker(&videoQueueMutex_);
+  videoQueue_.clear();
 }
 
 void FFmpegDecoder::clearAllQueues() {
@@ -650,8 +425,16 @@ void FFmpegDecoder::clearAllQueues() {
 }
 
 bool FFmpegDecoder::decodeVideoPacket(AVPacket *packet) {
+#if PROFILE_TIMING
+  QElapsedTimer pktTimer;
+  pktTimer.start();
+  qint64 send_us = 0;
+  qint64 receive_us = 0;
+  qint64 scale_us = 0;
+  int frameCount = 0;
+#endif
+
   int ret = avcodec_send_packet(videoCodecCtx_, packet);
-  AVFrame *frame = av_frame_alloc();
 
   auto processFrame = [&](AVFrame *f) {
     qint64 pts = f->pts;
@@ -676,54 +459,76 @@ bool FFmpegDecoder::decodeVideoPacket(AVPacket *packet) {
       }
     }
 
-    QByteArray rgbaData(w * h * 4, Qt::Uninitialized);
-    uint8_t *dstData[4] = {reinterpret_cast<uint8_t *>(rgbaData.data()),
-                           nullptr, nullptr, nullptr};
+#if PROFILE_TIMING
+    QElapsedTimer scaleTimer;
+    scaleTimer.start();
+#endif
+
+    // Reuse pre-allocated RGBA buffer
+    int bufSize = w * h * 4;
+    if (reusableRgbaBuffer_.size() != bufSize) {
+      reusableRgbaBuffer_.resize(bufSize);
+    }
+    uint8_t *dstData[4] = {
+        reinterpret_cast<uint8_t *>(reusableRgbaBuffer_.data()), nullptr,
+        nullptr, nullptr};
     int dstLinesize[4] = {w * 4, 0, 0, 0};
     sws_scale(swsCtx_, f->data, f->linesize, 0, h, dstData, dstLinesize);
 
-    DecodedVideoFrame vframe;
-    vframe.ptsMs = ptsMs;
-    vframe.width = w;
-    vframe.height = h;
-    vframe.rgbaData = std::move(rgbaData);
+#if PROFILE_TIMING
+    scale_us += scaleTimer.nsecsElapsed();
+#endif
 
-    {
-      QMutexLocker locker(&videoQueueMutex_);
-      videoQueue_.enqueue(std::move(vframe));
-    }
+    DecodedVideoFrame vf;
+    vf.ptsMs = ptsMs;
+    vf.width = w;
+    vf.height = h;
+    vf.rgbaData =
+        reusableRgbaBuffer_; // QByteArray is implicitly shared (copy-on-write)
 
-    av_frame_unref(f);
+    QMutexLocker locker(&videoQueueMutex_);
+    videoQueue_.enqueue(std::move(vf));
+    queueNotFull_.wakeAll();
   };
 
-  while (ret == AVERROR(EAGAIN)) {
-    while (avcodec_receive_frame(videoCodecCtx_, frame) == 0) {
-      processFrame(frame);
+  while (true) {
+#if PROFILE_TIMING
+    QElapsedTimer recvTimer;
+    recvTimer.start();
+#endif
+
+    ret = avcodec_receive_frame(videoCodecCtx_, reusableFrame_);
+    if (ret == AVERROR(EAGAIN) || ret == AVERROR_EOF) {
+      break;
     }
-    ret = avcodec_send_packet(videoCodecCtx_, packet);
+    if (ret < 0) {
+      char errbuf[256];
+      av_strerror(ret, errbuf, sizeof(errbuf));
+      LOG_DEC(warning, "Video decode error:" << errbuf);
+      return false;
+    }
+
+#if PROFILE_TIMING
+    receive_us += recvTimer.nsecsElapsed();
+    frameCount++;
+#endif
+
+    processFrame(reusableFrame_);
+    av_frame_unref(reusableFrame_);
   }
 
-  if (ret < 0 && ret != AVERROR_EOF) {
-    char errbuf[256];
-    av_strerror(ret, errbuf, sizeof(errbuf));
-    LOG_DEC(warning, "Video send packet error:" << errbuf);
-    av_frame_free(&frame);
-    return false;
+#if PROFILE_TIMING
+  if (frameCount > 0) {
+    send_us = pktTimer.nsecsElapsed() - receive_us - scale_us;
+    qInfo() << "[TIMING:decode] frames=" << frameCount
+            << " send_us=" << (send_us / 1000 / frameCount)
+            << " recv_us=" << (receive_us / 1000 / frameCount)
+            << " swscale_us=" << (scale_us / 1000 / frameCount)
+            << " per_frame_us="
+            << ((send_us + receive_us + scale_us) / 1000 / frameCount);
   }
+#endif
 
-  int receiveRet = avcodec_receive_frame(videoCodecCtx_, frame);
-  while (receiveRet == 0) {
-    processFrame(frame);
-    receiveRet = avcodec_receive_frame(videoCodecCtx_, frame);
-  }
-  if (receiveRet < 0 && receiveRet != AVERROR(EAGAIN) &&
-      receiveRet != AVERROR_EOF) {
-    char errbuf[256];
-    av_strerror(receiveRet, errbuf, sizeof(errbuf));
-    LOG_DEC(warning, "Video receive frame error:" << errbuf);
-  }
-
-  av_frame_free(&frame);
   return true;
 }
 

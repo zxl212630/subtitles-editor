@@ -23,8 +23,8 @@ static QString formatTime(qint64 ms) {
       .toString("hh:mm:ss.zzz");
 }
 
-static QPushButton *createTextBtn(QWidget *parent, const QString &text, int w,
-                                  int h, const QString &bg = "#333333",
+static QPushButton *createTextBtn(QWidget *parent, const QString &text,
+                                  int w, int h, const QString &bg = "#333333",
                                   const QString &color = "#d1d5db") {
   auto *btn = new QPushButton(text, parent);
   btn->setFixedSize(w, h);
@@ -232,7 +232,8 @@ void VideoPreviewPanel::setupUi() {
   cbLayout->setSpacing(8);
   cbLayout->setAlignment(Qt::AlignVCenter);
 
-  stepBwdBtn_ = createIconBtn(controlBar, ":/icons/step-backward.svg", 28, 28);
+  stepBwdBtn_ =
+      createIconBtn(controlBar, ":/icons/step-backward.svg", 28, 28);
   playPauseBtn_ = createIconBtn(controlBar, ":/icons/play.svg", 28, 28);
   stopBtn_ = createIconBtn(controlBar, ":/icons/stop.svg", 28, 28);
   stepFwdBtn_ = createIconBtn(controlBar, ":/icons/step-forward.svg", 28, 28);

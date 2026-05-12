@@ -8,6 +8,7 @@
 #include "VideoPreviewPanel.h"
 
 #include <QFile>
+#include <QFileDialog>
 #include <QFrame>
 #include <QHBoxLayout>
 #include <QLabel>
@@ -139,9 +140,26 @@ void AppWindow::setupSplitterLayout() {
   connect(d->timelinePanel, &TimelinePanel::mediaFileDropped, d->mediaPlayer,
           &MediaPlayer::load);
 
+  // 1a. Timeline empty-state import button -> file dialog
+  connect(d->timelinePanel, &TimelinePanel::importMediaRequested, this,
+          [this]() {
+            QString path = QFileDialog::getOpenFileName(
+                this, "导入视频", QString(),
+                "视频文件 (*.mp4 *.mkv *.avi *.mov);;所有文件 (*)");
+            if (!path.isEmpty() && d->mediaPlayer) {
+              d->mediaPlayer->load(path);
+            }
+          });
+
   // 2. MediaPlayer -> Timeline: duration
   connect(d->mediaPlayer, &MediaPlayer::mediaLoaded, d->timelinePanel,
           &TimelinePanel::setTotalDuration);
+
+  // 2a. MediaPlayer -> Timeline: video fps for drag throttle
+  connect(d->mediaPlayer, &MediaPlayer::mediaLoaded, d->timelinePanel,
+          [this](qint64, QSize) {
+            d->timelinePanel->setVideoFps(d->mediaPlayer->decoderFps());
+          });
 
   // 3. MediaPlayer -> VideoPreview: seek display
   connect(d->mediaPlayer, &MediaPlayer::mediaLoaded, d->videoPreviewPanel,
@@ -161,15 +179,13 @@ void AppWindow::setupSplitterLayout() {
   connect(d->timelinePanel, &TimelinePanel::timeClicked, d->mediaPlayer,
           &MediaPlayer::seek);
 
-  // 5a. Timeline drag -> MediaPlayer drag seek (keyframe-only, fast)
-  connect(d->timelinePanel, &TimelinePanel::dragSeekStarted, d->mediaPlayer,
-          [this]() {
-            d->mediaPlayer->beginDragSeek(d->mediaPlayer->currentTimeMs());
-          });
-  connect(d->timelinePanel, &TimelinePanel::dragSeekMoved, d->mediaPlayer,
-          &MediaPlayer::dragSeekTo);
-  connect(d->timelinePanel, &TimelinePanel::dragSeekEnded, d->mediaPlayer,
-          &MediaPlayer::endDragSeek);
+  // 5a. Timeline drag -> MediaPlayer preview seek
+  connect(d->timelinePanel, &TimelinePanel::previewSeekRequested,
+          d->mediaPlayer, &MediaPlayer::previewSeek);
+
+  // 5b. Timeline drag end -> MediaPlayer commit final position
+  connect(d->timelinePanel, &TimelinePanel::dragSeekFinished, d->mediaPlayer,
+          &MediaPlayer::stopPreviewDragging);
 
   // 6. SubtitleList -> MediaPlayer seek
   //    Timeline time is updated via MediaPlayer::timeChanged signal, no
@@ -254,8 +270,6 @@ void AppWindow::setupSplitterLayout() {
   centralLayout->setSpacing(0);
   centralLayout->addWidget(d->verticalSplitter);
   setCentralWidget(central);
-
-  setupDummyData();
 }
 
 void AppWindow::loadFile(const QString &path) {

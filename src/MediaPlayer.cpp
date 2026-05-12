@@ -7,6 +7,8 @@
 #include <QElapsedTimer>
 #include <QThread>
 
+#define PROFILE_TIMING 1
+
 #define LOG_MP_info(msg) qInfo() << "[MediaPlayer]" << msg
 #define LOG_MP_warning(msg) qWarning() << "[MediaPlayer]" << msg
 #define LOG_MP_critical(msg) qCritical() << "[MediaPlayer]" << msg
@@ -132,11 +134,6 @@ void MediaPlayer::stop() {
 }
 
 void MediaPlayer::seek(qint64 ms) {
-  // Ignore regular seeks during drag — use dragSeekTo instead
-  if (dragSeekMode_) {
-    return;
-  }
-
   LOG_MP(info, "seek() request target=" << ms << "ms");
 
   State oldState = state_;
@@ -148,6 +145,7 @@ void MediaPlayer::seek(qint64 ms) {
   currentTimeMs_ = ms;
   seekTargetMs_ = ms;
   pendingVideoFrame_ = std::nullopt;
+  previewFrameRendered_ = false;
 
   if (oldState == Playing) {
     play();
@@ -161,6 +159,52 @@ void MediaPlayer::seek(qint64 ms) {
 
   emit timeChanged(currentTimeMs_);
   LOG_MP(info, "seek() complete");
+}
+
+void MediaPlayer::previewSeek(qint64 ms) {
+  if (!decoder_ || !decoder_->hasVideo())
+    return;
+
+  if (!isPreviewDragging_) {
+    if (state_ == Playing) {
+      pause();
+    }
+    isPreviewDragging_ = true;
+    seekPreviewMode_ = true;
+    seekPreviewTimer_.start();
+    lastRenderedPreviewPts_ = -1;
+    LOG_MP(info, "previewSeek() drag started target=" << ms);
+  }
+
+  seekTargetMs_ = ms;
+  currentTimeMs_ = ms;
+  previewFrameRendered_ = false;
+  decoder_->requestSeek(ms);
+  decoder_->setPlaying(true);
+
+  if (!playbackTimerRunning_) {
+    playbackTimer_->start(16);
+    playbackTimerRunning_ = true;
+  }
+
+  emit timeChanged(currentTimeMs_);
+}
+
+void MediaPlayer::stopPreviewDragging() {
+  if (!isPreviewDragging_)
+    return;
+
+  isPreviewDragging_ = false;
+
+  if (decoder_) {
+    decoder_->clearAudioQueue();
+  }
+
+  seek(currentTimeMs_);
+}
+
+double MediaPlayer::decoderFps() const {
+  return decoder_ ? decoder_->fps() : 25.0;
 }
 
 void MediaPlayer::stepForward() {
@@ -177,83 +221,6 @@ void MediaPlayer::stepBackward() {
   }
 }
 
-void MediaPlayer::beginDragSeek(qint64 ms) {
-  QElapsedTimer timer;
-  timer.start();
-  LOG_MP(info, "beginDragSeek() at " << ms << "ms");
-  wasPlayingBeforeDrag_ = (state_ == Playing);
-
-  // Stop everything cleanly
-  playbackTimer_->stop();
-  playbackTimerRunning_ = false;
-  if (audioOutput_) {
-    audioOutput_->suspend();
-  }
-  if (state_ == Playing) {
-    state_ = Paused;
-    emit stateChanged(Paused);
-  }
-
-  // Stop decoder thread entirely so UI thread can safely use fmtCtx_
-  decoder_->stop();
-  qint64 stopTime = timer.elapsed();
-  decoder_->wait(5000);
-  qint64 waitTime = timer.elapsed();
-  decoder_->clearAllQueues();
-  pendingVideoFrame_ = std::nullopt;
-
-  dragSeekMode_ = true;
-  seekPreviewMode_ = false;
-  decoder_->resetDragState();
-
-  currentTimeMs_ = ms;
-  emit timeChanged(currentTimeMs_);
-  LOG_MP(debug, "beginDragSeek() ready stop="
-                    << stopTime << "ms wait=" << waitTime
-                    << "ms total=" << timer.elapsed() << "ms");
-}
-
-void MediaPlayer::dragSeekTo(qint64 ms) {
-  if (!dragSeekMode_) {
-    LOG_MP(warning, "dragSeekTo: not in drag mode");
-    return;
-  }
-
-  // Update playhead position immediately (before decode) so it stays responsive
-  currentTimeMs_ = ms;
-  emit timeChanged(currentTimeMs_);
-
-  // Decode the frame (this blocks the UI thread)
-  auto frame = decoder_->seekToKeyframe(ms);
-  if (frame) {
-    // Only render if this position is still the latest (not stale from a newer event)
-    if (currentTimeMs_ == ms && videoRenderer_) {
-      videoRenderer_->renderFrame(*frame);
-    }
-    LOG_MP(debug, "dragSeekTo ms=" << ms << " pts=" << frame->ptsMs);
-  }
-}
-
-void MediaPlayer::endDragSeek() {
-  QElapsedTimer timer;
-  timer.start();
-  LOG_MP(info, "endDragSeek()");
-  dragSeekMode_ = false;
-  seekPreviewMode_ = false;
-  decoder_->resetDragState();
-
-  if (wasPlayingBeforeDrag_) {
-    state_ = Ready;
-    play();
-  } else {
-    decoder_->requestSeek(currentTimeMs_);
-    decoder_->clearAllQueues();
-    decoder_->start();
-  }
-  wasPlayingBeforeDrag_ = false;
-  LOG_MP(debug, "endDragSeek() done total=" << timer.elapsed() << "ms");
-}
-
 void MediaPlayer::onPlaybackTimer() {
   if (seekPreviewMode_) {
     // Discard accumulated audio frames during preview
@@ -261,117 +228,168 @@ void MediaPlayer::onPlaybackTimer() {
       decoder_->dequeueAudioFrame();
     }
 
-    // Keep dequeuing video frames until we find one at or after target.
-    // Do NOT update currentTimeMs_ or emit timeChanged here — the timeline
-    // should stay at the seek target, not jump to the decoded frame pts.
-    while (decoder_->videoQueueSize() > 0) {
+    if (isPreviewDragging_) {
+      // Drag mode: render frames up to seekTargetMs_ to reach the
+      // drag position. Skip old frames (before last rendered) and
+      // discard frames past the target to prevent continuous playback
+      // when the mouse stops moving.
       auto frame = decoder_->dequeueVideoFrame();
-      if (frame && frame->ptsMs >= seekTargetMs_) {
-        if (videoRenderer_) {
+      while (frame) {
+        if (frame->ptsMs > lastRenderedPreviewPts_ &&
+            frame->ptsMs <= seekTargetMs_ && videoRenderer_) {
           videoRenderer_->renderFrame(*frame);
+          lastRenderedPreviewPts_ = frame->ptsMs;
         }
+        frame = decoder_->dequeueVideoFrame();
+      }
+      // Keep decoder running for next seek
+      decoder_->setPlaying(true);
 
+      if (seekPreviewTimer_.elapsed() > 5000) {
         decoder_->setPlaying(false);
         playbackTimer_->stop();
+        playbackTimerRunning_ = false;
         seekPreviewMode_ = false;
-        LOG_MP(info, "seek preview frame rendered pts=" << frame->ptsMs);
-        return;
+        isPreviewDragging_ = false;
+        LOG_MP(warning, "drag preview timed out");
       }
+      return;
     }
 
-    if (seekPreviewTimer_.elapsed() > 2000) {
-      // fallback: render the latest frame available
+    // Non-drag seek preview (single click): drain frames until we reach
+    // the exact target position, then stop.
+    if (!previewFrameRendered_) {
       auto frame = decoder_->dequeueVideoFrame();
-      if (frame && videoRenderer_) {
-        videoRenderer_->renderFrame(*frame);
+      while (frame) {
+        if (frame->ptsMs >= seekTargetMs_) {
+          if (videoRenderer_)
+            videoRenderer_->renderFrame(*frame);
+          previewFrameRendered_ = true;
+          break;
+        }
+        frame = decoder_->dequeueVideoFrame();
       }
-      decoder_->setPlaying(false);
-      playbackTimer_->stop();
-      seekPreviewMode_ = false;
-      LOG_MP(warning, "seek preview timed out");
+
+      if (previewFrameRendered_) {
+        decoder_->setPlaying(false);
+        playbackTimer_->stop();
+        playbackTimerRunning_ = false;
+        seekPreviewMode_ = false;
+        LOG_MP(info, "seek preview frame rendered at "
+                       << seekTargetMs_ << "ms");
+        return;
+      }
+
+      // Target frame not yet available: keep decoder running
+      decoder_->setPlaying(true);
+
+      if (seekPreviewTimer_.elapsed() > 3000) {
+        auto lastFrame = decoder_->dequeueVideoFrame();
+        if (lastFrame && videoRenderer_) {
+          videoRenderer_->renderFrame(*lastFrame);
+        }
+        decoder_->setPlaying(false);
+        playbackTimer_->stop();
+        playbackTimerRunning_ = false;
+        seekPreviewMode_ = false;
+        LOG_MP(warning, "seek preview timed out");
+      }
     }
     return;
   }
 
   // 1. Process audio frames
-  while (decoder_->audioQueueSize() > 0) {
-    // When queue is very long (>10), be conservative and check buffer space
-    // This prevents the queue from growing unbounded if audio device is slow
-    if (decoder_->audioQueueSize() > 10) {
-      qint64 bytesFree = audioOutput_->bytesFree();
-      if (bytesFree < 4096) { // Conservative minimum
-        break;
-      }
-    }
-
-    auto aframe = decoder_->dequeueAudioFrame();
-    if (!aframe) {
+while (decoder_->audioQueueSize() > 0) {
+  // When queue is very long (>10), be conservative and check buffer space
+  // This prevents the queue from growing unbounded if audio device is slow
+  if (decoder_->audioQueueSize() > 10) {
+    qint64 bytesFree = audioOutput_->bytesFree();
+    if (bytesFree < 4096) { // Conservative minimum
       break;
     }
+  }
 
-    // Skip audio frames that are before the current playback position.
-    // This happens after a seek when the decoder starts from a keyframe
-    // that is earlier than the seek target.
-    if (aframe->ptsMs < playbackStartTimeMs_) {
-      continue;
+  auto aframe = decoder_->dequeueAudioFrame();
+  if (!aframe) {
+    break;
+  }
+
+  // Skip audio frames that are before the current playback position.
+  // This happens after a seek when the decoder starts from a keyframe
+  // that is earlier than the seek target.
+  if (aframe->ptsMs < playbackStartTimeMs_) {
+    continue;
+  }
+
+  // write() handles partial writes internally and blocks if buffer is full
+  audioOutput_->write(aframe->pcmData.constData(), aframe->pcmData.size());
+}
+
+// 2. Calculate playback clock based on elapsed real time
+double audioClock = 0.0;
+if (playbackTimerRunning_) {
+  audioClock =
+      (playbackStartTimeMs_ + playbackElapsedTimer_.elapsed()) / 1000.0;
+} else {
+  audioClock = currentTimeMs_ / 1000.0;
+}
+
+// 3. Process video frame (sync)
+if (!pendingVideoFrame_) {
+  pendingVideoFrame_ = decoder_->dequeueVideoFrame();
+}
+if (!pendingVideoFrame_) {
+  // Check for end of stream
+  if (decoder_->videoQueueSize() == 0 && decoder_->audioQueueSize() == 0 &&
+      decoder_->isFinished()) {
+    stop();
+    emit playbackFinished();
+  }
+  return;
+}
+
+double videoPts = pendingVideoFrame_->ptsMs / 1000.0;
+double delayMs = (videoPts - audioClock) * 1000.0;
+
+bool shouldRender = true;
+bool dropFrame = false;
+if (decoder_->hasAudio()) {
+  if (delayMs > 20.0) {
+    // Video is ahead, keep frame for next tick (do not block UI thread)
+    shouldRender = false;
+  } else if (delayMs < -40.0) {
+    dropFrame = true;
+    shouldRender = false;
+    droppedFrames_++;
+  }
+}
+
+// 4. Render frame
+if (shouldRender) {
+  if (videoRenderer_) {
+#if PROFILE_TIMING
+    QElapsedTimer renderPerfTimer;
+    renderPerfTimer.start();
+#endif
+    videoRenderer_->renderFrame(*pendingVideoFrame_);
+#if PROFILE_TIMING
+    static int renderLogCounter = 0;
+    if (++renderLogCounter % 60 == 0) {
+      qInfo() << "[TIMING:playback_render] frame#" << renderedFrames_
+              << " pts=" << pendingVideoFrame_->ptsMs
+              << " render_us=" << (renderPerfTimer.nsecsElapsed() / 1000)
+              << " dropped=" << droppedFrames_;
     }
-
-    // write() handles partial writes internally and blocks if buffer is full
-    audioOutput_->write(aframe->pcmData.constData(), aframe->pcmData.size());
+#endif
   }
+  currentTimeMs_ = pendingVideoFrame_->ptsMs;
+  emit timeChanged(currentTimeMs_);
+  renderedFrames_++;
+}
 
-  // 2. Calculate playback clock based on elapsed real time
-  double audioClock = 0.0;
-  if (playbackTimerRunning_) {
-    audioClock =
-        (playbackStartTimeMs_ + playbackElapsedTimer_.elapsed()) / 1000.0;
-  } else {
-    audioClock = currentTimeMs_ / 1000.0;
-  }
-
-  // 3. Process video frame (sync)
-  if (!pendingVideoFrame_) {
-    pendingVideoFrame_ = decoder_->dequeueVideoFrame();
-  }
-  if (!pendingVideoFrame_) {
-    // Check for end of stream
-    if (decoder_->videoQueueSize() == 0 && decoder_->audioQueueSize() == 0 &&
-        decoder_->isFinished()) {
-      stop();
-      emit playbackFinished();
-    }
-    return;
-  }
-
-  double videoPts = pendingVideoFrame_->ptsMs / 1000.0;
-  double delayMs = (videoPts - audioClock) * 1000.0;
-
-  bool shouldRender = true;
-  bool dropFrame = false;
-  if (decoder_->hasAudio()) {
-    if (delayMs > 20.0) {
-      // Video is ahead, keep frame for next tick (do not block UI thread)
-      shouldRender = false;
-    } else if (delayMs < -40.0) {
-      dropFrame = true;
-      shouldRender = false;
-      droppedFrames_++;
-    }
-  }
-
-  // 4. Render frame
-  if (shouldRender) {
-    if (videoRenderer_) {
-      videoRenderer_->renderFrame(*pendingVideoFrame_);
-    }
-    currentTimeMs_ = pendingVideoFrame_->ptsMs;
-    emit timeChanged(currentTimeMs_);
-    renderedFrames_++;
-  }
-
-  if (shouldRender || dropFrame) {
-    pendingVideoFrame_ = std::nullopt;
-  }
+if (shouldRender || dropFrame) {
+  pendingVideoFrame_ = std::nullopt;
+}
 }
 
 void MediaPlayer::onDecoderError(const QString &error) {
