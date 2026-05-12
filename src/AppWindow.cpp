@@ -8,6 +8,7 @@
 #include "VideoPreviewPanel.h"
 
 #include <QFile>
+#include <QFileDialog>
 #include <QFrame>
 #include <QHBoxLayout>
 #include <QLabel>
@@ -139,6 +140,17 @@ void AppWindow::setupSplitterLayout() {
   connect(d->timelinePanel, &TimelinePanel::mediaFileDropped, d->mediaPlayer,
           &MediaPlayer::load);
 
+  // 1a. Timeline empty-state import button -> file dialog
+  connect(d->timelinePanel, &TimelinePanel::importMediaRequested, this,
+          [this]() {
+            QString path = QFileDialog::getOpenFileName(
+                this, "导入视频", QString(),
+                "视频文件 (*.mp4 *.mkv *.avi *.mov);;所有文件 (*)");
+            if (!path.isEmpty() && d->mediaPlayer) {
+              d->mediaPlayer->load(path);
+            }
+          });
+
   // 2. MediaPlayer -> Timeline: duration
   connect(d->mediaPlayer, &MediaPlayer::mediaLoaded, d->timelinePanel,
           &TimelinePanel::setTotalDuration);
@@ -258,8 +270,6 @@ void AppWindow::setupSplitterLayout() {
   centralLayout->setSpacing(0);
   centralLayout->addWidget(d->verticalSplitter);
   setCentralWidget(central);
-
-  setupDummyData();
 }
 
 void AppWindow::loadFile(const QString &path) {

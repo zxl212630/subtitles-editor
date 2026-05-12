@@ -31,6 +31,7 @@ signals:
   void asrFailed(const QString &error);
   void asrSucceeded();
   void mediaFileDropped(const QString &path);
+  void importMediaRequested();
 
 protected:
   void mousePressEvent(QMouseEvent *event) override;
@@ -45,6 +46,7 @@ private:
   void drawRuler(QPainter &painter);
   void drawSubtitleTrack(QPainter &painter, int y);
   void drawVideoTrack(QPainter &painter, int y);
+  void drawEmptyState(QPainter &painter);
   void drawPlayhead(QPainter &painter);
   void startAsrPipeline(const QString &localPath);
 
@@ -65,6 +67,7 @@ private:
   static constexpr int SUBTITLE_TRACK_HEIGHT = 48;
   static constexpr int VIDEO_TRACK_HEIGHT = 96;
   static constexpr int TRACK_HEAD_WIDTH = 120;
+  static constexpr int PANEL_RIGHT_MARGIN = 8;
 
   double pixelsPerSecond_ = 100.0;
   int scrollOffsetX_ = 0;
@@ -72,6 +75,9 @@ private:
   TimelineCanvas *canvas_ = nullptr;
   PlayheadAnchor playheadAnchor_ = PlayheadAnchor::Center;
   bool isPlaying_ = false;
+
+  // Empty state import button rect
+  QRect emptyStateRect_;
 
   // Drag-to-seek state
   bool isDragging_ = false;

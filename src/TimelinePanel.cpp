@@ -14,7 +14,6 @@
 #include <QPainter>
 #include <QPainterPath>
 #include <QScrollBar>
-#include <QVBoxLayout>
 #include <QWheelEvent>
 
 class TimelineCanvas : public QWidget {
@@ -40,26 +39,26 @@ TimelinePanel::TimelinePanel(QWidget *parent) : QWidget(parent) {
   setAcceptDrops(true);
   setMouseTracking(true);
 
-  auto *layout = new QVBoxLayout(this);
-  layout->setContentsMargins(0, 0, 0, 0);
-  layout->setSpacing(0);
-
   canvas_ = new TimelineCanvas(this, this);
-  canvas_->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
-  layout->addWidget(canvas_);
 
   hScrollBar_ = new QScrollBar(Qt::Horizontal, this);
-  hScrollBar_->setFixedHeight(14);
+  hScrollBar_->setFixedHeight(12);
   hScrollBar_->setStyleSheet(R"(
       QScrollBar:horizontal {
-          background: #1e1e1e;
+          background: transparent;
           height: 14px;
-          border-radius: 4px;
+          border: none;
+      }
+      QScrollBar::groove:horizontal {
+          background: transparent;
+          height: 14px;
+          border: none;
       }
       QScrollBar::handle:horizontal {
           background: #4a4a4a;
           border-radius: 4px;
           min-width: 20px;
+          margin: 2px 0px;
       }
       QScrollBar::handle:horizontal:hover {
           background: #5a5a5a;
@@ -68,8 +67,11 @@ TimelinePanel::TimelinePanel(QWidget *parent) : QWidget(parent) {
           width: 0px;
           border: none;
       }
+      QScrollBar::add-page:horizontal, QScrollBar::sub-page:horizontal {
+          background: transparent;
+          border: none;
+      }
   )");
-  layout->addWidget(hScrollBar_);
 
   connect(hScrollBar_, &QScrollBar::valueChanged, this, [this](int value) {
     scrollOffsetX_ = value;
@@ -208,7 +210,7 @@ void TimelinePanel::setTotalDuration(qint64 ms) {
 void TimelinePanel::drawOnCanvas(QPainter &painter) {
   painter.setRenderHint(QPainter::Antialiasing);
 
-  // Clip to rounded rect so border-radius works
+  // Clip to rounded rect so the panel corners stay rounded
   QPainterPath clipPath;
   clipPath.addRoundedRect(canvas_->rect().adjusted(1, 1, -1, -1), 10, 10);
   painter.setClipPath(clipPath);
@@ -217,53 +219,123 @@ void TimelinePanel::drawOnCanvas(QPainter &painter) {
   painter.fillRect(canvas_->rect(), QColor("#1e1e1e"));
 
   drawRuler(painter);
-  drawSubtitleTrack(painter, RULER_HEIGHT);
-  drawVideoTrack(painter, RULER_HEIGHT + SUBTITLE_TRACK_HEIGHT);
-  drawPlayhead(painter);
+
+  if (totalDurationMs_ == 0) {
+    int subY = RULER_HEIGHT;
+    int vidY = RULER_HEIGHT + SUBTITLE_TRACK_HEIGHT;
+
+    // Track heads only (no content background or separators)
+    painter.setPen(Qt::NoPen);
+    painter.fillRect(0, subY, TRACK_HEAD_WIDTH, SUBTITLE_TRACK_HEIGHT,
+                     QColor("#262626"));
+    painter.fillRect(0, vidY, TRACK_HEAD_WIDTH, VIDEO_TRACK_HEIGHT,
+                     QColor("#262626"));
+
+    painter.setPen(QColor("#9ca3af"));
+    QFont font = painter.font();
+    font.setPointSize(10);
+    painter.setFont(font);
+    painter.drawText(12, subY + 18, "T  字幕1");
+    painter.drawText(12, vidY + 18, "F  视频1");
+
+    // Separator between track heads
+    painter.setPen(QColor("#333333"));
+    painter.drawLine(0, vidY, TRACK_HEAD_WIDTH, vidY);
+
+    // Unified right-side background for empty state
+    painter.setPen(Qt::NoPen);
+    painter.fillRect(TRACK_HEAD_WIDTH, subY,
+                     canvas_->width() - TRACK_HEAD_WIDTH - PANEL_RIGHT_MARGIN,
+                     SUBTITLE_TRACK_HEIGHT + VIDEO_TRACK_HEIGHT,
+                     QColor("#2a2a2a"));
+
+    drawEmptyState(painter);
+  } else {
+    drawSubtitleTrack(painter, RULER_HEIGHT);
+    drawVideoTrack(painter, RULER_HEIGHT + SUBTITLE_TRACK_HEIGHT);
+    drawPlayhead(painter);
+  }
 }
 
 void TimelinePanel::drawRuler(QPainter &painter) {
   painter.save();
-  painter.setClipRect(TRACK_HEAD_WIDTH, 0, canvas_->width() - TRACK_HEAD_WIDTH,
-                      RULER_HEIGHT);
+  int contentWidth = canvas_->width() - TRACK_HEAD_WIDTH - PANEL_RIGHT_MARGIN;
+  painter.setClipRect(TRACK_HEAD_WIDTH, 0, contentWidth, RULER_HEIGHT);
 
   painter.setPen(QColor("#6b7280"));
   QFont font = painter.font();
   font.setPointSize(8);
   painter.setFont(font);
 
-  // Determine tick interval based on zoom
-  double majorIntervalSec = 1.0;
-  double minorIntervalSec = 0.5;
-  if (pixelsPerSecond_ < 20.0) {
-    majorIntervalSec = 10.0;
-    minorIntervalSec = 5.0;
-  } else if (pixelsPerSecond_ < 50.0) {
-    majorIntervalSec = 5.0;
-    minorIntervalSec = 1.0;
-  } else if (pixelsPerSecond_ < 100.0) {
-    majorIntervalSec = 2.0;
-    minorIntervalSec = 1.0;
+  // Dynamic major interval: ensure labels don't overlap.
+  // Estimate max label width (~50 px) and choose the smallest nice
+  // interval that gives at least that much screen space.
+  double minSpacingPx = 50.0;
+  double rawInterval = minSpacingPx / pixelsPerSecond_;
+  static const double NICE_INTERVALS[] = {1,  2,  5,   10,  15,
+                                          30, 60, 120, 300, 600};
+  double majorIntervalSec = 600.0;
+  for (double v : NICE_INTERVALS) {
+    if (v >= rawInterval) {
+      majorIntervalSec = v;
+      break;
+    }
   }
 
   bool showHours = totalDurationMs_ >= 3600000;
 
-  int canvasWidth = canvas_->width();
+  int canvasWidth = canvas_->width() - PANEL_RIGHT_MARGIN;
   int startSec = static_cast<int>(xToTime(TRACK_HEAD_WIDTH) / 1000.0);
   int endSec = static_cast<int>(xToTime(canvasWidth) / 1000.0) + 1;
   if (startSec < 0)
     startSec = 0;
 
-  for (double s = startSec; s <= endSec; s += majorIntervalSec) {
-    int x = timeToX(static_cast<qint64>(s * 1000));
+  // Always 10 subdivisions between major ticks
+  double minorIntervalSec = majorIntervalSec / 10.0;
+  int majorMs = static_cast<int>(majorIntervalSec * 1000);
+  int minorMs = static_cast<int>(minorIntervalSec * 1000);
+  int halfMs = majorMs / 2;
+
+  // ---- Draw all tick marks ----
+  // Align start to the nearest minor grid to avoid missing ticks
+  int firstMinorMs =
+      static_cast<int>(std::ceil(startSec * 1000.0 / minorMs) * minorMs);
+  for (int ms = firstMinorMs; ms <= endSec * 1000; ms += minorMs) {
+    int x = timeToX(static_cast<qint64>(ms));
     if (x > canvasWidth)
       break;
     if (x < TRACK_HEAD_WIDTH)
       continue;
 
-    int sec = static_cast<int>(s) % 60;
-    int min = (static_cast<int>(s) / 60) % 60;
-    int hr = static_cast<int>(s) / 3600;
+    int tickLen;
+    int modMajor = ms % majorMs;
+    int modHalf = ms % halfMs;
+    if (modMajor == 0) {
+      tickLen = 12; // Major tick (longest)
+    } else if (modHalf == 0) {
+      tickLen = 8; // Half tick (medium)
+    } else {
+      tickLen = 5; // Minor tick (shortest)
+    }
+
+    painter.setPen(QColor("#404040"));
+    painter.drawLine(x, RULER_HEIGHT - tickLen, x, RULER_HEIGHT);
+  }
+
+  // ---- Draw labels independently so they are never skipped ----
+  int firstMajorSec = static_cast<int>(std::ceil(startSec / majorIntervalSec) *
+                                       majorIntervalSec);
+  for (int s = firstMajorSec; s <= endSec;
+       s += static_cast<int>(majorIntervalSec)) {
+    int x = timeToX(static_cast<qint64>(s) * 1000);
+    if (x > canvasWidth)
+      break;
+    if (x < TRACK_HEAD_WIDTH)
+      continue;
+
+    int sec = s % 60;
+    int min = (s / 60) % 60;
+    int hr = s / 3600;
     QString label;
     if (showHours) {
       label = QString("%1:%2:%3")
@@ -275,36 +347,18 @@ void TimelinePanel::drawRuler(QPainter &painter) {
                   .arg(min, 2, 10, QChar('0'))
                   .arg(sec, 2, 10, QChar('0'));
     }
-    painter.drawText(x - 30, 8, 60, 14, Qt::AlignCenter, label);
-
-    painter.setPen(QColor("#333333"));
-    painter.drawLine(x, 24, x, 34);
     painter.setPen(QColor("#6b7280"));
-  }
-
-  // Minor ticks
-  painter.setPen(QColor("#404040"));
-  for (double s = startSec; s <= endSec; s += minorIntervalSec) {
-    int x = timeToX(static_cast<qint64>(s * 1000));
-    if (x < TRACK_HEAD_WIDTH || x > canvasWidth)
-      continue;
-    // Skip if too close to a major tick
-    int majorTickSec =
-        (static_cast<int>(s) / static_cast<int>(majorIntervalSec)) *
-        static_cast<int>(majorIntervalSec);
-    int majorX = timeToX(static_cast<qint64>(majorTickSec * 1000));
-    if (qAbs(x - majorX) < 3)
-      continue;
-    painter.drawLine(x, 28, x, 31);
+    painter.drawText(x - 30, 2, 60, 14, Qt::AlignCenter, label);
   }
 
   painter.restore();
 }
 
 void TimelinePanel::drawSubtitleTrack(QPainter &painter, int y) {
+  int contentWidth = canvas_->width() - TRACK_HEAD_WIDTH - PANEL_RIGHT_MARGIN;
   // Track background
-  painter.fillRect(TRACK_HEAD_WIDTH, y, canvas_->width() - TRACK_HEAD_WIDTH,
-                   SUBTITLE_TRACK_HEIGHT, QColor("#2a2a2a"));
+  painter.fillRect(TRACK_HEAD_WIDTH, y, contentWidth, SUBTITLE_TRACK_HEIGHT,
+                   QColor("#2a2a2a"));
 
   // Track head
   painter.setPen(Qt::NoPen);
@@ -319,14 +373,14 @@ void TimelinePanel::drawSubtitleTrack(QPainter &painter, int y) {
   // Separator
   painter.setPen(QColor("#333333"));
   painter.drawLine(TRACK_HEAD_WIDTH, y + SUBTITLE_TRACK_HEIGHT - 1,
-                   canvas_->width(), y + SUBTITLE_TRACK_HEIGHT - 1);
+                   TRACK_HEAD_WIDTH + contentWidth,
+                   y + SUBTITLE_TRACK_HEIGHT - 1);
 
   if (!track_)
     return;
 
   painter.save();
-  painter.setClipRect(TRACK_HEAD_WIDTH, y, canvas_->width() - TRACK_HEAD_WIDTH,
-                      SUBTITLE_TRACK_HEIGHT);
+  painter.setClipRect(TRACK_HEAD_WIDTH, y, contentWidth, SUBTITLE_TRACK_HEIGHT);
 
   // Subtitle bars
   for (const auto &item : track_->items()) {
@@ -336,7 +390,7 @@ void TimelinePanel::drawSubtitleTrack(QPainter &painter, int y) {
       w = 4;
     if (x + w < TRACK_HEAD_WIDTH)
       continue;
-    if (x > canvas_->width())
+    if (x > canvas_->width() - PANEL_RIGHT_MARGIN)
       continue;
 
     QColor barColor = item.selected ? QColor("#0ea5e9") : QColor("#38bdf8");
@@ -362,8 +416,9 @@ void TimelinePanel::drawSubtitleTrack(QPainter &painter, int y) {
 }
 
 void TimelinePanel::drawVideoTrack(QPainter &painter, int y) {
-  painter.fillRect(TRACK_HEAD_WIDTH, y, canvas_->width() - TRACK_HEAD_WIDTH,
-                   VIDEO_TRACK_HEIGHT, QColor("#2a2a2a"));
+  int contentWidth = canvas_->width() - TRACK_HEAD_WIDTH - PANEL_RIGHT_MARGIN;
+  painter.fillRect(TRACK_HEAD_WIDTH, y, contentWidth, VIDEO_TRACK_HEIGHT,
+                   QColor("#2a2a2a"));
 
   painter.setPen(Qt::NoPen);
   painter.fillRect(0, y, TRACK_HEAD_WIDTH, VIDEO_TRACK_HEIGHT,
@@ -375,28 +430,85 @@ void TimelinePanel::drawVideoTrack(QPainter &painter, int y) {
   painter.drawText(12, y + 18, "F  视频1");
 
   painter.save();
-  painter.setClipRect(TRACK_HEAD_WIDTH, y, canvas_->width() - TRACK_HEAD_WIDTH,
-                      VIDEO_TRACK_HEIGHT);
+  painter.setClipRect(TRACK_HEAD_WIDTH, y, contentWidth, VIDEO_TRACK_HEIGHT);
 
-  // Video bar (duration-based or placeholder)
+  // Video bar (duration-based)
   painter.setPen(Qt::NoPen);
   painter.setBrush(QColor("#0284c7"));
-  if (totalDurationMs_ > 0) {
-    int videoX = timeToX(0);
-    int videoEndX = timeToX(totalDurationMs_);
-    int videoWidth = videoEndX - videoX;
-    if (videoWidth < 4)
-      videoWidth = 4;
-    painter.drawRoundedRect(videoX + 4, y + 2, videoWidth - 8,
-                            VIDEO_TRACK_HEIGHT - 4, 4, 4);
-  } else {
-    painter.drawRoundedRect(TRACK_HEAD_WIDTH + 4, y + 2, 400,
-                            VIDEO_TRACK_HEIGHT - 4, 4, 4);
-  }
+  int videoX = timeToX(0);
+  int videoEndX = timeToX(totalDurationMs_);
+  int videoWidth = videoEndX - videoX;
+  if (videoWidth < 4)
+    videoWidth = 4;
+  painter.drawRoundedRect(videoX + 4, y + 2, videoWidth - 8,
+                          VIDEO_TRACK_HEIGHT - 4, 4, 4);
   painter.setPen(QColor("#e5e5e5"));
   painter.drawText(TRACK_HEAD_WIDTH + 16, y + 50, "video.mp4");
 
   painter.restore();
+}
+
+void TimelinePanel::drawEmptyState(QPainter &painter) {
+  int contentX = TRACK_HEAD_WIDTH;
+  int contentW = canvas_->width() - TRACK_HEAD_WIDTH - PANEL_RIGHT_MARGIN;
+  int contentY = RULER_HEIGHT;
+  int contentH = canvas_->height() - RULER_HEIGHT;
+  int centerX = contentX + contentW / 2;
+  int centerY = contentY + contentH / 2;
+
+  int boxW = 360;
+  int boxH = 100;
+  QRect boxRect(centerX - boxW / 2, centerY - boxH / 2 - 10, boxW, boxH);
+  emptyStateRect_ = boxRect;
+
+  // Dashed rounded rectangle
+  QPen dashPen(QColor("#4a4a4a"), 1, Qt::DashLine);
+  painter.setPen(dashPen);
+  painter.setBrush(Qt::NoBrush);
+  painter.drawRoundedRect(boxRect, 8, 8);
+
+  // Image icon (simple landscape with plus)
+  int iconW = 64;
+  int iconH = 48;
+  int iconX = centerX - iconW / 2;
+  int iconY = centerY - iconH / 2 - 14;
+
+  // Icon background rounded rect
+  painter.setPen(Qt::NoPen);
+  painter.setBrush(QColor("#3a3a3a"));
+  painter.drawRoundedRect(iconX, iconY, iconW, iconH, 6, 6);
+
+  // Landscape line
+  painter.setPen(QPen(QColor("#5a5a5a"), 2));
+  painter.setBrush(Qt::NoBrush);
+  painter.drawLine(iconX + 8, iconY + iconH - 10, iconX + 24, iconY + 22);
+  painter.drawLine(iconX + 24, iconY + 22, iconX + 40, iconY + iconH - 16);
+  painter.drawLine(iconX + 40, iconY + iconH - 16, iconX + iconW - 8,
+                   iconY + 10);
+
+  // Sun circle
+  painter.setBrush(QColor("#5a5a5a"));
+  painter.setPen(Qt::NoPen);
+  painter.drawEllipse(iconX + 14, iconY + 8, 8, 8);
+
+  // Plus circle in top-right corner
+  int plusR = 10;
+  int plusCx = iconX + iconW - 2;
+  int plusCy = iconY + 2;
+  painter.setBrush(QColor("#4a4a4a"));
+  painter.drawEllipse(plusCx - plusR, plusCy - plusR, plusR * 2, plusR * 2);
+  painter.setPen(QPen(QColor("#9ca3af"), 1));
+  painter.drawLine(plusCx - 5, plusCy, plusCx + 5, plusCy);
+  painter.drawLine(plusCx, plusCy - 5, plusCx, plusCy + 5);
+
+  // Hint text inside the dashed box
+  painter.setPen(QColor("#6b7280"));
+  QFont hintFont = painter.font();
+  hintFont.setPointSize(10);
+  painter.setFont(hintFont);
+  int textY = boxRect.bottom() - 28;
+  painter.drawText(centerX - boxW / 2, textY, boxW, 24, Qt::AlignCenter,
+                   "将视频和资源拖拽到此处，开始创作");
 }
 
 void TimelinePanel::drawPlayhead(QPainter &painter) {
@@ -415,14 +527,24 @@ void TimelinePanel::drawPlayhead(QPainter &painter) {
                          QPointF(x + 7, triangleTop), QPointF(x, triangleTip)};
   painter.drawPolygon(triangle, 3);
 
-  // Vertical line starts from triangle tip
+  // Vertical line stops above the scrollbar area
   painter.setPen(QColor("#f59e0b"));
-  painter.drawLine(x, triangleTip, x, canvas_->height());
+  int lineBottom = canvas_->height() - 24;
+  if (lineBottom > triangleTip)
+    painter.drawLine(x, triangleTip, x, lineBottom);
 }
 
 void TimelinePanel::mousePressEvent(QMouseEvent *event) {
   if (event->button() != Qt::LeftButton)
     return;
+
+  // Empty state import button click
+  if (totalDurationMs_ == 0 && !emptyStateRect_.isEmpty() &&
+      emptyStateRect_.contains(event->pos())) {
+    emit importMediaRequested();
+    return;
+  }
+
   if (event->x() < TRACK_HEAD_WIDTH)
     return;
 
@@ -640,4 +762,16 @@ void TimelinePanel::wheelEvent(QWheelEvent *event) {
   event->accept();
 }
 
-void TimelinePanel::resizeEvent(QResizeEvent * /*event*/) { updateScrollBar(); }
+void TimelinePanel::resizeEvent(QResizeEvent * /*event*/) {
+  int sbHeight = 12;
+  // Canvas covers the full panel
+  canvas_->setGeometry(0, 0, width(), height());
+  // Scrollbar sits on top of the canvas; keep vertical center unchanged
+  // old center = height - 14/2 = height - 7
+  int sbTop = height() - 7 - sbHeight / 2;
+  hScrollBar_->setGeometry(TRACK_HEAD_WIDTH, sbTop,
+                           width() - TRACK_HEAD_WIDTH - PANEL_RIGHT_MARGIN,
+                           sbHeight);
+  hScrollBar_->raise();
+  updateScrollBar();
+}
