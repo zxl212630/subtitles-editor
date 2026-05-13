@@ -8,6 +8,7 @@
 
 #include <QApplication>
 #include <QDateTime>
+#include <QFileInfo>
 #include <QFontDatabase>
 #include <QMimeData>
 #include <QMouseEvent>
@@ -198,6 +199,13 @@ void TimelinePanel::setVideoFps(double fps) {
   if (fps > 0.0) {
     videoFps_ = fps;
   }
+}
+
+void TimelinePanel::setMediaFilePath(const QString &path) {
+  mediaFileName_ = QFileInfo(path).fileName();
+  if (mediaFileName_.isEmpty())
+    mediaFileName_ = path;
+  canvas_->update();
 }
 
 void TimelinePanel::setTotalDuration(qint64 ms) {
@@ -429,9 +437,6 @@ void TimelinePanel::drawVideoTrack(QPainter &painter, int y) {
   painter.setFont(font);
   painter.drawText(12, y + 18, "F  视频1");
 
-  painter.save();
-  painter.setClipRect(TRACK_HEAD_WIDTH, y, contentWidth, VIDEO_TRACK_HEIGHT);
-
   // Video bar (duration-based)
   painter.setPen(Qt::NoPen);
   painter.setBrush(QColor("#0284c7"));
@@ -443,9 +448,8 @@ void TimelinePanel::drawVideoTrack(QPainter &painter, int y) {
   painter.drawRoundedRect(videoX + 4, y + 2, videoWidth - 8,
                           VIDEO_TRACK_HEIGHT - 4, 4, 4);
   painter.setPen(QColor("#e5e5e5"));
-  painter.drawText(TRACK_HEAD_WIDTH + 16, y + 50, "video.mp4");
-
-  painter.restore();
+  painter.drawText(TRACK_HEAD_WIDTH + 16, y + 50,
+                   mediaFileName_.isEmpty() ? "video.mp4" : mediaFileName_);
 }
 
 void TimelinePanel::drawEmptyState(QPainter &painter) {

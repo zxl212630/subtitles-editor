@@ -22,6 +22,7 @@ public:
   void setPlayheadAnchor(PlayheadAnchor anchor);
   void setPlaying(bool playing);
   void setVideoFps(double fps);
+  void setMediaFilePath(const QString &path);
 
 signals:
   void timeClicked(qint64 ms);
@@ -86,4 +87,6 @@ private:
   qint64 lastPreviewSystemTime_ = 0;
   double videoFps_ = 25.0;
   static constexpr int DRAG_THRESHOLD_PX = 3;
+
+  QString mediaFileName_;
 };

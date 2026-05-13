@@ -137,8 +137,11 @@ void AppWindow::setupSplitterLayout() {
 
   // Connect cross-panel signals
   // 1. Timeline -> MediaPlayer: file drop
-  connect(d->timelinePanel, &TimelinePanel::mediaFileDropped, d->mediaPlayer,
-          &MediaPlayer::load);
+  connect(d->timelinePanel, &TimelinePanel::mediaFileDropped, this,
+          [this](const QString &path) {
+            d->timelinePanel->setMediaFilePath(path);
+            d->mediaPlayer->load(path);
+          });
 
   // 1a. Timeline empty-state import button -> file dialog
   connect(d->timelinePanel, &TimelinePanel::importMediaRequested, this,
@@ -147,6 +150,7 @@ void AppWindow::setupSplitterLayout() {
                 this, "导入视频", QString(),
                 "视频文件 (*.mp4 *.mkv *.avi *.mov);;所有文件 (*)");
             if (!path.isEmpty() && d->mediaPlayer) {
+              d->timelinePanel->setMediaFilePath(path);
               d->mediaPlayer->load(path);
             }
           });
