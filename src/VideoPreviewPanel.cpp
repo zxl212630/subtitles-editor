@@ -25,7 +25,8 @@
 // ------------------------------------------------------------------
 class ProgressBarWidget : public QWidget {
 public:
-  explicit ProgressBarWidget(VideoPreviewPanel *panel, QWidget *parent = nullptr)
+  explicit ProgressBarWidget(VideoPreviewPanel *panel,
+                             QWidget *parent = nullptr)
       : QWidget(parent), panel_(panel) {
     setFixedHeight(20);
     setMinimumWidth(100);
@@ -40,6 +41,11 @@ public:
   }
 
   void setDuration(qint64 totalMs) { totalDurationMs_ = totalMs; }
+
+  void setVideoFps(double fps) {
+    if (fps > 0.0)
+      videoFps_ = fps;
+  }
 
   VideoPreviewPanel *panel_ = nullptr;
 
@@ -99,7 +105,8 @@ protected:
     }
     if (dragging_ && panel_) {
       qint64 now = QDateTime::currentMSecsSinceEpoch();
-      if (now - lastPreviewSystemTime_ >= 40) {
+      qint64 intervalMs = static_cast<qint64>(1000.0 / videoFps_);
+      if (now - lastPreviewSystemTime_ >= intervalMs) {
         lastPreviewSystemTime_ = now;
         emit panel_->previewSeekRequested(timeFromPos(event->pos().x()));
       }
@@ -148,6 +155,7 @@ private:
   bool dragging_ = false;
   bool hover_ = false;
   qint64 lastPreviewSystemTime_ = 0;
+  double videoFps_ = 25.0;
 };
 
 static QString formatTime(qint64 ms) {
@@ -505,6 +513,11 @@ void VideoPreviewPanel::seekTo(qint64 ms) {
   if (mediaPlayer_) {
     mediaPlayer_->seek(ms);
   }
+}
+
+void VideoPreviewPanel::setVideoFps(double fps) {
+  if (progressBar_)
+    progressBar_->setVideoFps(fps);
 }
 
 void VideoPreviewPanel::onTimeChanged(qint64 ms) {

@@ -159,10 +159,11 @@ void AppWindow::setupSplitterLayout() {
   connect(d->mediaPlayer, &MediaPlayer::mediaLoaded, d->timelinePanel,
           &TimelinePanel::setTotalDuration);
 
-  // 2a. MediaPlayer -> Timeline: video fps for drag throttle
-  connect(d->mediaPlayer, &MediaPlayer::mediaLoaded, d->timelinePanel,
+  // 2a. MediaPlayer -> Timeline & VideoPreview: video fps for drag throttle
+  connect(d->mediaPlayer, &MediaPlayer::mediaLoaded, this,
           [this](qint64, QSize) {
             d->timelinePanel->setVideoFps(d->mediaPlayer->decoderFps());
+            d->videoPreviewPanel->setVideoFps(d->mediaPlayer->decoderFps());
           });
 
   // 3. MediaPlayer -> VideoPreview: seek display

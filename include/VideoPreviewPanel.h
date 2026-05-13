@@ -27,6 +27,7 @@ public:
   void onMediaLoaded(qint64 durationMs, QSize videoSize);
   void seekTo(qint64 ms);
   void updateSubtitleOverlay();
+  void setVideoFps(double fps);
 
 signals:
   void fontChanged(const QString &family);
