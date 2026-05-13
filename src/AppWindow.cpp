@@ -6,6 +6,8 @@
 #include "SubtitleTrack.h"
 #include "TimelinePanel.h"
 #include "VideoPreviewPanel.h"
+#include "VideoPropertyDialog.h"
+#include "srtparser.h"
 
 #include <QFile>
 #include <QFileDialog>
@@ -148,10 +150,16 @@ void AppWindow::setupSplitterLayout() {
           [this]() {
             QString path = QFileDialog::getOpenFileName(
                 this, "导入视频", QString(),
-                "视频文件 (*.mp4 *.mkv *.avi *.mov);;所有文件 (*)");
-            if (!path.isEmpty() && d->mediaPlayer) {
-              d->timelinePanel->setMediaFilePath(path);
-              d->mediaPlayer->load(path);
+                "媒体文件 (*.mp4 *.mkv *.avi *.mov *.srt);;视频文件 (*.mp4 "
+                "*.mkv *.avi *.mov);;字幕文件 (*.srt);;所有文件 (*)");
+            if (!path.isEmpty()) {
+              QString ext = QFileInfo(path).suffix().toLower();
+              if (ext == "srt") {
+                onSubtitleFileDropped(path);
+              } else if (d->mediaPlayer) {
+                d->timelinePanel->setMediaFilePath(path);
+                d->mediaPlayer->load(path);
+              }
             }
           });
 
@@ -243,6 +251,18 @@ void AppWindow::setupSplitterLayout() {
     QMessageBox::information(nullptr, "语音识别完成", "字幕已成功生成！");
   });
 
+  // 12. TimelinePanel subtitle drop -> AppWindow
+  connect(d->timelinePanel, &TimelinePanel::subtitleFileDropped, this,
+          &AppWindow::onSubtitleFileDropped);
+
+  // 13. TimelinePanel video ASR -> AppWindow
+  connect(d->timelinePanel, &TimelinePanel::videoAsrRequested, this,
+          &AppWindow::onVideoAsrRequested);
+
+  // 14. TimelinePanel video property -> AppWindow
+  connect(d->timelinePanel, &TimelinePanel::videoPropertyRequested, this,
+          &AppWindow::onVideoPropertyRequested);
+
   // Top horizontal splitter
   d->topSplitter = new QSplitter(Qt::Horizontal, this);
   d->topSplitter->addWidget(d->videoPreviewPanel);
@@ -289,6 +309,12 @@ void AppWindow::loadFile(const QString &path) {
     d->mediaPlayer->play();
   }
 }
+
+void AppWindow::onSubtitleFileDropped(const QString &path) { Q_UNUSED(path) }
+
+void AppWindow::onVideoAsrRequested() {}
+
+void AppWindow::onVideoPropertyRequested() {}
 
 void AppWindow::setupDummyData() {
   auto addItem = [&](const QString &text, qint64 start, qint64 end) {
