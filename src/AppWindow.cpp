@@ -18,6 +18,7 @@
 #include <QHBoxLayout>
 #include <QLabel>
 #include <QMessageBox>
+#include <QProcess>
 #include <QSplitter>
 #include <QTime>
 #include <QUrl>
@@ -514,8 +515,12 @@ void AppWindow::onOpenFileLocationRequested() {
   if (path.isEmpty())
     return;
 
-  QString dir = QFileInfo(path).path();
-  QDesktopServices::openUrl(QUrl::fromLocalFile(dir));
+#ifdef Q_OS_MAC
+  // Use 'open -R' to reveal and select the file in Finder
+  QProcess::startDetached("open", QStringList() << "-R" << path);
+#else
+  QDesktopServices::openUrl(QUrl::fromLocalFile(QFileInfo(path).path()));
+#endif
 }
 
 void AppWindow::setupDummyData() {

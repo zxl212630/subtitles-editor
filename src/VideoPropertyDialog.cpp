@@ -17,31 +17,41 @@ void VideoPropertyDialog::setupUi() {
   setWindowTitle("属性");
   setMinimumSize(420, 400);
   resize(520, 600);
-  setStyleSheet("QDialog { background-color: #1e1e1e; }");
+
+  // Apply dark background to dialog and all child widgets
+  setStyleSheet(R"(
+        QDialog {
+            background-color: #1e1e1e;
+        }
+        QWidget {
+            background-color: #1e1e1e;
+        }
+        QScrollArea {
+            background-color: #1e1e1e;
+            border: none;
+        }
+        QScrollBar:vertical {
+            background: #2a2a2a;
+            width: 8px;
+            border-radius: 4px;
+        }
+        QScrollBar::handle:vertical {
+            background: #4a4a4a;
+            border-radius: 4px;
+            min-height: 30px;
+        }
+        QScrollBar::handle:vertical:hover {
+            background: #5a5a5a;
+        }
+        QScrollBar::add-line:vertical,
+        QScrollBar::sub-line:vertical {
+            height: 0px;
+        }
+    )");
 
   auto *mainLayout = new QVBoxLayout(this);
   mainLayout->setContentsMargins(24, 20, 24, 20);
   mainLayout->setSpacing(0);
-
-  // Title
-  auto *titleLabel = new QLabel("属性", this);
-  titleLabel->setAlignment(Qt::AlignCenter);
-  titleLabel->setStyleSheet(R"(
-        QLabel {
-            color: #d1d5db;
-            font-size: 16px;
-            font-weight: bold;
-            background: transparent;
-            padding-bottom: 12px;
-        }
-    )");
-  mainLayout->addWidget(titleLabel);
-
-  // Top divider
-  auto *topDivider = new QWidget(this);
-  topDivider->setFixedHeight(1);
-  topDivider->setStyleSheet("background-color: #333333;");
-  mainLayout->addWidget(topDivider);
 
   // Scroll area for sections
   auto *scrollArea = new QScrollArea(this);
