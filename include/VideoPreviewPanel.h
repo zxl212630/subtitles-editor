@@ -9,6 +9,7 @@ class QComboBox;
 class QLabel;
 class QFrame;
 class QPushButton;
+class ProgressBarWidget;
 
 class SoftwareVideoRenderer;
 class SubtitleTrack;
@@ -42,11 +43,6 @@ public slots:
 
 protected:
   void resizeEvent(QResizeEvent *event) override;
-  void mousePressEvent(QMouseEvent *event) override;
-  void mouseMoveEvent(QMouseEvent *event) override;
-  void mouseReleaseEvent(QMouseEvent *event) override;
-  void enterEvent(QEnterEvent *event) override;
-  void leaveEvent(QEvent *event) override;
 
 private:
   void setupUi();
@@ -68,13 +64,7 @@ private:
   QPushButton *stepFwdBtn_ = nullptr;
   QPushButton *stepBwdBtn_ = nullptr;
   QLabel *currentTimeLabel_ = nullptr;
-  QFrame *progressContainer_ = nullptr;
-  QFrame *progressFill_ = nullptr;
-  QFrame *progressHandle_ = nullptr;
+  ProgressBarWidget *progressBar_ = nullptr;
   bool isPlaying_ = false;
   qint64 totalDurationMs_ = 0;
-
-  // Progress bar drag state
-  bool progressDragging_ = false;
-  bool progressHover_ = false;
 };
