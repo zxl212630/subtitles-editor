@@ -9,6 +9,7 @@
 #include <QFrame>
 #include <QHBoxLayout>
 #include <QLabel>
+#include <QMouseEvent>
 #include <QPainter>
 #include <QPushButton>
 #include <QTime>
@@ -257,17 +258,30 @@ void VideoPreviewPanel::setupUi() {
           [this]() { emit stepBackwardRequested(); });
 
   // Progress bar container
-  auto *progressContainer = new QFrame(controlBar);
-  progressContainer->setFixedSize(550, 4);
-  progressContainer->setStyleSheet(
+  progressContainer_ = new QFrame(controlBar);
+  progressContainer_->setFixedHeight(4);
+  progressContainer_->setMinimumWidth(200);
+  progressContainer_->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
+  progressContainer_->setStyleSheet(
       "background-color: #333333; border-radius: 2px;");
-  auto *progressFill = new QFrame(progressContainer);
-  progressFill->setFixedSize(260, 4);
-  progressFill->setStyleSheet("background-color: #38bdf8; border-radius: 2px;");
-  progressFill->move(0, 0);
-  cbLayout->addWidget(progressContainer);
+  progressFill_ = new QFrame(progressContainer_);
+  progressFill_->setFixedSize(0, 4);
+  progressFill_->setStyleSheet(
+      "background-color: #38bdf8; border-radius: 2px;");
+  progressFill_->move(0, 0);
+
+  // Progress handle (draggable dot)
+  progressHandle_ = new QFrame(progressContainer_);
+  progressHandle_->setFixedSize(8, 8);
+  progressHandle_->setStyleSheet(
+      "background-color: #9ca3af; border-radius: 4px;");
+  progressHandle_->move(0, -2);
+  progressHandle_->raise();
+
+  cbLayout->addWidget(progressContainer_);
 
   currentTimeLabel_ = new QLabel("00:00:00.000 / 00:00:00.000", controlBar);
+  currentTimeLabel_->setFixedWidth(170);
   currentTimeLabel_->setStyleSheet(
       "color: #d1d5db; font-family: Inter, sans-serif; "
       "font-size: 11px; background: transparent;");
@@ -384,6 +398,21 @@ void VideoPreviewPanel::onTimeChanged(qint64 ms) {
                                    .arg(formatTime(ms))
                                    .arg(formatTime(totalDurationMs_)));
   }
+  if (progressFill_ && totalDurationMs_ > 0) {
+    double ratio = static_cast<double>(ms) / totalDurationMs_;
+    ratio = qBound(0.0, ratio, 1.0);
+    int parentWidth = progressFill_->parentWidget()->width();
+    progressFill_->setFixedWidth(static_cast<int>(parentWidth * ratio));
+  }
+  if (progressHandle_ && totalDurationMs_ > 0) {
+    double ratio = static_cast<double>(ms) / totalDurationMs_;
+    ratio = qBound(0.0, ratio, 1.0);
+    int parentWidth = progressHandle_->parentWidget()->width();
+    int handleOffset = progressHover_ ? 2 : 0;
+    int handleY = progressHover_ ? -4 : -2;
+    progressHandle_->move(static_cast<int>(parentWidth * ratio) - handleOffset,
+                          handleY);
+  }
   updateSubtitleOverlay();
 }
 
@@ -422,5 +451,84 @@ void VideoPreviewPanel::onPlaybackStateChanged(MediaPlayer::State state) {
     } else {
       playPauseBtn_->setIcon(QIcon(":/icons/play.svg"));
     }
+  }
+}
+
+void VideoPreviewPanel::enterEvent(QEnterEvent * /*event*/) {
+  if (!progressHandle_)
+    return;
+  progressHover_ = true;
+  progressHandle_->setFixedSize(12, 12);
+  progressHandle_->setStyleSheet(
+      "background-color: #ffffff; border-radius: 6px; "
+      "border: 2px solid #38bdf8;");
+  int currentX = progressHandle_->x();
+  progressHandle_->move(currentX - 2, -4);
+}
+
+void VideoPreviewPanel::leaveEvent(QEvent * /*event*/) {
+  if (!progressHandle_)
+    return;
+  progressHover_ = false;
+  progressHandle_->setFixedSize(8, 8);
+  progressHandle_->setStyleSheet(
+      "background-color: #9ca3af; border-radius: 4px;");
+  int currentX = progressHandle_->x();
+  progressHandle_->move(currentX + 2, -2);
+}
+
+static bool isPointInProgressBar(const QFrame *container, const QPoint &pos) {
+  if (!container)
+    return false;
+  QRect rect = container->geometry();
+  rect.adjust(0, -6, 0, 6);
+  return rect.contains(pos);
+}
+
+static qint64 progressPosToTime(const QFrame *container, qint64 totalDurationMs,
+                                const QPoint &pos) {
+  if (!container || totalDurationMs <= 0)
+    return 0;
+  QRect rect = container->geometry();
+  int relX = pos.x() - rect.left();
+  double ratio = static_cast<double>(relX) / rect.width();
+  ratio = qBound(0.0, ratio, 1.0);
+  return static_cast<qint64>(ratio * totalDurationMs);
+}
+
+void VideoPreviewPanel::mousePressEvent(QMouseEvent *event) {
+  if (event->button() != Qt::LeftButton)
+    return;
+  if (!isPointInProgressBar(progressContainer_, event->pos()))
+    return;
+
+  progressDragging_ = true;
+  qint64 ms =
+      progressPosToTime(progressContainer_, totalDurationMs_, event->pos());
+  if (mediaPlayer_) {
+    mediaPlayer_->previewSeek(ms);
+  }
+}
+
+void VideoPreviewPanel::mouseMoveEvent(QMouseEvent *event) {
+  if (!progressDragging_)
+    return;
+
+  qint64 ms =
+      progressPosToTime(progressContainer_, totalDurationMs_, event->pos());
+  if (mediaPlayer_) {
+    mediaPlayer_->previewSeek(ms);
+  }
+}
+
+void VideoPreviewPanel::mouseReleaseEvent(QMouseEvent *event) {
+  if (event->button() != Qt::LeftButton)
+    return;
+  if (!progressDragging_)
+    return;
+
+  progressDragging_ = false;
+  if (mediaPlayer_) {
+    mediaPlayer_->stopPreviewDragging();
   }
 }
