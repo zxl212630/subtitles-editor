@@ -172,10 +172,10 @@ void MediaPlayer::previewSeek(qint64 ms) {
     isPreviewDragging_ = true;
     seekPreviewMode_ = true;
     seekPreviewTimer_.start();
-    lastRenderedPreviewPts_ = -1;
     LOG_MP(info, "previewSeek() drag started target=" << ms);
   }
 
+  lastRenderedPreviewPts_ = -1;
   seekTargetMs_ = ms;
   currentTimeMs_ = ms;
   previewFrameRendered_ = false;

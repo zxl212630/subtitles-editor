@@ -5,6 +5,7 @@
 #include "SubtitleTrack.h"
 
 #include <QComboBox>
+#include <QDateTime>
 #include <QFontDatabase>
 #include <QFrame>
 #include <QHBoxLayout>
@@ -15,7 +16,6 @@
 #include <QTime>
 #include <QVBoxLayout>
 #include <QValidator>
-#include <functional>
 
 #define LOG_SUB_debug(msg) qDebug() << "[SubtitleOverlay]" << msg
 #define LOG_SUB(level, msg) LOG_SUB_##level(msg)
@@ -25,7 +25,8 @@
 // ------------------------------------------------------------------
 class ProgressBarWidget : public QWidget {
 public:
-  explicit ProgressBarWidget(QWidget *parent = nullptr) : QWidget(parent) {
+  explicit ProgressBarWidget(VideoPreviewPanel *panel, QWidget *parent = nullptr)
+      : QWidget(parent), panel_(panel) {
     setFixedHeight(20);
     setMinimumWidth(100);
     setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
@@ -33,7 +34,6 @@ public:
     setMouseTracking(true);
     setStyleSheet("background-color: transparent;");
   }
-
   void setRatio(double ratio) {
     ratio_ = qBound(0.0, ratio, 1.0);
     update();
@@ -41,8 +41,7 @@ public:
 
   void setDuration(qint64 totalMs) { totalDurationMs_ = totalMs; }
 
-  std::function<void(qint64)> onPreviewSeek;
-  std::function<void()> onPreviewSeekFinished;
+  VideoPreviewPanel *panel_ = nullptr;
 
 protected:
   void paintEvent(QPaintEvent *) override {
@@ -84,8 +83,9 @@ protected:
       return;
     if (event->button() == Qt::LeftButton) {
       dragging_ = true;
-      if (onPreviewSeek)
-        onPreviewSeek(timeFromPos(event->pos().x()));
+      lastPreviewSystemTime_ = QDateTime::currentMSecsSinceEpoch();
+      if (panel_)
+        emit panel_->previewSeekRequested(timeFromPos(event->pos().x()));
     }
   }
 
@@ -97,8 +97,12 @@ protected:
       hover_ = inside;
       update();
     }
-    if (dragging_ && onPreviewSeek) {
-      onPreviewSeek(timeFromPos(event->pos().x()));
+    if (dragging_ && panel_) {
+      qint64 now = QDateTime::currentMSecsSinceEpoch();
+      if (now - lastPreviewSystemTime_ >= 40) {
+        lastPreviewSystemTime_ = now;
+        emit panel_->previewSeekRequested(timeFromPos(event->pos().x()));
+      }
     }
   }
 
@@ -107,8 +111,8 @@ protected:
       return;
     if (event->button() == Qt::LeftButton && dragging_) {
       dragging_ = false;
-      if (onPreviewSeekFinished)
-        onPreviewSeekFinished();
+      if (panel_)
+        emit panel_->previewSeekFinished();
     }
   }
 
@@ -143,6 +147,7 @@ private:
   qint64 totalDurationMs_ = 0;
   bool dragging_ = false;
   bool hover_ = false;
+  qint64 lastPreviewSystemTime_ = 0;
 };
 
 static QString formatTime(qint64 ms) {
@@ -384,7 +389,7 @@ void VideoPreviewPanel::setupUi() {
           [this]() { emit stepBackwardRequested(); });
 
   // Progress bar
-  progressBar_ = new ProgressBarWidget(controlBar);
+  progressBar_ = new ProgressBarWidget(this, controlBar);
   cbLayout->addWidget(progressBar_);
 
   currentTimeLabel_ = new QLabel("00:00:00.000 / 00:00:00.000", controlBar);
@@ -476,16 +481,6 @@ void VideoPreviewPanel::setMediaPlayer(MediaPlayer *player) {
   if (mediaPlayer_) {
     connect(mediaPlayer_, &MediaPlayer::timeChanged, this,
             &VideoPreviewPanel::onTimeChanged, Qt::QueuedConnection);
-  }
-  if (progressBar_) {
-    progressBar_->onPreviewSeek = [this](qint64 ms) {
-      if (mediaPlayer_)
-        mediaPlayer_->previewSeek(ms);
-    };
-    progressBar_->onPreviewSeekFinished = [this]() {
-      if (mediaPlayer_)
-        mediaPlayer_->stopPreviewDragging();
-    };
   }
 }
 

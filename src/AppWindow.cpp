@@ -216,6 +216,12 @@ void AppWindow::setupSplitterLayout() {
   connect(d->videoPreviewPanel, &VideoPreviewPanel::stepBackwardRequested,
           d->mediaPlayer, &MediaPlayer::stepBackward);
 
+  // 10a. VideoPreview progress bar drag -> MediaPlayer (same as Timeline)
+  connect(d->videoPreviewPanel, &VideoPreviewPanel::previewSeekRequested,
+          d->mediaPlayer, &MediaPlayer::previewSeek);
+  connect(d->videoPreviewPanel, &VideoPreviewPanel::previewSeekFinished,
+          d->mediaPlayer, &MediaPlayer::stopPreviewDragging);
+
   // 11. SubtitleTrack data change -> VideoPreview subtitle refresh
   connect(d->subtitleTrack, &SubtitleTrack::dataChanged, d->videoPreviewPanel,
           &VideoPreviewPanel::updateSubtitleOverlay);

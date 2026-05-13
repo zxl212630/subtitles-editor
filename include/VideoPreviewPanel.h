@@ -37,6 +37,8 @@ signals:
   void seekRequested(qint64 ms);
   void stepForwardRequested();
   void stepBackwardRequested();
+  void previewSeekRequested(qint64 ms);
+  void previewSeekFinished();
 
 public slots:
   void onPlaybackStateChanged(MediaPlayer::State state);
