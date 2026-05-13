@@ -197,6 +197,23 @@ void SubtitleListPanel::setupUi() {
             background-color: transparent;
             border: none;
         }
+        QScrollBar:vertical {
+            background: #2a2a2a;
+            width: 8px;
+            border-radius: 4px;
+        }
+        QScrollBar::handle:vertical {
+            background: #4a4a4a;
+            border-radius: 4px;
+            min-height: 30px;
+        }
+        QScrollBar::handle:vertical:hover {
+            background: #5a5a5a;
+        }
+        QScrollBar::add-line:vertical,
+        QScrollBar::sub-line:vertical {
+            height: 0px;
+        }
     )");
   listView_->setSelectionMode(QAbstractItemView::SingleSelection);
   listView_->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);

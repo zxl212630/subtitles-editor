@@ -247,6 +247,7 @@ void VideoPreviewPanel::setupUi() {
   // Font combo
   fontCombo_ = new QComboBox(toolbar);
   fontCombo_->setFixedSize(140, 28);
+  fontCombo_->setMaxVisibleItems(15);
   fontCombo_->setStyleSheet(R"(
         QComboBox {
             background-color: #141414;
@@ -272,6 +273,24 @@ void VideoPreviewPanel::setupUi() {
             background-color: #141414;
             color: #d1d5db;
             selection-background-color: #333333;
+            border: none;
+        }
+        QComboBox QAbstractItemView QScrollBar:vertical {
+            background: #2a2a2a;
+            width: 8px;
+            border-radius: 4px;
+        }
+        QComboBox QAbstractItemView QScrollBar::handle:vertical {
+            background: #4a4a4a;
+            border-radius: 4px;
+            min-height: 30px;
+        }
+        QComboBox QAbstractItemView QScrollBar::handle:vertical:hover {
+            background: #5a5a5a;
+        }
+        QComboBox QAbstractItemView QScrollBar::add-line:vertical,
+        QComboBox QAbstractItemView QScrollBar::sub-line:vertical {
+            height: 0px;
         }
     )");
   populateFontCombo();
@@ -304,6 +323,29 @@ void VideoPreviewPanel::setupUi() {
             image: url(:/icons/down-arrow.svg);
             width: 14px;
             height: 14px;
+        }
+        QComboBox QAbstractItemView {
+            background-color: #141414;
+            color: #d1d5db;
+            selection-background-color: #333333;
+            border: none;
+        }
+        QComboBox QAbstractItemView QScrollBar:vertical {
+            background: #2a2a2a;
+            width: 8px;
+            border-radius: 4px;
+        }
+        QComboBox QAbstractItemView QScrollBar::handle:vertical {
+            background: #4a4a4a;
+            border-radius: 4px;
+            min-height: 30px;
+        }
+        QComboBox QAbstractItemView QScrollBar::handle:vertical:hover {
+            background: #5a5a5a;
+        }
+        QComboBox QAbstractItemView QScrollBar::add-line:vertical,
+        QComboBox QAbstractItemView QScrollBar::sub-line:vertical {
+            height: 0px;
         }
     )");
   populateSizeCombo();
