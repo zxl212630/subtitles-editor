@@ -426,3 +426,23 @@ int MediaPlayer::audioSampleRate() const {
 int MediaPlayer::audioChannels() const {
   return decoder_ ? decoder_->audioChannels() : 0;
 }
+
+QString MediaPlayer::audioCodecName() const {
+  return decoder_ ? decoder_->audioCodecName() : QString();
+}
+
+qint64 MediaPlayer::videoBitRate() const {
+  return decoder_ ? decoder_->videoBitRate() : 0;
+}
+
+qint64 MediaPlayer::audioBitRate() const {
+  return decoder_ ? decoder_->audioBitRate() : 0;
+}
+
+int MediaPlayer::audioBitDepth() const {
+  return decoder_ ? decoder_->audioBitDepth() : 0;
+}
+
+QString MediaPlayer::mediaCreationTime() const {
+  return decoder_ ? decoder_->mediaCreationTime() : QString();
+}

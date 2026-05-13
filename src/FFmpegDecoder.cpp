@@ -95,6 +95,7 @@ bool FFmpegDecoder::open(const QString &path) {
       if (videoCodecCtx_->codec) {
         videoCodecName_ = QString::fromUtf8(videoCodecCtx_->codec->name);
       }
+      videoBitRate_ = videoCodecCtx_->bit_rate;
       if (stream->avg_frame_rate.den != 0) {
         fps_ = av_q2d(stream->avg_frame_rate);
       }
@@ -143,6 +144,13 @@ bool FFmpegDecoder::open(const QString &path) {
       audioTimeBase_ = stream->time_base;
       audioSampleRate_ = audioCodecCtx_->sample_rate;
       audioChannels_ = audioCodecCtx_->ch_layout.nb_channels;
+      if (audioCodecCtx_->codec) {
+        audioCodecName_ = QString::fromUtf8(audioCodecCtx_->codec->name);
+      }
+      audioBitRate_ = audioCodecCtx_->bit_rate;
+      audioBitDepth_ = audioCodecCtx_->bits_per_raw_sample > 0
+                           ? audioCodecCtx_->bits_per_raw_sample
+                           : audioCodecCtx_->sample_fmt;
       hasAudio_ = true;
     }
   }
@@ -164,6 +172,15 @@ bool FFmpegDecoder::open(const QString &path) {
     durationMs_ =
         static_cast<qint64>(fmtCtx_->streams[audioStreamIdx_]->duration *
                             av_q2d(audioTimeBase_) * 1000);
+  }
+
+  // Read media creation_time from metadata if available
+  if (fmtCtx_->metadata) {
+    AVDictionaryEntry *entry =
+        av_dict_get(fmtCtx_->metadata, "creation_time", nullptr, 0);
+    if (entry && entry->value) {
+      mediaCreationTime_ = QString::fromUtf8(entry->value);
+    }
   }
 
   LOG_DEC(info, "Opened:" << path);
@@ -213,6 +230,11 @@ void FFmpegDecoder::close() {
   hasVideo_ = false;
   hasAudio_ = false;
   videoCodecName_.clear();
+  audioCodecName_.clear();
+  videoBitRate_ = 0;
+  audioBitRate_ = 0;
+  audioBitDepth_ = 0;
+  mediaCreationTime_.clear();
 
   LOG_DEC(info, "close() complete");
 }
@@ -308,6 +330,31 @@ int FFmpegDecoder::audioChannels() const { return audioChannels_; }
 QString FFmpegDecoder::videoCodecName() const {
   QMutexLocker locker(&metadataMutex_);
   return videoCodecName_;
+}
+
+QString FFmpegDecoder::audioCodecName() const {
+  QMutexLocker locker(&metadataMutex_);
+  return audioCodecName_;
+}
+
+qint64 FFmpegDecoder::videoBitRate() const {
+  QMutexLocker locker(&metadataMutex_);
+  return videoBitRate_;
+}
+
+qint64 FFmpegDecoder::audioBitRate() const {
+  QMutexLocker locker(&metadataMutex_);
+  return audioBitRate_;
+}
+
+int FFmpegDecoder::audioBitDepth() const {
+  QMutexLocker locker(&metadataMutex_);
+  return audioBitDepth_;
+}
+
+QString FFmpegDecoder::mediaCreationTime() const {
+  QMutexLocker locker(&metadataMutex_);
+  return mediaCreationTime_;
 }
 
 void FFmpegDecoder::run() {

@@ -40,6 +40,11 @@ public:
   QSize videoSize() const;
   qint64 durationMs() const;
   QString videoCodecName() const;
+  QString audioCodecName() const;
+  qint64 videoBitRate() const;
+  qint64 audioBitRate() const;
+  int audioBitDepth() const;
+  QString mediaCreationTime() const;
   int audioSampleRate() const;
   int audioChannels() const;
 

@@ -838,11 +838,14 @@ void TimelinePanel::contextMenuEvent(QContextMenuEvent *event) {
   )");
 
   QAction *propAction = menu.addAction("属性");
-  QAction *asrAction = menu.addAction("智能语音识别");
+  QAction *openLocAction = menu.addAction("打开文件所在位置");
+  QAction *asrAction = menu.addAction("语音转文字");
 
   QAction *selected = menu.exec(event->globalPos());
   if (selected == propAction) {
     emit videoPropertyRequested();
+  } else if (selected == openLocAction) {
+    emit openFileLocationRequested();
   } else if (selected == asrAction) {
     emit videoAsrRequested();
   }

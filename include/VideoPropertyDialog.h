@@ -1,18 +1,22 @@
 #pragma once
 
 #include <QDialog>
+#include <QList>
 #include <QMap>
+#include <QPair>
 #include <QString>
 
 class VideoPropertyDialog : public QDialog {
   Q_OBJECT
 
 public:
-  explicit VideoPropertyDialog(const QMap<QString, QString> &properties,
+  using Section = QPair<QString, QMap<QString, QString>>;
+
+  explicit VideoPropertyDialog(const QList<Section> &sections,
                                QWidget *parent = nullptr);
 
 private:
   void setupUi();
 
-  QMap<QString, QString> m_properties;
+  QList<Section> m_sections;
 };

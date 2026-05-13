@@ -67,6 +67,11 @@ public:
   int audioSampleRate() const;
   int audioChannels() const;
   QString videoCodecName() const;
+  QString audioCodecName() const;
+  qint64 videoBitRate() const;
+  qint64 audioBitRate() const;
+  int audioBitDepth() const;
+  QString mediaCreationTime() const;
 
 signals:
   void decodeError(const QString &message);
@@ -106,6 +111,11 @@ private:
   bool hasVideo_ = false;
   bool hasAudio_ = false;
   QString videoCodecName_;
+  QString audioCodecName_;
+  qint64 videoBitRate_ = 0;
+  qint64 audioBitRate_ = 0;
+  int audioBitDepth_ = 0;
+  QString mediaCreationTime_;
 
   // Thread control
   std::atomic<bool> running_{false};

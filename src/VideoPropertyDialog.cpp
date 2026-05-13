@@ -7,41 +7,43 @@
 #include <QVBoxLayout>
 #include <QWidget>
 
-VideoPropertyDialog::VideoPropertyDialog(
-    const QMap<QString, QString> &properties, QWidget *parent)
-    : QDialog(parent), m_properties(properties) {
+VideoPropertyDialog::VideoPropertyDialog(const QList<Section> &sections,
+                                         QWidget *parent)
+    : QDialog(parent), m_sections(sections) {
   setupUi();
 }
 
 void VideoPropertyDialog::setupUi() {
-  setWindowTitle("视频属性");
-  setMinimumSize(400, 300);
-  resize(480, 360);
+  setWindowTitle("属性");
+  setMinimumSize(420, 400);
+  resize(520, 600);
   setStyleSheet("QDialog { background-color: #1e1e1e; }");
 
   auto *mainLayout = new QVBoxLayout(this);
-  mainLayout->setContentsMargins(20, 20, 20, 16);
-  mainLayout->setSpacing(16);
+  mainLayout->setContentsMargins(24, 20, 24, 20);
+  mainLayout->setSpacing(0);
 
   // Title
-  auto *titleLabel = new QLabel("视频属性", this);
+  auto *titleLabel = new QLabel("属性", this);
+  titleLabel->setAlignment(Qt::AlignCenter);
   titleLabel->setStyleSheet(R"(
         QLabel {
             color: #d1d5db;
-            font-size: 14px;
+            font-size: 16px;
             font-weight: bold;
             background: transparent;
+            padding-bottom: 12px;
         }
     )");
   mainLayout->addWidget(titleLabel);
 
-  // Divider
-  auto *divider = new QWidget(this);
-  divider->setFixedHeight(1);
-  divider->setStyleSheet("background-color: #333333;");
-  mainLayout->addWidget(divider);
+  // Top divider
+  auto *topDivider = new QWidget(this);
+  topDivider->setFixedHeight(1);
+  topDivider->setStyleSheet("background-color: #333333;");
+  mainLayout->addWidget(topDivider);
 
-  // Scroll area for properties
+  // Scroll area for sections
   auto *scrollArea = new QScrollArea(this);
   scrollArea->setWidgetResizable(true);
   scrollArea->setFrameShape(QFrame::NoFrame);
@@ -51,46 +53,82 @@ void VideoPropertyDialog::setupUi() {
   auto *scrollContent = new QWidget(scrollArea);
   auto *scrollLayout = new QVBoxLayout(scrollContent);
   scrollLayout->setContentsMargins(0, 0, 0, 0);
-  scrollLayout->setSpacing(10);
+  scrollLayout->setSpacing(20);
   scrollLayout->setAlignment(Qt::AlignTop);
 
-  for (auto it = m_properties.constBegin(); it != m_properties.constEnd();
-       ++it) {
-    auto *row = new QWidget(scrollContent);
-    auto *rowLayout = new QHBoxLayout(row);
-    rowLayout->setContentsMargins(0, 0, 0, 0);
-    rowLayout->setSpacing(12);
-
-    auto *keyLabel = new QLabel(it.key(), row);
-    keyLabel->setFixedWidth(100);
-    keyLabel->setAlignment(Qt::AlignRight | Qt::AlignVCenter);
-    keyLabel->setStyleSheet(R"(
+  for (const auto &section : m_sections) {
+    // Section title
+    auto *sectionTitle = new QLabel(section.first, scrollContent);
+    sectionTitle->setStyleSheet(R"(
             QLabel {
                 color: #9ca3af;
                 font-size: 13px;
+                font-weight: bold;
                 background: transparent;
+                padding-top: 8px;
             }
         )");
+    scrollLayout->addWidget(sectionTitle);
 
-    auto *valueLabel = new QLabel(it.value(), row);
-    valueLabel->setWordWrap(true);
-    valueLabel->setTextInteractionFlags(Qt::TextSelectableByMouse);
-    valueLabel->setStyleSheet(R"(
-            QLabel {
-                color: #d1d5db;
-                font-size: 13px;
-                background: transparent;
-            }
-        )");
+    // Section divider
+    auto *sectionDivider = new QWidget(scrollContent);
+    sectionDivider->setFixedHeight(1);
+    sectionDivider->setStyleSheet("background-color: #333333;");
+    scrollLayout->addWidget(sectionDivider);
 
-    rowLayout->addWidget(keyLabel);
-    rowLayout->addWidget(valueLabel, 1);
-    scrollLayout->addWidget(row);
+    // Properties in this section
+    for (auto it = section.second.constBegin(); it != section.second.constEnd();
+         ++it) {
+      auto *row = new QWidget(scrollContent);
+      auto *rowLayout = new QHBoxLayout(row);
+      rowLayout->setContentsMargins(0, 4, 0, 4);
+      rowLayout->setSpacing(16);
+
+      auto *keyLabel = new QLabel(it.key() + ":", row);
+      keyLabel->setFixedWidth(100);
+      keyLabel->setAlignment(Qt::AlignRight | Qt::AlignVCenter);
+      keyLabel->setStyleSheet(R"(
+                QLabel {
+                    color: #9ca3af;
+                    font-size: 13px;
+                    background: transparent;
+                }
+            )");
+
+      auto *valueContainer = new QWidget(row);
+      valueContainer->setStyleSheet(
+          "background-color: #2a2a2a; border-radius: 4px;");
+      auto *valueLayout = new QHBoxLayout(valueContainer);
+      valueLayout->setContentsMargins(10, 6, 10, 6);
+      valueLayout->setSpacing(0);
+
+      auto *valueLabel = new QLabel(it.value(), valueContainer);
+      valueLabel->setWordWrap(true);
+      valueLabel->setTextInteractionFlags(Qt::TextSelectableByMouse);
+      valueLabel->setStyleSheet(R"(
+                QLabel {
+                    color: #d1d5db;
+                    font-size: 13px;
+                    background: transparent;
+                }
+            )");
+      valueLayout->addWidget(valueLabel);
+
+      rowLayout->addWidget(keyLabel);
+      rowLayout->addWidget(valueContainer, 1);
+      scrollLayout->addWidget(row);
+    }
   }
 
   scrollLayout->addStretch();
   scrollArea->setWidget(scrollContent);
   mainLayout->addWidget(scrollArea, 1);
+
+  // Bottom divider
+  auto *bottomDivider = new QWidget(this);
+  bottomDivider->setFixedHeight(1);
+  bottomDivider->setStyleSheet("background-color: #333333;");
+  mainLayout->addWidget(bottomDivider);
 
   // Button box
   auto *buttonBox = new QDialogButtonBox(QDialogButtonBox::Ok, this);
@@ -99,20 +137,21 @@ void VideoPropertyDialog::setupUi() {
             background: transparent;
         }
         QPushButton {
-            background-color: #333333;
-            color: #d1d5db;
-            border: 1px solid #444444;
-            border-radius: 4px;
-            padding: 6px 18px;
-            font-size: 13px;
+            background-color: #34d399;
+            color: #111827;
+            border: none;
+            border-radius: 6px;
+            padding: 8px 32px;
+            font-size: 14px;
+            font-weight: bold;
         }
         QPushButton:hover {
-            background-color: #444444;
+            background-color: #10b981;
         }
         QPushButton:pressed {
-            background-color: #555555;
+            background-color: #059669;
         }
     )");
   connect(buttonBox, &QDialogButtonBox::accepted, this, &QDialog::accept);
-  mainLayout->addWidget(buttonBox);
+  mainLayout->addWidget(buttonBox, 0, Qt::AlignCenter);
 }

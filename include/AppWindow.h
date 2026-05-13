@@ -30,6 +30,7 @@ private:
   void onSubtitleFileDropped(const QString &path);
   void onVideoAsrRequested();
   void onVideoPropertyRequested();
+  void onOpenFileLocationRequested();
 
 private:
   struct Private;

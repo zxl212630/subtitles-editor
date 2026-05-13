@@ -9,14 +9,18 @@
 #include "VideoPropertyDialog.h"
 #include "srtparser.h"
 
+#include <QDateTime>
+#include <QDesktopServices>
 #include <QFile>
 #include <QFileDialog>
+#include <QFileInfo>
 #include <QFrame>
 #include <QHBoxLayout>
 #include <QLabel>
 #include <QMessageBox>
 #include <QSplitter>
 #include <QTime>
+#include <QUrl>
 #include <QUuid>
 #include <QVBoxLayout>
 #include <QWidget>
@@ -35,6 +39,8 @@ struct AppWindow::Private {
 
   SubtitleTrack *subtitleTrack = nullptr;
   MediaPlayer *mediaPlayer = nullptr;
+
+  QDateTime videoImportTime_;
 };
 
 AppWindow::AppWindow(QWidget *parent)
@@ -143,6 +149,7 @@ void AppWindow::setupSplitterLayout() {
   connect(d->timelinePanel, &TimelinePanel::mediaFileDropped, this,
           [this](const QString &path) {
             d->timelinePanel->setMediaFilePath(path);
+            d->videoImportTime_ = QDateTime::currentDateTime();
             d->mediaPlayer->load(path);
           });
 
@@ -159,6 +166,7 @@ void AppWindow::setupSplitterLayout() {
                 onSubtitleFileDropped(path);
               } else if (d->mediaPlayer) {
                 d->timelinePanel->setMediaFilePath(path);
+                d->videoImportTime_ = QDateTime::currentDateTime();
                 d->mediaPlayer->load(path);
               }
             }
@@ -263,6 +271,10 @@ void AppWindow::setupSplitterLayout() {
   // 14. TimelinePanel video property -> AppWindow
   connect(d->timelinePanel, &TimelinePanel::videoPropertyRequested, this,
           &AppWindow::onVideoPropertyRequested);
+
+  // 15. TimelinePanel open file location -> AppWindow
+  connect(d->timelinePanel, &TimelinePanel::openFileLocationRequested, this,
+          &AppWindow::onOpenFileLocationRequested);
 
   // Top horizontal splitter
   d->topSplitter = new QSplitter(Qt::Horizontal, this);
@@ -398,40 +410,112 @@ void AppWindow::onVideoPropertyRequested() {
     return;
 
   QFileInfo fi(path);
-  QMap<QString, QString> props;
-  props.insert("文件路径", path);
-  props.insert("文件大小",
-               QString("%1 MB").arg(fi.size() / (1024.0 * 1024.0), 0, 'f', 2));
+  QList<VideoPropertyDialog::Section> sections;
+
+  // ---- Basic Info ----
+  QMap<QString, QString> basicInfo;
+  basicInfo.insert("名称", fi.completeBaseName());
+  basicInfo.insert("位置", fi.path());
+  basicInfo.insert("文件大小", QString("%1 MB").arg(
+                                   fi.size() / (1024.0 * 1024.0), 0, 'f', 2));
+
+  double fps = d->mediaPlayer->decoderFps();
+  qint64 durationMs = d->mediaPlayer->durationMs();
+  if (durationMs > 0) {
+    int totalSeconds = static_cast<int>(durationMs / 1000);
+    int hours = totalSeconds / 3600;
+    int minutes = (totalSeconds % 3600) / 60;
+    int seconds = totalSeconds % 60;
+    int frames = 0;
+    if (fps > 0.0) {
+      frames = static_cast<int>((durationMs % 1000) * fps / 1000.0);
+    }
+    basicInfo.insert("时长", QString("%1:%2:%3:%4")
+                                 .arg(hours, 2, 10, QLatin1Char('0'))
+                                 .arg(minutes, 2, 10, QLatin1Char('0'))
+                                 .arg(seconds, 2, 10, QLatin1Char('0'))
+                                 .arg(frames, 2, 10, QLatin1Char('0')));
+  }
+
+  if (fi.birthTime().isValid())
+    basicInfo.insert("创建日期",
+                     fi.birthTime().toString("yyyy/MM/dd hh:mm:ss"));
+  if (d->videoImportTime_.isValid())
+    basicInfo.insert("导入时间",
+                     d->videoImportTime_.toString("yyyy/MM/dd hh:mm:ss"));
+
+  QString mediaCreation = d->mediaPlayer->mediaCreationTime();
+  if (!mediaCreation.isEmpty()) {
+    QDateTime dt = QDateTime::fromString(mediaCreation, Qt::ISODate);
+    if (dt.isValid())
+      basicInfo.insert("创建媒体时间",
+                       dt.toLocalTime().toString("yyyy/MM/dd hh:mm:ss"));
+  }
+
+  sections.append(qMakePair(QString("基本信息"), basicInfo));
+
+  // ---- Video Info ----
+  QMap<QString, QString> videoInfo;
+  QString vCodec = d->mediaPlayer->videoCodecName();
+  if (!vCodec.isEmpty())
+    videoInfo.insert("编译码器", vCodec.toUpper());
 
   QSize size = d->mediaPlayer->videoSize();
   if (size.isValid())
-    props.insert("分辨率",
-                 QString("%1x%2").arg(size.width()).arg(size.height()));
+    videoInfo.insert("分辨率",
+                     QString("%1x%2").arg(size.width()).arg(size.height()));
 
-  double fps = d->mediaPlayer->decoderFps();
   if (fps > 0.0)
-    props.insert("帧率", QString("%1 fps").arg(fps, 0, 'f', 2));
+    videoInfo.insert("帧率", QString("%1 fps").arg(fps, 0, 'f', 0));
 
-  qint64 duration = d->mediaPlayer->durationMs();
-  if (duration > 0)
-    props.insert("时长",
-                 QTime::fromMSecsSinceStartOfDay(static_cast<int>(duration))
-                     .toString("hh:mm:ss.zzz"));
+  qint64 vBitrate = d->mediaPlayer->videoBitRate();
+  if (vBitrate > 0)
+    videoInfo.insert("码率", QString("%1 kbps").arg(vBitrate / 1000));
 
-  QString codec = d->mediaPlayer->videoCodecName();
-  if (!codec.isEmpty())
-    props.insert("视频编码", codec);
+  videoInfo.insert("传输特性", "-");
 
-  int sampleRate = d->mediaPlayer->audioSampleRate();
-  if (sampleRate > 0)
-    props.insert("音频采样率", QString("%1 Hz").arg(sampleRate));
+  sections.append(qMakePair(QString("视频信息"), videoInfo));
+
+  // ---- Audio Info ----
+  QMap<QString, QString> audioInfo;
+  QString aCodec = d->mediaPlayer->audioCodecName();
+  if (!aCodec.isEmpty())
+    audioInfo.insert("编译码器", aCodec.toUpper());
 
   int channels = d->mediaPlayer->audioChannels();
   if (channels > 0)
-    props.insert("音频通道", QString("%1").arg(channels));
+    audioInfo.insert("声道", QString("%1").arg(channels));
 
-  VideoPropertyDialog dialog(props, this);
+  int sampleRate = d->mediaPlayer->audioSampleRate();
+  int bitDepth = d->mediaPlayer->audioBitDepth();
+  if (sampleRate > 0) {
+    if (bitDepth > 0)
+      audioInfo.insert("采样率",
+                       QString("%1 Hz,%2 Bits").arg(sampleRate).arg(bitDepth));
+    else
+      audioInfo.insert("采样率", QString("%1 Hz").arg(sampleRate));
+  }
+
+  qint64 aBitrate = d->mediaPlayer->audioBitRate();
+  if (aBitrate > 0)
+    audioInfo.insert("码率", QString("%1 kbps").arg(aBitrate / 1000));
+
+  sections.append(qMakePair(QString("音频信息"), audioInfo));
+
+  VideoPropertyDialog dialog(sections, this);
   dialog.exec();
+}
+
+void AppWindow::onOpenFileLocationRequested() {
+  if (!d->timelinePanel)
+    return;
+
+  QString path = d->timelinePanel->mediaFilePath();
+  if (path.isEmpty())
+    return;
+
+  QString dir = QFileInfo(path).path();
+  QDesktopServices::openUrl(QUrl::fromLocalFile(dir));
 }
 
 void AppWindow::setupDummyData() {

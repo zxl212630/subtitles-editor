@@ -41,6 +41,7 @@ signals:
   void subtitleFileDropped(const QString &path);
   void videoAsrRequested();
   void videoPropertyRequested();
+  void openFileLocationRequested();
 
 protected:
   void mousePressEvent(QMouseEvent *event) override;
