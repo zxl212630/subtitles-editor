@@ -61,6 +61,7 @@ set(SOURCES
     src/QtAudioOutput.cpp
     src/SoftwareVideoRenderer.cpp
     src/MediaPlayer.cpp
+    src/VideoPropertyDialog.cpp
 )
 
 set(HEADERS
@@ -82,6 +83,7 @@ set(HEADERS
     include/QtAudioOutput.h
     include/SoftwareVideoRenderer.h
     include/MediaPlayer.h
+    include/VideoPropertyDialog.h
 )
 
 set(RESOURCES

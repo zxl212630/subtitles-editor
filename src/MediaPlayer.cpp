@@ -275,8 +275,8 @@ void MediaPlayer::onPlaybackTimer() {
         playbackTimer_->stop();
         playbackTimerRunning_ = false;
         seekPreviewMode_ = false;
-        LOG_MP(info, "seek preview frame rendered at "
-                       << seekTargetMs_ << "ms");
+        LOG_MP(info,
+               "seek preview frame rendered at " << seekTargetMs_ << "ms");
         return;
       }
 
@@ -299,97 +299,97 @@ void MediaPlayer::onPlaybackTimer() {
   }
 
   // 1. Process audio frames
-while (decoder_->audioQueueSize() > 0) {
-  // When queue is very long (>10), be conservative and check buffer space
-  // This prevents the queue from growing unbounded if audio device is slow
-  if (decoder_->audioQueueSize() > 10) {
-    qint64 bytesFree = audioOutput_->bytesFree();
-    if (bytesFree < 4096) { // Conservative minimum
+  while (decoder_->audioQueueSize() > 0) {
+    // When queue is very long (>10), be conservative and check buffer space
+    // This prevents the queue from growing unbounded if audio device is slow
+    if (decoder_->audioQueueSize() > 10) {
+      qint64 bytesFree = audioOutput_->bytesFree();
+      if (bytesFree < 4096) { // Conservative minimum
+        break;
+      }
+    }
+
+    auto aframe = decoder_->dequeueAudioFrame();
+    if (!aframe) {
       break;
     }
-  }
 
-  auto aframe = decoder_->dequeueAudioFrame();
-  if (!aframe) {
-    break;
-  }
-
-  // Skip audio frames that are before the current playback position.
-  // This happens after a seek when the decoder starts from a keyframe
-  // that is earlier than the seek target.
-  if (aframe->ptsMs < playbackStartTimeMs_) {
-    continue;
-  }
-
-  // write() handles partial writes internally and blocks if buffer is full
-  audioOutput_->write(aframe->pcmData.constData(), aframe->pcmData.size());
-}
-
-// 2. Calculate playback clock based on elapsed real time
-double audioClock = 0.0;
-if (playbackTimerRunning_) {
-  audioClock =
-      (playbackStartTimeMs_ + playbackElapsedTimer_.elapsed()) / 1000.0;
-} else {
-  audioClock = currentTimeMs_ / 1000.0;
-}
-
-// 3. Process video frame (sync)
-if (!pendingVideoFrame_) {
-  pendingVideoFrame_ = decoder_->dequeueVideoFrame();
-}
-if (!pendingVideoFrame_) {
-  // Check for end of stream
-  if (decoder_->videoQueueSize() == 0 && decoder_->audioQueueSize() == 0 &&
-      decoder_->isFinished()) {
-    stop();
-    emit playbackFinished();
-  }
-  return;
-}
-
-double videoPts = pendingVideoFrame_->ptsMs / 1000.0;
-double delayMs = (videoPts - audioClock) * 1000.0;
-
-bool shouldRender = true;
-bool dropFrame = false;
-if (decoder_->hasAudio()) {
-  if (delayMs > 20.0) {
-    // Video is ahead, keep frame for next tick (do not block UI thread)
-    shouldRender = false;
-  } else if (delayMs < -40.0) {
-    dropFrame = true;
-    shouldRender = false;
-    droppedFrames_++;
-  }
-}
-
-// 4. Render frame
-if (shouldRender) {
-  if (videoRenderer_) {
-#if PROFILE_TIMING
-    QElapsedTimer renderPerfTimer;
-    renderPerfTimer.start();
-#endif
-    videoRenderer_->renderFrame(*pendingVideoFrame_);
-#if PROFILE_TIMING
-    static int renderLogCounter = 0;
-    if (++renderLogCounter % 60 == 0) {
-      qInfo() << "[TIMING:playback_render] frame#" << renderedFrames_
-              << " pts=" << pendingVideoFrame_->ptsMs
-              << " render_us=" << (renderPerfTimer.nsecsElapsed() / 1000)
-              << " dropped=" << droppedFrames_;
+    // Skip audio frames that are before the current playback position.
+    // This happens after a seek when the decoder starts from a keyframe
+    // that is earlier than the seek target.
+    if (aframe->ptsMs < playbackStartTimeMs_) {
+      continue;
     }
-#endif
-  }
-  currentTimeMs_ = pendingVideoFrame_->ptsMs;
-  emit timeChanged(currentTimeMs_);
-  renderedFrames_++;
-}
 
-if (shouldRender || dropFrame) {
-  pendingVideoFrame_ = std::nullopt;
-}
+    // write() handles partial writes internally and blocks if buffer is full
+    audioOutput_->write(aframe->pcmData.constData(), aframe->pcmData.size());
+  }
+
+  // 2. Calculate playback clock based on elapsed real time
+  double audioClock = 0.0;
+  if (playbackTimerRunning_) {
+    audioClock =
+        (playbackStartTimeMs_ + playbackElapsedTimer_.elapsed()) / 1000.0;
+  } else {
+    audioClock = currentTimeMs_ / 1000.0;
+  }
+
+  // 3. Process video frame (sync)
+  if (!pendingVideoFrame_) {
+    pendingVideoFrame_ = decoder_->dequeueVideoFrame();
+  }
+  if (!pendingVideoFrame_) {
+    // Check for end of stream
+    if (decoder_->videoQueueSize() == 0 && decoder_->audioQueueSize() == 0 &&
+        decoder_->isFinished()) {
+      stop();
+      emit playbackFinished();
+    }
+    return;
+  }
+
+  double videoPts = pendingVideoFrame_->ptsMs / 1000.0;
+  double delayMs = (videoPts - audioClock) * 1000.0;
+
+  bool shouldRender = true;
+  bool dropFrame = false;
+  if (decoder_->hasAudio()) {
+    if (delayMs > 20.0) {
+      // Video is ahead, keep frame for next tick (do not block UI thread)
+      shouldRender = false;
+    } else if (delayMs < -40.0) {
+      dropFrame = true;
+      shouldRender = false;
+      droppedFrames_++;
+    }
+  }
+
+  // 4. Render frame
+  if (shouldRender) {
+    if (videoRenderer_) {
+#if PROFILE_TIMING
+      QElapsedTimer renderPerfTimer;
+      renderPerfTimer.start();
+#endif
+      videoRenderer_->renderFrame(*pendingVideoFrame_);
+#if PROFILE_TIMING
+      static int renderLogCounter = 0;
+      if (++renderLogCounter % 60 == 0) {
+        qInfo() << "[TIMING:playback_render] frame#" << renderedFrames_
+                << " pts=" << pendingVideoFrame_->ptsMs
+                << " render_us=" << (renderPerfTimer.nsecsElapsed() / 1000)
+                << " dropped=" << droppedFrames_;
+      }
+#endif
+    }
+    currentTimeMs_ = pendingVideoFrame_->ptsMs;
+    emit timeChanged(currentTimeMs_);
+    renderedFrames_++;
+  }
+
+  if (shouldRender || dropFrame) {
+    pendingVideoFrame_ = std::nullopt;
+  }
 }
 
 void MediaPlayer::onDecoderError(const QString &error) {

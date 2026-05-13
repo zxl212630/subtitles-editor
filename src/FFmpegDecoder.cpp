@@ -396,8 +396,7 @@ void FFmpegDecoder::performSeek(qint64 targetMs) {
 
 #if PROFILE_TIMING
   qint64 elapsed = seekTimer.nsecsElapsed() / 1000;
-  qInfo() << "[TIMING:seek] targetMs=" << targetMs
-          << " cost_us=" << elapsed;
+  qInfo() << "[TIMING:seek] targetMs=" << targetMs << " cost_us=" << elapsed;
 #endif
 
   LOG_DEC(info, "Seek complete target=" << targetMs << "ms");

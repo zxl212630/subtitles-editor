@@ -39,8 +39,7 @@ void SoftwareVideoRenderer::renderFrame(const DecodedVideoFrame &frame) {
   static int renderLogCounter2 = 0;
   if (++renderLogCounter2 % 30 == 0) {
     qInfo() << "[TIMING:render_copy] size=" << frame.width << "x"
-            << frame.height
-            << " copy_us=" << (copyTimer.nsecsElapsed() / 1000);
+            << frame.height << " copy_us=" << (copyTimer.nsecsElapsed() / 1000);
   }
 #else
   LOG_RENDER(debug,
