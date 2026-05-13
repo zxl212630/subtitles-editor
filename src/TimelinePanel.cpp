@@ -662,10 +662,12 @@ void TimelinePanel::dropEvent(QDropEvent *event) {
   qDebug() << "=== TimelinePanel::dropEvent ===";
   qDebug() << "Dropped file:" << localPath;
 
-  emit mediaFileDropped(localPath);
-
-  // TODO: ASR temporarily disabled — re-enable when needed
-  // startAsrPipeline(localPath);
+  QString ext = QFileInfo(localPath).suffix().toLower();
+  if (ext == "srt") {
+    emit subtitleFileDropped(localPath);
+  } else {
+    emit mediaFileDropped(localPath);
+  }
 }
 
 void TimelinePanel::startAsrPipeline(const QString &localPath) {
