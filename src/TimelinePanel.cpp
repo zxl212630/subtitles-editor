@@ -100,9 +100,15 @@ qint64 TimelinePanel::xToTime(int x) const {
 }
 
 void TimelinePanel::clampScrollOffset() {
+  if (totalDurationMs_ == 0) {
+    scrollOffsetX_ = 0;
+    return;
+  }
   int canvasWidth = canvas_->width();
-  int contentWidth =
+  int videoPixelWidth =
       static_cast<int>(totalDurationMs_ * pixelsPerSecond_ / 1000.0);
+  int tailMargin = qMax(0, (canvasWidth - TRACK_HEAD_WIDTH) / 3);
+  int contentWidth = videoPixelWidth + tailMargin;
   int maxOffset = qMax(0, contentWidth - canvasWidth + TRACK_HEAD_WIDTH);
   scrollOffsetX_ = qBound(0, scrollOffsetX_, maxOffset);
 }
@@ -110,9 +116,17 @@ void TimelinePanel::clampScrollOffset() {
 void TimelinePanel::updateScrollBar() {
   clampScrollOffset();
 
+  if (totalDurationMs_ == 0) {
+    hScrollBar_->setRange(0, 0);
+    hScrollBar_->setValue(0);
+    return;
+  }
+
   int canvasWidth = canvas_->width();
-  int contentWidth =
+  int videoPixelWidth =
       static_cast<int>(totalDurationMs_ * pixelsPerSecond_ / 1000.0);
+  int tailMargin = qMax(0, (canvasWidth - TRACK_HEAD_WIDTH) / 3);
+  int contentWidth = videoPixelWidth + tailMargin;
   int maxOffset = qMax(0, contentWidth - canvasWidth + TRACK_HEAD_WIDTH);
 
   hScrollBar_->setRange(0, maxOffset);
@@ -437,6 +451,9 @@ void TimelinePanel::drawVideoTrack(QPainter &painter, int y) {
   painter.setFont(font);
   painter.drawText(12, y + 18, "F  视频1");
 
+  painter.save();
+  painter.setClipRect(TRACK_HEAD_WIDTH, y, contentWidth, VIDEO_TRACK_HEIGHT);
+
   // Video bar (duration-based)
   painter.setPen(Qt::NoPen);
   painter.setBrush(QColor("#0284c7"));
@@ -450,6 +467,8 @@ void TimelinePanel::drawVideoTrack(QPainter &painter, int y) {
   painter.setPen(QColor("#e5e5e5"));
   painter.drawText(TRACK_HEAD_WIDTH + 16, y + 50,
                    mediaFileName_.isEmpty() ? "video.mp4" : mediaFileName_);
+
+  painter.restore();
 }
 
 void TimelinePanel::drawEmptyState(QPainter &painter) {
