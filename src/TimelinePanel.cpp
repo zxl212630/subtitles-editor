@@ -370,9 +370,9 @@ void TimelinePanel::drawSubtitleTrack(QPainter &painter, int y) {
   painter.setFont(font);
   painter.drawText(12, y + 18, "T  字幕1");
 
-  // Separator
+  // Separator (full width including track head)
   painter.setPen(QColor("#333333"));
-  painter.drawLine(TRACK_HEAD_WIDTH, y + SUBTITLE_TRACK_HEIGHT - 1,
+  painter.drawLine(0, y + SUBTITLE_TRACK_HEIGHT - 1,
                    TRACK_HEAD_WIDTH + contentWidth,
                    y + SUBTITLE_TRACK_HEIGHT - 1);
 
