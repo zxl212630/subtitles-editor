@@ -349,9 +349,14 @@ void AppWindow::onSubtitleFileDropped(const QString &path) {
     delete parser;
 
     // Extend timeline duration if subtitles exceed video
-    if (maxEndMs > 0 && d->timelinePanel) {
-      d->timelinePanel->setTotalDuration(
-          qMax(d->timelinePanel->totalDuration(), maxEndMs));
+    if (maxEndMs > 0) {
+      if (d->timelinePanel) {
+        d->timelinePanel->setTotalDuration(
+            qMax(d->timelinePanel->totalDuration(), maxEndMs));
+      }
+      if (d->videoPreviewPanel) {
+        d->videoPreviewPanel->onMediaLoaded(maxEndMs, QSize());
+      }
     }
 
     // Seek to 0
