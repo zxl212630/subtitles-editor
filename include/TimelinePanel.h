@@ -27,6 +27,8 @@ public:
   qint64 totalDuration() const { return totalDurationMs_; }
   QString mediaFilePath() const { return mediaFilePath_; }
 
+  void startAsrPipeline(const QString &localPath);
+
 signals:
   void timeClicked(qint64 ms);
   void previewSeekRequested(qint64 ms);
@@ -56,7 +58,6 @@ private:
   void drawVideoTrack(QPainter &painter, int y);
   void drawEmptyState(QPainter &painter);
   void drawPlayhead(QPainter &painter);
-  void startAsrPipeline(const QString &localPath);
 
   int timeToX(qint64 ms) const;
   qint64 xToTime(int x) const;
@@ -96,5 +97,5 @@ private:
   static constexpr int DRAG_THRESHOLD_PX = 3;
 
   QString mediaFileName_;
-  QString mediaFilePath_;  // 视频完整路径
+  QString mediaFilePath_; // 视频完整路径
 };

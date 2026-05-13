@@ -16,6 +16,7 @@
 #include <QLabel>
 #include <QMessageBox>
 #include <QSplitter>
+#include <QTime>
 #include <QUuid>
 #include <QVBoxLayout>
 #include <QWidget>
@@ -363,9 +364,70 @@ void AppWindow::onSubtitleFileDropped(const QString &path) {
   }
 }
 
-void AppWindow::onVideoAsrRequested() {}
+void AppWindow::onVideoAsrRequested() {
+  if (!d->subtitleTrack || !d->timelinePanel)
+    return;
 
-void AppWindow::onVideoPropertyRequested() {}
+  QString videoPath = d->timelinePanel->mediaFilePath();
+  if (videoPath.isEmpty())
+    return;
+
+  if (!d->subtitleTrack->items().isEmpty()) {
+    int ret = QMessageBox::question(
+        this, "确认覆盖",
+        "字幕轨道已有内容，语音识别将清空现有字幕，是否继续？",
+        QMessageBox::Yes | QMessageBox::No, QMessageBox::No);
+    if (ret != QMessageBox::Yes)
+      return;
+  }
+
+  d->timelinePanel->startAsrPipeline(videoPath);
+}
+
+void AppWindow::onVideoPropertyRequested() {
+  if (!d->mediaPlayer || !d->timelinePanel)
+    return;
+
+  QString path = d->timelinePanel->mediaFilePath();
+  if (path.isEmpty())
+    return;
+
+  QFileInfo fi(path);
+  QMap<QString, QString> props;
+  props.insert("文件路径", path);
+  props.insert("文件大小",
+               QString("%1 MB").arg(fi.size() / (1024.0 * 1024.0), 0, 'f', 2));
+
+  QSize size = d->mediaPlayer->videoSize();
+  if (size.isValid())
+    props.insert("分辨率",
+                 QString("%1x%2").arg(size.width()).arg(size.height()));
+
+  double fps = d->mediaPlayer->decoderFps();
+  if (fps > 0.0)
+    props.insert("帧率", QString("%1 fps").arg(fps, 0, 'f', 2));
+
+  qint64 duration = d->mediaPlayer->durationMs();
+  if (duration > 0)
+    props.insert("时长",
+                 QTime::fromMSecsSinceStartOfDay(static_cast<int>(duration))
+                     .toString("hh:mm:ss.zzz"));
+
+  QString codec = d->mediaPlayer->videoCodecName();
+  if (!codec.isEmpty())
+    props.insert("视频编码", codec);
+
+  int sampleRate = d->mediaPlayer->audioSampleRate();
+  if (sampleRate > 0)
+    props.insert("音频采样率", QString("%1 Hz").arg(sampleRate));
+
+  int channels = d->mediaPlayer->audioChannels();
+  if (channels > 0)
+    props.insert("音频通道", QString("%1").arg(channels));
+
+  VideoPropertyDialog dialog(props, this);
+  dialog.exec();
+}
 
 void AppWindow::setupDummyData() {
   auto addItem = [&](const QString &text, qint64 start, qint64 end) {
