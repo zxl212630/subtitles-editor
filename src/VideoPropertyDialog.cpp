@@ -62,7 +62,7 @@ void VideoPropertyDialog::setupUi() {
 
   auto *scrollContent = new QWidget(scrollArea);
   auto *scrollLayout = new QVBoxLayout(scrollContent);
-  scrollLayout->setContentsMargins(0, 0, 0, 0);
+  scrollLayout->setContentsMargins(0, 0, 12, 0);
   scrollLayout->setSpacing(20);
   scrollLayout->setAlignment(Qt::AlignTop);
 
@@ -134,11 +134,8 @@ void VideoPropertyDialog::setupUi() {
   scrollArea->setWidget(scrollContent);
   mainLayout->addWidget(scrollArea, 1);
 
-  // Bottom divider
-  auto *bottomDivider = new QWidget(this);
-  bottomDivider->setFixedHeight(1);
-  bottomDivider->setStyleSheet("background-color: #333333;");
-  mainLayout->addWidget(bottomDivider);
+  // Spacer between content and button
+  mainLayout->addSpacing(16);
 
   // Button box
   auto *buttonBox = new QDialogButtonBox(QDialogButtonBox::Ok, this);
