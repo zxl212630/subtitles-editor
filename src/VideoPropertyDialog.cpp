@@ -3,6 +3,7 @@
 #include <QDialogButtonBox>
 #include <QHBoxLayout>
 #include <QLabel>
+#include <QPushButton>
 #include <QScrollArea>
 #include <QVBoxLayout>
 #include <QWidget>
@@ -145,8 +146,8 @@ void VideoPropertyDialog::setupUi() {
             background: transparent;
         }
         QPushButton {
-            background-color: #34d399;
-            color: #111827;
+            background-color: #0284c7;
+            color: #ffffff;
             border: none;
             border-radius: 6px;
             padding: 8px 32px;
@@ -154,12 +155,15 @@ void VideoPropertyDialog::setupUi() {
             font-weight: bold;
         }
         QPushButton:hover {
-            background-color: #10b981;
+            background-color: #0369a1;
         }
         QPushButton:pressed {
-            background-color: #059669;
+            background-color: #075985;
         }
     )");
+  if (QPushButton *okBtn = buttonBox->button(QDialogButtonBox::Ok)) {
+    okBtn->setText("确定");
+  }
   connect(buttonBox, &QDialogButtonBox::accepted, this, &QDialog::accept);
   mainLayout->addWidget(buttonBox, 0, Qt::AlignCenter);
 }
