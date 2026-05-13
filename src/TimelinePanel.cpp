@@ -11,6 +11,7 @@
 #include <QDateTime>
 #include <QFileInfo>
 #include <QFontDatabase>
+#include <QMenu>
 #include <QMimeData>
 #include <QMouseEvent>
 #include <QPainter>
@@ -803,6 +804,45 @@ void TimelinePanel::resizeEvent(QResizeEvent * /*event*/) {
   updateScrollBar();
 }
 
-void TimelinePanel::contextMenuEvent(QContextMenuEvent * /*event*/) {
-  // TODO: implement context menu for video track
+void TimelinePanel::contextMenuEvent(QContextMenuEvent *event) {
+  if (totalDurationMs_ <= 0 || mediaFilePath_.isEmpty())
+    return;
+
+  int y = event->pos().y();
+  int videoTrackY = RULER_HEIGHT + SUBTITLE_TRACK_HEIGHT;
+  if (y < videoTrackY || y >= videoTrackY + VIDEO_TRACK_HEIGHT)
+    return;
+
+  int x = event->pos().x();
+  int videoX = timeToX(0);
+  int videoEndX = timeToX(totalDurationMs_);
+  if (x < videoX || x > videoEndX)
+    return;
+
+  QMenu menu(this);
+  menu.setStyleSheet(R"(
+      QMenu {
+          background-color: #1e1e1e;
+          border: 1px solid #333333;
+          padding: 4px;
+      }
+      QMenu::item {
+          color: #d1d5db;
+          padding: 8px 24px;
+          font-size: 13px;
+      }
+      QMenu::item:selected {
+          background-color: #2a2a2a;
+      }
+  )");
+
+  QAction *propAction = menu.addAction("属性");
+  QAction *asrAction = menu.addAction("智能语音识别");
+
+  QAction *selected = menu.exec(event->globalPos());
+  if (selected == propAction) {
+    emit videoPropertyRequested();
+  } else if (selected == asrAction) {
+    emit videoAsrRequested();
+  }
 }
