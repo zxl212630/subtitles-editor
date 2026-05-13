@@ -115,6 +115,7 @@ void VideoPropertyDialog::setupUi() {
       auto *valueLabel = new QLabel(it.value(), valueContainer);
       valueLabel->setWordWrap(true);
       valueLabel->setTextInteractionFlags(Qt::TextSelectableByMouse);
+      valueLabel->setContextMenuPolicy(Qt::NoContextMenu);
       valueLabel->setStyleSheet(R"(
                 QLabel {
                     color: #d1d5db;
