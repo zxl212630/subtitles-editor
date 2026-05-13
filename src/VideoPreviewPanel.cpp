@@ -4,6 +4,7 @@
 #include "SoftwareVideoRenderer.h"
 #include "SubtitleTrack.h"
 
+#include <QAbstractItemView>
 #include <QComboBox>
 #include <QDateTime>
 #include <QFontDatabase>
@@ -483,6 +484,31 @@ void VideoPreviewPanel::populateFontCombo() {
     fontCombo_->setCurrentIndex(idx);
   } else if (fontCombo_->count() > 0) {
     fontCombo_->setCurrentIndex(0);
+  }
+
+  // Ensure dropdown has a scrollbar and limited height on all platforms
+  if (QAbstractItemView *view = fontCombo_->view()) {
+    view->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOn);
+    view->setMaximumHeight(400);
+    view->setStyleSheet(R"(
+            QScrollBar:vertical {
+                background: #2a2a2a;
+                width: 8px;
+                border-radius: 4px;
+            }
+            QScrollBar::handle:vertical {
+                background: #4a4a4a;
+                border-radius: 4px;
+                min-height: 30px;
+            }
+            QScrollBar::handle:vertical:hover {
+                background: #5a5a5a;
+            }
+            QScrollBar::add-line:vertical,
+            QScrollBar::sub-line:vertical {
+                height: 0px;
+            }
+        )");
   }
 }
 
