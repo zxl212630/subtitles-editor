@@ -98,34 +98,34 @@ void SoftwareVideoRenderer::paintEvent(QPaintEvent *event) {
     }
   }
 
-  if (!hasFrame || imageToDraw.isNull()) {
+  // Draw video frame if available
+  if (hasFrame && !imageToDraw.isNull()) {
+    double widgetRatio =
+        static_cast<double>(width()) / static_cast<double>(height());
+    double imageRatio = static_cast<double>(imageToDraw.width()) /
+                        static_cast<double>(imageToDraw.height());
+
+    int newWidth;
+    int newHeight;
+    if (widgetRatio > imageRatio) {
+      newHeight = height();
+      newWidth = static_cast<int>(height() * imageRatio);
+    } else {
+      newWidth = width();
+      newHeight = static_cast<int>(width() / imageRatio);
+    }
+
+    int x = (width() - newWidth) / 2;
+    int y = (height() - newHeight) / 2;
+    QRect targetRect(x, y, newWidth, newHeight);
+
+    painter.drawImage(targetRect, imageToDraw);
+  } else {
     LOG_RENDER(debug,
                "paintEvent() cost=" << timer.elapsed() << "ms (no frame)");
-    return;
   }
 
-  double widgetRatio =
-      static_cast<double>(width()) / static_cast<double>(height());
-  double imageRatio = static_cast<double>(imageToDraw.width()) /
-                      static_cast<double>(imageToDraw.height());
-
-  int newWidth;
-  int newHeight;
-  if (widgetRatio > imageRatio) {
-    newHeight = height();
-    newWidth = static_cast<int>(height() * imageRatio);
-  } else {
-    newWidth = width();
-    newHeight = static_cast<int>(width() / imageRatio);
-  }
-
-  int x = (width() - newWidth) / 2;
-  int y = (height() - newHeight) / 2;
-  QRect targetRect(x, y, newWidth, newHeight);
-
-  painter.drawImage(targetRect, imageToDraw);
-
-  // Draw subtitle overlay
+  // Draw subtitle overlay (always, even without video)
   QString text;
   QFont font;
   {

@@ -37,6 +37,11 @@ public:
   State state() const { return state_; }
   qint64 currentTimeMs() const { return currentTimeMs_; }
   double decoderFps() const;
+  QSize videoSize() const;
+  qint64 durationMs() const;
+  QString videoCodecName() const;
+  int audioSampleRate() const;
+  int audioChannels() const;
 
 signals:
   void stateChanged(State state);

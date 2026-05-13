@@ -7,9 +7,11 @@
 #include "TencentAsrService.h"
 
 #include <QApplication>
+#include <QContextMenuEvent>
 #include <QDateTime>
 #include <QFileInfo>
 #include <QFontDatabase>
+#include <QMenu>
 #include <QMimeData>
 #include <QMouseEvent>
 #include <QPainter>
@@ -216,6 +218,7 @@ void TimelinePanel::setVideoFps(double fps) {
 }
 
 void TimelinePanel::setMediaFilePath(const QString &path) {
+  mediaFilePath_ = path;
   mediaFileName_ = QFileInfo(path).fileName();
   if (mediaFileName_.isEmpty())
     mediaFileName_ = path;
@@ -454,19 +457,20 @@ void TimelinePanel::drawVideoTrack(QPainter &painter, int y) {
   painter.save();
   painter.setClipRect(TRACK_HEAD_WIDTH, y, contentWidth, VIDEO_TRACK_HEIGHT);
 
-  // Video bar (duration-based)
-  painter.setPen(Qt::NoPen);
-  painter.setBrush(QColor("#0284c7"));
-  int videoX = timeToX(0);
-  int videoEndX = timeToX(totalDurationMs_);
-  int videoWidth = videoEndX - videoX;
-  if (videoWidth < 4)
-    videoWidth = 4;
-  painter.drawRoundedRect(videoX, y + 2, videoWidth, VIDEO_TRACK_HEIGHT - 4, 4,
-                          4);
-  painter.setPen(QColor("#e5e5e5"));
-  painter.drawText(TRACK_HEAD_WIDTH + 16, y + 50,
-                   mediaFileName_.isEmpty() ? "video.mp4" : mediaFileName_);
+  // Video bar (duration-based) - only draw if a video file is loaded
+  if (!mediaFilePath_.isEmpty()) {
+    painter.setPen(Qt::NoPen);
+    painter.setBrush(QColor("#0284c7"));
+    int videoX = timeToX(0);
+    int videoEndX = timeToX(totalDurationMs_);
+    int videoWidth = videoEndX - videoX;
+    if (videoWidth < 4)
+      videoWidth = 4;
+    painter.drawRoundedRect(videoX, y + 2, videoWidth, VIDEO_TRACK_HEIGHT - 4,
+                            4, 4);
+    painter.setPen(QColor("#e5e5e5"));
+    painter.drawText(TRACK_HEAD_WIDTH + 16, y + 50, mediaFileName_);
+  }
 
   painter.restore();
 }
@@ -660,10 +664,12 @@ void TimelinePanel::dropEvent(QDropEvent *event) {
   qDebug() << "=== TimelinePanel::dropEvent ===";
   qDebug() << "Dropped file:" << localPath;
 
-  emit mediaFileDropped(localPath);
-
-  // TODO: ASR temporarily disabled — re-enable when needed
-  // startAsrPipeline(localPath);
+  QString ext = QFileInfo(localPath).suffix().toLower();
+  if (ext == "srt") {
+    emit subtitleFileDropped(localPath);
+  } else {
+    emit mediaFileDropped(localPath);
+  }
 }
 
 void TimelinePanel::startAsrPipeline(const QString &localPath) {
@@ -797,4 +803,47 @@ void TimelinePanel::resizeEvent(QResizeEvent * /*event*/) {
                            sbHeight);
   hScrollBar_->raise();
   updateScrollBar();
+}
+
+void TimelinePanel::contextMenuEvent(QContextMenuEvent *event) {
+  if (totalDurationMs_ <= 0 || mediaFilePath_.isEmpty())
+    return;
+
+  int y = event->pos().y();
+  int videoTrackY = RULER_HEIGHT + SUBTITLE_TRACK_HEIGHT;
+  if (y < videoTrackY || y >= videoTrackY + VIDEO_TRACK_HEIGHT)
+    return;
+
+  int x = event->pos().x();
+  int videoX = timeToX(0);
+  int videoEndX = timeToX(totalDurationMs_);
+  if (x < videoX || x > videoEndX)
+    return;
+
+  QMenu menu(this);
+  menu.setStyleSheet(R"(
+      QMenu {
+          background-color: #1e1e1e;
+          border: 1px solid #333333;
+          padding: 4px;
+      }
+      QMenu::item {
+          color: #d1d5db;
+          padding: 8px 24px;
+          font-size: 13px;
+      }
+      QMenu::item:selected {
+          background-color: #2a2a2a;
+      }
+  )");
+
+  QAction *propAction = menu.addAction("属性");
+  QAction *asrAction = menu.addAction("智能语音识别");
+
+  QAction *selected = menu.exec(event->globalPos());
+  if (selected == propAction) {
+    emit videoPropertyRequested();
+  } else if (selected == asrAction) {
+    emit videoAsrRequested();
+  }
 }

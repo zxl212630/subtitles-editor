@@ -6,6 +6,8 @@
 #include "SubtitleTrack.h"
 #include "TimelinePanel.h"
 #include "VideoPreviewPanel.h"
+#include "VideoPropertyDialog.h"
+#include "srtparser.h"
 
 #include <QFile>
 #include <QFileDialog>
@@ -14,6 +16,7 @@
 #include <QLabel>
 #include <QMessageBox>
 #include <QSplitter>
+#include <QTime>
 #include <QUuid>
 #include <QVBoxLayout>
 #include <QWidget>
@@ -148,10 +151,16 @@ void AppWindow::setupSplitterLayout() {
           [this]() {
             QString path = QFileDialog::getOpenFileName(
                 this, "导入视频", QString(),
-                "视频文件 (*.mp4 *.mkv *.avi *.mov);;所有文件 (*)");
-            if (!path.isEmpty() && d->mediaPlayer) {
-              d->timelinePanel->setMediaFilePath(path);
-              d->mediaPlayer->load(path);
+                "媒体文件 (*.mp4 *.mkv *.avi *.mov *.srt);;视频文件 (*.mp4 "
+                "*.mkv *.avi *.mov);;字幕文件 (*.srt);;所有文件 (*)");
+            if (!path.isEmpty()) {
+              QString ext = QFileInfo(path).suffix().toLower();
+              if (ext == "srt") {
+                onSubtitleFileDropped(path);
+              } else if (d->mediaPlayer) {
+                d->timelinePanel->setMediaFilePath(path);
+                d->mediaPlayer->load(path);
+              }
             }
           });
 
@@ -243,6 +252,18 @@ void AppWindow::setupSplitterLayout() {
     QMessageBox::information(nullptr, "语音识别完成", "字幕已成功生成！");
   });
 
+  // 12. TimelinePanel subtitle drop -> AppWindow
+  connect(d->timelinePanel, &TimelinePanel::subtitleFileDropped, this,
+          &AppWindow::onSubtitleFileDropped);
+
+  // 13. TimelinePanel video ASR -> AppWindow
+  connect(d->timelinePanel, &TimelinePanel::videoAsrRequested, this,
+          &AppWindow::onVideoAsrRequested);
+
+  // 14. TimelinePanel video property -> AppWindow
+  connect(d->timelinePanel, &TimelinePanel::videoPropertyRequested, this,
+          &AppWindow::onVideoPropertyRequested);
+
   // Top horizontal splitter
   d->topSplitter = new QSplitter(Qt::Horizontal, this);
   d->topSplitter->addWidget(d->videoPreviewPanel);
@@ -288,6 +309,129 @@ void AppWindow::loadFile(const QString &path) {
     d->mediaPlayer->load(path);
     d->mediaPlayer->play();
   }
+}
+
+void AppWindow::onSubtitleFileDropped(const QString &path) {
+  if (!d->subtitleTrack)
+    return;
+
+  // Confirm overwrite if track not empty
+  if (!d->subtitleTrack->items().isEmpty()) {
+    int ret = QMessageBox::question(
+        this, "确认覆盖",
+        "字幕轨道已有内容，继续导入将清空现有字幕，是否继续？",
+        QMessageBox::Yes | QMessageBox::No, QMessageBox::No);
+    if (ret != QMessageBox::Yes)
+      return;
+    d->subtitleTrack->clear();
+  }
+
+  // Parse SRT
+  try {
+    SrtParser::SubtitleParserFactory parserFactory(path.toStdString());
+    SrtParser::SubtitleParser *parser = parserFactory.getParser();
+    auto subtitles = parser->getSubtitles();
+
+    qint64 maxEndMs = 0;
+    for (auto *sub : subtitles) {
+      if (!sub)
+        continue;
+      SubtitleItem item;
+      item.id = QUuid::createUuid().toString(QUuid::WithoutBraces);
+      item.text = QString::fromStdString(sub->getText());
+      item.startMs = static_cast<qint64>(sub->getStartTime());
+      item.endMs = static_cast<qint64>(sub->getEndTime());
+      d->subtitleTrack->addItem(item);
+      if (item.endMs > maxEndMs)
+        maxEndMs = item.endMs;
+    }
+
+    delete parser;
+
+    // Extend timeline duration if subtitles exceed video
+    if (maxEndMs > 0) {
+      if (d->timelinePanel) {
+        d->timelinePanel->setTotalDuration(
+            qMax(d->timelinePanel->totalDuration(), maxEndMs));
+      }
+      if (d->videoPreviewPanel) {
+        d->videoPreviewPanel->onMediaLoaded(maxEndMs, QSize());
+      }
+    }
+
+    // Seek to 0
+    if (d->mediaPlayer)
+      d->mediaPlayer->seek(0);
+
+  } catch (...) {
+    QMessageBox::critical(this, "字幕文件格式错误",
+                          "无法解析字幕文件，请检查文件格式。");
+  }
+}
+
+void AppWindow::onVideoAsrRequested() {
+  if (!d->subtitleTrack || !d->timelinePanel)
+    return;
+
+  QString videoPath = d->timelinePanel->mediaFilePath();
+  if (videoPath.isEmpty())
+    return;
+
+  if (!d->subtitleTrack->items().isEmpty()) {
+    int ret = QMessageBox::question(
+        this, "确认覆盖",
+        "字幕轨道已有内容，语音识别将清空现有字幕，是否继续？",
+        QMessageBox::Yes | QMessageBox::No, QMessageBox::No);
+    if (ret != QMessageBox::Yes)
+      return;
+  }
+
+  d->timelinePanel->startAsrPipeline(videoPath);
+}
+
+void AppWindow::onVideoPropertyRequested() {
+  if (!d->mediaPlayer || !d->timelinePanel)
+    return;
+
+  QString path = d->timelinePanel->mediaFilePath();
+  if (path.isEmpty())
+    return;
+
+  QFileInfo fi(path);
+  QMap<QString, QString> props;
+  props.insert("文件路径", path);
+  props.insert("文件大小",
+               QString("%1 MB").arg(fi.size() / (1024.0 * 1024.0), 0, 'f', 2));
+
+  QSize size = d->mediaPlayer->videoSize();
+  if (size.isValid())
+    props.insert("分辨率",
+                 QString("%1x%2").arg(size.width()).arg(size.height()));
+
+  double fps = d->mediaPlayer->decoderFps();
+  if (fps > 0.0)
+    props.insert("帧率", QString("%1 fps").arg(fps, 0, 'f', 2));
+
+  qint64 duration = d->mediaPlayer->durationMs();
+  if (duration > 0)
+    props.insert("时长",
+                 QTime::fromMSecsSinceStartOfDay(static_cast<int>(duration))
+                     .toString("hh:mm:ss.zzz"));
+
+  QString codec = d->mediaPlayer->videoCodecName();
+  if (!codec.isEmpty())
+    props.insert("视频编码", codec);
+
+  int sampleRate = d->mediaPlayer->audioSampleRate();
+  if (sampleRate > 0)
+    props.insert("音频采样率", QString("%1 Hz").arg(sampleRate));
+
+  int channels = d->mediaPlayer->audioChannels();
+  if (channels > 0)
+    props.insert("音频通道", QString("%1").arg(channels));
+
+  VideoPropertyDialog dialog(props, this);
+  dialog.exec();
 }
 
 void AppWindow::setupDummyData() {

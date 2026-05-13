@@ -27,6 +27,10 @@ private:
   void setupDummyData();
   void checkConfig();
 
+  void onSubtitleFileDropped(const QString &path);
+  void onVideoAsrRequested();
+  void onVideoPropertyRequested();
+
 private:
   struct Private;
   std::unique_ptr<Private> d;

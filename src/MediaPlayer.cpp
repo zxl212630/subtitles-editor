@@ -162,7 +162,15 @@ void MediaPlayer::seek(qint64 ms) {
 }
 
 void MediaPlayer::previewSeek(qint64 ms) {
-  if (!decoder_ || !decoder_->hasVideo())
+  if (!decoder_)
+    return;
+
+  // Always update current time so UI (progress bar, subtitles) refreshes
+  // even when there is no video loaded.
+  currentTimeMs_ = ms;
+  emit timeChanged(currentTimeMs_);
+
+  if (!decoder_->hasVideo())
     return;
 
   if (!isPreviewDragging_) {
@@ -177,7 +185,6 @@ void MediaPlayer::previewSeek(qint64 ms) {
 
   lastRenderedPreviewPts_ = -1;
   seekTargetMs_ = ms;
-  currentTimeMs_ = ms;
   previewFrameRendered_ = false;
   decoder_->requestSeek(ms);
   decoder_->setPlaying(true);
@@ -186,8 +193,6 @@ void MediaPlayer::previewSeek(qint64 ms) {
     playbackTimer_->start(16);
     playbackTimerRunning_ = true;
   }
-
-  emit timeChanged(currentTimeMs_);
 }
 
 void MediaPlayer::stopPreviewDragging() {
@@ -400,4 +405,24 @@ void MediaPlayer::onDecoderError(const QString &error) {
 
 void MediaPlayer::onEndOfStream() {
   LOG_MP(info, "EOS from decoder, letting playback drain remaining queues");
+}
+
+QSize MediaPlayer::videoSize() const {
+  return decoder_ ? decoder_->videoSize() : QSize();
+}
+
+qint64 MediaPlayer::durationMs() const {
+  return decoder_ ? decoder_->durationMs() : 0;
+}
+
+QString MediaPlayer::videoCodecName() const {
+  return decoder_ ? decoder_->videoCodecName() : QString();
+}
+
+int MediaPlayer::audioSampleRate() const {
+  return decoder_ ? decoder_->audioSampleRate() : 0;
+}
+
+int MediaPlayer::audioChannels() const {
+  return decoder_ ? decoder_->audioChannels() : 0;
 }
