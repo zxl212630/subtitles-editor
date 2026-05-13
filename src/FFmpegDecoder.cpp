@@ -92,6 +92,9 @@ bool FFmpegDecoder::open(const QString &path) {
       videoTimeBase_ = stream->time_base;
       videoSize_ = QSize(videoCodecCtx_->width, videoCodecCtx_->height);
       hasVideo_ = true;
+      if (videoCodecCtx_->codec) {
+        videoCodecName_ = QString::fromUtf8(videoCodecCtx_->codec->name);
+      }
       if (stream->avg_frame_rate.den != 0) {
         fps_ = av_q2d(stream->avg_frame_rate);
       }
@@ -209,6 +212,7 @@ void FFmpegDecoder::close() {
   swrFormat_ = AV_SAMPLE_FMT_NONE;
   hasVideo_ = false;
   hasAudio_ = false;
+  videoCodecName_.clear();
 
   LOG_DEC(info, "close() complete");
 }
@@ -300,6 +304,11 @@ bool FFmpegDecoder::hasAudio() const { return hasAudio_; }
 int FFmpegDecoder::audioSampleRate() const { return audioSampleRate_; }
 
 int FFmpegDecoder::audioChannels() const { return audioChannels_; }
+
+QString FFmpegDecoder::videoCodecName() const {
+  QMutexLocker locker(&metadataMutex_);
+  return videoCodecName_;
+}
 
 void FFmpegDecoder::run() {
   if (!fmtCtx_) {
@@ -396,8 +405,7 @@ void FFmpegDecoder::performSeek(qint64 targetMs) {
 
 #if PROFILE_TIMING
   qint64 elapsed = seekTimer.nsecsElapsed() / 1000;
-  qInfo() << "[TIMING:seek] targetMs=" << targetMs
-          << " cost_us=" << elapsed;
+  qInfo() << "[TIMING:seek] targetMs=" << targetMs << " cost_us=" << elapsed;
 #endif
 
   LOG_DEC(info, "Seek complete target=" << targetMs << "ms");

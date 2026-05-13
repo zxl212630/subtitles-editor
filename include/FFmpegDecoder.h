@@ -66,6 +66,7 @@ public:
   bool hasAudio() const;
   int audioSampleRate() const;
   int audioChannels() const;
+  QString videoCodecName() const;
 
 signals:
   void decodeError(const QString &message);
@@ -104,6 +105,7 @@ private:
   int audioChannels_ = 0;
   bool hasVideo_ = false;
   bool hasAudio_ = false;
+  QString videoCodecName_;
 
   // Thread control
   std::atomic<bool> running_{false};
