@@ -310,7 +310,58 @@ void AppWindow::loadFile(const QString &path) {
   }
 }
 
-void AppWindow::onSubtitleFileDropped(const QString &path) { Q_UNUSED(path) }
+void AppWindow::onSubtitleFileDropped(const QString &path) {
+  if (!d->subtitleTrack)
+    return;
+
+  // Confirm overwrite if track not empty
+  if (!d->subtitleTrack->items().isEmpty()) {
+    int ret = QMessageBox::question(
+        this, "确认覆盖",
+        "字幕轨道已有内容，继续导入将清空现有字幕，是否继续？",
+        QMessageBox::Yes | QMessageBox::No, QMessageBox::No);
+    if (ret != QMessageBox::Yes)
+      return;
+    d->subtitleTrack->clear();
+  }
+
+  // Parse SRT
+  try {
+    SrtParser::SubtitleParserFactory parserFactory(path.toStdString());
+    SrtParser::SubtitleParser *parser = parserFactory.getParser();
+    auto subtitles = parser->getSubtitles();
+
+    qint64 maxEndMs = 0;
+    for (auto *sub : subtitles) {
+      if (!sub)
+        continue;
+      SubtitleItem item;
+      item.id = QUuid::createUuid().toString(QUuid::WithoutBraces);
+      item.text = QString::fromStdString(sub->getText());
+      item.startMs = static_cast<qint64>(sub->getStartTime());
+      item.endMs = static_cast<qint64>(sub->getEndTime());
+      d->subtitleTrack->addItem(item);
+      if (item.endMs > maxEndMs)
+        maxEndMs = item.endMs;
+    }
+
+    delete parser;
+
+    // Extend timeline duration if subtitles exceed video
+    if (maxEndMs > 0 && d->timelinePanel) {
+      d->timelinePanel->setTotalDuration(
+          qMax(d->timelinePanel->totalDuration(), maxEndMs));
+    }
+
+    // Seek to 0
+    if (d->mediaPlayer)
+      d->mediaPlayer->seek(0);
+
+  } catch (...) {
+    QMessageBox::critical(this, "字幕文件格式错误",
+                          "无法解析字幕文件，请检查文件格式。");
+  }
+}
 
 void AppWindow::onVideoAsrRequested() {}
 
