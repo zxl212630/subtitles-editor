@@ -7,6 +7,7 @@
 #include "TencentAsrService.h"
 
 #include <QApplication>
+#include <QContextMenuEvent>
 #include <QDateTime>
 #include <QFileInfo>
 #include <QFontDatabase>
@@ -216,6 +217,7 @@ void TimelinePanel::setVideoFps(double fps) {
 }
 
 void TimelinePanel::setMediaFilePath(const QString &path) {
+  mediaFilePath_ = path;
   mediaFileName_ = QFileInfo(path).fileName();
   if (mediaFileName_.isEmpty())
     mediaFileName_ = path;
@@ -797,4 +799,8 @@ void TimelinePanel::resizeEvent(QResizeEvent * /*event*/) {
                            sbHeight);
   hScrollBar_->raise();
   updateScrollBar();
+}
+
+void TimelinePanel::contextMenuEvent(QContextMenuEvent * /*event*/) {
+  // TODO: implement context menu for video track
 }

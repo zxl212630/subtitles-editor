@@ -24,6 +24,9 @@ public:
   void setVideoFps(double fps);
   void setMediaFilePath(const QString &path);
 
+  qint64 totalDuration() const { return totalDurationMs_; }
+  QString mediaFilePath() const { return mediaFilePath_; }
+
 signals:
   void timeClicked(qint64 ms);
   void previewSeekRequested(qint64 ms);
@@ -33,6 +36,9 @@ signals:
   void asrSucceeded();
   void mediaFileDropped(const QString &path);
   void importMediaRequested();
+  void subtitleFileDropped(const QString &path);
+  void videoAsrRequested();
+  void videoPropertyRequested();
 
 protected:
   void mousePressEvent(QMouseEvent *event) override;
@@ -42,6 +48,7 @@ protected:
   void dropEvent(QDropEvent *event) override;
   void wheelEvent(QWheelEvent *event) override;
   void resizeEvent(QResizeEvent *event) override;
+  void contextMenuEvent(QContextMenuEvent *event) override;
 
 private:
   void drawRuler(QPainter &painter);
@@ -89,4 +96,5 @@ private:
   static constexpr int DRAG_THRESHOLD_PX = 3;
 
   QString mediaFileName_;
+  QString mediaFilePath_;  // 视频完整路径
 };
