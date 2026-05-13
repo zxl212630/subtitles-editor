@@ -45,7 +45,8 @@ void VideoPropertyDialog::setupUi() {
   auto *scrollArea = new QScrollArea(this);
   scrollArea->setWidgetResizable(true);
   scrollArea->setFrameShape(QFrame::NoFrame);
-  scrollArea->setStyleSheet("QScrollArea { background: transparent; border: none; }");
+  scrollArea->setStyleSheet(
+      "QScrollArea { background: transparent; border: none; }");
 
   auto *scrollContent = new QWidget(scrollArea);
   auto *scrollLayout = new QVBoxLayout(scrollContent);

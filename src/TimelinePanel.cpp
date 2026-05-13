@@ -457,19 +457,20 @@ void TimelinePanel::drawVideoTrack(QPainter &painter, int y) {
   painter.save();
   painter.setClipRect(TRACK_HEAD_WIDTH, y, contentWidth, VIDEO_TRACK_HEIGHT);
 
-  // Video bar (duration-based)
-  painter.setPen(Qt::NoPen);
-  painter.setBrush(QColor("#0284c7"));
-  int videoX = timeToX(0);
-  int videoEndX = timeToX(totalDurationMs_);
-  int videoWidth = videoEndX - videoX;
-  if (videoWidth < 4)
-    videoWidth = 4;
-  painter.drawRoundedRect(videoX, y + 2, videoWidth, VIDEO_TRACK_HEIGHT - 4, 4,
-                          4);
-  painter.setPen(QColor("#e5e5e5"));
-  painter.drawText(TRACK_HEAD_WIDTH + 16, y + 50,
-                   mediaFileName_.isEmpty() ? "video.mp4" : mediaFileName_);
+  // Video bar (duration-based) - only draw if a video file is loaded
+  if (!mediaFilePath_.isEmpty()) {
+    painter.setPen(Qt::NoPen);
+    painter.setBrush(QColor("#0284c7"));
+    int videoX = timeToX(0);
+    int videoEndX = timeToX(totalDurationMs_);
+    int videoWidth = videoEndX - videoX;
+    if (videoWidth < 4)
+      videoWidth = 4;
+    painter.drawRoundedRect(videoX, y + 2, videoWidth, VIDEO_TRACK_HEIGHT - 4,
+                            4, 4);
+    painter.setPen(QColor("#e5e5e5"));
+    painter.drawText(TRACK_HEAD_WIDTH + 16, y + 50, mediaFileName_);
+  }
 
   painter.restore();
 }

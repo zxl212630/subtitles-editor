@@ -61,7 +61,7 @@ private:
                 // after processing
   std::string _justDialogue; // contains processed subtitle - stripped style,
                              // non dialogue text removal etc.
-  int _speakerCount;                 // count of number of speakers
+  int _speakerCount;         // count of number of speakers
   std::vector<std::string> _speaker; // list of speakers in a single subtitle
   int _nonDialogueCount;             // count of non spoken words in a subtitle
   std::vector<std::string>
