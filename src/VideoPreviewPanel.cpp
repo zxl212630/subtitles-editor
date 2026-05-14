@@ -11,6 +11,7 @@
 #include <QFrame>
 #include <QHBoxLayout>
 #include <QLabel>
+#include <QLineEdit>
 #include <QMouseEvent>
 #include <QPainter>
 #include <QPushButton>
@@ -248,7 +249,12 @@ void VideoPreviewPanel::setupUi() {
   // Font combo
   fontCombo_ = new QComboBox(toolbar);
   fontCombo_->setFixedSize(140, 28);
-  fontCombo_->setMaxVisibleItems(15);
+  fontCombo_->setEditable(true);
+  if (fontCombo_->lineEdit()) {
+    fontCombo_->lineEdit()->setReadOnly(true);
+    fontCombo_->lineEdit()->setStyleSheet(
+        "background: transparent; border: none; color: #d1d5db;");
+  }
   fontCombo_->setStyleSheet(R"(
         QComboBox {
             background-color: #141414;
@@ -259,6 +265,7 @@ void VideoPreviewPanel::setupUi() {
             padding-right: 20px;
             font-family: Inter, sans-serif;
             font-size: 12px;
+            combobox-popup: 0;
         }
         QComboBox::drop-down {
             border: none;
@@ -271,10 +278,25 @@ void VideoPreviewPanel::setupUi() {
             height: 14px;
         }
         QComboBox QAbstractItemView {
-            background-color: #141414;
+            background-color: #1c1c1e;
             color: #d1d5db;
-            selection-background-color: #333333;
-            border: none;
+            border: 1px solid #333333;
+            border-radius: 6px;
+            outline: none;
+            padding: 4px;
+            margin-top: 6px;
+            min-width: 220px;
+        }
+        QComboBox QAbstractItemView::item {
+            min-height: 24px;
+            padding: 2px 12px 2px 8px;
+            border-radius: 4px;
+        }
+        QComboBox QAbstractItemView::item:selected {
+            background-color: #333333;
+        }
+        QComboBox QAbstractItemView::item:hover {
+            background-color: #2a2a2a;
         }
         QComboBox QAbstractItemView QScrollBar:vertical {
             background: #2a2a2a;
@@ -303,6 +325,7 @@ void VideoPreviewPanel::setupUi() {
   // Size combo
   sizeCombo_ = new QComboBox(toolbar);
   sizeCombo_->setFixedSize(70, 28);
+  sizeCombo_->setMaxVisibleItems(10);
   sizeCombo_->setEditable(true);
   sizeCombo_->setStyleSheet(R"(
         QComboBox {
@@ -314,6 +337,7 @@ void VideoPreviewPanel::setupUi() {
             padding-right: 20px;
             font-family: Inter, sans-serif;
             font-size: 12px;
+            combobox-popup: 0;
         }
         QComboBox::drop-down {
             border: none;
@@ -326,10 +350,24 @@ void VideoPreviewPanel::setupUi() {
             height: 14px;
         }
         QComboBox QAbstractItemView {
-            background-color: #141414;
+            background-color: #1c1c1e;
             color: #d1d5db;
-            selection-background-color: #333333;
-            border: none;
+            border: 1px solid #333333;
+            border-radius: 6px;
+            outline: none;
+            padding: 4px;
+            margin-top: 6px;
+        }
+        QComboBox QAbstractItemView::item {
+            min-height: 24px;
+            padding: 2px 4px 2px 8px;
+            border-radius: 4px;
+        }
+        QComboBox QAbstractItemView::item:selected {
+            background-color: #333333;
+        }
+        QComboBox QAbstractItemView::item:hover {
+            background-color: #2a2a2a;
         }
         QComboBox QAbstractItemView QScrollBar:vertical {
             background: #2a2a2a;
@@ -486,29 +524,8 @@ void VideoPreviewPanel::populateFontCombo() {
     fontCombo_->setCurrentIndex(0);
   }
 
-  // Ensure dropdown has a scrollbar and limited height on all platforms
-  if (QAbstractItemView *view = fontCombo_->view()) {
-    view->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOn);
-    view->setMaximumHeight(400);
-    view->setStyleSheet(R"(
-            QScrollBar:vertical {
-                background: #2a2a2a;
-                width: 8px;
-                border-radius: 4px;
-            }
-            QScrollBar::handle:vertical {
-                background: #4a4a4a;
-                border-radius: 4px;
-                min-height: 30px;
-            }
-            QScrollBar::handle:vertical:hover {
-                background: #5a5a5a;
-            }
-            QScrollBar::add-line:vertical,
-            QScrollBar::sub-line:vertical {
-                height: 0px;
-            }
-        )");
+  if (auto *view = fontCombo_->view()) {
+    view->setMinimumWidth(220);
   }
 }
 
