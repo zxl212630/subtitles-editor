@@ -478,10 +478,8 @@ void TimelinePanel::drawVideoTrack(QPainter &painter, int y) {
 void TimelinePanel::drawEmptyState(QPainter &painter) {
   int contentX = TRACK_HEAD_WIDTH;
   int contentW = canvas_->width() - TRACK_HEAD_WIDTH - PANEL_RIGHT_MARGIN;
-  int contentY = RULER_HEIGHT;
-  int contentH = canvas_->height() - RULER_HEIGHT;
   int centerX = contentX + contentW / 2;
-  int centerY = contentY + contentH / 2;
+  int centerY = RULER_HEIGHT + (SUBTITLE_TRACK_HEIGHT + VIDEO_TRACK_HEIGHT) / 2;
 
   int boxW = 360;
   int boxH = 100;
