@@ -20,6 +20,7 @@
 #include <QLabel>
 #include <QMessageBox>
 #include <QProcess>
+#include <QPushButton>
 #include <QSplitter>
 #include <QTime>
 #include <QUrl>
@@ -27,6 +28,43 @@
 #include <QVBoxLayout>
 #include <QWidget>
 #include <QWindowKit/QWKWidgets/widgetwindowagent.h>
+
+static void applyMessageBoxStyle(QMessageBox *box) {
+  if (auto *btn = box->button(QMessageBox::Ok))
+    btn->setText("确定");
+  if (auto *btn = box->button(QMessageBox::Yes))
+    btn->setText("是");
+  if (auto *btn = box->button(QMessageBox::No))
+    btn->setText("否");
+  if (auto *btn = box->button(QMessageBox::Cancel))
+    btn->setText("取消");
+
+  box->setStyleSheet(R"(
+        QMessageBox {
+            background-color: #1e1e1e;
+        }
+        QLabel {
+            color: #d1d5db;
+            font-size: 13px;
+            background: transparent;
+        }
+        QPushButton {
+            background-color: #0284c7;
+            color: #ffffff;
+            border: none;
+            border-radius: 6px;
+            padding: 8px 24px;
+            font-size: 13px;
+            font-weight: bold;
+        }
+        QPushButton:hover {
+            background-color: #0369a1;
+        }
+        QPushButton:pressed {
+            background-color: #075985;
+        }
+    )");
+}
 
 struct AppWindow::Private {
   QWK::WidgetWindowAgent *windowAgent = nullptr;
@@ -54,12 +92,15 @@ AppWindow::AppWindow(QWidget *parent)
 void AppWindow::checkConfig() {
   if (!ConfigManager::instance().isValid()) {
     QString configPath = ConfigManager::instance().configFilePath();
-    QMessageBox::warning(
-        this, "配置缺失",
+    auto *box = new QMessageBox(
+        QMessageBox::Warning, "配置缺失",
         QString("未检测到有效配置文件，部分功能（如语音识别）将无法使用。\n\n"
                 "请在以下路径创建或编辑配置文件：\n%1\n\n"
                 "确保包含 ffmpeg、腾讯云 ASR 和阿里云 OSS 的必要配置项。")
-            .arg(configPath));
+            .arg(configPath),
+        QMessageBox::Ok, this);
+    applyMessageBoxStyle(box);
+    box->exec();
   }
 }
 
@@ -264,11 +305,19 @@ void AppWindow::setupSplitterLayout() {
 
   connect(d->timelinePanel, &TimelinePanel::asrFailed, this,
           [](const QString &error) {
-            QMessageBox::critical(nullptr, "语音识别失败", error);
+            auto *box = new QMessageBox(QMessageBox::Critical, "语音识别失败",
+                                        error, QMessageBox::Ok);
+            applyMessageBoxStyle(box);
+            box->exec();
+            delete box;
           });
 
   connect(d->timelinePanel, &TimelinePanel::asrSucceeded, this, []() {
-    QMessageBox::information(nullptr, "语音识别完成", "字幕已成功生成！");
+    auto *box = new QMessageBox(QMessageBox::Information, "语音识别完成",
+                                "字幕已成功生成！", QMessageBox::Ok);
+    applyMessageBoxStyle(box);
+    box->exec();
+    delete box;
   });
 
   // 12. TimelinePanel subtitle drop -> AppWindow
@@ -340,10 +389,13 @@ void AppWindow::onSubtitleFileDropped(const QString &path) {
 
   // Confirm overwrite if track not empty
   if (!d->subtitleTrack->items().isEmpty()) {
-    int ret = QMessageBox::question(
-        this, "确认覆盖",
-        "字幕轨道已有内容，继续导入将清空现有字幕，是否继续？",
-        QMessageBox::Yes | QMessageBox::No, QMessageBox::No);
+    auto *box =
+        new QMessageBox(QMessageBox::Question, "确认覆盖",
+                        "字幕轨道已有内容，继续导入将清空现有字幕，是否继续？",
+                        QMessageBox::Yes | QMessageBox::No, this);
+    box->setDefaultButton(QMessageBox::No);
+    applyMessageBoxStyle(box);
+    int ret = box->exec();
     if (ret != QMessageBox::Yes)
       return;
     d->subtitleTrack->clear();
@@ -387,8 +439,11 @@ void AppWindow::onSubtitleFileDropped(const QString &path) {
       d->mediaPlayer->seek(0);
 
   } catch (...) {
-    QMessageBox::critical(this, "字幕文件格式错误",
-                          "无法解析字幕文件，请检查文件格式。");
+    auto *box = new QMessageBox(QMessageBox::Critical, "字幕文件格式错误",
+                                "无法解析字幕文件，请检查文件格式。",
+                                QMessageBox::Ok, this);
+    applyMessageBoxStyle(box);
+    box->exec();
   }
 }
 
@@ -401,10 +456,13 @@ void AppWindow::onVideoAsrRequested() {
     return;
 
   if (!d->subtitleTrack->items().isEmpty()) {
-    int ret = QMessageBox::question(
-        this, "确认覆盖",
-        "字幕轨道已有内容，语音识别将清空现有字幕，是否继续？",
-        QMessageBox::Yes | QMessageBox::No, QMessageBox::No);
+    auto *box =
+        new QMessageBox(QMessageBox::Question, "确认覆盖",
+                        "字幕轨道已有内容，语音识别将清空现有字幕，是否继续？",
+                        QMessageBox::Yes | QMessageBox::No, this);
+    box->setDefaultButton(QMessageBox::No);
+    applyMessageBoxStyle(box);
+    int ret = box->exec();
     if (ret != QMessageBox::Yes)
       return;
   }
