@@ -1,10 +1,12 @@
 #include "VideoPreviewPanel.h"
 
+#include "AppWindow.h"
 #include "MediaPlayer.h"
 #include "SoftwareVideoRenderer.h"
 #include "SubtitleTrack.h"
 
 #include <QAbstractItemView>
+#include <QApplication>
 #include <QComboBox>
 #include <QDateTime>
 #include <QFontDatabase>
@@ -214,6 +216,21 @@ static QPushButton *createIconBtn(QWidget *parent, const QString &iconPath,
 
 VideoPreviewPanel::VideoPreviewPanel(QWidget *parent) : QWidget(parent) {
   setupUi();
+  if (auto *aw = qobject_cast<AppWindow *>(window())) {
+    connect(aw, &AppWindow::windowClicked, this, [this](QPoint globalPos) {
+      QWidget *w = QApplication::widgetAt(globalPos);
+      while (w) {
+        if (qobject_cast<QComboBox *>(w))
+          return;
+        if (QLatin1String(w->metaObject()->className())
+                .contains(QLatin1String("ComboBox")))
+          return;
+        w = w->parentWidget();
+      }
+      fontCombo_->hidePopup();
+      sizeCombo_->hidePopup();
+    });
+  }
 }
 
 void VideoPreviewPanel::setupUi() {

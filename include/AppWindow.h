@@ -20,8 +20,11 @@ public:
 public slots:
   void loadFile(const QString &path);
 
+signals:
+  void windowClicked(QPoint globalPos);
+
 protected:
-  void moveEvent(QMoveEvent *event) override;
+  bool eventFilter(QObject *obj, QEvent *event) override;
 
 private:
   void setupUi();
