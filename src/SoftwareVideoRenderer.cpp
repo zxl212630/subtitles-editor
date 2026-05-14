@@ -98,7 +98,8 @@ void SoftwareVideoRenderer::paintEvent(QPaintEvent *event) {
     }
   }
 
-  // Draw video frame if available
+  // Compute video target rect (used for both video and subtitle clipping)
+  QRect targetRect;
   if (hasFrame && !imageToDraw.isNull()) {
     double widgetRatio =
         static_cast<double>(width()) / static_cast<double>(height());
@@ -117,15 +118,16 @@ void SoftwareVideoRenderer::paintEvent(QPaintEvent *event) {
 
     int x = (width() - newWidth) / 2;
     int y = (height() - newHeight) / 2;
-    QRect targetRect(x, y, newWidth, newHeight);
+    targetRect = QRect(x, y, newWidth, newHeight);
 
     painter.drawImage(targetRect, imageToDraw);
   } else {
+    targetRect = rect();
     LOG_RENDER(debug,
                "paintEvent() cost=" << timer.elapsed() << "ms (no frame)");
   }
 
-  // Draw subtitle overlay (always, even without video)
+  // Draw subtitle overlay (clipped to video area)
   QString text;
   QFont font;
   {
@@ -135,7 +137,7 @@ void SoftwareVideoRenderer::paintEvent(QPaintEvent *event) {
   }
   if (!text.isEmpty()) {
     painter.setFont(font);
-    QRect textRect = rect().adjusted(40, 0, -40, -20);
+    QRect textRect = targetRect.adjusted(40, 0, -40, -20);
     painter.setPen(
         QPen(Qt::black, 3, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin));
     painter.drawText(textRect, Qt::AlignHCenter | Qt::AlignBottom, text);
