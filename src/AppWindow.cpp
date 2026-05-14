@@ -9,6 +9,8 @@
 #include "VideoPropertyDialog.h"
 #include "srtparser.h"
 
+#include <QAbstractItemView>
+#include <QComboBox>
 #include <QDateTime>
 #include <QDesktopServices>
 #include <QFile>
@@ -86,6 +88,16 @@ void AppWindow::setupUi() {
 
   setMenuWidget(d->titleBar);
   d->windowAgent->setTitleBar(d->titleBar);
+}
+
+void AppWindow::moveEvent(QMoveEvent *event) {
+  QMainWindow::moveEvent(event);
+  for (auto *combo : findChildren<QComboBox *>()) {
+    if (combo->view() && combo->view()->isVisible()) {
+      combo->hidePopup();
+      combo->showPopup();
+    }
+  }
 }
 
 void AppWindow::setupTitleBar() {

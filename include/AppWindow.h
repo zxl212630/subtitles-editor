@@ -20,6 +20,9 @@ public:
 public slots:
   void loadFile(const QString &path);
 
+protected:
+  void moveEvent(QMoveEvent *event) override;
+
 private:
   void setupUi();
   void setupTitleBar();
