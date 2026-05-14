@@ -232,6 +232,58 @@ void TimelinePanel::setTotalDuration(qint64 ms) {
   canvas_->update();
 }
 
+TimelinePanel::ClipInteractionMode
+TimelinePanel::hitTestClip(int mouseX, int mouseY, QString *outId) const {
+  int trackY = RULER_HEIGHT;
+  if (mouseY < trackY || mouseY >= trackY + SUBTITLE_TRACK_HEIGHT)
+    return ClipInteractionMode::Idle;
+  if (mouseX < TRACK_HEAD_WIDTH)
+    return ClipInteractionMode::Idle;
+  if (!track_)
+    return ClipInteractionMode::Idle;
+
+  for (const auto &item : track_->items()) {
+    int clipX = timeToX(item.startMs);
+    int clipEndX = timeToX(item.endMs);
+
+    if (mouseX < clipX || mouseX > clipEndX)
+      continue;
+
+    *outId = item.id;
+
+    if (mouseX - clipX <= DRAG_EDGE_THRESHOLD_PX) {
+      return ClipInteractionMode::ClipResizeLeft;
+    }
+    // Check if near right edge
+    if (clipEndX - mouseX <= DRAG_EDGE_THRESHOLD_PX) {
+      return ClipInteractionMode::ClipResizeRight;
+    }
+    return ClipInteractionMode::ClipMove;
+  }
+
+  return ClipInteractionMode::Idle;
+}
+
+void TimelinePanel::updateClipCursor(int mouseX, int mouseY) {
+  QString id;
+  ClipInteractionMode mode = hitTestClip(mouseX, mouseY, &id);
+  switch (mode) {
+  case ClipInteractionMode::ClipResizeLeft: {
+    static QPixmap cursor(":/icons/resize-left.svg");
+    setCursor(QCursor(cursor));
+    break;
+  }
+  case ClipInteractionMode::ClipResizeRight: {
+    static QPixmap cursor(":/icons/resize-right.svg");
+    setCursor(QCursor(cursor));
+    break;
+  }
+  default:
+    unsetCursor();
+    break;
+  }
+}
+
 void TimelinePanel::drawOnCanvas(QPainter &painter) {
   painter.setRenderHint(QPainter::Antialiasing);
 
@@ -409,8 +461,16 @@ void TimelinePanel::drawSubtitleTrack(QPainter &painter, int y) {
 
   // Subtitle bars
   for (const auto &item : track_->items()) {
-    int x = timeToX(item.startMs);
-    int w = timeToX(item.endMs) - x;
+    qint64 startMs = item.startMs;
+    qint64 endMs = item.endMs;
+    // Use temp values if this clip is being dragged
+    if (isDragging_ && item.id == dragTargetId_) {
+      startMs = dragTempStartMs_;
+      endMs = dragTempEndMs_;
+    }
+
+    int x = timeToX(startMs);
+    int w = timeToX(endMs) - x;
     if (w < 4)
       w = 4;
     if (x + w < TRACK_HEAD_WIDTH)
@@ -573,25 +633,70 @@ void TimelinePanel::mousePressEvent(QMouseEvent *event) {
   if (event->x() < TRACK_HEAD_WIDTH)
     return;
 
-  mousePressed_ = true;
-  isDragging_ = false;
-  dragStartX_ = event->x();
+  // Reset clip mode; will be set below if clicking on a clip
+  clipMode_ = ClipInteractionMode::Idle;
 
-  qint64 ms = xToTime(event->x());
-  if (ms < 0)
-    ms = 0;
-  if (ms > totalDurationMs_)
-    ms = totalDurationMs_;
+  // Determine interaction mode based on click position
+  QString hitId;
+  ClipInteractionMode mode = hitTestClip(event->x(), event->y(), &hitId);
 
-  // Update playhead position immediately (visual feedback)
-  currentTimeMs_ = ms;
-  lastPreviewSystemTime_ = QDateTime::currentMSecsSinceEpoch();
-  canvas_->update();
+  if (mode == ClipInteractionMode::ClipMove ||
+      mode == ClipInteractionMode::ClipResizeLeft ||
+      mode == ClipInteractionMode::ClipResizeRight) {
+    // Start clip drag/resize
+    clipMode_ = mode;
+    dragTargetId_ = hitId;
+    const SubtitleItem *item = track_->findItem(hitId);
+    if (!item) {
+      clipMode_ = ClipInteractionMode::Idle;
+      return;
+    }
+    dragOrigStartMs_ = item->startMs;
+    dragOrigEndMs_ = item->endMs;
+    dragTempStartMs_ = item->startMs;
+    dragTempEndMs_ = item->endMs;
+
+    mousePressed_ = true;
+    isDragging_ = false;
+    dragStartX_ = event->x();
+  } else if (event->y() < RULER_HEIGHT) {
+    // Click on ruler: seek behavior (existing)
+    mousePressed_ = true;
+    isDragging_ = false;
+    dragStartX_ = event->x();
+
+    qint64 ms = xToTime(event->x());
+    if (ms < 0)
+      ms = 0;
+    if (ms > totalDurationMs_)
+      ms = totalDurationMs_;
+    currentTimeMs_ = ms;
+    lastPreviewSystemTime_ = QDateTime::currentMSecsSinceEpoch();
+    canvas_->update();
+  } else {
+    // Click on empty area: no-op, but set mousePressed for seek fallback
+    mousePressed_ = true;
+    isDragging_ = false;
+    dragStartX_ = event->x();
+
+    qint64 ms = xToTime(event->x());
+    if (ms < 0)
+      ms = 0;
+    if (ms > totalDurationMs_)
+      ms = totalDurationMs_;
+    currentTimeMs_ = ms;
+    lastPreviewSystemTime_ = QDateTime::currentMSecsSinceEpoch();
+    canvas_->update();
+  }
 }
 
 void TimelinePanel::mouseMoveEvent(QMouseEvent *event) {
-  if (!mousePressed_)
+  // Update cursor when not dragging
+  if (!mousePressed_) {
+    updateClipCursor(event->x(), event->y());
     return;
+  }
+
   if (event->x() < TRACK_HEAD_WIDTH)
     return;
 
@@ -603,22 +708,135 @@ void TimelinePanel::mouseMoveEvent(QMouseEvent *event) {
     lastPreviewSystemTime_ = QDateTime::currentMSecsSinceEpoch();
   }
 
-  qint64 ms = xToTime(event->x());
-  if (ms < 0)
-    ms = 0;
-  if (ms > totalDurationMs_)
-    ms = totalDurationMs_;
+  if (clipMode_ == ClipInteractionMode::ClipMove ||
+      clipMode_ == ClipInteractionMode::ClipResizeLeft ||
+      clipMode_ == ClipInteractionMode::ClipResizeRight) {
+    // --- Clip drag/resize ---
+    qint64 mouseMs = xToTime(event->x());
+    qint64 origDuration = dragOrigEndMs_ - dragOrigStartMs_;
 
-  // Always update playhead position (instant, no delay)
-  currentTimeMs_ = ms;
-  canvas_->update();
+    if (clipMode_ == ClipInteractionMode::ClipMove) {
+      qint64 deltaMs = mouseMs - xToTime(dragStartX_);
+      qint64 newStart = dragOrigStartMs_ + deltaMs;
+      qint64 newEnd = dragOrigEndMs_ + deltaMs;
 
-  // Throttle video preview based on frame rate
-  qint64 now = QDateTime::currentMSecsSinceEpoch();
-  qint64 intervalMs = static_cast<qint64>(1000.0 / videoFps_);
-  if (now - lastPreviewSystemTime_ >= intervalMs) {
-    lastPreviewSystemTime_ = now;
-    emit previewSeekRequested(ms);
+      // Find adjacent clips
+      qint64 prevEnd = -1;   // endMs of previous clip, or -1 if none
+      qint64 nextStart = -1; // startMs of next clip, or -1 if none
+      for (const auto &item : track_->items()) {
+        if (item.id == dragTargetId_)
+          continue;
+        if (item.endMs <= dragOrigStartMs_) {
+          if (prevEnd < 0 || item.endMs > prevEnd)
+            prevEnd = item.endMs;
+        }
+        if (item.startMs >= dragOrigEndMs_) {
+          if (nextStart < 0 || item.startMs < nextStart)
+            nextStart = item.startMs;
+        }
+      }
+
+      // Re-derive the other end to preserve duration
+      newEnd = newStart + origDuration;
+      // Re-check right collision with new end
+      if (nextStart >= 0 && newEnd >= nextStart) {
+        newEnd = nextStart - 1;
+        newStart = newEnd - origDuration;
+      }
+
+      // Boundary
+      if (newStart < 0) {
+        newStart = 0;
+        newEnd = origDuration;
+      }
+      if (newEnd > totalDurationMs_ - 1) {
+        newEnd = totalDurationMs_ - 1;
+        newStart = newEnd - origDuration;
+      }
+      if (newStart < 0)
+        newStart = 0;
+
+      dragTempStartMs_ = newStart;
+      dragTempEndMs_ = newEnd;
+
+    } else if (clipMode_ == ClipInteractionMode::ClipResizeLeft) {
+      qint64 newStart = xToTime(event->x());
+
+      // Find previous clip
+      qint64 prevEnd = -1;
+      for (const auto &item : track_->items()) {
+        if (item.id == dragTargetId_)
+          continue;
+        if (item.endMs <= dragOrigStartMs_) {
+          if (prevEnd < 0 || item.endMs > prevEnd)
+            prevEnd = item.endMs;
+        }
+      }
+
+      // Collision
+      if (prevEnd >= 0 && newStart <= prevEnd)
+        newStart = prevEnd + 1;
+
+      // Minimum duration
+      if (dragOrigEndMs_ - newStart < 100)
+        newStart = dragOrigEndMs_ - 100;
+
+      // Boundary
+      if (newStart < 0)
+        newStart = 0;
+
+      dragTempStartMs_ = newStart;
+      dragTempEndMs_ = dragOrigEndMs_;
+
+    } else if (clipMode_ == ClipInteractionMode::ClipResizeRight) {
+      qint64 newEnd = xToTime(event->x());
+
+      // Find next clip
+      qint64 nextStart = -1;
+      for (const auto &item : track_->items()) {
+        if (item.id == dragTargetId_)
+          continue;
+        if (item.startMs >= dragOrigEndMs_) {
+          if (nextStart < 0 || item.startMs < nextStart)
+            nextStart = item.startMs;
+        }
+      }
+
+      // Collision
+      if (nextStart >= 0 && newEnd >= nextStart)
+        newEnd = nextStart - 1;
+
+      // Minimum duration
+      if (newEnd - dragOrigStartMs_ < 100)
+        newEnd = dragOrigStartMs_ + 100;
+
+      // Boundary
+      if (newEnd > totalDurationMs_ - 1)
+        newEnd = totalDurationMs_ - 1;
+
+      dragTempStartMs_ = dragOrigStartMs_;
+      dragTempEndMs_ = newEnd;
+    }
+
+    canvas_->update();
+
+  } else {
+    // --- Original seek drag behavior ---
+    qint64 ms = xToTime(event->x());
+    if (ms < 0)
+      ms = 0;
+    if (ms > totalDurationMs_)
+      ms = totalDurationMs_;
+
+    currentTimeMs_ = ms;
+    canvas_->update();
+
+    qint64 now = QDateTime::currentMSecsSinceEpoch();
+    qint64 intervalMs = static_cast<qint64>(1000.0 / videoFps_);
+    if (now - lastPreviewSystemTime_ >= intervalMs) {
+      lastPreviewSystemTime_ = now;
+      emit previewSeekRequested(ms);
+    }
   }
 }
 
@@ -626,12 +844,28 @@ void TimelinePanel::mouseReleaseEvent(QMouseEvent *event) {
   if (event->button() != Qt::LeftButton)
     return;
 
-  if (isDragging_) {
-    // Drag ended: emit signal to commit final position
+  if (isDragging_ && (clipMode_ == ClipInteractionMode::ClipMove ||
+                      clipMode_ == ClipInteractionMode::ClipResizeLeft ||
+                      clipMode_ == ClipInteractionMode::ClipResizeRight)) {
+    // Commit clip position: apply temp values to the track
+    if (track_ && !dragTargetId_.isEmpty()) {
+      const SubtitleItem *original = track_->findItem(dragTargetId_);
+      if (original) {
+        SubtitleItem item;
+        item.id = dragTargetId_;
+        item.text = original->text;
+        item.startMs = dragTempStartMs_;
+        item.endMs = dragTempEndMs_;
+        item.selected = true;
+        track_->updateItem(dragTargetId_, item);
+      }
+    }
+
+  } else if (isDragging_) {
+    // Drag seek ended
     emit dragSeekFinished(currentTimeMs_);
-    isDragging_ = false;
   } else {
-    // Click (no drag): emit seek as before
+    // Click (no drag): emit seek
     qint64 ms = xToTime(event->x());
     if (ms < 0)
       ms = 0;
@@ -642,7 +876,12 @@ void TimelinePanel::mouseReleaseEvent(QMouseEvent *event) {
     canvas_->update();
   }
 
+  // Always reset clip interaction state on release
+  clipMode_ = ClipInteractionMode::Idle;
+  dragTargetId_.clear();
+
   mousePressed_ = false;
+  isDragging_ = false;
 }
 
 void TimelinePanel::dragEnterEvent(QDragEnterEvent *event) {

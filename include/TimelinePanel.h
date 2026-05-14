@@ -14,6 +14,13 @@ class TimelinePanel : public QWidget {
 public:
   enum class PlayheadAnchor { LeftThird, Center, RightThird };
 
+  enum class ClipInteractionMode {
+    Idle,
+    ClipMove,
+    ClipResizeLeft,
+    ClipResizeRight
+  };
+
   explicit TimelinePanel(QWidget *parent = nullptr);
 
   void setTrack(SubtitleTrack *track);
@@ -65,6 +72,9 @@ private:
   void updateScrollBar();
   void clampScrollOffset();
 
+  ClipInteractionMode hitTestClip(int mouseX, int mouseY, QString *outId) const;
+  void updateClipCursor(int mouseX, int mouseY);
+
 protected:
   friend class TimelineCanvas;
   void drawOnCanvas(QPainter &painter);
@@ -99,4 +109,13 @@ private:
 
   QString mediaFileName_;
   QString mediaFilePath_; // 视频完整路径
+
+  // Clip drag/resize state
+  ClipInteractionMode clipMode_ = ClipInteractionMode::Idle;
+  QString dragTargetId_;       // id of the clip being dragged
+  qint64 dragOrigStartMs_ = 0; // original startMs before drag
+  qint64 dragOrigEndMs_ = 0;   // original endMs before drag
+  qint64 dragTempStartMs_ = 0; // current temp startMs during drag
+  qint64 dragTempEndMs_ = 0;   // current temp endMs during drag
+  static constexpr int DRAG_EDGE_THRESHOLD_PX = 6;
 };
