@@ -8,5 +8,7 @@
         <file>icons/step-forward.svg</file>
         <file>icons/scissors.svg</file>
         <file>icons/close.svg</file>
+        <file>icons/resize-left.svg</file>
+        <file>icons/resize-right.svg</file>
     </qresource>
 </RCC>
