@@ -1,7 +1,5 @@
 #pragma once
 
-#include <QCursor>
-#include <QPair>
 #include <QWidget>
 
 class QResizeEvent;
@@ -9,13 +7,19 @@ class QScrollBar;
 class QWheelEvent;
 class SubtitleTrack;
 class TimelineCanvas;
-struct SubtitleItem;
 
 class TimelinePanel : public QWidget {
   Q_OBJECT
 
 public:
   enum class PlayheadAnchor { LeftThird, Center, RightThird };
+
+  enum class ClipInteractionMode {
+    Idle,
+    ClipMove,
+    ClipResizeLeft,
+    ClipResizeRight
+  };
 
   explicit TimelinePanel(QWidget *parent = nullptr);
 
@@ -67,9 +71,9 @@ private:
   qint64 xToTime(int x) const;
   void updateScrollBar();
   void clampScrollOffset();
-  const SubtitleItem *hitTestClip(const QPoint &pos) const;
-  QPair<const SubtitleItem *, const SubtitleItem *> findAdjacentClips(
-      const QString &id) const;
+
+  ClipInteractionMode hitTestClip(int mouseX, int mouseY, QString *outId) const;
+  void updateClipCursor(int mouseX, int mouseY);
 
 protected:
   friend class TimelineCanvas;
@@ -84,10 +88,6 @@ private:
   static constexpr int VIDEO_TRACK_HEIGHT = 96;
   static constexpr int TRACK_HEAD_WIDTH = 120;
   static constexpr int PANEL_RIGHT_MARGIN = 8;
-  static constexpr int EDGE_HIT_ZONE = 6;
-  static constexpr int MIN_CLIP_DURATION_MS = 100;
-
-  enum class InteractionMode { None, ClipMove, ClipResizeLeft, ClipResizeRight };
 
   double pixelsPerSecond_ = 100.0;
   int scrollOffsetX_ = 0;
@@ -110,13 +110,12 @@ private:
   QString mediaFileName_;
   QString mediaFilePath_; // 视频完整路径
 
-  // Clip interaction state
-  InteractionMode interactionMode_ = InteractionMode::None;
-  QString draggingItemId_;
-  qint64 dragOriginalStartMs_ = 0;
-  qint64 dragOriginalEndMs_ = 0;
-  qint64 previewStartMs_ = 0;
-  qint64 previewEndMs_ = 0;
-  QCursor resizeLeftCursor_;
-  QCursor resizeRightCursor_;
+  // Clip drag/resize state
+  ClipInteractionMode clipMode_ = ClipInteractionMode::Idle;
+  QString dragTargetId_;       // id of the clip being dragged
+  qint64 dragOrigStartMs_ = 0; // original startMs before drag
+  qint64 dragOrigEndMs_ = 0;   // original endMs before drag
+  qint64 dragTempStartMs_ = 0; // current temp startMs during drag
+  qint64 dragTempEndMs_ = 0;   // current temp endMs during drag
+  static constexpr int DRAG_EDGE_THRESHOLD_PX = 6;
 };
