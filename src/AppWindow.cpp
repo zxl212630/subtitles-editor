@@ -95,7 +95,6 @@ void AppWindow::moveEvent(QMoveEvent *event) {
   for (auto *combo : findChildren<QComboBox *>()) {
     if (combo->view() && combo->view()->isVisible()) {
       combo->hidePopup();
-      combo->showPopup();
     }
   }
 }
