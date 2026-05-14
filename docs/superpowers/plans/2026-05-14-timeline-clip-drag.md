@@ -1,155 +1,220 @@
-# 时间线字幕 Clip 拖拽调整 实现计划
+# Timeline Clip Drag Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** TimelinePanel 支持字幕 clip 拖拽移动和边缘缩放，带碰撞检测、自定义光标、仅刻度尺 seek。
+**Goal:** Add clip drag-move and edge-resize to TimelinePanel's subtitle track.
 
-**Architecture:** 在 TimelinePanel 中新增 `ClipMove`/`ClipResizeLeft`/`ClipResizeRight` 三种交互状态，通过 mousePressEvent 判断点击位置进入不同模式。拖拽期间使用 `previewStartMs_`/`previewEndMs_` 做视觉预览，mouseReleaseEvent 时提交 `track_->updateItem()`。Seek 行为限制为仅刻度尺区域（Y < 36）。
+**Architecture:** Extend TimelinePanel's mouse event handling with a state machine (Idle/ClipMove/ClipResizeLeft/ClipResizeRight/Seek). Two cursor SVGs added to resources. Drag uses local temp variables for preview, commits via `track_->updateItem()` only on mouse release.
 
-**Tech Stack:** C++17, Qt6 Widgets, QPainter canvas 绘制
-
----
-
-### Task 1: 更新 TimelinePanel.h — 新枚举、成员变量、方法声明
-
-**File:** `include/TimelinePanel.h`
-
-- [ ] **Step 1: 在 class TimelinePanel 的 private 区域新增 InteractionMode 枚举**
-
-在 line 76（`RULER_HEIGHT` 等常量区域后）添加：
-
-```cpp
-  enum class InteractionMode { None, ClipMove, ClipResizeLeft, ClipResizeRight };
-```
-
-- [ ] **Step 2: 新增常量**
-
-在现有常量区域添加：
-
-```cpp
-  static constexpr int EDGE_HIT_ZONE = 6;
-  static constexpr int MIN_CLIP_DURATION_MS = 100;
-```
-
-- [ ] **Step 3: 新增方法声明（private 区域）**
-
-```cpp
-  const SubtitleItem* hitTestClip(const QPoint &pos) const;
-  QPair<const SubtitleItem*, const SubtitleItem*> findAdjacentClips(const QString &id) const;
-```
-
-- [ ] **Step 4: 新增成员变量（private 区域）**
-
-```cpp
-  InteractionMode interactionMode_ = InteractionMode::None;
-  QString draggingItemId_;
-  qint64 dragOriginalStartMs_ = 0;
-  qint64 dragOriginalEndMs_ = 0;
-  qint64 previewStartMs_ = 0;
-  qint64 previewEndMs_ = 0;
-  QCursor resizeLeftCursor_;
-  QCursor resizeRightCursor_;
-```
+**Tech Stack:** C++17, Qt6, QPainter, QCursor, SVG resources
 
 ---
 
-### Task 2: 添加 SVG 图标到 qrc 并加载光标
+## File Structure
+
+| File | Action | Purpose |
+|------|--------|---------|
+| `resources/icons/resize-left.svg` | Create | Left resize cursor SVG |
+| `resources/icons/resize-right.svg` | Create | Right resize cursor SVG |
+| `resources/resources.qrc` | Modify | Register the two new SVGs |
+| `include/TimelinePanel.h` | Modify | Add ClipInteractionMode enum, drag state members, helper methods |
+| `src/TimelinePanel.cpp` | Modify | Implement interaction logic in mouse handlers, cursor management, draw with temp values |
+
+---
+
+### Task 1: Create cursor SVGs and register in resources.qrc
 
 **Files:**
+- Create: `resources/icons/resize-left.svg`
+- Create: `resources/icons/resize-right.svg`
 - Modify: `resources/resources.qrc`
-- Modify: `src/TimelinePanel.cpp` (constructor)
 
-- [ ] **Step 1: 在 resources.qrc 中添加两个图标**
+- [ ] **Step 1: Create resize-left.svg**
 
-在 `resources/resources.qrc` 的 `<qresource>` 中，在现有 `<file>` 条目后添加：
+Create file `resources/icons/resize-left.svg`:
+
+```svg
+<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16">
+  <rect x="1" y="1" width="3" height="14" rx="1" fill="#ffffff" stroke="#000000" stroke-width="1"/>
+  <path d="M12 5 L8 8 L12 11" fill="none" stroke="#000000" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
+```
+
+- [ ] **Step 2: Create resize-right.svg**
+
+Create file `resources/icons/resize-right.svg`:
+
+```svg
+<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16">
+  <rect x="12" y="1" width="3" height="14" rx="1" fill="#ffffff" stroke="#000000" stroke-width="1"/>
+  <path d="M4 5 L8 8 L4 11" fill="none" stroke="#000000" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
+```
+
+- [ ] **Step 3: Register SVGs in resources.qrc**
+
+In `resources/resources.qrc`, add the two new entries inside the `<qresource>` block:
 
 ```xml
-        <file>icons/resize-left.svg</file>
-        <file>icons/resize-right.svg</file>
+<file>icons/resize-left.svg</file>
+<file>icons/resize-right.svg</file>
 ```
 
-- [ ] **Step 2: 在 TimelinePanel 构造函数中加载自定义光标**
+- [ ] **Step 4: Build to verify resources compile**
 
-在 `src/TimelinePanel.cpp` 构造函数中 `setMouseTracking(true)` 之前添加：
-
-```cpp
-  resizeLeftCursor_ = QCursor(QIcon(":/icons/resize-left.svg").pixmap(24, 24), 0, 12);
-  resizeRightCursor_ = QCursor(QIcon(":/icons/resize-right.svg").pixmap(24, 24), 23, 12);
-```
-
-需在文件头添加 `#include <QIcon>`。
+Run: `cmake --build cmake-build-debug`
 
 ---
 
-### Task 3: 实现 hitTestClip 和 findAdjacentClips 辅助方法
+### Task 2: Add state enums and member variables to TimelinePanel.h
 
-**File:** `src/TimelinePanel.cpp`
+**Files:**
+- Modify: `include/TimelinePanel.h`
 
-在两个方法实现区域（如 `drawEmptyState` 之前或之后）添加。
+- [ ] **Step 1: Add ClipInteractionMode enum**
 
-- [ ] **Step 1: 实现 hitTestClip**
+In `include/TimelinePanel.h`, add the enum inside the `TimelinePanel` class, after the `PlayheadAnchor` enum (line 16):
 
 ```cpp
-const SubtitleItem* TimelinePanel::hitTestClip(const QPoint &pos) const {
-  if (!track_)
-    return nullptr;
+  enum class ClipInteractionMode {
+    Idle,
+    ClipMove,
+    ClipResizeLeft,
+    ClipResizeRight,
+    Seek
+  };
+```
+
+- [ ] **Step 2: Add member variables for clip drag state**
+
+In the private section at the end of the class, add:
+
+```cpp
+  // Clip drag/resize state
+  ClipInteractionMode clipMode_ = ClipInteractionMode::Idle;
+  QString dragTargetId_;          // id of the clip being dragged
+  qint64 dragOrigStartMs_ = 0;    // original startMs before drag
+  qint64 dragOrigEndMs_ = 0;      // original endMs before drag
+  qint64 dragTempStartMs_ = 0;    // current temp startMs during drag
+  qint64 dragTempEndMs_ = 0;      // current temp endMs during drag
+  int dragEdgeThreshold_ = 6;     // px from edge to trigger resize
+```
+
+- [ ] **Step 3: Add helper method declarations**
+
+In the private section, add:
+
+```cpp
+  ClipInteractionMode hitTestClip(int mouseX, int mouseY, QString *outId) const;
+  void updateClipCursor(int mouseX, int mouseY);
+  void resetClipCursor();
+```
+
+- [ ] **Step 4: Build to verify header compiles**
+
+Run: `cmake --build cmake-build-debug`
+
+---
+
+### Task 3: Implement hitTestClip helper
+
+**Files:**
+- Modify: `src/TimelinePanel.cpp`
+
+- [ ] **Step 1: Implement hitTestClip**
+
+Add at the end of `src/TimelinePanel.cpp` (before closing), or in a logical spot near the other helpers:
+
+```cpp
+TimelinePanel::ClipInteractionMode
+TimelinePanel::hitTestClip(int mouseX, int mouseY, QString *outId) const {
+  // Only handle clicks in the subtitle track area
   int trackY = RULER_HEIGHT;
-  if (pos.y() < trackY || pos.y() >= trackY + SUBTITLE_TRACK_HEIGHT)
-    return nullptr;
-
-  for (const auto &item : track_->items()) {
-    int x = timeToX(item.startMs);
-    int w = timeToX(item.endMs) - x;
-    if (w < 4)
-      w = 4;
-    if (pos.x() >= x && pos.x() <= x + w)
-      return &item;
-  }
-  return nullptr;
-}
-```
-
-- [ ] **Step 2: 实现 findAdjacentClips**
-
-```cpp
-QPair<const SubtitleItem*, const SubtitleItem*> TimelinePanel::findAdjacentClips(const QString &id) const {
+  if (mouseY < trackY || mouseY >= trackY + SUBTITLE_TRACK_HEIGHT)
+    return ClipInteractionMode::Idle;
+  if (mouseX < TRACK_HEAD_WIDTH)
+    return ClipInteractionMode::Idle;
   if (!track_)
-    return {nullptr, nullptr};
+    return ClipInteractionMode::Idle;
 
-  const SubtitleItem *current = track_->findItem(id);
-  if (!current)
-    return {nullptr, nullptr};
+  qint64 clickMs = xToTime(mouseX);
 
-  const SubtitleItem *prev = nullptr;
-  const SubtitleItem *next = nullptr;
-
+  // Find which clip was clicked
   for (const auto &item : track_->items()) {
-    if (item.id == id)
+    int clipX = timeToX(item.startMs);
+    int clipEndX = timeToX(item.endMs);
+
+    // Must be within the clip's horizontal bounds
+    if (mouseX < clipX || mouseX > clipEndX)
       continue;
-    if (item.endMs <= current->startMs) {
-      if (!prev || item.endMs > prev->endMs)
-        prev = &item;
+
+    *outId = item.id;
+
+    // Check if near left edge
+    if (mouseX - clipX <= dragEdgeThreshold_) {
+      return ClipInteractionMode::ClipResizeLeft;
     }
-    if (item.startMs >= current->endMs) {
-      if (!next || item.startMs < next->startMs)
-        next = &item;
+    // Check if near right edge
+    if (clipEndX - mouseX <= dragEdgeThreshold_) {
+      return ClipInteractionMode::ClipResizeRight;
     }
+    // Otherwise it's a move
+    return ClipInteractionMode::ClipMove;
   }
-  return {prev, next};
+
+  return ClipInteractionMode::Idle;
 }
 ```
+
+- [ ] **Step 2: Build to verify**
+
+Run: `cmake --build cmake-build-debug`
 
 ---
 
-### Task 4: 重写 mousePressEvent / mouseMoveEvent / mouseReleaseEvent
+### Task 4: Implement cursor management helpers
 
-**File:** `src/TimelinePanel.cpp`
+**Files:**
+- Modify: `src/TimelinePanel.cpp`
 
-**Note:** 这是核心改动，将替换现有的三个鼠标事件处理函数。
+- [ ] **Step 1: Implement updateClipCursor and resetClipCursor**
 
-- [ ] **Step 1: 重写 mousePressEvent**
+Add these two methods in `src/TimelinePanel.cpp`:
 
-替换 line 562-590 的现有实现：
+```cpp
+void TimelinePanel::updateClipCursor(int mouseX, int mouseY) {
+  QString id;
+  ClipInteractionMode mode = hitTestClip(mouseX, mouseY, &id);
+  switch (mode) {
+  case ClipInteractionMode::ClipResizeLeft:
+    setCursor(QCursor(QPixmap(":/icons/resize-left.svg")));
+    break;
+  case ClipInteractionMode::ClipResizeRight:
+    setCursor(QCursor(QPixmap(":/icons/resize-right.svg")));
+    break;
+  default:
+    unsetCursor();
+    break;
+  }
+}
+
+void TimelinePanel::resetClipCursor() { unsetCursor(); }
+```
+
+- [ ] **Step 2: Build to verify**
+
+Run: `cmake --build cmake-build-debug`
+
+---
+
+### Task 5: Modify mousePressEvent for clip interaction
+
+**Files:**
+- Modify: `src/TimelinePanel.cpp`
+
+- [ ] **Step 1: Update mousePressEvent**
+
+Replace the existing `mousePressEvent` implementation in `src/TimelinePanel.cpp` (lines 562-590) with:
 
 ```cpp
 void TimelinePanel::mousePressEvent(QMouseEvent *event) {
@@ -163,136 +228,91 @@ void TimelinePanel::mousePressEvent(QMouseEvent *event) {
     return;
   }
 
-  // Ruler area: seek behavior (Y < RULER_HEIGHT)
-  if (event->y() < RULER_HEIGHT && event->x() >= TRACK_HEAD_WIDTH) {
+  if (event->x() < TRACK_HEAD_WIDTH)
+    return;
+
+  // Determine interaction mode based on click position
+  QString hitId;
+  ClipInteractionMode mode = hitTestClip(event->x(), event->y(), &hitId);
+
+  if (mode == ClipInteractionMode::ClipMove ||
+      mode == ClipInteractionMode::ClipResizeLeft ||
+      mode == ClipInteractionMode::ClipResizeRight) {
+    // Start clip drag/resize
+    clipMode_ = mode;
+    dragTargetId_ = hitId;
+    const SubtitleItem *item = track_->findItem(hitId);
+    if (!item) {
+      clipMode_ = ClipInteractionMode::Idle;
+      return;
+    }
+    dragOrigStartMs_ = item->startMs;
+    dragOrigEndMs_ = item->endMs;
+    dragTempStartMs_ = item->startMs;
+    dragTempEndMs_ = item->endMs;
+
+    mousePressed_ = true;
+    isDragging_ = false;
+    dragStartX_ = event->x();
+  } else if (event->y() < RULER_HEIGHT) {
+    // Click on ruler: seek behavior (existing)
     mousePressed_ = true;
     isDragging_ = false;
     dragStartX_ = event->x();
 
     qint64 ms = xToTime(event->x());
-    if (ms < 0) ms = 0;
-    if (ms > totalDurationMs_) ms = totalDurationMs_;
-
+    if (ms < 0)
+      ms = 0;
+    if (ms > totalDurationMs_)
+      ms = totalDurationMs_;
     currentTimeMs_ = ms;
     lastPreviewSystemTime_ = QDateTime::currentMSecsSinceEpoch();
     canvas_->update();
-    return;
-  }
-
-  // Track area: clip interaction
-  const SubtitleItem *hitClip = hitTestClip(event->pos());
-  if (!hitClip)
-    return;
-
-  draggingItemId_ = hitClip->id;
-  dragOriginalStartMs_ = hitClip->startMs;
-  dragOriginalEndMs_ = hitClip->endMs;
-  dragStartX_ = event->x();
-
-  int clipX = timeToX(hitClip->startMs);
-  int clipW = timeToX(hitClip->endMs) - clipX;
-  if (clipW < 4) clipW = 4;
-
-  int relX = event->x() - clipX;
-
-  if (relX <= EDGE_HIT_ZONE) {
-    interactionMode_ = InteractionMode::ClipResizeLeft;
-  } else if (relX >= clipW - EDGE_HIT_ZONE) {
-    interactionMode_ = InteractionMode::ClipResizeRight;
   } else {
-    interactionMode_ = InteractionMode::ClipMove;
+    // Click on empty area: no-op, but set mousePressed for seek fallback
+    mousePressed_ = true;
+    isDragging_ = false;
+    dragStartX_ = event->x();
+
+    qint64 ms = xToTime(event->x());
+    if (ms < 0)
+      ms = 0;
+    if (ms > totalDurationMs_)
+      ms = totalDurationMs_;
+    currentTimeMs_ = ms;
+    lastPreviewSystemTime_ = QDateTime::currentMSecsSinceEpoch();
+    canvas_->update();
   }
 }
 ```
 
-- [ ] **Step 2: 重写 mouseMoveEvent**
+- [ ] **Step 2: Build to verify**
 
-替换 line 592-623 的现有实现：
+Run: `cmake --build cmake-build-debug`
+
+---
+
+### Task 6: Modify mouseMoveEvent for clip drag/resize
+
+**Files:**
+- Modify: `src/TimelinePanel.cpp`
+
+- [ ] **Step 1: Update mouseMoveEvent**
+
+Replace the existing `mouseMoveEvent` implementation in `src/TimelinePanel.cpp` (lines 592-623) with:
 
 ```cpp
 void TimelinePanel::mouseMoveEvent(QMouseEvent *event) {
-  // Not pressed: update cursor
-  if (!mousePressed_ && interactionMode_ == InteractionMode::None) {
-    const SubtitleItem *hovered = hitTestClip(event->pos());
-    if (hovered) {
-      int clipX = timeToX(hovered->startMs);
-      int clipW = timeToX(hovered->endMs) - clipX;
-      if (clipW < 4) clipW = 4;
-      int relX = event->x() - clipX;
-      if (relX <= EDGE_HIT_ZONE) {
-        setCursor(resizeLeftCursor_);
-      } else if (relX >= clipW - EDGE_HIT_ZONE) {
-        setCursor(resizeRightCursor_);
-      } else {
-        setCursor(Qt::ArrowCursor);
-      }
-    } else {
-      setCursor(Qt::ArrowCursor);
-    }
+  // Update cursor when not dragging
+  if (!mousePressed_) {
+    updateClipCursor(event->x(), event->y());
     return;
   }
 
-  // Clip interaction drag
-  if (interactionMode_ != InteractionMode::None) {
-    qint64 ms = xToTime(event->x());
-    auto [prev, next] = findAdjacentClips(draggingItemId_);
-
-    switch (interactionMode_) {
-    case InteractionMode::ClipMove: {
-      qint64 delta = ms - xToTime(dragStartX_);
-      qint64 duration = dragOriginalEndMs_ - dragOriginalStartMs_;
-      qint64 newStart = dragOriginalStartMs_ + delta;
-
-      qint64 leftBound = prev ? prev->endMs + 1 : 0;
-      qint64 rightBound = next ? next->startMs - 1 : totalDurationMs_ - 1;
-
-      if (newStart < leftBound)
-        newStart = leftBound;
-      if (newStart + duration > rightBound)
-        newStart = rightBound - duration;
-
-      previewStartMs_ = newStart;
-      previewEndMs_ = newStart + duration;
-      break;
-    }
-    case InteractionMode::ClipResizeLeft: {
-      qint64 newStart = ms;
-      qint64 leftBound = prev ? prev->endMs + 1 : 0;
-      if (newStart < leftBound)
-        newStart = leftBound;
-      if (newStart >= dragOriginalEndMs_ - MIN_CLIP_DURATION_MS)
-        newStart = dragOriginalEndMs_ - MIN_CLIP_DURATION_MS;
-
-      previewStartMs_ = newStart;
-      previewEndMs_ = dragOriginalEndMs_;
-      break;
-    }
-    case InteractionMode::ClipResizeRight: {
-      qint64 newEnd = ms;
-      qint64 rightBound = next ? next->startMs - 1 : totalDurationMs_ - 1;
-      if (newEnd > rightBound)
-        newEnd = rightBound;
-      if (newEnd <= dragOriginalStartMs_ + MIN_CLIP_DURATION_MS)
-        newEnd = dragOriginalStartMs_ + MIN_CLIP_DURATION_MS;
-
-      previewStartMs_ = dragOriginalStartMs_;
-      previewEndMs_ = newEnd;
-      break;
-    }
-    default:
-      break;
-    }
-
-    canvas_->update();
-    return;
-  }
-
-  // Seek drag (existing behavior)
-  if (!mousePressed_)
-    return;
   if (event->x() < TRACK_HEAD_WIDTH)
     return;
 
+  // Check if we've crossed the drag threshold
   if (!isDragging_) {
     if (qAbs(event->x() - dragStartX_) < DRAG_THRESHOLD_PX)
       return;
@@ -300,127 +320,312 @@ void TimelinePanel::mouseMoveEvent(QMouseEvent *event) {
     lastPreviewSystemTime_ = QDateTime::currentMSecsSinceEpoch();
   }
 
-  qint64 ms = xToTime(event->x());
-  if (ms < 0) ms = 0;
-  if (ms > totalDurationMs_) ms = totalDurationMs_;
+  if (clipMode_ == ClipInteractionMode::ClipMove ||
+      clipMode_ == ClipInteractionMode::ClipResizeLeft ||
+      clipMode_ == ClipInteractionMode::ClipResizeRight) {
+    // --- Clip drag/resize ---
+    qint64 mouseMs = xToTime(event->x());
+    qint64 origDuration = dragOrigEndMs_ - dragOrigStartMs_;
 
-  currentTimeMs_ = ms;
-  canvas_->update();
+    if (clipMode_ == ClipInteractionMode::ClipMove) {
+      qint64 deltaMs = mouseMs - xToTime(dragStartX_);
+      qint64 newStart = dragOrigStartMs_ + deltaMs;
+      qint64 newEnd = dragOrigEndMs_ + deltaMs;
 
-  qint64 now = QDateTime::currentMSecsSinceEpoch();
-  qint64 intervalMs = static_cast<qint64>(1000.0 / videoFps_);
-  if (now - lastPreviewSystemTime_ >= intervalMs) {
-    lastPreviewSystemTime_ = now;
-    emit previewSeekRequested(ms);
+      // Find adjacent clips
+      qint64 prevEnd = -1;   // endMs of previous clip, or -1 if none
+      qint64 nextStart = -1; // startMs of next clip, or -1 if none
+      for (const auto &item : track_->items()) {
+        if (item.id == dragTargetId_)
+          continue;
+        if (item.endMs <= dragOrigStartMs_) {
+          if (prevEnd < 0 || item.endMs > prevEnd)
+            prevEnd = item.endMs;
+        }
+        if (item.startMs >= dragOrigEndMs_) {
+          if (nextStart < 0 || item.startMs < nextStart)
+            nextStart = item.startMs;
+        }
+      }
+
+      // Collision: left move
+      if (prevEnd >= 0 && newStart <= prevEnd)
+        newStart = prevEnd + 1;
+      // Collision: right move
+      if (nextStart >= 0 && newEnd >= nextStart)
+        newEnd = nextStart - 1;
+
+      // Re-derive the other end to preserve duration
+      newEnd = newStart + origDuration;
+      // Re-check right collision with new end
+      if (nextStart >= 0 && newEnd >= nextStart) {
+        newEnd = nextStart - 1;
+        newStart = newEnd - origDuration;
+      }
+
+      // Boundary
+      if (newStart < 0) {
+        newStart = 0;
+        newEnd = origDuration;
+      }
+      if (newEnd > totalDurationMs_ - 1) {
+        newEnd = totalDurationMs_ - 1;
+        newStart = newEnd - origDuration;
+      }
+      if (newStart < 0)
+        newStart = 0;
+
+      dragTempStartMs_ = newStart;
+      dragTempEndMs_ = newEnd;
+
+    } else if (clipMode_ == ClipInteractionMode::ClipResizeLeft) {
+      qint64 newStart = xToTime(event->x());
+
+      // Find previous clip
+      qint64 prevEnd = -1;
+      for (const auto &item : track_->items()) {
+        if (item.id == dragTargetId_)
+          continue;
+        if (item.endMs <= dragOrigStartMs_) {
+          if (prevEnd < 0 || item.endMs > prevEnd)
+            prevEnd = item.endMs;
+        }
+      }
+
+      // Collision
+      if (prevEnd >= 0 && newStart <= prevEnd)
+        newStart = prevEnd + 1;
+
+      // Minimum duration
+      if (dragOrigEndMs_ - newStart < 100)
+        newStart = dragOrigEndMs_ - 100;
+
+      // Boundary
+      if (newStart < 0)
+        newStart = 0;
+
+      dragTempStartMs_ = newStart;
+      dragTempEndMs_ = dragOrigEndMs_;
+
+    } else if (clipMode_ == ClipInteractionMode::ClipResizeRight) {
+      qint64 newEnd = xToTime(event->x());
+
+      // Find next clip
+      qint64 nextStart = -1;
+      for (const auto &item : track_->items()) {
+        if (item.id == dragTargetId_)
+          continue;
+        if (item.startMs >= dragOrigEndMs_) {
+          if (nextStart < 0 || item.startMs < nextStart)
+            nextStart = item.startMs;
+        }
+      }
+
+      // Collision
+      if (nextStart >= 0 && newEnd >= nextStart)
+        newEnd = nextStart - 1;
+
+      // Minimum duration
+      if (newEnd - dragOrigStartMs_ < 100)
+        newEnd = dragOrigStartMs_ + 100;
+
+      // Boundary
+      if (newEnd > totalDurationMs_ - 1)
+        newEnd = totalDurationMs_ - 1;
+
+      dragTempStartMs_ = dragOrigStartMs_;
+      dragTempEndMs_ = newEnd;
+    }
+
+    canvas_->update();
+
+  } else {
+    // --- Original seek drag behavior ---
+    qint64 ms = xToTime(event->x());
+    if (ms < 0)
+      ms = 0;
+    if (ms > totalDurationMs_)
+      ms = totalDurationMs_;
+
+    currentTimeMs_ = ms;
+    canvas_->update();
+
+    qint64 now = QDateTime::currentMSecsSinceEpoch();
+    qint64 intervalMs = static_cast<qint64>(1000.0 / videoFps_);
+    if (now - lastPreviewSystemTime_ >= intervalMs) {
+      lastPreviewSystemTime_ = now;
+      emit previewSeekRequested(ms);
+    }
   }
 }
 ```
 
-- [ ] **Step 3: 重写 mouseReleaseEvent**
+- [ ] **Step 2: Build to verify**
 
-替换 line 625-646 的现有实现：
+Run: `cmake --build cmake-build-debug`
+
+---
+
+### Task 7: Modify mouseReleaseEvent for clip commit
+
+**Files:**
+- Modify: `src/TimelinePanel.cpp`
+
+- [ ] **Step 1: Update mouseReleaseEvent**
+
+Replace the existing `mouseReleaseEvent` implementation in `src/TimelinePanel.cpp` (lines 625-646) with:
 
 ```cpp
 void TimelinePanel::mouseReleaseEvent(QMouseEvent *event) {
   if (event->button() != Qt::LeftButton)
     return;
 
-  // Clip interaction: commit changes
-  if (interactionMode_ != InteractionMode::None) {
-    const SubtitleItem *item = track_->findItem(draggingItemId_);
-    if (item) {
-      SubtitleItem updated = *item;
-      updated.startMs = previewStartMs_;
-      updated.endMs = previewEndMs_;
-      track_->updateItem(draggingItemId_, updated);
+  if (isDragging_ &&
+      (clipMode_ == ClipInteractionMode::ClipMove ||
+       clipMode_ == ClipInteractionMode::ClipResizeLeft ||
+       clipMode_ == ClipInteractionMode::ClipResizeRight)) {
+    // Commit clip position: apply temp values to the track
+    if (track_ && !dragTargetId_.isEmpty()) {
+      SubtitleItem item;
+      item.id = dragTargetId_;
+      item.text = track_->findItem(dragTargetId_)->text;
+      item.startMs = dragTempStartMs_;
+      item.endMs = dragTempEndMs_;
+      item.selected = true;
+      track_->updateItem(dragTargetId_, item);
     }
+    clipMode_ = ClipInteractionMode::Idle;
+    dragTargetId_.clear();
 
-    interactionMode_ = InteractionMode::None;
-    draggingItemId_.clear();
-    previewStartMs_ = 0;
-    previewEndMs_ = 0;
-    canvas_->update();
-    return;
-  }
-
-  // Seek drag or click
-  if (isDragging_) {
+  } else if (isDragging_) {
+    // Drag seek ended
     emit dragSeekFinished(currentTimeMs_);
-    isDragging_ = false;
   } else {
+    // Click (no drag): emit seek
     qint64 ms = xToTime(event->x());
-    if (ms < 0) ms = 0;
-    if (ms > totalDurationMs_) ms = totalDurationMs_;
+    if (ms < 0)
+      ms = 0;
+    if (ms > totalDurationMs_)
+      ms = totalDurationMs_;
     currentTimeMs_ = ms;
     emit timeClicked(ms);
     canvas_->update();
   }
 
   mousePressed_ = false;
+  isDragging_ = false;
 }
 ```
 
+- [ ] **Step 2: Build to verify**
+
+Run: `cmake --build cmake-build-debug`
+
 ---
 
-### Task 5: 修改 drawSubtitleTrack — 拖拽预览绘制
+### Task 8: Modify drawSubtitleTrack to use temp values during drag
 
-**File:** `src/TimelinePanel.cpp`
+**Files:**
+- Modify: `src/TimelinePanel.cpp`
 
-- [ ] **Step 1: 在 drawSubtitleTrack 的 clip 绘制循环中对被拖拽的 clip 使用预览坐标**
+- [ ] **Step 1: Update drawSubtitleTrack**
 
-在 line 411-438 的 for 循环中，在获取 `x` 和 `w` 之前插入判断：
+In `drawSubtitleTrack`, modify the subtitle bars loop (around lines 411-438) to use temporary values when the clip is being dragged. Replace the loop with:
 
 ```cpp
-  for (const auto &item : track_->items()) {
-    qint64 drawStart = item.startMs;
-    qint64 drawEnd = item.endMs;
-    if (!draggingItemId_.isEmpty() && item.id == draggingItemId_) {
-      drawStart = previewStartMs_;
-      drawEnd = previewEndMs_;
+  for (auto item : track_->items()) {
+    // Use temp values if this clip is being dragged
+    if (isDragging_ && item.id == dragTargetId_) {
+      item.startMs = dragTempStartMs_;
+      item.endMs = dragTempEndMs_;
     }
-    int x = timeToX(drawStart);
-    int w = timeToX(drawEnd) - x;
+
+    int x = timeToX(item.startMs);
+    int w = timeToX(item.endMs) - x;
     if (w < 4)
       w = 4;
-    // ... 后面使用 item.text 绘制文本不变 ...
+    if (x + w < TRACK_HEAD_WIDTH)
+      continue;
+    if (x > canvas_->width() - PANEL_RIGHT_MARGIN)
+      continue;
+
+    QColor barColor = item.selected ? QColor("#0ea5e9") : QColor("#38bdf8");
+    painter.setPen(Qt::NoPen);
+    painter.setBrush(barColor);
+    painter.drawRoundedRect(x, y + 2, w, SUBTITLE_TRACK_HEIGHT - 4, 4, 4);
+
+    painter.setPen(QColor("#e5e5e5"));
+    QFont barFont = painter.font();
+    barFont.setPointSize(9);
+    painter.setFont(barFont);
+
+    int textX = qMax(x + 8, TRACK_HEAD_WIDTH + 4);
+    int textMaxWidth = qMax(0, x + w - 4 - textX);
+    if (textMaxWidth > 0) {
+      QFontMetrics fm(barFont);
+      QString elided = fm.elidedText(item.text, Qt::ElideRight, textMaxWidth);
+      painter.drawText(textX, y + 18, elided);
+    }
+  }
 ```
 
-注意 `item.text` 仍使用原始 item，仅 `x` 和 `w` 使用 preview 值。
+Note: The loop variable changes from `const auto &item` to `auto item` (by value) so we can modify its startMs/endMs for rendering.
+
+- [ ] **Step 2: Build to verify**
+
+Run: `cmake --build cmake-build-debug`
 
 ---
 
-### Task 6: 构建验证
+### Task 9: Add QApplication include for cursor support
 
-**File:** 无需修改文件
+**Files:**
+- Modify: `src/TimelinePanel.cpp`
 
-- [ ] **Step 1: 构建**
+- [ ] **Step 1: Verify QApplication is already included**
+
+The file already includes `<QApplication>` on line 9. Also verify `<QCursor>` is available — it's included transitively via QWidget. No changes needed for includes.
+
+- [ ] **Step 2: Full build and manual test**
+
+Run: `cmake --build cmake-build-debug`
+
+Then run the app and verify:
+- Hovering over clip left/right edge shows resize cursor
+- Dragging clip middle moves it
+- Dragging left edge adjusts startMs
+- Dragging right edge adjusts endMs
+- Release commits the change
+- Clips don't overlap adjacent clips
+- Minimum duration of 100ms is enforced
+
+---
+
+### Task 10: clang-format and final build
+
+**Files:**
+- Modify: all changed files
+
+- [ ] **Step 1: Run clang-format**
+
+```bash
+clang-format -i src/TimelinePanel.cpp include/TimelinePanel.h
+```
+
+- [ ] **Step 2: Final build**
 
 ```bash
 cmake --build cmake-build-debug
 ```
 
-Expected: 编译成功，无错误。
+- [ ] **Step 3: Verify no warnings**
 
-- [ ] **Step 2: 运行并手动测试**
+Check build output for warnings. Fix any if present.
 
-```bash
-./cmake-build-debug/subtitles-editor
-```
+---
 
-Expected 行为：
-1. 加载视频后，字幕 clip 显示在轨道上
-2. 鼠标移到 clip 左边缘 → 自定义左 resize 光标
-3. 鼠标移到 clip 右边缘 → 自定义右 resize 光标
-4. 鼠标移到 clip 中间 → 默认箭头
-5. 拖拽 clip 主体 → 左右移动，碰到相邻 clip 停止
-6. 拖拽 clip 左边缘 → 调整起始时间
-7. 拖拽 clip 右边缘 → 调整结束时间
-8. 点击刻度尺区域 → seek 行为不受影响
-9. 点击轨道空白区域 → 无操作
+## Self-Review
 
-- [ ] **Step 3: 提交**
-
-```bash
-git add include/TimelinePanel.h src/TimelinePanel.cpp resources/resources.qrc
-git commit -m "feat: 字幕 clip 拖拽移动和边缘缩放"
-```
+1. **Spec coverage:** All sections addressed — interaction modes, cursor rules, collision rules, min duration, boundaries, commit strategy, adjacent clip lookup.
+2. **Placeholder scan:** No TBD/TODO placeholders found. All steps have concrete code.
+3. **Type consistency:** `ClipInteractionMode` enum used consistently across header and implementation. Member variable names match between declaration and usage.
