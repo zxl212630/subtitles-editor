@@ -24,6 +24,7 @@ public:
   explicit TimelineCanvas(TimelinePanel *panel, QWidget *parent = nullptr)
       : QWidget(parent), panel_(panel) {
     setAttribute(Qt::WA_StyledBackground);
+    setMouseTracking(true);
   }
 
 protected:
@@ -31,6 +32,10 @@ protected:
     QPainter painter(this);
     panel_->drawOnCanvas(painter);
   }
+
+  void mousePressEvent(QMouseEvent *event) override { panel_->mousePressEvent(event); }
+  void mouseMoveEvent(QMouseEvent *event) override { panel_->mouseMoveEvent(event); }
+  void mouseReleaseEvent(QMouseEvent *event) override { panel_->mouseReleaseEvent(event); }
 
 private:
   TimelinePanel *panel_;
@@ -736,9 +741,13 @@ void TimelinePanel::mouseMoveEvent(QMouseEvent *event) {
         }
       }
 
+      // Left collision: ensure newStart > prev clip's endMs
+      if (prevEnd >= 0 && newStart <= prevEnd)
+        newStart = prevEnd + 1;
+
       // Re-derive the other end to preserve duration
       newEnd = newStart + origDuration;
-      // Re-check right collision with new end
+      // Right collision: ensure newEnd < next clip's startMs
       if (nextStart >= 0 && newEnd >= nextStart) {
         newEnd = nextStart - 1;
         newStart = newEnd - origDuration;
