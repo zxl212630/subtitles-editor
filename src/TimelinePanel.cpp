@@ -862,8 +862,8 @@ void TimelinePanel::mouseReleaseEvent(QMouseEvent *event) {
   } else if (isDragging_) {
     // Drag seek ended
     emit dragSeekFinished(currentTimeMs_);
-  } else {
-    // Click (no drag): emit seek
+  } else if (mousePressed_ && clipMode_ == ClipInteractionMode::Idle) {
+    // Click on ruler (no drag): emit seek
     qint64 ms = xToTime(event->x());
     if (ms < 0)
       ms = 0;
