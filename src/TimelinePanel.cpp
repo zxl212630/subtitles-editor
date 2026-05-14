@@ -679,19 +679,8 @@ void TimelinePanel::mousePressEvent(QMouseEvent *event) {
     lastPreviewSystemTime_ = QDateTime::currentMSecsSinceEpoch();
     canvas_->update();
   } else {
-    // Click on empty area: no-op, but set mousePressed for seek fallback
-    mousePressed_ = true;
-    isDragging_ = false;
-    dragStartX_ = event->x();
-
-    qint64 ms = xToTime(event->x());
-    if (ms < 0)
-      ms = 0;
-    if (ms > totalDurationMs_)
-      ms = totalDurationMs_;
-    currentTimeMs_ = ms;
-    lastPreviewSystemTime_ = QDateTime::currentMSecsSinceEpoch();
-    canvas_->update();
+    // Click on empty track area: no-op
+    return;
   }
 }
 
