@@ -58,8 +58,8 @@ public:
     // Style adjustments based on enabled state
     auto updateBtnStyle = [](QPushButton *btn) {
       bool enabled = btn->isEnabled();
-      QString color = enabled ? "#2dd4bf" : "#4b5563"; // Teal-400 vs Gray-600
-      QString bg = enabled ? "#134e4a" : "#1f2937";    // Teal-900 vs Gray-800
+      QString color = enabled ? "#38bdf8" : "#4b5563"; // Sky-400 vs Gray-600
+      QString bg = enabled ? "#0c4a6e" : "#1f2937";    // Sky-900 vs Gray-800
       btn->setStyleSheet(QString(R"(
         QPushButton {
           background-color: %1;
@@ -72,7 +72,7 @@ public:
           font-weight: bold;
         }
         QPushButton:hover:enabled {
-          background-color: #115e59;
+          background-color: #075985;
         }
       )")
                              .arg(bg, color));
@@ -91,8 +91,8 @@ protected:
     QPainter painter(this);
     painter.setRenderHint(QPainter::Antialiasing);
 
-    // Green horizontal line
-    painter.setPen(QPen(QColor("#2dd4bf"), 1));
+    // Blue horizontal line
+    painter.setPen(QPen(QColor("#38bdf8"), 1));
     int midY = height() / 2;
     painter.drawLine(0, midY, width(), midY);
   }
@@ -286,6 +286,12 @@ void SubtitleListPanel::setupUi() {
 
   lcLayout->addWidget(tableHeader);
 
+  // Separator line
+  auto *headerSeparator = new QFrame(listContainer);
+  headerSeparator->setFixedHeight(1);
+  headerSeparator->setStyleSheet("background-color: #262626; border: none;");
+  lcLayout->addWidget(headerSeparator);
+
   // Subtitle list
   listView_ = new QListView(listContainer);
   listView_->setStyleSheet(R"(
@@ -330,7 +336,7 @@ void SubtitleListPanel::setupUi() {
   delegate_ = new SubtitleListDelegate(this);
   listView_->setItemDelegate(delegate_);
 
-  actionOverlay_ = new SubtitleActionOverlay(listView_->viewport());
+  actionOverlay_ = new SubtitleActionOverlay(listContainer);
   connect(actionOverlay_, &SubtitleActionOverlay::addClicked, this,
           [this](qint64 start, qint64 end) {
             if (track_)
@@ -369,6 +375,7 @@ void SubtitleListPanel::setupUi() {
           &SubtitleListPanel::onItemDoubleClicked);
 
   lcLayout->addWidget(listView_);
+  lcLayout->addSpacing(12); // Extra space at bottom
   pcLayout->addWidget(listContainer);
   layout->addWidget(panelContent);
 }
@@ -463,8 +470,11 @@ bool SubtitleListPanel::eventFilter(QObject *watched, QEvent *event) {
           }
 
           if (y != -1) {
-            actionOverlay_->move(0, y - actionOverlay_->height() / 2);
-            actionOverlay_->resize(listView_->viewport()->width(),
+            // Map viewport Y to listContainer coordinates
+            QPoint posInContainer = listView_->viewport()->mapTo(listView_->parentWidget(), QPoint(0, y));
+            
+            actionOverlay_->move(0, posInContainer.y() - actionOverlay_->height() / 2);
+            actionOverlay_->resize(listView_->parentWidget()->width(),
                                    actionOverlay_->height());
 
             bool canMerge = !id1.isEmpty() && !id2.isEmpty();
@@ -473,21 +483,32 @@ bool SubtitleListPanel::eventFilter(QObject *watched, QEvent *event) {
             actionOverlay_->setProperty("id2", id2);
 
             actionOverlay_->show();
+            actionOverlay_->raise();
             foundZone = true;
             break;
           }
         }
 
         if (!foundZone) {
-          actionOverlay_->hide();
+          // Only hide if the mouse isn't currently over the overlay itself
+          if (actionOverlay_ && !actionOverlay_->underMouse()) {
+            actionOverlay_->hide();
+          }
         }
       }
 
       return false;
     } else if (event->type() == QEvent::Leave) {
       delegate_->setHoveredIndex(QModelIndex(), 0);
-      if (actionOverlay_)
-        actionOverlay_->hide();
+      // Logic for hiding: check if mouse actually left the logical interaction
+      // zone
+      if (actionOverlay_) {
+        QPoint globalPos = QCursor::pos();
+        QPoint localPos = actionOverlay_->mapFromGlobal(globalPos);
+        if (!actionOverlay_->rect().contains(localPos)) {
+          actionOverlay_->hide();
+        }
+      }
       return false;
     }
   }
