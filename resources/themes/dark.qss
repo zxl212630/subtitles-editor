@@ -1,0 +1,11 @@
+QMainWindow { background-color: #151515; }
+QFrame#TitleBar { background-color: #262626; border: none; }
+QLabel { background: transparent; }
+QLabel#AppTitleLabel {
+    color: #9ca3af;
+    font-family: Inter, sans-serif;
+    font-size: 12px;
+    font-weight: normal;
+}
+QSplitter::handle { background-color: #0a0a0a; }
+QWidget#CentralWidget { background-color: #0a0a0a; }

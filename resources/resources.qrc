@@ -12,5 +12,8 @@
         <file>icons/merge.svg</file>
         <file>icons/resize-left.svg</file>
         <file>icons/resize-right.svg</file>
+        <file>icons/settings.svg</file>
+        <file>themes/dark.qss</file>
+        <file>themes/light.qss</file>
     </qresource>
 </RCC>

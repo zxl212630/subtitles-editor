@@ -117,8 +117,14 @@ void AppWindow::setupUi() {
   resize(1440, 900);
   setMinimumSize(960, 600);
 
-  // Window background (#151515) shows around edges and between panels
-  setStyleSheet("QMainWindow { background-color: #151515; }");
+  QString theme = ConfigManager::instance().theme();
+  if (theme.isEmpty())
+    theme = "dark";
+
+  QFile f(QString(":/themes/%1.qss").arg(theme));
+  if (f.open(QFile::ReadOnly | QFile::Text)) {
+    qApp->setStyleSheet(QTextStream(&f).readAll());
+  }
 
   d->windowAgent = new QWK::WidgetWindowAgent(this);
   d->windowAgent->setup(this);
@@ -143,12 +149,6 @@ void AppWindow::setupTitleBar() {
   d->titleBar = new QFrame(this);
   d->titleBar->setFixedHeight(36);
   d->titleBar->setObjectName("TitleBar");
-  d->titleBar->setStyleSheet(R"(
-        QFrame#TitleBar {
-            background-color: #262626;
-            border: none;
-        }
-    )");
 
   auto *layout = new QHBoxLayout(d->titleBar);
   layout->setContentsMargins(12, 0, 12, 0);
@@ -160,16 +160,8 @@ void AppWindow::setupTitleBar() {
   layout->addWidget(leftSpacer);
 
   d->titleLabel = new QLabel("字幕编辑", d->titleBar);
+  d->titleLabel->setObjectName("AppTitleLabel");
   d->titleLabel->setAlignment(Qt::AlignCenter);
-  d->titleLabel->setStyleSheet(R"(
-        QLabel {
-            color: #9ca3af;
-            font-family: Inter, sans-serif;
-            font-size: 12px;
-            font-weight: normal;
-            background: transparent;
-        }
-    )");
   layout->addWidget(d->titleLabel);
 
   auto *rightSpacer = new QWidget(d->titleBar);
@@ -347,8 +339,6 @@ void AppWindow::setupSplitterLayout() {
   d->topSplitter->setStretchFactor(0, 1);
   d->topSplitter->setStretchFactor(1, 0);
   d->topSplitter->setHandleWidth(10);
-  d->topSplitter->setStyleSheet(
-      "QSplitter::handle { background-color: #0a0a0a; }");
   d->topSplitter->setCollapsible(0, false);
   d->topSplitter->setCollapsible(1, false);
   d->subtitleListPanel->setMinimumWidth(300);
@@ -362,8 +352,6 @@ void AppWindow::setupSplitterLayout() {
   d->verticalSplitter->setStretchFactor(0, 1);
   d->verticalSplitter->setStretchFactor(1, 0);
   d->verticalSplitter->setHandleWidth(10);
-  d->verticalSplitter->setStyleSheet(
-      "QSplitter::handle { background-color: #0a0a0a; }");
   d->verticalSplitter->setCollapsible(0, false);
   d->verticalSplitter->setCollapsible(1, false);
   d->timelinePanel->setMinimumHeight(180);
@@ -372,7 +360,7 @@ void AppWindow::setupSplitterLayout() {
 
   // Set central widget
   auto *central = new QWidget(this);
-  central->setStyleSheet("background-color: #0a0a0a;");
+  central->setObjectName("CentralWidget");
   auto *centralLayout = new QVBoxLayout(central);
   centralLayout->setContentsMargins(10, 10, 10, 10);
   centralLayout->setSpacing(0);
