@@ -641,10 +641,20 @@ void VideoPreviewPanel::updateSubtitleOverlay() {
 
   qint64 currentTimeMs = mediaPlayer_->currentTimeMs();
   const SubtitleItem *activeItem = nullptr;
-  for (const auto &item : subtitleTrack_->items()) {
-    if (item.startMs <= currentTimeMs && currentTimeMs <= item.endMs) {
-      activeItem = &item;
-      break;
+  const auto &items = subtitleTrack_->items();
+
+  for (int i = 0; i < items.size(); ++i) {
+    const auto &item = items[i];
+    bool isLast = (i == items.size() - 1);
+
+    // Left-closed, right-open: [start, end)
+    // Exception: last item is visible at exactly endMs
+    if (currentTimeMs >= item.startMs) {
+      if (currentTimeMs < item.endMs ||
+          (isLast && currentTimeMs == item.endMs)) {
+        activeItem = &item;
+        break;
+      }
     }
   }
 

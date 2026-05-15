@@ -29,8 +29,11 @@ public:
   QRect splitButtonRect(const QStyleOptionViewItem &option) const;
   QRect deleteButtonRect(const QStyleOptionViewItem &option) const;
 
+  int getActiveEditorCursorPosition() const;
+
 signals:
   void deleteClicked(const QString &id);
+  void splitClicked(const QString &id, int cursorPosition);
 
 private:
   static QString formatTime(qint64 ms);
@@ -38,4 +41,5 @@ private:
 
   QModelIndex hoveredIndex_;
   int hoveredButton_ = 0; // 0=none, 1=split, 2=delete
+  mutable QWidget *currentEditor_ = nullptr;
 };

@@ -8,6 +8,7 @@ class SubtitleListDelegate;
 class QListView;
 class QLineEdit;
 class QPushButton;
+class SubtitleActionOverlay;
 
 class SubtitleListPanel : public QWidget {
   Q_OBJECT
@@ -16,6 +17,8 @@ public:
   explicit SubtitleListPanel(QWidget *parent = nullptr);
 
   void setTrack(SubtitleTrack *track);
+  void setVideoFps(double fps);
+  void setTotalDuration(qint64 ms);
 
 signals:
   void itemSelected(const QString &id);
@@ -34,4 +37,8 @@ private:
   SubtitleListDelegate *delegate_ = nullptr;
   QListView *listView_ = nullptr;
   QLineEdit *searchEdit_ = nullptr;
+  SubtitleActionOverlay *actionOverlay_ = nullptr;
+
+  double videoFps_ = 25.0;
+  qint64 totalDurationMs_ = 0;
 };

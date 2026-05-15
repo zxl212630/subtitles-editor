@@ -227,12 +227,16 @@ void AppWindow::setupSplitterLayout() {
   // 2. MediaPlayer -> Timeline: duration
   connect(d->mediaPlayer, &MediaPlayer::mediaLoaded, d->timelinePanel,
           &TimelinePanel::setTotalDuration);
+  connect(d->mediaPlayer, &MediaPlayer::mediaLoaded, d->subtitleListPanel,
+          &SubtitleListPanel::setTotalDuration);
 
   // 2a. MediaPlayer -> Timeline & VideoPreview: video fps for drag throttle
   connect(d->mediaPlayer, &MediaPlayer::mediaLoaded, this,
           [this](qint64, QSize) {
-            d->timelinePanel->setVideoFps(d->mediaPlayer->decoderFps());
-            d->videoPreviewPanel->setVideoFps(d->mediaPlayer->decoderFps());
+            double fps = d->mediaPlayer->decoderFps();
+            d->timelinePanel->setVideoFps(fps);
+            d->videoPreviewPanel->setVideoFps(fps);
+            d->subtitleListPanel->setVideoFps(fps);
           });
 
   // 3. MediaPlayer -> VideoPreview: seek display
@@ -408,6 +412,7 @@ void AppWindow::onSubtitleFileDropped(const QString &path) {
     auto subtitles = parser->getSubtitles();
 
     qint64 maxEndMs = 0;
+    qint64 previousEndMs = 0;
     for (auto *sub : subtitles) {
       if (!sub)
         continue;
@@ -416,7 +421,16 @@ void AppWindow::onSubtitleFileDropped(const QString &path) {
       item.text = QString::fromStdString(sub->getText());
       item.startMs = static_cast<qint64>(sub->getStartTime());
       item.endMs = static_cast<qint64>(sub->getEndTime());
+
+      // Overlap check
+      if (item.startMs < previousEndMs) {
+        qWarning() << "Illegal overlapping subtitle ignored: " << item.text
+                   << " start=" << item.startMs << " prevEnd=" << previousEndMs;
+        continue;
+      }
+
       d->subtitleTrack->addItem(item);
+      previousEndMs = item.endMs;
       if (item.endMs > maxEndMs)
         maxEndMs = item.endMs;
     }

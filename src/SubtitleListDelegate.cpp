@@ -153,15 +153,32 @@ bool SubtitleListDelegate::editorEvent(QEvent *event, QAbstractItemModel *model,
 
   if (event->type() == QEvent::MouseButtonRelease) {
     auto *mouseEvent = static_cast<QMouseEvent *>(event);
+    QString id = getIdAtIndex(index);
+
+    QRect splitBtn = splitButtonRect(option);
+    if (splitBtn.contains(mouseEvent->pos())) {
+      int pos = getActiveEditorCursorPosition();
+      emit splitClicked(id, pos);
+      return true;
+    }
+
     QRect deleteBtn = deleteButtonRect(option);
     if (deleteBtn.contains(mouseEvent->pos())) {
-      QString id = getIdAtIndex(index);
       emit deleteClicked(id);
       return true;
     }
   }
 
   return QStyledItemDelegate::editorEvent(event, model, option, index);
+}
+
+int SubtitleListDelegate::getActiveEditorCursorPosition() const {
+  if (!currentEditor_)
+    return -1;
+  auto *edit = qobject_cast<QTextEdit *>(currentEditor_);
+  if (!edit)
+    return -1;
+  return edit->textCursor().position();
 }
 
 class SubtitleTextEdit : public QTextEdit {
@@ -191,6 +208,9 @@ SubtitleListDelegate::createEditor(QWidget *parent,
                                    const QStyleOptionViewItem & /*option*/,
                                    const QModelIndex & /*index*/) const {
   auto *editor = new SubtitleTextEdit(parent);
+  currentEditor_ = editor;
+  connect(editor, &QObject::destroyed, [this]() { currentEditor_ = nullptr; });
+
   editor->setStyleSheet(
       "QTextEdit { background-color: #1a1a1a; color: #d1d5db; "
       "border: 1px solid #0ea5e9; border-radius: 4px; padding: 2px 6px; "

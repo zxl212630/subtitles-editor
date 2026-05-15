@@ -13,6 +13,105 @@
 #include <QPushButton>
 #include <QVBoxLayout>
 
+#include <QApplication>
+#include <QPainter>
+
+class SubtitleActionOverlay : public QWidget {
+  Q_OBJECT
+public:
+  explicit SubtitleActionOverlay(QWidget *parent = nullptr) : QWidget(parent) {
+    setFixedHeight(28);
+    hide();
+
+    auto *layout = new QHBoxLayout(this);
+    layout->setContentsMargins(0, 0, 0, 0);
+    layout->setSpacing(10);
+    layout->setAlignment(Qt::AlignCenter);
+
+    addBtn_ = createBtn(":/icons/add.svg", "添加");
+    mergeBtn_ = createBtn(":/icons/merge.svg", "合并");
+
+    layout->addStretch();
+    layout->addWidget(addBtn_);
+    layout->addWidget(mergeBtn_);
+    layout->addStretch();
+
+    connect(addBtn_, &QPushButton::clicked, this, [this]() {
+      emit addClicked(gapStart_, gapEnd_);
+    });
+    connect(mergeBtn_, &QPushButton::clicked, this, [this]() {
+      emit mergeClicked();
+    });
+    }
+
+
+  void updateState(qint64 gapStart, qint64 gapEnd, bool canMerge, double fps) {
+    gapStart_ = gapStart;
+    gapEnd_ = gapEnd;
+
+    double minGap = 1000.0 / fps;
+    bool canAdd = (gapEnd - gapStart) >= minGap;
+
+    addBtn_->setEnabled(canAdd);
+    mergeBtn_->setEnabled(canMerge);
+
+    // Style adjustments based on enabled state
+    auto updateBtnStyle = [](QPushButton *btn) {
+      bool enabled = btn->isEnabled();
+      QString color = enabled ? "#2dd4bf" : "#4b5563"; // Teal-400 vs Gray-600
+      QString bg = enabled ? "#134e4a" : "#1f2937";    // Teal-900 vs Gray-800
+      btn->setStyleSheet(QString(R"(
+        QPushButton {
+          background-color: %1;
+          color: %2;
+          border: none;
+          border-radius: 6px;
+          padding: 4px 12px;
+          font-family: Inter, sans-serif;
+          font-size: 11px;
+          font-weight: bold;
+        }
+        QPushButton:hover:enabled {
+          background-color: #115e59;
+        }
+      )")
+                             .arg(bg, color));
+    };
+
+    updateBtnStyle(addBtn_);
+    updateBtnStyle(mergeBtn_);
+  }
+
+signals:
+  void addClicked(qint64 start, qint64 end);
+  void mergeClicked();
+
+protected:
+  void paintEvent(QPaintEvent *) override {
+    QPainter painter(this);
+    painter.setRenderHint(QPainter::Antialiasing);
+
+    // Green horizontal line
+    painter.setPen(QPen(QColor("#2dd4bf"), 1));
+    int midY = height() / 2;
+    painter.drawLine(0, midY, width(), midY);
+  }
+
+private:
+  QPushButton *createBtn(const QString &iconPath, const QString &text) {
+    auto *btn = new QPushButton(this);
+    btn->setText(text);
+    btn->setIcon(QIcon(iconPath));
+    btn->setIconSize(QSize(14, 14));
+    return btn;
+  }
+
+  QPushButton *addBtn_ = nullptr;
+  QPushButton *mergeBtn_ = nullptr;
+  qint64 gapStart_ = 0;
+  qint64 gapEnd_ = 0;
+};
+
 SubtitleListPanel::SubtitleListPanel(QWidget *parent) : QWidget(parent) {
   setupUi();
 }
@@ -21,6 +120,13 @@ void SubtitleListPanel::setTrack(SubtitleTrack *track) {
   track_ = track;
   model_->setTrack(track);
 }
+
+void SubtitleListPanel::setVideoFps(double fps) {
+  if (fps > 0)
+    videoFps_ = fps;
+}
+
+void SubtitleListPanel::setTotalDuration(qint64 ms) { totalDurationMs_ = ms; }
 
 void SubtitleListPanel::setupUi() {
   setObjectName("SubtitleListPanel");
@@ -224,10 +330,33 @@ void SubtitleListPanel::setupUi() {
   delegate_ = new SubtitleListDelegate(this);
   listView_->setItemDelegate(delegate_);
 
+  actionOverlay_ = new SubtitleActionOverlay(listView_->viewport());
+  connect(actionOverlay_, &SubtitleActionOverlay::addClicked, this,
+          [this](qint64 start, qint64 end) {
+            if (track_)
+              track_->addGapItem(start, end);
+          });
+
+  // Use properties to store IDs on the overlay for merge
+  connect(actionOverlay_, &SubtitleActionOverlay::mergeClicked, this, [this]() {
+    QString id1 = actionOverlay_->property("id1").toString();
+    QString id2 = actionOverlay_->property("id2").toString();
+    if (track_ && !id1.isEmpty() && !id2.isEmpty()) {
+      track_->mergeItems(id1, id2);
+    }
+  });
+
   connect(delegate_, &SubtitleListDelegate::deleteClicked, this,
           [this](const QString &id) {
             if (track_) {
               track_->removeItem(id);
+            }
+          });
+
+  connect(delegate_, &SubtitleListDelegate::splitClicked, this,
+          [this](const QString &id, int pos) {
+            if (track_) {
+              track_->splitItem(id, pos);
             }
           });
 
@@ -288,11 +417,80 @@ bool SubtitleListPanel::eventFilter(QObject *watched, QEvent *event) {
         }
       }
       delegate_->setHoveredIndex(index, button);
+
+      // --- Add/Merge Overlay Logic ---
+      if (track_) {
+        const auto &items = track_->items();
+        bool foundZone = false;
+        const int threshold = 12; // px sensitivity
+
+        // Check if mouse is near any item's top/bottom
+        for (int i = 0; i <= items.size(); ++i) {
+          int y = -1;
+          qint64 gapStart = 0, gapEnd = 0;
+          QString id1, id2;
+
+          if (i < items.size()) {
+            // Check top of item i
+            QModelIndex idx = model_->index(i);
+            QRect r = listView_->visualRect(idx);
+            if (qAbs(me->pos().y() - r.top()) <= threshold) {
+              y = r.top();
+              gapEnd = items[i].startMs;
+              id2 = items[i].id;
+              if (i > 0) {
+                gapStart = items[i - 1].endMs;
+                id1 = items[i - 1].id;
+              }
+            }
+          }
+
+          if (y == -1 && i > 0) {
+            // Check bottom of item i-1
+            QModelIndex idx = model_->index(i - 1);
+            QRect r = listView_->visualRect(idx);
+            if (qAbs(me->pos().y() - r.bottom()) <= threshold) {
+              y = r.bottom();
+              gapStart = items[i - 1].endMs;
+              id1 = items[i - 1].id;
+              if (i < items.size()) {
+                gapEnd = items[i].startMs;
+                id2 = items[i].id;
+              } else {
+                gapEnd = totalDurationMs_;
+              }
+            }
+          }
+
+          if (y != -1) {
+            actionOverlay_->move(0, y - actionOverlay_->height() / 2);
+            actionOverlay_->resize(listView_->viewport()->width(),
+                                   actionOverlay_->height());
+
+            bool canMerge = !id1.isEmpty() && !id2.isEmpty();
+            actionOverlay_->updateState(gapStart, gapEnd, canMerge, videoFps_);
+            actionOverlay_->setProperty("id1", id1);
+            actionOverlay_->setProperty("id2", id2);
+
+            actionOverlay_->show();
+            foundZone = true;
+            break;
+          }
+        }
+
+        if (!foundZone) {
+          actionOverlay_->hide();
+        }
+      }
+
       return false;
     } else if (event->type() == QEvent::Leave) {
       delegate_->setHoveredIndex(QModelIndex(), 0);
+      if (actionOverlay_)
+        actionOverlay_->hide();
       return false;
     }
   }
   return QWidget::eventFilter(watched, event);
 }
+#include "SubtitleListPanel.moc"

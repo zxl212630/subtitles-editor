@@ -33,9 +33,15 @@ protected:
     panel_->drawOnCanvas(painter);
   }
 
-  void mousePressEvent(QMouseEvent *event) override { panel_->mousePressEvent(event); }
-  void mouseMoveEvent(QMouseEvent *event) override { panel_->mouseMoveEvent(event); }
-  void mouseReleaseEvent(QMouseEvent *event) override { panel_->mouseReleaseEvent(event); }
+  void mousePressEvent(QMouseEvent *event) override {
+    panel_->mousePressEvent(event);
+  }
+  void mouseMoveEvent(QMouseEvent *event) override {
+    panel_->mouseMoveEvent(event);
+  }
+  void mouseReleaseEvent(QMouseEvent *event) override {
+    panel_->mouseReleaseEvent(event);
+  }
 
 private:
   TimelinePanel *panel_;
@@ -317,8 +323,10 @@ void TimelinePanel::drawOnCanvas(QPainter &painter) {
     QFont font = painter.font();
     font.setPointSize(10);
     painter.setFont(font);
-    painter.drawText(12, subY, TRACK_HEAD_WIDTH - 24, SUBTITLE_TRACK_HEIGHT, Qt::AlignVCenter | Qt::AlignLeft, "T  字幕1");
-    painter.drawText(12, vidY, TRACK_HEAD_WIDTH - 24, VIDEO_TRACK_HEIGHT, Qt::AlignVCenter | Qt::AlignLeft, "F  视频1");
+    painter.drawText(12, subY, TRACK_HEAD_WIDTH - 24, SUBTITLE_TRACK_HEIGHT,
+                     Qt::AlignVCenter | Qt::AlignLeft, "T  字幕1");
+    painter.drawText(12, vidY, TRACK_HEAD_WIDTH - 24, VIDEO_TRACK_HEIGHT,
+                     Qt::AlignVCenter | Qt::AlignLeft, "F  视频1");
 
     // Separator between track heads
     painter.setPen(QColor("#333333"));
@@ -450,7 +458,8 @@ void TimelinePanel::drawSubtitleTrack(QPainter &painter, int y) {
   QFont font = painter.font();
   font.setPointSize(10);
   painter.setFont(font);
-  painter.drawText(12, y, TRACK_HEAD_WIDTH - 24, SUBTITLE_TRACK_HEIGHT, Qt::AlignVCenter | Qt::AlignLeft, "T  字幕1");
+  painter.drawText(12, y, TRACK_HEAD_WIDTH - 24, SUBTITLE_TRACK_HEIGHT,
+                   Qt::AlignVCenter | Qt::AlignLeft, "T  字幕1");
 
   // Separator (full width including track head)
   painter.setPen(QColor("#333333"));
@@ -498,7 +507,8 @@ void TimelinePanel::drawSubtitleTrack(QPainter &painter, int y) {
     if (textMaxWidth > 0) {
       QFontMetrics fm(barFont);
       QString elided = fm.elidedText(item.text, Qt::ElideRight, textMaxWidth);
-      painter.drawText(textX, y, textMaxWidth, SUBTITLE_TRACK_HEIGHT, Qt::AlignVCenter | Qt::AlignLeft, elided);
+      painter.drawText(textX, y, textMaxWidth, SUBTITLE_TRACK_HEIGHT,
+                       Qt::AlignVCenter | Qt::AlignLeft, elided);
     }
   }
 
@@ -517,7 +527,8 @@ void TimelinePanel::drawVideoTrack(QPainter &painter, int y) {
   QFont font = painter.font();
   font.setPointSize(10);
   painter.setFont(font);
-  painter.drawText(12, y, TRACK_HEAD_WIDTH - 24, VIDEO_TRACK_HEIGHT, Qt::AlignVCenter | Qt::AlignLeft, "F  视频1");
+  painter.drawText(12, y, TRACK_HEAD_WIDTH - 24, VIDEO_TRACK_HEIGHT,
+                   Qt::AlignVCenter | Qt::AlignLeft, "F  视频1");
 
   painter.save();
   painter.setClipRect(TRACK_HEAD_WIDTH, y, contentWidth, VIDEO_TRACK_HEIGHT);
@@ -534,7 +545,9 @@ void TimelinePanel::drawVideoTrack(QPainter &painter, int y) {
     painter.drawRoundedRect(videoX, y + 2, videoWidth, VIDEO_TRACK_HEIGHT - 4,
                             4, 4);
     painter.setPen(QColor("#e5e5e5"));
-    painter.drawText(TRACK_HEAD_WIDTH + 16, y, contentWidth - 32, VIDEO_TRACK_HEIGHT, Qt::AlignVCenter | Qt::AlignLeft, mediaFileName_);
+    painter.drawText(TRACK_HEAD_WIDTH + 16, y, contentWidth - 32,
+                     VIDEO_TRACK_HEIGHT, Qt::AlignVCenter | Qt::AlignLeft,
+                     mediaFileName_);
   }
 
   painter.restore();
@@ -731,15 +744,15 @@ void TimelinePanel::mouseMoveEvent(QMouseEvent *event) {
         }
       }
 
-      // Left collision: ensure newStart > prev clip's endMs
-      if (prevEnd >= 0 && newStart <= prevEnd)
-        newStart = prevEnd + 1;
+      // Left collision: allow touching
+      if (prevEnd >= 0 && newStart < prevEnd)
+        newStart = prevEnd;
 
       // Re-derive the other end to preserve duration
       newEnd = newStart + origDuration;
-      // Right collision: ensure newEnd < next clip's startMs
-      if (nextStart >= 0 && newEnd >= nextStart) {
-        newEnd = nextStart - 1;
+      // Right collision: allow touching
+      if (nextStart >= 0 && newEnd > nextStart) {
+        newEnd = nextStart;
         newStart = newEnd - origDuration;
       }
 
@@ -748,8 +761,8 @@ void TimelinePanel::mouseMoveEvent(QMouseEvent *event) {
         newStart = 0;
         newEnd = origDuration;
       }
-      if (newEnd > totalDurationMs_ - 1) {
-        newEnd = totalDurationMs_ - 1;
+      if (newEnd > totalDurationMs_) {
+        newEnd = totalDurationMs_;
         newStart = newEnd - origDuration;
       }
       if (newStart < 0)
@@ -772,9 +785,9 @@ void TimelinePanel::mouseMoveEvent(QMouseEvent *event) {
         }
       }
 
-      // Collision
-      if (prevEnd >= 0 && newStart <= prevEnd)
-        newStart = prevEnd + 1;
+      // Collision: allow touching
+      if (prevEnd >= 0 && newStart < prevEnd)
+        newStart = prevEnd;
 
       // Minimum duration
       if (dragOrigEndMs_ - newStart < 100)
@@ -801,17 +814,17 @@ void TimelinePanel::mouseMoveEvent(QMouseEvent *event) {
         }
       }
 
-      // Collision
-      if (nextStart >= 0 && newEnd >= nextStart)
-        newEnd = nextStart - 1;
+      // Collision: allow touching
+      if (nextStart >= 0 && newEnd > nextStart)
+        newEnd = nextStart;
 
       // Minimum duration
       if (newEnd - dragOrigStartMs_ < 100)
         newEnd = dragOrigStartMs_ + 100;
 
       // Boundary
-      if (newEnd > totalDurationMs_ - 1)
-        newEnd = totalDurationMs_ - 1;
+      if (newEnd > totalDurationMs_)
+        newEnd = totalDurationMs_;
 
       dragTempStartMs_ = dragOrigStartMs_;
       dragTempEndMs_ = newEnd;

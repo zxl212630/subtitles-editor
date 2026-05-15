@@ -21,6 +21,10 @@ public:
   const SubtitleItem *selectedItem() const;
   const SubtitleItem *findItem(const QString &id) const;
 
+  void splitItem(const QString &id, int cursorPosition = -1);
+  void mergeItems(const QString &id1, const QString &id2);
+  void addGapItem(qint64 startMs, qint64 endMs);
+
 signals:
   void itemAdded(const SubtitleItem &item);
   void itemRemoved(const QString &id);
