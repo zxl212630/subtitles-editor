@@ -148,37 +148,24 @@ void SubtitleListDelegate::setHoveredIndex(const QModelIndex &index,
 bool SubtitleListDelegate::editorEvent(QEvent *event, QAbstractItemModel *model,
                                        const QStyleOptionViewItem &option,
                                        const QModelIndex &index) {
-  if (!index.isValid())
-    return false;
-
-  if (event->type() == QEvent::MouseButtonRelease) {
-    auto *mouseEvent = static_cast<QMouseEvent *>(event);
-    QString id = getIdAtIndex(index);
-
-    QRect splitBtn = splitButtonRect(option);
-    if (splitBtn.contains(mouseEvent->pos())) {
-      int pos = getActiveEditorCursorPosition();
-      emit splitClicked(id, pos);
-      return true;
-    }
-
-    QRect deleteBtn = deleteButtonRect(option);
-    if (deleteBtn.contains(mouseEvent->pos())) {
-      emit deleteClicked(id);
-      return true;
-    }
-  }
-
+  // Click handling moved to SubtitleListPanel::eventFilter for better stability
+  // when an editor is active.
   return QStyledItemDelegate::editorEvent(event, model, option, index);
 }
 
-int SubtitleListDelegate::getActiveEditorCursorPosition() const {
-  if (!currentEditor_)
-    return -1;
+bool SubtitleListDelegate::getActiveEditorInfo(const QModelIndex &index,
+                                               int &cursorPosition,
+                                               QString &text) const {
+  QString id = getIdAtIndex(index);
+  if (!currentEditor_ || currentEditingId_ != id) {
+    return false;
+  }
   auto *edit = qobject_cast<QTextEdit *>(currentEditor_);
   if (!edit)
-    return -1;
-  return edit->textCursor().position();
+    return false;
+  cursorPosition = lastCursorPos_; // Use tracked position
+  text = edit->toPlainText();
+  return true;
 }
 
 class SubtitleTextEdit : public QTextEdit {
@@ -206,10 +193,34 @@ protected:
 QWidget *
 SubtitleListDelegate::createEditor(QWidget *parent,
                                    const QStyleOptionViewItem & /*option*/,
-                                   const QModelIndex & /*index*/) const {
+                                   const QModelIndex &index) const {
   auto *editor = new SubtitleTextEdit(parent);
   currentEditor_ = editor;
-  connect(editor, &QObject::destroyed, [this]() { currentEditor_ = nullptr; });
+  currentEditingId_ = getIdAtIndex(index);
+  lastCursorPos_ = 0; // Initialize
+
+  connect(editor, &QTextEdit::cursorPositionChanged, [this, editor]() {
+    int newPos = editor->textCursor().position();
+    int len = editor->toPlainText().length();
+    // Logic: If the cursor suddenly jumps to the very end or beginning
+    // (often happens on focus loss), but we already had a position in the
+    // middle, ignore the jump to preserve the split point.
+    if (len > 0 && (newPos == 0 || newPos == len)) {
+      if (lastCursorPos_ > 0 && lastCursorPos_ < len) {
+        qDebug() << "[SplitDebug] Ignoring cursor jump to boundary:" << newPos
+                 << " (staying at:" << lastCursorPos_ << ")";
+        return;
+      }
+    }
+    lastCursorPos_ = newPos;
+  });
+
+  connect(editor, &QObject::destroyed, [this]() {
+    qDebug() << "[SplitDebug] Editor destroyed for id:" << currentEditingId_;
+    currentEditor_ = nullptr;
+    currentEditingId_.clear();
+    lastCursorPos_ = -1;
+  });
 
   editor->setStyleSheet(
       "QTextEdit { background-color: #1a1a1a; color: #d1d5db; "
@@ -232,6 +243,19 @@ void SubtitleListDelegate::setEditorData(QWidget *editor,
   QString text = index.data(SubtitleListModel::TextRole).toString();
   auto *textEdit = static_cast<SubtitleTextEdit *>(editor);
   textEdit->setPlainText(text);
+
+  QString id = getIdAtIndex(index);
+  int len = text.length();
+
+  // Logic: Only reset cursor position to end if we don't already have a valid
+  // middle-text position for THIS specific item. This protects against
+  // re-initialization during click events.
+  if (currentEditingId_ != id || lastCursorPos_ <= 0 || lastCursorPos_ >= len) {
+    QTextCursor cursor = textEdit->textCursor();
+    cursor.movePosition(QTextCursor::End);
+    textEdit->setTextCursor(cursor);
+    lastCursorPos_ = cursor.position();
+  }
 }
 
 void SubtitleListDelegate::setModelData(QWidget *editor,

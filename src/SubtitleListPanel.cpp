@@ -366,6 +366,13 @@ void SubtitleListPanel::setupUi() {
             }
           });
 
+  connect(delegate_, &SubtitleListDelegate::splitClickedWithData, this,
+          [this](const QString &id, int pos, const QString &text) {
+            if (track_) {
+              track_->splitItem(id, pos, text);
+            }
+          });
+
   listView_->setMouseTracking(true);
   listView_->viewport()->installEventFilter(this);
 
@@ -407,6 +414,39 @@ void SubtitleListPanel::onItemDoubleClicked(const QModelIndex &index) {
 
 bool SubtitleListPanel::eventFilter(QObject *watched, QEvent *event) {
   if (watched == listView_->viewport()) {
+    if (event->type() == QEvent::MouseButtonPress) {
+      auto *me = static_cast<QMouseEvent *>(event);
+      QModelIndex index = listView_->indexAt(me->pos());
+      if (index.isValid()) {
+        QStyleOptionViewItem option;
+        option.initFrom(listView_);
+        option.rect = listView_->visualRect(index);
+
+        // Check Split Button
+        if (delegate_->splitButtonRect(option).contains(me->pos())) {
+          QString id = model_->data(index, SubtitleListModel::IdRole).toString();
+          int pos = -1;
+          QString text;
+          if (delegate_->getActiveEditorInfo(index, pos, text)) {
+            if (track_)
+              track_->splitItem(id, pos, text);
+          } else {
+            if (track_)
+              track_->splitItem(id, -1);
+          }
+          return true; // Handled
+        }
+
+        // Check Delete Button
+        if (delegate_->deleteButtonRect(option).contains(me->pos())) {
+          QString id = model_->data(index, SubtitleListModel::IdRole).toString();
+          if (track_)
+            track_->removeItem(id);
+          return true; // Handled
+        }
+      }
+    }
+
     if (event->type() == QEvent::MouseMove) {
       auto *me = static_cast<QMouseEvent *>(event);
       QModelIndex index = listView_->indexAt(me->pos());

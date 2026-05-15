@@ -1,4 +1,5 @@
 #include "SubtitleTrack.h"
+#include <QDebug>
 #include <QUuid>
 
 SubtitleTrack::SubtitleTrack(QObject *parent) : QObject(parent) {}
@@ -76,17 +77,21 @@ const SubtitleItem *SubtitleTrack::findItem(const QString &id) const {
   return nullptr;
 }
 
-void SubtitleTrack::splitItem(const QString &id, int cursorPosition) {
+void SubtitleTrack::splitItem(const QString &id, int cursorPosition,
+                              const QString &currentText) {
   for (int i = 0; i < items_.size(); ++i) {
     if (items_[i].id == id) {
       SubtitleItem original = items_[i];
+      if (!currentText.isNull()) {
+        original.text = currentText;
+      }
       int textLen = original.text.length();
 
       qint64 splitMs;
       QString text1, text2;
 
       if (cursorPosition > 0 && cursorPosition < textLen) {
-        // Case A: Split at cursor
+        // Case A: Split at specified position (only if not at boundaries)
         text1 = original.text.left(cursorPosition);
         text2 = original.text.mid(cursorPosition);
         double ratio = static_cast<double>(cursorPosition) / textLen;
@@ -94,7 +99,7 @@ void SubtitleTrack::splitItem(const QString &id, int cursorPosition) {
             original.startMs +
             static_cast<qint64>((original.endMs - original.startMs) * ratio);
       } else {
-        // Case B: 50/50 split
+        // Case B: 50/50 split (automatic fallback for boundary or -1)
         int mid = textLen / 2;
         text1 = original.text.left(mid);
         text2 = original.text.mid(mid);
