@@ -1,4 +1,5 @@
 #include "AppWindow.h"
+#include "ConfigDialog.h"
 #include "ConfigManager.h"
 #include "MediaPlayer.h"
 #include "SubtitleItem.h"
@@ -167,6 +168,30 @@ void AppWindow::setupTitleBar() {
   auto *rightSpacer = new QWidget(d->titleBar);
   rightSpacer->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Preferred);
   layout->addWidget(rightSpacer);
+
+  auto *settingsBtn = new QPushButton(d->titleBar);
+  settingsBtn->setIcon(QIcon(":/icons/settings.svg"));
+  settingsBtn->setIconSize(QSize(20, 20));
+  settingsBtn->setFixedSize(32, 32);
+  settingsBtn->setToolTip("设置");
+  settingsBtn->setCursor(Qt::PointingHandCursor);
+  settingsBtn->setStyleSheet(R"(
+    QPushButton {
+        background: transparent;
+        border: none;
+        border-radius: 4px;
+    }
+    QPushButton:hover {
+        background: rgba(255, 255, 255, 0.1);
+    }
+    QPushButton:pressed {
+        background: rgba(255, 255, 255, 0.2);
+    }
+  )");
+  layout->addWidget(settingsBtn);
+  connect(settingsBtn, &QPushButton::clicked, this, &AppWindow::onSettingsRequested);
+
+  d->windowAgent->setHitTestVisible(settingsBtn, true);
 }
 
 void AppWindow::setupSplitterLayout() {
@@ -606,4 +631,9 @@ void AppWindow::setupDummyData() {
   addItem("Online tool to convert", 1000, 3170);
   addItem("the subtitle file (SRT) to", 5000, 7170);
   addItem("PremierePro-supported XML format", 8000, 11170);
+}
+
+void AppWindow::onSettingsRequested() {
+  ConfigDialog dialog(this);
+  dialog.exec();
 }

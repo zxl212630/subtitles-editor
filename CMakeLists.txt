@@ -62,6 +62,7 @@ set(SOURCES
     src/SoftwareVideoRenderer.cpp
     src/MediaPlayer.cpp
     src/VideoPropertyDialog.cpp
+    src/ConfigDialog.cpp
 )
 
 set(HEADERS
@@ -84,6 +85,7 @@ set(HEADERS
     include/SoftwareVideoRenderer.h
     include/MediaPlayer.h
     include/VideoPropertyDialog.h
+    include/ConfigDialog.h
 )
 
 set(RESOURCES
