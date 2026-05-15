@@ -17,7 +17,15 @@
 #include <QPainter>
 #include <QPainterPath>
 #include <QScrollBar>
+#include <QIcon>
 #include <QWheelEvent>
+
+static QCursor createSvgCursor(const QString &path, int hotX, int hotY) {
+  QIcon icon(path);
+  // QIcon::pixmap handles devicePixelRatio automatically on supported platforms
+  QPixmap pixmap = icon.pixmap(32, 32);
+  return QCursor(pixmap, hotX, hotY);
+}
 
 class TimelineCanvas : public QWidget {
 public:
@@ -280,13 +288,11 @@ void TimelinePanel::updateClipCursor(int mouseX, int mouseY) {
   ClipInteractionMode mode = hitTestClip(mouseX, mouseY, &id);
   switch (mode) {
   case ClipInteractionMode::ClipResizeLeft: {
-    static QPixmap cursor(":/icons/resize-left.svg");
-    setCursor(QCursor(cursor));
+    setCursor(createSvgCursor(":/icons/resize-left.svg", 5, 16));
     break;
   }
   case ClipInteractionMode::ClipResizeRight: {
-    static QPixmap cursor(":/icons/resize-right.svg");
-    setCursor(QCursor(cursor));
+    setCursor(createSvgCursor(":/icons/resize-right.svg", 27, 16));
     break;
   }
   default:

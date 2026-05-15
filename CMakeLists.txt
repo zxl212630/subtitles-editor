@@ -19,7 +19,7 @@ set(FFMPEG_ROOT "$ENV{HOME}/Tools/ffmpeg/8.0" CACHE PATH "FFmpeg installation ro
 # Qt6
 # ============================================================
 set(CMAKE_PREFIX_PATH "${Qt6_ROOT};${CMAKE_PREFIX_PATH}")
-find_package(Qt6 REQUIRED COMPONENTS Core Gui Widgets Network Multimedia)
+find_package(Qt6 REQUIRED COMPONENTS Core Gui Widgets Network Multimedia Svg)
 
 # ============================================================
 # QWindowKit (Qt6 build)
@@ -115,6 +115,7 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
     Qt::Widgets
     Qt::Network
     Qt::Multimedia
+    Qt::Svg
 )
 
 # QWindowKit dependencies
