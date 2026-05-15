@@ -85,7 +85,7 @@ private:
   qint64 currentTimeMs_ = 0;
   static constexpr int RULER_HEIGHT = 36;
   static constexpr int SUBTITLE_TRACK_HEIGHT = 48;
-  static constexpr int VIDEO_TRACK_HEIGHT = 96;
+  static constexpr int VIDEO_TRACK_HEIGHT = 80;
   static constexpr int TRACK_HEAD_WIDTH = 120;
   static constexpr int PANEL_RIGHT_MARGIN = 8;
 

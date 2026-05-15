@@ -317,8 +317,8 @@ void TimelinePanel::drawOnCanvas(QPainter &painter) {
     QFont font = painter.font();
     font.setPointSize(10);
     painter.setFont(font);
-    painter.drawText(12, subY + 18, "T  字幕1");
-    painter.drawText(12, vidY + 18, "F  视频1");
+    painter.drawText(12, subY, TRACK_HEAD_WIDTH - 24, SUBTITLE_TRACK_HEIGHT, Qt::AlignVCenter | Qt::AlignLeft, "T  字幕1");
+    painter.drawText(12, vidY, TRACK_HEAD_WIDTH - 24, VIDEO_TRACK_HEIGHT, Qt::AlignVCenter | Qt::AlignLeft, "F  视频1");
 
     // Separator between track heads
     painter.setPen(QColor("#333333"));
@@ -450,7 +450,7 @@ void TimelinePanel::drawSubtitleTrack(QPainter &painter, int y) {
   QFont font = painter.font();
   font.setPointSize(10);
   painter.setFont(font);
-  painter.drawText(12, y + 18, "T  字幕1");
+  painter.drawText(12, y, TRACK_HEAD_WIDTH - 24, SUBTITLE_TRACK_HEIGHT, Qt::AlignVCenter | Qt::AlignLeft, "T  字幕1");
 
   // Separator (full width including track head)
   painter.setPen(QColor("#333333"));
@@ -498,7 +498,7 @@ void TimelinePanel::drawSubtitleTrack(QPainter &painter, int y) {
     if (textMaxWidth > 0) {
       QFontMetrics fm(barFont);
       QString elided = fm.elidedText(item.text, Qt::ElideRight, textMaxWidth);
-      painter.drawText(textX, y + 18, elided);
+      painter.drawText(textX, y, textMaxWidth, SUBTITLE_TRACK_HEIGHT, Qt::AlignVCenter | Qt::AlignLeft, elided);
     }
   }
 
@@ -517,7 +517,7 @@ void TimelinePanel::drawVideoTrack(QPainter &painter, int y) {
   QFont font = painter.font();
   font.setPointSize(10);
   painter.setFont(font);
-  painter.drawText(12, y + 18, "F  视频1");
+  painter.drawText(12, y, TRACK_HEAD_WIDTH - 24, VIDEO_TRACK_HEIGHT, Qt::AlignVCenter | Qt::AlignLeft, "F  视频1");
 
   painter.save();
   painter.setClipRect(TRACK_HEAD_WIDTH, y, contentWidth, VIDEO_TRACK_HEIGHT);
@@ -534,7 +534,7 @@ void TimelinePanel::drawVideoTrack(QPainter &painter, int y) {
     painter.drawRoundedRect(videoX, y + 2, videoWidth, VIDEO_TRACK_HEIGHT - 4,
                             4, 4);
     painter.setPen(QColor("#e5e5e5"));
-    painter.drawText(TRACK_HEAD_WIDTH + 16, y + 50, mediaFileName_);
+    painter.drawText(TRACK_HEAD_WIDTH + 16, y, contentWidth - 32, VIDEO_TRACK_HEIGHT, Qt::AlignVCenter | Qt::AlignLeft, mediaFileName_);
   }
 
   painter.restore();
@@ -544,11 +544,12 @@ void TimelinePanel::drawEmptyState(QPainter &painter) {
   int contentX = TRACK_HEAD_WIDTH;
   int contentW = canvas_->width() - TRACK_HEAD_WIDTH - PANEL_RIGHT_MARGIN;
   int centerX = contentX + contentW / 2;
-  int centerY = RULER_HEIGHT + (SUBTITLE_TRACK_HEIGHT + VIDEO_TRACK_HEIGHT) / 2;
+  int centerY =
+      RULER_HEIGHT + (SUBTITLE_TRACK_HEIGHT + VIDEO_TRACK_HEIGHT) / 2 + 5;
 
   int boxW = 360;
   int boxH = 100;
-  QRect boxRect(centerX - boxW / 2, centerY - boxH / 2 - 10, boxW, boxH);
+  QRect boxRect(centerX - boxW / 2, centerY - boxH / 2, boxW, boxH);
   emptyStateRect_ = boxRect;
 
   // Dashed rounded rectangle
