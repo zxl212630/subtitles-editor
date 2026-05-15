@@ -25,11 +25,15 @@ public:
   QString ossBucket() const;
   QString ossRegion() const;
 
+  QString getString(const QString &group, const QString &key) const;
+  void setValue(const QString &group, const QString &key, const QVariant &value);
+  void sync();
+  QString theme() const;
+  QString language() const;
+
 private:
   ConfigManager();
   ~ConfigManager() = default;
-
-  QString getString(const QString &group, const QString &key) const;
 
   QString configFilePath_;
   mutable QSettings settings_;

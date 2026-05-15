@@ -81,3 +81,20 @@ QString ConfigManager::getString(const QString &group,
   settings_.endGroup();
   return value;
 }
+void ConfigManager::setValue(const QString &group, const QString &key, const QVariant &value) {
+    settings_.beginGroup(group);
+    settings_.setValue(key, value);
+    settings_.endGroup();
+}
+
+void ConfigManager::sync() {
+    settings_.sync();
+}
+
+QString ConfigManager::theme() const {
+    return getString("general", "theme");
+}
+
+QString ConfigManager::language() const {
+    return getString("general", "language");
+}
