@@ -9,6 +9,11 @@ class QLabel;
 class QPushButton;
 class QLineEdit;
 
+namespace QWK {
+class WidgetWindowAgent;
+}
+class QFrame;
+
 class ConfigDialog : public QDialog {
     Q_OBJECT
 public:
@@ -23,9 +28,14 @@ private slots:
 
 private:
     void setupUi();
+    void setupTitleBar();
     void loadConfig();
     void saveConfig();
     bool isDirty() const;
+
+    QWK::WidgetWindowAgent *windowAgent = nullptr;
+    QFrame *titleBar = nullptr;
+    QLabel *titleLabel = nullptr;
 
     QListWidget *sidebarList_;
     QStackedWidget *stackedWidget_;

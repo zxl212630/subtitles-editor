@@ -1,11 +1,171 @@
-QMainWindow { background-color: #151515; }
-QFrame#TitleBar { background-color: #262626; border: none; }
-QLabel { background: transparent; }
+/* Global Styles */
+QMainWindow, QDialog {
+    background-color: #151515;
+    color: #d1d5db;
+}
+
+/* Ensure child widgets of QDialog also have the correct background if needed */
+QDialog QWidget {
+    background-color: transparent;
+}
+
+QLabel {
+    background: transparent;
+    color: #d1d5db;
+}
+
+/* Title Bar */
+QFrame#TitleBar {
+    background-color: #262626;
+    border: none;
+}
+
 QLabel#AppTitleLabel {
     color: #9ca3af;
     font-family: Inter, sans-serif;
     font-size: 12px;
     font-weight: normal;
 }
-QSplitter::handle { background-color: #0a0a0a; }
-QWidget#CentralWidget { background-color: #0a0a0a; }
+
+/* Config Dialog specific */
+QWidget#ConfigContentWidget {
+    background-color: #1e1e1e;
+}
+
+QListWidget#ConfigSidebar {
+    background-color: #262626;
+    border: none;
+    border-right: 1px solid #0a0a0a;
+    outline: none;
+}
+
+QListWidget#ConfigSidebar::item {
+    padding: 12px 16px;
+    color: #9ca3af;
+    border: none;
+}
+
+QListWidget#ConfigSidebar::item:selected {
+    background-color: #3b3b3b;
+    color: #ffffff;
+}
+
+QListWidget#ConfigSidebar::item:hover:!selected {
+    background-color: #2d2d2d;
+}
+
+QStackedWidget#ConfigStackedWidget {
+    background-color: #1e1e1e;
+}
+
+/* Force background for pages in stacked widget */
+QStackedWidget#ConfigStackedWidget > QWidget {
+    background-color: #1e1e1e;
+}
+
+QLabel#ConfigPageTitle {
+    font-size: 16px;
+    font-weight: bold;
+    color: #ffffff;
+}
+
+QLabel#ConfigFieldLabel {
+    color: #9ca3af;
+    font-size: 13px;
+}
+
+/* Inputs */
+QLineEdit, QComboBox {
+    background-color: #2d2d2d;
+    border: 1px solid #3f3f46;
+    border-radius: 4px;
+    padding: 5px 10px;
+    color: #ffffff;
+    font-size: 13px;
+    selection-background-color: #0284c7;
+}
+
+QLineEdit:focus, QComboBox:focus {
+    border: 1px solid #0284c7;
+}
+
+/* Specific styling for QComboBox popup */
+QComboBox {
+    combobox-popup: 0;
+}
+
+QComboBox::drop-down {
+    subcontrol-origin: padding;
+    subcontrol-position: top right;
+    width: 25px;
+    border-left: none;
+}
+
+QComboBox::down-arrow {
+    image: url(:/icons/down-arrow.svg);
+    width: 10px;
+    height: 10px;
+}
+
+/* Dropdown list styling */
+QComboBox QAbstractItemView {
+    background-color: #2d2d2d;
+    border: 1px solid #3f3f46;
+    selection-background-color: #0284c7;
+    selection-color: #ffffff;
+    color: #ffffff;
+    outline: none;
+}
+
+/* Footer */
+QWidget#ConfigFooter {
+    background-color: #262626;
+    border-top: 1px solid #333333;
+}
+
+QLabel#ConfigDirtyLabel {
+    color: #eab308;
+    font-size: 12px;
+}
+
+/* Buttons */
+QPushButton#ConfigCancelButton, QPushButton#ConfigApplyButton, QPushButton#ConfigOkButton {
+    padding: 7px 18px;
+    border-radius: 4px;
+    font-size: 13px;
+    font-weight: 500;
+}
+
+QPushButton#ConfigCancelButton {
+    background-color: #3f3f46;
+    color: #ffffff;
+    border: none;
+}
+
+QPushButton#ConfigCancelButton:hover {
+    background-color: #52525b;
+}
+
+QPushButton#ConfigApplyButton, QPushButton#ConfigOkButton {
+    background-color: #0284c7;
+    color: #ffffff;
+    border: none;
+}
+
+QPushButton#ConfigApplyButton:hover, QPushButton#ConfigOkButton:hover {
+    background-color: #0369a1;
+}
+
+QPushButton#ConfigApplyButton:disabled, QPushButton#ConfigOkButton:disabled {
+    background-color: #1e40af;
+    color: #94a3b8;
+}
+
+/* Main Window stuff */
+QSplitter::handle {
+    background-color: #0a0a0a;
+}
+
+QWidget#CentralWidget {
+    background-color: #0a0a0a;
+}

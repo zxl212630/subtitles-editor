@@ -9,6 +9,9 @@
 #include <QLabel>
 #include <QPushButton>
 #include <QMessageBox>
+#include <QFile>
+#include <QApplication>
+#include <QWindowKit/QWKWidgets/widgetwindowagent.h>
 
 ConfigDialog::ConfigDialog(QWidget *parent) : QDialog(parent) {
     setupUi();
@@ -19,43 +22,63 @@ ConfigDialog::ConfigDialog(QWidget *parent) : QDialog(parent) {
 void ConfigDialog::setupUi() {
     setWindowTitle(tr("配置"));
     resize(700, 500);
-    setStyleSheet("QDialog { background-color: #1e1e1e; color: #d1d5db; }");
+    setMinimumSize(600, 400);
 
-    auto *mainLayout = new QHBoxLayout(this);
+    windowAgent = new QWK::WidgetWindowAgent(this);
+    windowAgent->setup(this);
+
+    setupTitleBar();
+
+    auto *rootLayout = new QVBoxLayout(this);
+    rootLayout->setContentsMargins(0, 0, 0, 0);
+    rootLayout->setSpacing(0);
+    rootLayout->addWidget(titleBar);
+
+    auto *contentWidget = new QWidget(this);
+    contentWidget->setObjectName("ConfigContentWidget");
+    rootLayout->addWidget(contentWidget);
+
+    auto *mainLayout = new QHBoxLayout(contentWidget);
     mainLayout->setContentsMargins(0, 0, 0, 0);
     mainLayout->setSpacing(0);
 
     // Sidebar
-    sidebarList_ = new QListWidget(this);
+    sidebarList_ = new QListWidget(contentWidget);
     sidebarList_->setFixedWidth(160);
-    sidebarList_->setStyleSheet("QListWidget { background-color: #262626; border-right: 1px solid #0a0a0a; outline: none; } QListWidget::item { padding: 12px 16px; color: #9ca3af; } QListWidget::item:selected { background-color: #3b3b3b; color: #fff; }");
+    sidebarList_->setObjectName("ConfigSidebar");
     sidebarList_->addItem(tr("通用"));
     sidebarList_->addItem(tr("存储"));
     sidebarList_->addItem(tr("语音识别"));
     
     // Stacked Widget
-    stackedWidget_ = new QStackedWidget(this);
+    stackedWidget_ = new QStackedWidget(contentWidget);
+    stackedWidget_->setObjectName("ConfigStackedWidget");
     
     // General Page
     auto *generalPage = new QWidget();
     auto *generalLayout = new QVBoxLayout(generalPage);
     generalLayout->setAlignment(Qt::AlignTop);
     generalLayout->setContentsMargins(25, 25, 25, 25);
+    generalLayout->setSpacing(15);
     
-    auto *titleLabel = new QLabel(tr("通用配置"), generalPage);
-    titleLabel->setStyleSheet("font-size: 16px; font-weight: bold; color: #fff; margin-bottom: 20px;");
-    generalLayout->addWidget(titleLabel);
+    auto *titleLabelPage = new QLabel(tr("通用配置"), generalPage);
+    titleLabelPage->setObjectName("ConfigPageTitle");
+    generalLayout->addWidget(titleLabelPage);
 
+    auto *langLabel = new QLabel(tr("语言 (Language)"), generalPage);
+    langLabel->setObjectName("ConfigFieldLabel");
+    generalLayout->addWidget(langLabel);
     langCombo_ = new QComboBox(generalPage);
     langCombo_->addItem("简体中文", "zh_CN");
     langCombo_->addItem("English", "en_US");
-    generalLayout->addWidget(new QLabel(tr("语言 (Language)")));
     generalLayout->addWidget(langCombo_);
 
+    auto *themeLabel = new QLabel(tr("主题 (Theme)"), generalPage);
+    themeLabel->setObjectName("ConfigFieldLabel");
+    generalLayout->addWidget(themeLabel);
     themeCombo_ = new QComboBox(generalPage);
     themeCombo_->addItem(tr("深色 (Dark)"), "dark");
     themeCombo_->addItem(tr("浅色 (Light)"), "light");
-    generalLayout->addWidget(new QLabel(tr("主题 (Theme)")));
     generalLayout->addWidget(themeCombo_);
 
     stackedWidget_->addWidget(generalPage);
@@ -65,31 +88,42 @@ void ConfigDialog::setupUi() {
     auto *storageLayout = new QVBoxLayout(storagePage);
     storageLayout->setAlignment(Qt::AlignTop);
     storageLayout->setContentsMargins(25, 25, 25, 25);
+    storageLayout->setSpacing(15);
 
     auto *storageTitleLabel = new QLabel(tr("存储配置"), storagePage);
-    storageTitleLabel->setStyleSheet("font-size: 16px; font-weight: bold; color: #fff; margin-bottom: 20px;");
+    storageTitleLabel->setObjectName("ConfigPageTitle");
     storageLayout->addWidget(storageTitleLabel);
 
-    storageLayout->addWidget(new QLabel(tr("存储提供商")));
+    auto *storageProvLabel = new QLabel(tr("存储提供商"), storagePage);
+    storageProvLabel->setObjectName("ConfigFieldLabel");
+    storageLayout->addWidget(storageProvLabel);
     storageProviderCombo_ = new QComboBox(storagePage);
-    storageProviderCombo_->addItem("阿里云 OSS", "aliyun_oss");
+    storageProviderCombo_->addItem(tr("阿里云 OSS"), "aliyun_oss");
     storageLayout->addWidget(storageProviderCombo_);
     
+    auto *bucketLabel = new QLabel(tr("存储桶 (Bucket)"), storagePage);
+    bucketLabel->setObjectName("ConfigFieldLabel");
+    storageLayout->addWidget(bucketLabel);
     ossBucketEdit_ = new QLineEdit(storagePage);
-    storageLayout->addWidget(new QLabel("Bucket"));
     storageLayout->addWidget(ossBucketEdit_);
     
+    auto *regionLabel = new QLabel(tr("地域 (Region)"), storagePage);
+    regionLabel->setObjectName("ConfigFieldLabel");
+    storageLayout->addWidget(regionLabel);
     ossRegionEdit_ = new QLineEdit(storagePage);
-    storageLayout->addWidget(new QLabel("Region"));
     storageLayout->addWidget(ossRegionEdit_);
 
+    auto *akLabel = new QLabel(tr("访问密钥 ID (Access Key ID)"), storagePage);
+    akLabel->setObjectName("ConfigFieldLabel");
+    storageLayout->addWidget(akLabel);
     ossAccessKeyEdit_ = new QLineEdit(storagePage);
-    storageLayout->addWidget(new QLabel("Access Key ID"));
     storageLayout->addWidget(ossAccessKeyEdit_);
 
+    auto *skLabel = new QLabel(tr("访问密钥密钥 (Access Key Secret)"), storagePage);
+    skLabel->setObjectName("ConfigFieldLabel");
+    storageLayout->addWidget(skLabel);
     ossSecretKeyEdit_ = new QLineEdit(storagePage);
     ossSecretKeyEdit_->setEchoMode(QLineEdit::Password);
-    storageLayout->addWidget(new QLabel("Access Key Secret"));
     storageLayout->addWidget(ossSecretKeyEdit_);
     
     stackedWidget_->addWidget(storagePage);
@@ -99,44 +133,54 @@ void ConfigDialog::setupUi() {
     auto *asrLayout = new QVBoxLayout(asrPage);
     asrLayout->setAlignment(Qt::AlignTop);
     asrLayout->setContentsMargins(25, 25, 25, 25);
+    asrLayout->setSpacing(15);
 
     auto *asrTitleLabel = new QLabel(tr("语音识别配置"), asrPage);
-    asrTitleLabel->setStyleSheet("font-size: 16px; font-weight: bold; color: #fff; margin-bottom: 20px;");
+    asrTitleLabel->setObjectName("ConfigPageTitle");
     asrLayout->addWidget(asrTitleLabel);
 
-    asrLayout->addWidget(new QLabel(tr("ASR 服务提供商")));
+    auto *asrProvLabel = new QLabel(tr("ASR 服务提供商"), asrPage);
+    asrProvLabel->setObjectName("ConfigFieldLabel");
+    asrLayout->addWidget(asrProvLabel);
     asrProviderCombo_ = new QComboBox(asrPage);
-    asrProviderCombo_->addItem("腾讯云", "tencent");
+    asrProviderCombo_->addItem(tr("腾讯云"), "tencent");
     asrLayout->addWidget(asrProviderCombo_);
 
+    auto *appIdLabel = new QLabel(tr("应用 ID (App ID)"), asrPage);
+    appIdLabel->setObjectName("ConfigFieldLabel");
+    asrLayout->addWidget(appIdLabel);
     tencentAppIdEdit_ = new QLineEdit(asrPage);
-    asrLayout->addWidget(new QLabel("App ID"));
     asrLayout->addWidget(tencentAppIdEdit_);
 
+    auto *sidLabel = new QLabel(tr("密钥 ID (Secret ID)"), asrPage);
+    sidLabel->setObjectName("ConfigFieldLabel");
+    asrLayout->addWidget(sidLabel);
     tencentSecretIdEdit_ = new QLineEdit(asrPage);
-    asrLayout->addWidget(new QLabel("Secret ID"));
     asrLayout->addWidget(tencentSecretIdEdit_);
 
+    auto *skeyLabel = new QLabel(tr("密钥密码 (Secret Key)"), asrPage);
+    skeyLabel->setObjectName("ConfigFieldLabel");
+    asrLayout->addWidget(skeyLabel);
     tencentSecretKeyEdit_ = new QLineEdit(asrPage);
     tencentSecretKeyEdit_->setEchoMode(QLineEdit::Password);
-    asrLayout->addWidget(new QLabel("Secret Key"));
     asrLayout->addWidget(tencentSecretKeyEdit_);
 
     stackedWidget_->addWidget(asrPage);
 
     // Right side layout (Stack + Footer)
-    auto *rightLayout = new QVBoxLayout();
-    rightLayout->setContentsMargins(0, 0, 0, 0);
-    rightLayout->setSpacing(0);
-    rightLayout->addWidget(stackedWidget_);
+    auto *rightSideLayout = new QVBoxLayout();
+    rightSideLayout->setContentsMargins(0, 0, 0, 0);
+    rightSideLayout->setSpacing(0);
+    rightSideLayout->addWidget(stackedWidget_);
 
     // Footer
-    auto *footer = new QWidget(this);
-    footer->setStyleSheet("background-color: #262626; border-top: 1px solid #333;");
+    auto *footer = new QWidget(contentWidget);
+    footer->setObjectName("ConfigFooter");
     auto *footerLayout = new QHBoxLayout(footer);
+    footerLayout->setContentsMargins(15, 10, 15, 10);
     
     dirtyLabel_ = new QLabel(tr("● 有未保存的更改"), footer);
-    dirtyLabel_->setStyleSheet("color: #eab308; font-size: 12px;");
+    dirtyLabel_->setObjectName("ConfigDirtyLabel");
     footerLayout->addWidget(dirtyLabel_);
     footerLayout->addStretch();
 
@@ -144,20 +188,17 @@ void ConfigDialog::setupUi() {
     btnApply_ = new QPushButton(tr("应用"), footer);
     btnOk_ = new QPushButton(tr("确定"), footer);
     
-    QString btnStyle = "QPushButton { background-color: #444; color: #eee; border: none; padding: 7px 18px; border-radius: 4px; } QPushButton:hover { background-color: #555; }";
-    QString primaryBtnStyle = "QPushButton { background-color: #0284c7; color: #fff; border: none; padding: 7px 18px; border-radius: 4px; } QPushButton:hover { background-color: #0369a1; }";
-    
-    btnCancel_->setStyleSheet(btnStyle);
-    btnApply_->setStyleSheet(primaryBtnStyle);
-    btnOk_->setStyleSheet(primaryBtnStyle);
+    btnCancel_->setObjectName("ConfigCancelButton");
+    btnApply_->setObjectName("ConfigApplyButton");
+    btnOk_->setObjectName("ConfigOkButton");
 
     footerLayout->addWidget(btnCancel_);
     footerLayout->addWidget(btnApply_);
     footerLayout->addWidget(btnOk_);
-    rightLayout->addWidget(footer);
+    rightSideLayout->addWidget(footer);
 
     mainLayout->addWidget(sidebarList_);
-    mainLayout->addLayout(rightLayout);
+    mainLayout->addLayout(rightSideLayout);
 
     connect(sidebarList_, &QListWidget::currentRowChanged, stackedWidget_, &QStackedWidget::setCurrentIndex);
     connect(btnCancel_, &QPushButton::clicked, this, &ConfigDialog::onCancel);
@@ -173,6 +214,32 @@ void ConfigDialog::setupUi() {
     for(auto *le : lineEdits) {
         connect(le, &QLineEdit::textChanged, this, &ConfigDialog::checkDirtyState);
     }
+
+    windowAgent->setTitleBar(titleBar);
+}
+
+void ConfigDialog::setupTitleBar() {
+    titleBar = new QFrame(this);
+    titleBar->setFixedHeight(36);
+    titleBar->setObjectName("TitleBar");
+
+    auto *layout = new QHBoxLayout(titleBar);
+    layout->setContentsMargins(12, 0, 12, 0);
+    layout->setSpacing(8);
+    layout->setAlignment(Qt::AlignVCenter);
+
+    auto *leftSpacer = new QWidget(titleBar);
+    leftSpacer->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Preferred);
+    layout->addWidget(leftSpacer);
+
+    titleLabel = new QLabel(tr("配置"), titleBar);
+    titleLabel->setObjectName("AppTitleLabel");
+    titleLabel->setAlignment(Qt::AlignCenter);
+    layout->addWidget(titleLabel);
+
+    auto *rightSpacer = new QWidget(titleBar);
+    rightSpacer->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Preferred);
+    layout->addWidget(rightSpacer);
 }
 
 void ConfigDialog::loadConfig() {
