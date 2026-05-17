@@ -35,7 +35,7 @@ QWidget#ConfigContentWidget {
 QListWidget#ConfigSidebar {
     background-color: #262626;
     border: none;
-    border-right: 1px solid #0a0a0a;
+    border-right: 1px solid #333333;
     outline: none;
 }
 

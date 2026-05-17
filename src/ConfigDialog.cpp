@@ -311,12 +311,5 @@ void ConfigDialog::onApply() { saveConfig(); }
 void ConfigDialog::onOk() { saveConfig(); accept(); }
 
 void ConfigDialog::onCancel() {
-    if (isDirty()) {
-        QMessageBox::StandardButton reply = QMessageBox::question(this, tr("未保存的更改"),
-            tr("配置已修改，是否在离开前保存？"), QMessageBox::Yes | QMessageBox::No | QMessageBox::Cancel);
-        if (reply == QMessageBox::Yes) { saveConfig(); accept(); return; }
-        if (reply == QMessageBox::No) { reject(); return; }
-        if (reply == QMessageBox::Cancel) { return; }
-    }
     reject();
 }
