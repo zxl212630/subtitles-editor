@@ -266,20 +266,13 @@ void VideoPreviewPanel::setupUi() {
   // Font combo
   fontCombo_ = new QComboBox(toolbar);
   fontCombo_->setFixedSize(140, 28);
-  fontCombo_->setEditable(true);
-  if (fontCombo_->lineEdit()) {
-    fontCombo_->lineEdit()->setReadOnly(true);
-    fontCombo_->lineEdit()->setStyleSheet(
-        "background: transparent; border: none; color: #d1d5db;");
-  }
   fontCombo_->setStyleSheet(R"(
         QComboBox {
             background-color: #1e1e1e;
             color: #ffffff;
             border: 1px solid #3f3f46;
             border-radius: 6px;
-            padding-left: 8px;
-            padding-right: 25px;
+            padding: 0px 25px 0px 8px;
             font-family: Inter, sans-serif;
             font-size: 12px;
             combobox-popup: 0;
@@ -350,14 +343,16 @@ void VideoPreviewPanel::setupUi() {
   sizeCombo_->setFixedSize(70, 28);
   sizeCombo_->setMaxVisibleItems(10);
   sizeCombo_->setEditable(true);
+  if (sizeCombo_->lineEdit()) {
+      sizeCombo_->lineEdit()->setStyleSheet("background: transparent; border: none; color: #ffffff; padding: 0px; margin: 0px;");
+  }
   sizeCombo_->setStyleSheet(R"(
         QComboBox {
             background-color: #1e1e1e;
             color: #ffffff;
             border: 1px solid #3f3f46;
             border-radius: 6px;
-            padding-left: 8px;
-            padding-right: 25px;
+            padding: 0px 25px 0px 8px;
             font-family: Inter, sans-serif;
             font-size: 12px;
             combobox-popup: 0;
@@ -555,6 +550,10 @@ void VideoPreviewPanel::populateFontCombo() {
 
   if (auto *view = fontCombo_->view()) {
     view->setMinimumWidth(220);
+    if (QWidget *w = view->window()) {
+      w->setWindowFlags(Qt::Popup | Qt::FramelessWindowHint | Qt::NoDropShadowWindowHint);
+      w->setAttribute(Qt::WA_TranslucentBackground);
+    }
   }
 }
 
@@ -565,6 +564,13 @@ void VideoPreviewPanel::populateSizeCombo() {
     sizeCombo_->addItem(QString::number(s));
   }
   sizeCombo_->setCurrentText("24");
+
+  if (auto *view = sizeCombo_->view()) {
+    if (QWidget *w = view->window()) {
+      w->setWindowFlags(Qt::Popup | Qt::FramelessWindowHint | Qt::NoDropShadowWindowHint);
+      w->setAttribute(Qt::WA_TranslucentBackground);
+    }
+  }
 }
 
 void VideoPreviewPanel::updateHandlePositions() {
