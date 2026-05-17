@@ -21,8 +21,8 @@ ConfigDialog::ConfigDialog(QWidget *parent) : QDialog(parent) {
 
 void ConfigDialog::setupUi() {
     setWindowTitle(tr("配置"));
-    resize(700, 500);
-    setMinimumSize(600, 400);
+    resize(700, 560);
+    setMinimumSize(600, 500);
 
     windowAgent = new QWK::WidgetWindowAgent(this);
     windowAgent->setup(this);
