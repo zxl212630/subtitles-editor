@@ -38,7 +38,7 @@ C++17 Qt6 desktop app for video subtitle editing. macOS bundle.
 
 | Dependency | Purpose |
 |-----------|---------|
-| Qt6 6.5.8 | UI framework (Core, Gui, Widgets) |
+| Qt6 6.5.7 | UI framework (Core, Gui, Widgets) |
 | QWindowKit | Custom title bar, frameless window |
 | FFmpeg 8.0 | Video/audio decoding |
 
@@ -50,47 +50,31 @@ C++17 Qt6 desktop app for video subtitle editing. macOS bundle.
 | `SubtitleTrack` | Shared data model (QObject). Holds `QList<SubtitleItem>`, emits change signals. |
 | `SubtitleItem` | Data struct: `id`, `text`, `startMs`, `endMs`, `selected`. |
 | `SubtitleListModel` | `QAbstractListModel` adapter over `SubtitleTrack` with custom roles. |
-| `SubtitleListPanel` | Left sidebar: search + list view. Emits `itemSelected`, `itemDeleteRequested`. |
-| `VideoPreviewPanel` | Right panel: video display with font/size controls. |
-| `TimelinePanel` | Bottom panel: ruler, subtitle track, playhead. `PIXELS_PER_SECOND = 100`. |
+| `SubtitleListPanel` | Left sidebar: search + list view. |
+| `VideoPreviewPanel` | Right panel: video display with overlay and format controls. |
+| `TimelinePanel` | Bottom panel: ruler, tracks, and playhead. Supports zoom/scroll. |
 | `SubtitleExporter` | Static utility. Exports to SRT, ASS, VTT, Premiere Pro XML. |
-| `AsrServiceBase` | Abstract ASR interface with `transcribeFinished` / `transcribeProgress` signals. |
+| `AsrServiceBase` | Abstract ASR interface for automated transcription. |
 
 ### Layout Structure
 
 ```
 AppWindow
-├─ TitleBar (36px fixed)
+├─ TitleBar (Fixed height)
 └─ CentralWidget
    └─ VerticalSplitter
-      ├─ TopSplitter (horizontal)
-      │  ├─ VideoPreviewPanel (stretch 1, min 400px)
-      │  └─ SubtitleListPanel (stretch 0, min 300px)
-      └─ TimelinePanel (min 150px, max 400px)
+      ├─ TopSplitter (Horizontal)
+      │  ├─ VideoPreviewPanel
+      │  └─ SubtitleListPanel
+      └─ TimelinePanel
 ```
 
-All splitters: `setCollapsible(false)`, handle width 10px, color `#0a0a0a`.
-
-## UI Design Tokens
-
-| Token | Hex |
-|-------|-----|
-| Window background | `#151515` |
-| Title bar / panel bg | `#262626` |
-| Central / splitter bg | `#0a0a0a` |
-| Control / header bg | `#1a1a1a` |
-| Hover / pressed bg | `#2a2a2a` |
-| Border | `#303030` |
-| Dimmed text | `#9ca3af` |
-
-Font: Inter, 12px (titlebar / time labels).
+All splitters are non-collapsible.
 
 ## Pre-Commit Checks
 
-```bash
-clang-format -i src/*.cpp include/*.h  # Format
-cmake --build cmake-build-debug        # Compile
-```
+1. **Format**: `clang-format -i src/*.cpp include/*.h`
+2. **Compile**: `cmake --build cmake-build-debug`
 
 ## SDK Paths
 
@@ -98,6 +82,6 @@ Override via CMake `-D` flags (e.g., `-DQt6_ROOT=/path/to/qt`).
 
 | SDK | Default |
 |-----|---------|
-| Qt6 | `~/Tools/Qt/6.5.8` |
+| Qt6 | `~/Tools/Qt/6.5.7` |
 | QWindowKit | `~/Tools/Qt/QwindowKit/Qt6` |
 | FFmpeg | `~/Tools/ffmpeg/8.0` |
