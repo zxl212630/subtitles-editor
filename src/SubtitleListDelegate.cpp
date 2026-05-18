@@ -1,6 +1,6 @@
 #include "SubtitleListDelegate.h"
-
 #include "SubtitleListModel.h"
+#include "ThemeManager.h"
 
 #include <QKeyEvent>
 #include <QMouseEvent>
@@ -25,7 +25,9 @@ void SubtitleListDelegate::paint(QPainter *painter,
   // Background
   if (isSelected) {
     painter->setPen(Qt::NoPen);
-    painter->setBrush(QColor("#1f2937"));
+    QColor highlight = ThemeManager::instance().getPrimaryColor();
+    highlight.setAlpha(60); // Use a semi-transparent version of primary for row selection
+    painter->setBrush(highlight);
     painter->drawRoundedRect(rect.adjusted(4, 2, -4, -2), 5, 5);
   }
 
@@ -222,10 +224,13 @@ SubtitleListDelegate::createEditor(QWidget *parent,
     lastCursorPos_ = -1;
   });
 
-  editor->setStyleSheet(
-      "QTextEdit { background-color: #1a1a1a; color: #d1d5db; "
-      "border: 1px solid #0ea5e9; border-radius: 4px; padding: 2px 6px; "
-      "font-family: Inter, sans-serif; font-size: 12px; }");
+  editor->setStyleSheet(QString(
+      "QTextEdit { background-color: %1; color: %2; "
+      "border: 1px solid %3; border-radius: 4px; padding: 2px 6px; "
+      "font-family: Inter, sans-serif; font-size: 12px; }")
+      .arg(ThemeManager::instance().getBgBaseColor().name())
+      .arg(ThemeManager::instance().getTextNormalColor().name())
+      .arg(ThemeManager::instance().getPrimaryColor().name()));
   editor->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
   editor->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
 

@@ -63,6 +63,29 @@ void ThemeManager::applyTheme() {
     const auto& t = themes_[themeId];
     const auto& p = primaries_[primaryId];
 
+    // 1. Update Global QPalette
+    QPalette pal;
+    QColor mainBg(t.bgBase);
+    QColor panelBg(t.bgPanel);
+    QColor text(t.textNormal);
+    QColor muted(t.textMuted);
+    QColor primary(p.main);
+    
+    pal.setColor(QPalette::Window, mainBg);
+    pal.setColor(QPalette::WindowText, text);
+    pal.setColor(QPalette::Base, panelBg);
+    pal.setColor(QPalette::AlternateBase, mainBg);
+    pal.setColor(QPalette::Text, text);
+    pal.setColor(QPalette::PlaceholderText, muted);
+    pal.setColor(QPalette::Button, t.bgLighter);
+    pal.setColor(QPalette::ButtonText, text);
+    pal.setColor(QPalette::Highlight, primary);
+    pal.setColor(QPalette::HighlightedText, Qt::white);
+    pal.setColor(QPalette::Link, primary);
+    
+    qApp->setPalette(pal);
+
+    // 2. Process and apply QSS
     QString rawQss = loadQssTemplate(themeId);
     QString processedQss = processQss(rawQss, t, p);
 
