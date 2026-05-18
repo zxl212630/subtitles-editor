@@ -37,7 +37,8 @@ private:
 
     QWK::WidgetWindowAgent *windowAgent = nullptr;
     QFrame *titleBar = nullptr;
-    QLabel *titleLabel = nullptr;
+    QLabel *titleLeftLabel = nullptr;
+    QLabel *titleRightLabel = nullptr;
 
     QListWidget *sidebarList_;
     QStackedWidget *stackedWidget_;

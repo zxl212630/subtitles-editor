@@ -54,22 +54,29 @@ void ConfigDialog::setupTitleBar() {
     titleBar->setObjectName("TitleBar");
 
     auto *layout = new QHBoxLayout(titleBar);
-    layout->setContentsMargins(12, 0, 12, 0);
-    layout->setSpacing(8);
-    layout->setAlignment(Qt::AlignVCenter);
+    layout->setContentsMargins(0, 0, 0, 0);
+    layout->setSpacing(0);
 
-    auto *leftSpacer = new QWidget(titleBar);
-    leftSpacer->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Preferred);
-    layout->addWidget(leftSpacer);
+    // Left part of title bar (above sidebar)
+    auto *leftContainer = new QWidget(titleBar);
+    leftContainer->setFixedWidth(180);
+    leftContainer->setObjectName("TitleLeftContainer");
+    auto *leftLayout = new QHBoxLayout(leftContainer);
+    leftLayout->setContentsMargins(12, 0, 12, 0);
+    titleLeftLabel = new QLabel(tr("设置"), leftContainer);
+    titleLeftLabel->setObjectName("ConfigTitleLeftLabel");
+    leftLayout->addWidget(titleLeftLabel);
+    layout->addWidget(leftContainer);
 
-    titleLabel = new QLabel(tr("配置"), titleBar);
-    titleLabel->setObjectName("AppTitleLabel");
-    titleLabel->setAlignment(Qt::AlignCenter);
-    layout->addWidget(titleLabel);
-
-    auto *rightSpacer = new QWidget(titleBar);
-    rightSpacer->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Preferred);
-    layout->addWidget(rightSpacer);
+    // Right part of title bar (above content)
+    auto *rightContainer = new QWidget(titleBar);
+    rightContainer->setObjectName("TitleRightContainer");
+    auto *rightLayout = new QHBoxLayout(rightContainer);
+    rightLayout->setContentsMargins(20, 0, 20, 0);
+    titleRightLabel = new QLabel("", rightContainer);
+    titleRightLabel->setObjectName("ConfigTitleRightLabel");
+    rightLayout->addWidget(titleRightLabel);
+    layout->addWidget(rightContainer);
 }
 
 void ConfigDialog::loadConfig() {
@@ -105,6 +112,11 @@ void ConfigDialog::loadConfig() {
     tencentAppIdEdit_->setText(initialConfig_["tc_appid"].toString());
     tencentSecretIdEdit_->setText(initialConfig_["tc_sid"].toString());
     tencentSecretKeyEdit_->setText(initialConfig_["tc_skey"].toString());
+
+    // Sync title
+    if (sidebarList_->currentItem()) {
+        titleRightLabel->setText(sidebarList_->currentItem()->text());
+    }
 
     checkDirtyState();
 }
@@ -210,13 +222,9 @@ void ConfigDialog::setupUi() {
     // ------------------------------------------------------------------------
     auto *generalPage = new QWidget();
     auto *genLayout = new QVBoxLayout(generalPage);
-    genLayout->setContentsMargins(30, 20, 30, 30);
+    genLayout->setContentsMargins(30, 25, 30, 30);
     genLayout->setSpacing(15);
     
-    auto *genTitle = new QLabel(tr("常规设置"), generalPage);
-    genTitle->setObjectName("ConfigPageTitle");
-    genLayout->addWidget(genTitle);
-
     auto *langLabel = new QLabel(tr("界面语言 (Language)"), generalPage);
     langLabel->setObjectName("ConfigFieldLabel");
     genLayout->addWidget(langLabel);
@@ -259,13 +267,9 @@ void ConfigDialog::setupUi() {
     // ------------------------------------------------------------------------
     auto *storagePage = new QWidget();
     auto *stLayout = new QVBoxLayout(storagePage);
-    stLayout->setContentsMargins(30, 20, 30, 30);
-    stLayout->setSpacing(12);
+    stLayout->setContentsMargins(30, 25, 30, 30);
+    stLayout->setSpacing(15);
     
-    auto *stTitle = new QLabel(tr("存储设置"), storagePage);
-    stTitle->setObjectName("ConfigPageTitle");
-    stLayout->addWidget(stTitle);
-
     auto *stProvLabel = new QLabel(tr("存储提供商"), storagePage);
     stProvLabel->setObjectName("ConfigFieldLabel");
     stLayout->addWidget(stProvLabel);
@@ -311,13 +315,9 @@ void ConfigDialog::setupUi() {
     // ------------------------------------------------------------------------
     auto *asrPage = new QWidget();
     auto *asrLayout = new QVBoxLayout(asrPage);
-    asrLayout->setContentsMargins(30, 20, 30, 30);
-    asrLayout->setSpacing(12);
+    asrLayout->setContentsMargins(30, 25, 30, 30);
+    asrLayout->setSpacing(15);
     
-    auto *asrTitle = new QLabel(tr("语音识别设置"), asrPage);
-    asrTitle->setObjectName("ConfigPageTitle");
-    asrLayout->addWidget(asrTitle);
-
     auto *asrProvLabel = new QLabel(tr("识别提供商"), asrPage);
     asrProvLabel->setObjectName("ConfigFieldLabel");
     asrLayout->addWidget(asrProvLabel);
@@ -382,5 +382,10 @@ void ConfigDialog::setupUi() {
     mainLayout->addWidget(footer);
 
     connect(sidebarList_, &QListWidget::currentRowChanged, stackedWidget_, &QStackedWidget::setCurrentIndex);
+    connect(sidebarList_, &QListWidget::currentRowChanged, this, [this](int row) {
+        if (auto *item = sidebarList_->item(row)) {
+            titleRightLabel->setText(item->text());
+        }
+    });
     sidebarList_->setCurrentRow(0);
 }

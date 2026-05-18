@@ -18,6 +18,30 @@ QLabel {
 QFrame#TitleBar {
     background-color: @bg_lighter;
     border: none;
+    border-bottom: 1px solid @border_dark;
+}
+
+QWidget#TitleLeftContainer {
+    background-color: @bg_lighter;
+    border-right: 1px solid @border_dark;
+}
+
+QWidget#TitleRightContainer {
+    background-color: @bg_panel;
+}
+
+QLabel#ConfigTitleLeftLabel {
+    color: @text_normal;
+    font-family: Inter, sans-serif;
+    font-size: 13px;
+    font-weight: bold;
+}
+
+QLabel#ConfigTitleRightLabel {
+    color: @text_normal;
+    font-family: Inter, sans-serif;
+    font-size: 13px;
+    font-weight: bold;
 }
 
 QLabel#AppTitleLabel {
