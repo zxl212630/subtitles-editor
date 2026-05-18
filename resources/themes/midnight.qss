@@ -1,0 +1,443 @@
+/* Global Styles */
+QMainWindow, QDialog {
+    background-color: @bg_base;
+    color: @text_normal;
+}
+
+/* Ensure child widgets of QDialog also have the correct background if needed */
+QDialog QWidget {
+    background-color: transparent;
+}
+
+QLabel {
+    background: transparent;
+    color: @text_normal;
+}
+
+/* Generic Button Styling to prevent native look */
+QPushButton {
+    background-color: @bg_lighter;
+    color: @text_normal;
+    border: 1px solid @border_color;
+    border-radius: 4px;
+    padding: 4px 12px;
+    font-size: 12px;
+}
+
+QPushButton:hover {
+    background-color: @border_dark;
+}
+
+QPushButton:pressed {
+    background-color: @border_color;
+}
+
+QPushButton:disabled {
+    background-color: @bg_base;
+    color: @text_muted;
+    border-color: @border_dark;
+}
+
+/* Primary buttons */
+QPushButton#SubtitleActionBtn, 
+QPushButton#ConfigApplyButton, 
+QPushButton#ConfigOkButton {
+    background-color: @primary_color;
+    color: #ffffff;
+    border: none;
+    font-weight: bold;
+}
+
+QPushButton#SubtitleActionBtn:hover,
+QPushButton#ConfigApplyButton:hover,
+QPushButton#ConfigOkButton:hover {
+    background-color: @primary_hover;
+}
+
+/* Title Bar */
+QFrame#TitleBar {
+    background-color: @bg_lighter;
+    border: none;
+}
+
+QLabel#AppTitleLabel {
+    color: @text_muted;
+    font-family: Inter, sans-serif;
+    font-size: 12px;
+    font-weight: normal;
+}
+
+/* Config Dialog specific */
+QWidget#ConfigContentWidget {
+    background-color: @bg_panel;
+}
+
+QListWidget#ConfigSidebar {
+    background-color: @bg_lighter;
+    border: none;
+    border-right: 1px solid @border_dark;
+    outline: none;
+}
+
+QListWidget#ConfigSidebar::item {
+    padding: 12px 16px;
+    color: @text_muted;
+    border: none;
+}
+
+QListWidget#ConfigSidebar::item:selected {
+    background-color: @primary_color;
+    color: #ffffff;
+}
+
+QListWidget#ConfigSidebar::item:hover:!selected {
+    background-color: @border_dark;
+}
+
+QStackedWidget#ConfigStackedWidget {
+    background-color: @bg_panel;
+}
+
+/* Force background for pages in stacked widget */
+QStackedWidget#ConfigStackedWidget > QWidget {
+    background-color: @bg_panel;
+}
+
+QLabel#ConfigPageTitle {
+    font-size: 16px;
+    font-weight: bold;
+    color: @text_normal;
+}
+
+QLabel#ConfigFieldLabel {
+    color: @text_muted;
+    font-size: 13px;
+}
+
+/* Inputs */
+QLineEdit, QComboBox {
+    background-color: @bg_panel;
+    border: 1px solid @border_color;
+    border-radius: 6px;
+    padding: 4px 12px;
+    color: @text_normal;
+    font-size: 13px;
+    selection-background-color: @border_color;
+}
+
+QLineEdit:focus, QComboBox:focus, QComboBox:on {
+    border: 1px solid @primary_color;
+}
+
+/* Specific styling for QComboBox popup */
+QComboBox {
+    combobox-popup: 0;
+}
+
+QComboBox::drop-down {
+    subcontrol-origin: padding;
+    subcontrol-position: top right;
+    width: 25px;
+    border-left: none;
+}
+
+QComboBox::down-arrow {
+    image: url(:/icons/down-arrow.svg);
+    width: 10px;
+    height: 10px;
+}
+
+/* Dropdown list styling */
+QComboBox QAbstractItemView {
+    background-color: @bg_panel;
+    border: 1px solid @border_color;
+    border-radius: 8px;
+    selection-background-color: @primary_color;
+    selection-color: #ffffff;
+    color: @text_normal;
+    outline: none;
+    padding: 4px;
+    margin-top: 2px;
+}
+
+QComboBox QAbstractItemView::item {
+    padding: 6px 10px;
+    margin: 1px;
+    border-radius: 4px;
+}
+
+QComboBox QAbstractItemView::item:selected {
+    background-color: @primary_color;
+    color: #ffffff;
+}
+
+/* Footer */
+QWidget#ConfigFooter {
+    background-color: @bg_lighter;
+    border-top: 1px solid @border_dark;
+}
+
+QLabel#ConfigDirtyLabel {
+    color: #eab308;
+    font-size: 12px;
+}
+
+/* Buttons */
+QPushButton#ConfigCancelButton, QPushButton#ConfigApplyButton, QPushButton#ConfigOkButton {
+    padding: 7px 18px;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 500;
+}
+
+QPushButton#ConfigCancelButton {
+    background-color: @border_color;
+    color: @text_normal;
+    border: none;
+}
+
+QPushButton#ConfigCancelButton:hover {
+    background-color: @text_muted;
+}
+
+QPushButton#ConfigApplyButton, QPushButton#ConfigOkButton {
+    background-color: @primary_color;
+    color: #ffffff;
+    border: none;
+}
+
+QPushButton#ConfigApplyButton:hover, QPushButton#ConfigOkButton:hover {
+    background-color: @primary_hover;
+}
+
+QPushButton#ConfigApplyButton:disabled, QPushButton#ConfigOkButton:disabled {
+    background-color: @border_dark;
+    color: @text_muted;
+}
+
+/* Main Window stuff */
+QSplitter::handle {
+    background-color: @bg_base;
+}
+
+QWidget#CentralWidget {
+    background-color: @bg_base;
+}
+
+/* VideoPreviewPanel */
+QWidget#VideoPreviewPanel {
+    background-color: @bg_panel;
+    border-radius: 10px;
+}
+QWidget#PreviewProgressBar {
+    background-color: transparent;
+}
+QPushButton#PreviewTextBtn {
+    background-color: @bg_lighter;
+    color: @text_muted;
+    border: none;
+    border-radius: 4px;
+    font-family: Inter, sans-serif;
+    font-size: 12px;
+    font-weight: bold;
+}
+QPushButton#PreviewTextBtn:hover {
+    background-color: @border_dark;
+    color: @text_normal;
+}
+QPushButton#PreviewIconBtn {
+    background-color: transparent;
+    border: none;
+    border-radius: 4px;
+}
+QPushButton#PreviewIconBtn:hover {
+    background-color: @bg_lighter;
+}
+QComboBox#PreviewFontCombo, QComboBox#PreviewSizeCombo {
+    padding: 0px 25px 0px 8px;
+    font-family: Inter, sans-serif;
+    font-size: 12px;
+}
+QLineEdit#PreviewSizeComboLineEdit {
+    background: transparent; 
+    border: none; 
+    color: @text_normal; 
+    padding: 0px; 
+    margin: 0px;
+}
+QWidget#PreviewToolbarSpacer, QWidget#PreviewFormatBtnGroup, QFrame#PreviewVideoArea {
+    background: transparent;
+}
+QFrame#PreviewVideoArea {
+    border: none;
+}
+QFrame#PreviewToolbar {
+    background-color: @bg_lighter;
+    border-top-left-radius: 10px;
+    border-top-right-radius: 10px;
+    border: none;
+}
+QFrame#PreviewControlBar {
+    background-color: @bg_lighter;
+    border-bottom-left-radius: 10px;
+    border-bottom-right-radius: 10px;
+    border: none;
+}
+QLabel#PreviewCurrentTimeLabel {
+    color: @text_muted;
+    font-family: Inter, sans-serif;
+    font-size: 11px;
+    background: transparent;
+}
+QLabel#PreviewVolLabel, QLabel#PreviewFsLabel {
+    color: @text_muted;
+    font-family: Inter, sans-serif;
+    font-size: 12px;
+    background: transparent;
+}
+
+/* SubtitleListPanel */
+QWidget#SubtitleListPanel {
+    background-color: @bg_panel;
+    border-radius: 10px;
+}
+QFrame#SubtitlePanelHeader {
+    background-color: @bg_lighter;
+    border-top-left-radius: 10px;
+    border-top-right-radius: 10px;
+    border: none;
+}
+QPushButton#SubtitleTabBtn {
+    background-color: @bg_lighter;
+    color: @text_muted;
+    border: none;
+    border-radius: 5px;
+    font-family: Inter, sans-serif;
+    font-size: 12px;
+}
+QPushButton#SubtitleTabBtn[active="true"] {
+    background-color: @border_dark;
+    color: #e5e5e5;
+}
+QFrame#SubtitlePanelContent, QFrame#SubtitleSearchBar, QFrame#SubtitleTableHeader, QFrame#SubtitleHeaderLeft {
+    background-color: transparent;
+    border: none;
+}
+QFrame#SubtitleSearchInputContainer {
+    background-color: @bg_base;
+    border-radius: 5px;
+}
+QLabel#SubtitleSearchIcon {
+    color: #6b7280;
+    font-size: 16px;
+    background: transparent;
+}
+QLineEdit#SubtitleSearchEdit {
+    background-color: transparent;
+    color: @text_normal;
+    border: none;
+    font-family: Inter, sans-serif;
+    font-size: 12px;
+}
+QFrame#SubtitleListContainer {
+    background-color: @bg_base;
+    border-radius: 5px;
+}
+QLabel#SubtitleHeaderLabel {
+    color: @text_muted;
+    font-family: Inter, sans-serif;
+    font-size: 11px;
+    background: transparent;
+}
+QFrame#SubtitleHeaderSeparator {
+    background-color: @bg_lighter;
+    border: none;
+}
+QListView#SubtitleListView {
+    background-color: transparent;
+    border: none;
+    outline: none;
+}
+QListView#SubtitleListView::item {
+    height: 56px;
+    background-color: transparent;
+    border: none;
+}
+QListView#SubtitleListView::item:selected {
+    background-color: transparent;
+    border: none;
+}
+
+/* ScrollBars */
+QScrollBar:vertical {
+    background: @bg_lighter;
+    width: 8px;
+    border-radius: 4px;
+}
+QScrollBar::handle:vertical {
+    background: @border_dark;
+    border-radius: 4px;
+    min-height: 30px;
+}
+QScrollBar::handle:vertical:hover {
+    background: @text_muted;
+}
+QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {
+    height: 0px;
+}
+
+QScrollBar:horizontal {
+    background: @bg_lighter;
+    height: 8px;
+    border-radius: 4px;
+}
+QScrollBar::handle:horizontal {
+    background: @border_dark;
+    border-radius: 4px;
+    min-width: 30px;
+}
+QScrollBar::handle:horizontal:hover {
+    background: @text_muted;
+}
+QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal {
+    width: 0px;
+}
+
+QScrollBar#TimelineScrollBar {
+    background: transparent;
+    height: 12px;
+}
+QScrollBar#TimelineScrollBar::handle:horizontal {
+    background: @border_dark;
+    margin: 2px 0;
+}
+QScrollBar#TimelineScrollBar::handle:horizontal:hover {
+    background: @text_muted;
+}
+
+QPushButton#TitleBarSettingsBtn {
+    background-color: transparent;
+    border: none;
+    border-radius: 4px;
+}
+QPushButton#TitleBarSettingsBtn:hover {
+    background-color: @border_dark;
+}
+
+QPushButton#SubtitleActionBtn {
+    background-color: @primary_color;
+    color: #ffffff;
+    border: none;
+    border-radius: 6px;
+    padding: 4px 12px;
+    font-family: Inter, sans-serif;
+    font-size: 11px;
+    font-weight: bold;
+}
+QPushButton#SubtitleActionBtn:hover:enabled {
+    background-color: @primary_hover;
+}
+QPushButton#SubtitleActionBtn:disabled {
+    background-color: @border_dark;
+    color: @text_muted;
+}
