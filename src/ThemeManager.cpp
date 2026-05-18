@@ -4,6 +4,7 @@
 #include <QFile>
 #include <QTextStream>
 #include <QDebug>
+#include <QPalette>
 
 ThemeManager& ThemeManager::instance() {
     static ThemeManager instance;
@@ -57,11 +58,20 @@ void ThemeManager::applyTheme() {
     QString themeId = ConfigManager::instance().theme();
     QString primaryId = ConfigManager::instance().primaryColor();
 
-    if (!themes_.contains(themeId)) themeId = "dark";
-    if (!primaries_.contains(primaryId)) primaryId = "blue";
+    qDebug() << "[ThemeManager] Applying Theme:" << themeId << "Primary:" << primaryId;
+
+    if (!themes_.contains(themeId)) {
+        qDebug() << "[ThemeManager] Theme ID" << themeId << "not found, falling back to dark";
+        themeId = "dark";
+    }
+    if (!primaries_.contains(primaryId)) {
+        qDebug() << "[ThemeManager] Primary ID" << primaryId << "not found, falling back to blue";
+        primaryId = "blue";
+    }
 
     const auto& t = themes_[themeId];
     const auto& p = primaries_[primaryId];
+    qDebug() << "[ThemeManager] Using Primary Hex:" << p.main;
 
     // 1. Update Global QPalette
     QPalette pal;

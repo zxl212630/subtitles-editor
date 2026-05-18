@@ -14,6 +14,9 @@ int main(int argc, char *argv[]) {
   // Use Fusion style for better dark theme support and cross-platform consistency
   app.setStyle(QStyleFactory::create("Fusion"));
   
+  // Ensure ConfigManager is initialized after app properties are set
+  ConfigManager::instance();
+  
   // Apply theme dynamically using the new ThemeManager
   ThemeManager::instance().applyTheme();
 

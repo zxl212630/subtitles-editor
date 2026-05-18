@@ -1,232 +1,42 @@
 #include "ConfigDialog.h"
 #include "ConfigManager.h"
 #include "ThemeManager.h"
-#include "PaletteSelectors.h"
-#include <QHBoxLayout>
-#include <QVBoxLayout>
-#include <QListWidget>
-#include <QStackedWidget>
+#include <QBoxLayout>
 #include <QComboBox>
-#include <QLineEdit>
+#include <QFileDialog>
+#include <QHeaderView>
 #include <QLabel>
+#include <QLineEdit>
+#include <QListWidget>
 #include <QPushButton>
-#include <QMessageBox>
-#include <QFile>
-#include <QApplication>
+#include <QStackedWidget>
+#include <QStandardPaths>
+#include <QDebug>
+#include "PaletteSelectors.h"
 #include <QWindowKit/QWKWidgets/widgetwindowagent.h>
 
 ConfigDialog::ConfigDialog(QWidget *parent) : QDialog(parent) {
-    setupUi();
-    loadConfig();
-    checkDirtyState();
-}
-
-void ConfigDialog::setupUi() {
-    setWindowTitle(tr("配置"));
-    resize(700, 560);
-    setMinimumSize(600, 500);
+    setWindowTitle(tr("设置"));
+    setMinimumSize(800, 560);
+    
+    // Set object name for QSS
+    setObjectName("ConfigDialog");
 
     windowAgent = new QWK::WidgetWindowAgent(this);
     windowAgent->setup(this);
 
     setupTitleBar();
+    setupUi();
+    loadConfig();
 
-    auto *rootLayout = new QVBoxLayout(this);
-    rootLayout->setContentsMargins(0, 0, 0, 0);
-    rootLayout->setSpacing(0);
-    rootLayout->addWidget(titleBar);
-
-    auto *contentWidget = new QWidget(this);
-    contentWidget->setObjectName("ConfigContentWidget");
-    rootLayout->addWidget(contentWidget);
-
-    auto *mainLayout = new QHBoxLayout(contentWidget);
-    mainLayout->setContentsMargins(0, 0, 0, 0);
-    mainLayout->setSpacing(0);
-
-    // Sidebar
-    sidebarList_ = new QListWidget(contentWidget);
-    sidebarList_->setFixedWidth(160);
-    sidebarList_->setObjectName("ConfigSidebar");
-    sidebarList_->addItem(tr("通用"));
-    sidebarList_->addItem(tr("存储"));
-    sidebarList_->addItem(tr("语音识别"));
-    
-    // Stacked Widget
-    stackedWidget_ = new QStackedWidget(contentWidget);
-    stackedWidget_->setObjectName("ConfigStackedWidget");
-    
-    // General Page
-    auto *generalPage = new QWidget();
-    auto *generalLayout = new QVBoxLayout(generalPage);
-    generalLayout->setAlignment(Qt::AlignTop);
-    generalLayout->setContentsMargins(25, 25, 25, 25);
-    generalLayout->setSpacing(15);
-    
-    auto *titleLabelPage = new QLabel(tr("通用配置"), generalPage);
-    titleLabelPage->setObjectName("ConfigPageTitle");
-    generalLayout->addWidget(titleLabelPage);
-
-    auto *langLabel = new QLabel(tr("语言 (Language)"), generalPage);
-    langLabel->setObjectName("ConfigFieldLabel");
-    generalLayout->addWidget(langLabel);
-    langCombo_ = new QComboBox(generalPage);
-    langCombo_->addItem("简体中文", "zh_CN");
-    langCombo_->addItem("English", "en_US");
-    generalLayout->addWidget(langCombo_);
-
-    auto *themeLabel = new QLabel(tr("外观 (Theme)"), generalPage);
-    themeLabel->setObjectName("ConfigFieldLabel");
-    generalLayout->addWidget(themeLabel);
-
-    themeSelector_ = new ThemeSelectorWidget(generalPage);
-    themeSelector_->addTheme("dark", "#151515", "#1e1e1e", "#3b82f6");
-    themeSelector_->addTheme("light", "#f3f4f6", "#ffffff", "#3b82f6");
-    generalLayout->addWidget(themeSelector_);
-
-    auto *colorLabel = new QLabel(tr("主色 (Primary Color)"), generalPage);
-    colorLabel->setObjectName("ConfigFieldLabel");
-    generalLayout->addWidget(colorLabel);
-
-    colorSelector_ = new ColorSelectorWidget(generalPage);
-    for (const QString& cid : ThemeManager::instance().availablePrimaryColors()) {
-        colorSelector_->addColor(cid, ThemeManager::instance().getPrimaryColorHex(cid));
-    }
-    generalLayout->addWidget(colorSelector_);
-
-    stackedWidget_->addWidget(generalPage);
-
-    // Storage Page
-    auto *storagePage = new QWidget();
-    auto *storageLayout = new QVBoxLayout(storagePage);
-    storageLayout->setAlignment(Qt::AlignTop);
-    storageLayout->setContentsMargins(25, 25, 25, 25);
-    storageLayout->setSpacing(15);
-
-    auto *storageTitleLabel = new QLabel(tr("存储配置"), storagePage);
-    storageTitleLabel->setObjectName("ConfigPageTitle");
-    storageLayout->addWidget(storageTitleLabel);
-
-    auto *storageProvLabel = new QLabel(tr("存储提供商"), storagePage);
-    storageProvLabel->setObjectName("ConfigFieldLabel");
-    storageLayout->addWidget(storageProvLabel);
-    storageProviderCombo_ = new QComboBox(storagePage);
-    storageProviderCombo_->addItem(tr("阿里云 OSS"), "aliyun_oss");
-    storageLayout->addWidget(storageProviderCombo_);
-    
-    auto *bucketLabel = new QLabel(tr("存储桶 (Bucket)"), storagePage);
-    bucketLabel->setObjectName("ConfigFieldLabel");
-    storageLayout->addWidget(bucketLabel);
-    ossBucketEdit_ = new QLineEdit(storagePage);
-    storageLayout->addWidget(ossBucketEdit_);
-    
-    auto *regionLabel = new QLabel(tr("地域 (Region)"), storagePage);
-    regionLabel->setObjectName("ConfigFieldLabel");
-    storageLayout->addWidget(regionLabel);
-    ossRegionEdit_ = new QLineEdit(storagePage);
-    storageLayout->addWidget(ossRegionEdit_);
-
-    auto *akLabel = new QLabel(tr("访问密钥 ID (Access Key ID)"), storagePage);
-    akLabel->setObjectName("ConfigFieldLabel");
-    storageLayout->addWidget(akLabel);
-    ossAccessKeyEdit_ = new QLineEdit(storagePage);
-    storageLayout->addWidget(ossAccessKeyEdit_);
-
-    auto *skLabel = new QLabel(tr("访问密钥密钥 (Access Key Secret)"), storagePage);
-    skLabel->setObjectName("ConfigFieldLabel");
-    storageLayout->addWidget(skLabel);
-    ossSecretKeyEdit_ = new QLineEdit(storagePage);
-    ossSecretKeyEdit_->setEchoMode(QLineEdit::Password);
-    storageLayout->addWidget(ossSecretKeyEdit_);
-    
-    stackedWidget_->addWidget(storagePage);
-
-    // ASR Page
-    auto *asrPage = new QWidget();
-    auto *asrLayout = new QVBoxLayout(asrPage);
-    asrLayout->setAlignment(Qt::AlignTop);
-    asrLayout->setContentsMargins(25, 25, 25, 25);
-    asrLayout->setSpacing(15);
-
-    auto *asrTitleLabel = new QLabel(tr("语音识别配置"), asrPage);
-    asrTitleLabel->setObjectName("ConfigPageTitle");
-    asrLayout->addWidget(asrTitleLabel);
-
-    auto *asrProvLabel = new QLabel(tr("ASR 服务提供商"), asrPage);
-    asrProvLabel->setObjectName("ConfigFieldLabel");
-    asrLayout->addWidget(asrProvLabel);
-    asrProviderCombo_ = new QComboBox(asrPage);
-    asrProviderCombo_->addItem(tr("腾讯云"), "tencent");
-    asrLayout->addWidget(asrProviderCombo_);
-
-    auto *appIdLabel = new QLabel(tr("应用 ID (App ID)"), asrPage);
-    appIdLabel->setObjectName("ConfigFieldLabel");
-    asrLayout->addWidget(appIdLabel);
-    tencentAppIdEdit_ = new QLineEdit(asrPage);
-    asrLayout->addWidget(tencentAppIdEdit_);
-
-    auto *sidLabel = new QLabel(tr("密钥 ID (Secret ID)"), asrPage);
-    sidLabel->setObjectName("ConfigFieldLabel");
-    asrLayout->addWidget(sidLabel);
-    tencentSecretIdEdit_ = new QLineEdit(asrPage);
-    asrLayout->addWidget(tencentSecretIdEdit_);
-
-    auto *skeyLabel = new QLabel(tr("密钥密码 (Secret Key)"), asrPage);
-    skeyLabel->setObjectName("ConfigFieldLabel");
-    asrLayout->addWidget(skeyLabel);
-    tencentSecretKeyEdit_ = new QLineEdit(asrPage);
-    tencentSecretKeyEdit_->setEchoMode(QLineEdit::Password);
-    asrLayout->addWidget(tencentSecretKeyEdit_);
-
-    stackedWidget_->addWidget(asrPage);
-
-    // Right side layout (Stack + Footer)
-    auto *rightSideLayout = new QVBoxLayout();
-    rightSideLayout->setContentsMargins(0, 0, 0, 0);
-    rightSideLayout->setSpacing(0);
-    rightSideLayout->addWidget(stackedWidget_);
-
-    // Footer
-    auto *footer = new QWidget(contentWidget);
-    footer->setObjectName("ConfigFooter");
-    auto *footerLayout = new QHBoxLayout(footer);
-    footerLayout->setContentsMargins(15, 10, 15, 10);
-    
-    dirtyLabel_ = new QLabel(tr("● 有未保存的更改"), footer);
-    dirtyLabel_->setObjectName("ConfigDirtyLabel");
-    footerLayout->addWidget(dirtyLabel_);
-    footerLayout->addStretch();
-
-    btnCancel_ = new QPushButton(tr("取消"), footer);
-    btnApply_ = new QPushButton(tr("应用"), footer);
-    btnOk_ = new QPushButton(tr("确定"), footer);
-    
-    btnCancel_->setObjectName("ConfigCancelButton");
-    btnApply_->setObjectName("ConfigApplyButton");
-    btnOk_->setObjectName("ConfigOkButton");
-
-    footerLayout->addWidget(btnCancel_);
-    footerLayout->addWidget(btnApply_);
-    footerLayout->addWidget(btnOk_);
-    rightSideLayout->addWidget(footer);
-
-    mainLayout->addWidget(sidebarList_);
-    mainLayout->addLayout(rightSideLayout);
-
-    connect(sidebarList_, &QListWidget::currentRowChanged, stackedWidget_, &QStackedWidget::setCurrentIndex);
     connect(btnCancel_, &QPushButton::clicked, this, &ConfigDialog::onCancel);
     connect(btnApply_, &QPushButton::clicked, this, &ConfigDialog::onApply);
     connect(btnOk_, &QPushButton::clicked, this, &ConfigDialog::onOk);
-    
+
+    // Track changes
+    connect(themeSelector_, &ThemeSelectorWidget::themeSelected, this, &ConfigDialog::checkDirtyState);
+    connect(colorSelector_, &ColorSelectorWidget::colorSelected, this, &ConfigDialog::checkDirtyState);
     connect(langCombo_, &QComboBox::currentTextChanged, this, &ConfigDialog::checkDirtyState);
-    connect(themeSelector_, &ThemeSelectorWidget::themeSelected, this, [this](const QString&) {
-        checkDirtyState();
-        ThemeManager::instance().applyTheme();
-    });
-    connect(colorSelector_, &ColorSelectorWidget::colorSelected, this, [this](const QString&) {
-        checkDirtyState();
-        ThemeManager::instance().applyTheme();
-    });
     connect(storageProviderCombo_, &QComboBox::currentTextChanged, this, &ConfigDialog::checkDirtyState);
     connect(asrProviderCombo_, &QComboBox::currentTextChanged, this, &ConfigDialog::checkDirtyState);
 
@@ -264,40 +74,43 @@ void ConfigDialog::setupTitleBar() {
 
 void ConfigDialog::loadConfig() {
     auto &cfg = ConfigManager::instance();
-    initialConfig_["language"] = cfg.getString("general", "language");
+    initialConfig_["language"] = cfg.getString("", "language");
     if (initialConfig_["language"].toString().isEmpty()) initialConfig_["language"] = "zh_CN";
     
-    initialConfig_["theme"] = cfg.getString("general", "theme");
+    initialConfig_["theme"] = cfg.getString("", "theme");
     if (initialConfig_["theme"].toString().isEmpty()) initialConfig_["theme"] = "dark";
 
-    initialConfig_["primary_color"] = cfg.getString("general", "primary_color");
+    initialConfig_["primary_color"] = cfg.getString("", "primary_color");
     if (initialConfig_["primary_color"].toString().isEmpty()) initialConfig_["primary_color"] = "blue";
 
     langCombo_->setCurrentIndex(langCombo_->findData(initialConfig_["language"]));
     themeSelector_->setCurrentTheme(initialConfig_["theme"].toString());
     colorSelector_->setCurrentColor(initialConfig_["primary_color"].toString());
 
-    initialConfig_["oss_bucket"] = cfg.ossBucket();
-    ossBucketEdit_->setText(cfg.ossBucket());
-    initialConfig_["oss_region"] = cfg.ossRegion();
-    ossRegionEdit_->setText(cfg.ossRegion());
-    initialConfig_["oss_ak"] = cfg.ossAccessKeyId();
-    ossAccessKeyEdit_->setText(cfg.ossAccessKeyId());
-    initialConfig_["oss_sk"] = cfg.ossAccessKeySecret();
-    ossSecretKeyEdit_->setText(cfg.ossAccessKeySecret());
+    initialConfig_["oss_bucket"] = cfg.getString("aliyun_oss", "bucket");
+    initialConfig_["oss_region"] = cfg.getString("aliyun_oss", "region");
+    initialConfig_["oss_ak"] = cfg.getString("aliyun_oss", "access_key_id");
+    initialConfig_["oss_sk"] = cfg.getString("aliyun_oss", "access_key_secret");
 
-    initialConfig_["tc_appid"] = cfg.tencentAppId();
-    tencentAppIdEdit_->setText(cfg.tencentAppId());
-    initialConfig_["tc_sid"] = cfg.tencentSecretId();
-    tencentSecretIdEdit_->setText(cfg.tencentSecretId());
-    initialConfig_["tc_skey"] = cfg.tencentSecretKey();
-    tencentSecretKeyEdit_->setText(cfg.tencentSecretKey());
+    initialConfig_["tc_appid"] = cfg.getString("tencent_asr", "app_id");
+    initialConfig_["tc_sid"] = cfg.getString("tencent_asr", "secret_id");
+    initialConfig_["tc_skey"] = cfg.getString("tencent_asr", "secret_key");
+
+    ossBucketEdit_->setText(initialConfig_["oss_bucket"].toString());
+    ossRegionEdit_->setText(initialConfig_["oss_region"].toString());
+    ossAccessKeyEdit_->setText(initialConfig_["oss_ak"].toString());
+    ossSecretKeyEdit_->setText(initialConfig_["oss_sk"].toString());
+    tencentAppIdEdit_->setText(initialConfig_["tc_appid"].toString());
+    tencentSecretIdEdit_->setText(initialConfig_["tc_sid"].toString());
+    tencentSecretKeyEdit_->setText(initialConfig_["tc_skey"].toString());
+
+    checkDirtyState();
 }
 
 bool ConfigDialog::isDirty() const {
-    return (langCombo_->currentData().toString() != initialConfig_["language"]) ||
-           (themeSelector_->currentTheme() != initialConfig_["theme"]) ||
-           (colorSelector_->currentColor() != initialConfig_["primary_color"]) ||
+    return (langCombo_->currentData().toString() != initialConfig_["language"].toString()) ||
+           (themeSelector_->currentTheme() != initialConfig_["theme"].toString()) ||
+           (colorSelector_->currentColor() != initialConfig_["primary_color"].toString()) ||
            (ossBucketEdit_->text() != initialConfig_["oss_bucket"].toString()) ||
            (ossRegionEdit_->text() != initialConfig_["oss_region"].toString()) ||
            (ossAccessKeyEdit_->text() != initialConfig_["oss_ak"].toString()) ||
@@ -315,9 +128,9 @@ void ConfigDialog::checkDirtyState() {
 
 void ConfigDialog::saveConfig() {
     auto &cfg = ConfigManager::instance();
-    cfg.setValue("general", "language", langCombo_->currentData().toString());
-    cfg.setValue("general", "theme", themeSelector_->currentTheme());
-    cfg.setValue("general", "primary_color", colorSelector_->currentColor());
+    cfg.setValue("", "language", langCombo_->currentData().toString());
+    cfg.setValue("", "theme", themeSelector_->currentTheme());
+    cfg.setValue("", "primary_color", colorSelector_->currentColor());
     
     cfg.setValue("aliyun_oss", "bucket", ossBucketEdit_->text());
     cfg.setValue("aliyun_oss", "region", ossRegionEdit_->text());
@@ -359,9 +172,162 @@ void ConfigDialog::onOk() {
 void ConfigDialog::onCancel() {
     if (themeSelector_->currentTheme() != initialConfig_["theme"].toString() || 
         colorSelector_->currentColor() != initialConfig_["primary_color"].toString()) {
-        ConfigManager::instance().setValue("general", "theme", initialConfig_["theme"]);
-        ConfigManager::instance().setValue("general", "primary_color", initialConfig_["primary_color"]);
+        ConfigManager::instance().setValue("", "theme", initialConfig_["theme"]);
+        ConfigManager::instance().setValue("", "primary_color", initialConfig_["primary_color"]);
         ThemeManager::instance().applyTheme();
     }
     reject();
+}
+
+void ConfigDialog::setupUi() {
+    auto *mainLayout = new QVBoxLayout(this);
+    mainLayout->setContentsMargins(0, 0, 0, 0);
+    mainLayout->setSpacing(0);
+
+    mainLayout->addWidget(titleBar);
+
+    auto *contentWidget = new QWidget(this);
+    contentWidget->setObjectName("ConfigContentWidget");
+    auto *contentLayout = new QHBoxLayout(contentWidget);
+    contentLayout->setContentsMargins(0, 0, 0, 0);
+    contentLayout->setSpacing(0);
+
+    sidebarList_ = new QListWidget(contentWidget);
+    sidebarList_->setObjectName("ConfigSidebar");
+    sidebarList_->setFixedWidth(180);
+    sidebarList_->addItem(tr("常规"));
+    sidebarList_->addItem(tr("存储"));
+    sidebarList_->addItem(tr("语音识别"));
+    contentLayout->addWidget(sidebarList_);
+
+    stackedWidget_ = new QStackedWidget(contentWidget);
+    stackedWidget_->setObjectName("ConfigStackedWidget");
+    
+    // Create Pages
+    auto *generalPage = new QWidget();
+    auto *genLayout = new QVBoxLayout(generalPage);
+    genLayout->setContentsMargins(30, 20, 30, 30);
+    genLayout->setSpacing(20);
+    auto *genTitle = new QLabel(tr("常规设置"), generalPage);
+    genTitle->setObjectName("ConfigPageTitle");
+    genLayout->addWidget(genTitle);
+    auto *genForm = new QGridLayout();
+    genForm->setVerticalSpacing(15);
+    genForm->setHorizontalSpacing(20);
+    genForm->addWidget(new QLabel(tr("界面语言:"), generalPage), 0, 0);
+    langCombo_ = new QComboBox(generalPage);
+    langCombo_->addItem("简体中文", "zh_CN");
+    langCombo_->addItem("English", "en_US");
+    genForm->addWidget(langCombo_, 0, 1);
+    genForm->addWidget(new QLabel(tr("主题模式:"), generalPage), 1, 0, Qt::AlignTop);
+    themeSelector_ = new ThemeSelectorWidget(generalPage);
+    themeSelector_->addTheme("dark", "#151515", "#1e1e1e", "#3b82f6");
+    themeSelector_->addTheme("light", "#f3f4f6", "#ffffff", "#3b82f6");
+    genForm->addWidget(themeSelector_, 1, 1);
+    genForm->addWidget(new QLabel(tr("主色调:"), generalPage), 2, 0, Qt::AlignTop);
+    colorSelector_ = new ColorSelectorWidget(generalPage);
+    colorSelector_->addColor("purple", "#a855f7");
+    colorSelector_->addColor("indigo", "#6366f1");
+    colorSelector_->addColor("blue", "#3b82f6");
+    colorSelector_->addColor("cyan", "#06b6d4");
+    colorSelector_->addColor("teal", "#14b8a6");
+    colorSelector_->addColor("green", "#10b981");
+    colorSelector_->addColor("orange", "#f97316");
+    colorSelector_->addColor("pink", "#ec4899");
+    colorSelector_->addColor("red", "#ef4444");
+    colorSelector_->addColor("sepia", "#d4ba8a");
+    genForm->addWidget(colorSelector_, 2, 1);
+    genLayout->addLayout(genForm);
+    genLayout->addStretch();
+    stackedWidget_->addWidget(generalPage);
+
+    auto *storagePage = new QWidget();
+    auto *stLayout = new QVBoxLayout(storagePage);
+    stLayout->setContentsMargins(30, 20, 30, 30);
+    stLayout->setSpacing(20);
+    auto *stTitle = new QLabel(tr("存储设置"), storagePage);
+    stTitle->setObjectName("ConfigPageTitle");
+    stLayout->addWidget(stTitle);
+    auto *stForm = new QGridLayout();
+    stForm->setSpacing(15);
+    stForm->addWidget(new QLabel(tr("存储提供商:"), storagePage), 0, 0);
+    storageProviderCombo_ = new QComboBox(storagePage);
+    storageProviderCombo_->addItem("阿里云 OSS", "aliyun_oss");
+    stForm->addWidget(storageProviderCombo_, 0, 1);
+    stForm->addWidget(new QLabel(tr("Bucket:"), storagePage), 1, 0);
+    ossBucketEdit_ = new QLineEdit(storagePage);
+    stForm->addWidget(ossBucketEdit_, 1, 1);
+    stForm->addWidget(new QLabel(tr("Region:"), storagePage), 2, 0);
+    ossRegionEdit_ = new QLineEdit(storagePage);
+    stForm->addWidget(ossRegionEdit_, 2, 1);
+    stForm->addWidget(new QLabel(tr("Access Key ID:"), storagePage), 3, 0);
+    ossAccessKeyEdit_ = new QLineEdit(storagePage);
+    stForm->addWidget(ossAccessKeyEdit_, 3, 1);
+    stForm->addWidget(new QLabel(tr("Access Key Secret:"), storagePage), 4, 0);
+    ossSecretKeyEdit_ = new QLineEdit(storagePage);
+    ossSecretKeyEdit_->setEchoMode(QLineEdit::Password);
+    stForm->addWidget(ossSecretKeyEdit_, 4, 1);
+    stLayout->addLayout(stForm);
+    stLayout->addStretch();
+    stackedWidget_->addWidget(storagePage);
+
+    auto *asrPage = new QWidget();
+    auto *asrLayout = new QVBoxLayout(asrPage);
+    asrLayout->setContentsMargins(30, 20, 30, 30);
+    asrLayout->setSpacing(20);
+    auto *asrTitle = new QLabel(tr("语音识别设置"), asrPage);
+    asrTitle->setObjectName("ConfigPageTitle");
+    asrLayout->addWidget(asrTitle);
+    auto *asrForm = new QGridLayout();
+    asrForm->setSpacing(15);
+    asrForm->addWidget(new QLabel(tr("识别提供商:"), asrPage), 0, 0);
+    asrProviderCombo_ = new QComboBox(asrPage);
+    asrProviderCombo_->addItem("腾讯云 ASR", "tencent_asr");
+    asrForm->addWidget(asrProviderCombo_, 0, 1);
+    asrForm->addWidget(new QLabel(tr("App ID:"), asrPage), 1, 0);
+    tencentAppIdEdit_ = new QLineEdit(asrPage);
+    asrForm->addWidget(tencentAppIdEdit_, 1, 1);
+    asrForm->addWidget(new QLabel(tr("Secret ID:"), asrPage), 2, 0);
+    tencentSecretIdEdit_ = new QLineEdit(asrPage);
+    asrForm->addWidget(tencentSecretIdEdit_, 2, 1);
+    asrForm->addWidget(new QLabel(tr("Secret Key:"), asrPage), 3, 0);
+    tencentSecretKeyEdit_ = new QLineEdit(asrPage);
+    tencentSecretKeyEdit_->setEchoMode(QLineEdit::Password);
+    asrForm->addWidget(tencentSecretKeyEdit_, 3, 1);
+    asrLayout->addLayout(asrForm);
+    asrLayout->addStretch();
+    stackedWidget_->addWidget(asrPage);
+
+    contentLayout->addWidget(stackedWidget_);
+
+    mainLayout->addWidget(contentWidget);
+
+    auto *footer = new QWidget(this);
+    footer->setObjectName("ConfigFooter");
+    footer->setFixedHeight(60);
+    auto *footerLayout = new QHBoxLayout(footer);
+    footerLayout->setContentsMargins(20, 0, 20, 0);
+
+    dirtyLabel_ = new QLabel(tr("有未保存的更改"), footer);
+    dirtyLabel_->setObjectName("ConfigDirtyLabel");
+    dirtyLabel_->setVisible(false);
+    footerLayout->addWidget(dirtyLabel_);
+
+    footerLayout->addStretch();
+
+    btnCancel_ = new QPushButton(tr("取消"), footer);
+    btnCancel_->setObjectName("ConfigCancelButton");
+    btnApply_ = new QPushButton(tr("应用"), footer);
+    btnApply_->setObjectName("ConfigApplyButton");
+    btnOk_ = new QPushButton(tr("确定"), footer);
+    btnOk_->setObjectName("ConfigOkButton");
+
+    footerLayout->addWidget(btnCancel_);
+    footerLayout->addWidget(btnApply_);
+    footerLayout->addWidget(btnOk_);
+
+    mainLayout->addWidget(footer);
+
+    connect(sidebarList_, &QListWidget::currentRowChanged, stackedWidget_, &QStackedWidget::setCurrentIndex);
+    sidebarList_->setCurrentRow(0);
 }

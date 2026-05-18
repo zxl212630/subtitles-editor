@@ -3,6 +3,7 @@
 #include <QDir>
 #include <QFile>
 #include <QStandardPaths>
+#include <QDebug>
 
 ConfigManager &ConfigManager::instance() {
   static ConfigManager inst;
@@ -13,31 +14,45 @@ ConfigManager::ConfigManager()
     : configFilePath_([] {
         QString configDir =
             QStandardPaths::writableLocation(QStandardPaths::AppConfigLocation);
-        QDir().mkpath(configDir);
-        QString path = configDir + "/config.ini";
+        QString standardPath = configDir + "/config.ini";
+        QString localPath = QCoreApplication::applicationDirPath() + "/config.ini";
+        
+        QString finalPath = standardPath;
 
-        // If config doesn't exist, copy from template
-        if (!QFile::exists(path)) {
-          QString templatePath =
-              QCoreApplication::applicationDirPath() + "/config.ini.template";
-          if (QFile::exists(templatePath)) {
-            QFile::copy(templatePath, path);
-          }
+        if (!QFile::exists(standardPath)) {
+            if (QFile::exists(localPath)) {
+                finalPath = localPath;
+            } else {
+                QDir().mkpath(configDir);
+                QString templatePath = QCoreApplication::applicationDirPath() + "/config.ini.template";
+                if (QFile::exists(templatePath)) {
+                    QFile::copy(templatePath, standardPath);
+                }
+            }
         }
-        return path;
+        qDebug() << "[ConfigManager] Selected config path:" << finalPath;
+        return finalPath;
       }()),
-      settings_(configFilePath_, QSettings::IniFormat) {}
+      settings_(configFilePath_, QSettings::IniFormat) {
+}
 
 bool ConfigManager::isValid() const {
-  // Check all required keys
-  return !getString("ffmpeg", "path").isEmpty() &&
-         !getString("tencent_asr", "secret_id").isEmpty() &&
-         !getString("tencent_asr", "secret_key").isEmpty() &&
-         !getString("tencent_asr", "app_id").isEmpty() &&
-         !getString("aliyun_oss", "access_key_id").isEmpty() &&
-         !getString("aliyun_oss", "access_key_secret").isEmpty() &&
-         !getString("aliyun_oss", "bucket").isEmpty() &&
-         !getString("aliyun_oss", "region").isEmpty();
+  auto check = [this](const QString &group, const QString &key) {
+    QString val = getString(group, key);
+    return !val.isEmpty() && !val.contains("YOUR_") && !val.contains("FFMPEG_PATH");
+  };
+
+  bool valid = check("ffmpeg", "path") &&
+               check("tencent_asr", "secret_id") &&
+               check("tencent_asr", "secret_key") &&
+               check("tencent_asr", "app_id") &&
+               check("aliyun_oss", "access_key_id") &&
+               check("aliyun_oss", "access_key_secret") &&
+               check("aliyun_oss", "bucket") &&
+               check("aliyun_oss", "region");
+  
+  qDebug() << "[ConfigManager] Configuration is valid:" << valid;
+  return valid;
 }
 
 QString ConfigManager::configFilePath() const { return configFilePath_; }
@@ -76,15 +91,18 @@ QString ConfigManager::ossRegion() const {
 
 QString ConfigManager::getString(const QString &group,
                                  const QString &key) const {
-  settings_.beginGroup(group);
-  QString value = settings_.value(key).toString();
-  settings_.endGroup();
+  QString fullKey = group + "/" + key;
+  QString value = settings_.value(fullKey).toString().trimmed();
+  
+  if (value.startsWith('\"') && value.endsWith('\"')) {
+      value = value.mid(1, value.length() - 2);
+  }
   return value;
 }
+
 void ConfigManager::setValue(const QString &group, const QString &key, const QVariant &value) {
-    settings_.beginGroup(group);
-    settings_.setValue(key, value);
-    settings_.endGroup();
+    QString fullKey = group + "/" + key;
+    settings_.setValue(fullKey, value);
 }
 
 void ConfigManager::sync() {
@@ -92,13 +110,13 @@ void ConfigManager::sync() {
 }
 
 QString ConfigManager::theme() const {
-    return getString("general", "theme");
+    return getString("", "theme");
 }
 
 QString ConfigManager::primaryColor() const {
-    return getString("general", "primary_color");
+    return getString("", "primary_color");
 }
 
 QString ConfigManager::language() const {
-    return getString("general", "language");
+    return getString("", "language");
 }
