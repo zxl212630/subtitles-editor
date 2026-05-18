@@ -306,7 +306,7 @@ QPushButton#SubtitleTabBtn {
 }
 QPushButton#SubtitleTabBtn[active="true"] {
     background-color: @border_dark;
-    color: #e5e5e5;
+    color: @text_normal;
 }
 QFrame#SubtitlePanelContent, QFrame#SubtitleSearchBar, QFrame#SubtitleTableHeader, QFrame#SubtitleHeaderLeft {
     background-color: transparent;
@@ -317,7 +317,7 @@ QFrame#SubtitleSearchInputContainer {
     border-radius: 5px;
 }
 QLabel#SubtitleSearchIcon {
-    color: #6b7280;
+    color: @text_muted;
     font-size: 16px;
     background: transparent;
 }

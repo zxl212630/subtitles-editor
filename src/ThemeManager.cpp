@@ -28,28 +28,28 @@ void ThemeManager::init() {
         "#9ca3af"  // textMuted
     };
 
-    // OLED (Deep Gray)
-    themeNames_["oled"] = tr("深度灰黑 (Deep Gray)");
+    // OLED (Deep Black)
+    themeNames_["oled"] = tr("纯黑 OLED (Pure Black)");
     themes_["oled"] = {
-        "#0a0a0a", // bgBase
-        "#121212", // bgPanel
-        "#1e1e1e", // bgLighter
-        "#262626", // border
-        "#333333", // borderDark
-        "#eeeeee", // textNormal
-        "#9ca3af"  // textMuted
+        "#000000", // bgBase
+        "#09090b", // bgPanel
+        "#18181b", // bgLighter
+        "#27272a", // border
+        "#3f3f46", // borderDark
+        "#f4f4f5", // textNormal (Zinc 100)
+        "#71717a"  // textMuted (Zinc 500)
     };
 
-    // Midnight (Pro Blue)
-    themeNames_["midnight"] = tr("专业午夜蓝 (Midnight)");
+    // Midnight (Deep Navy)
+    themeNames_["midnight"] = tr("深邃午夜蓝 (Midnight)");
     themes_["midnight"] = {
-        "#111218", // bgBase
-        "#171821", // bgPanel
-        "#212330", // bgLighter
-        "#2d2f3f", // border
-        "#33354a", // borderDark
-        "#c0caf5", // textNormal
-        "#565f89"  // textMuted
+        "#020617", // bgBase (Slate 950 / Navy Dark)
+        "#0f172a", // bgPanel (Slate 900)
+        "#1e293b", // bgLighter (Slate 800)
+        "#334155", // border (Slate 700)
+        "#475569", // borderDark (Slate 600)
+        "#e2e8f0", // textNormal (Slate 200)
+        "#94a3b8"  // textMuted (Slate 400)
     };
     
     // TODO: Add Sepia later

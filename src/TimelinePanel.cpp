@@ -343,9 +343,17 @@ void TimelinePanel::drawOnCanvas(QPainter &painter) {
 void TimelinePanel::drawRuler(QPainter &painter) {
   painter.save();
   int contentWidth = canvas_->width() - TRACK_HEAD_WIDTH - PANEL_RIGHT_MARGIN;
+  
+  QColor bgLighter = ThemeManager::instance().getBgLighterColor();
+  QColor textMuted = ThemeManager::instance().getTextMutedColor();
+  QColor borderDark = ThemeManager::instance().getBorderDarkColor();
+
+  // Background for ruler
+  painter.fillRect(canvas_->rect().left(), 0, canvas_->rect().width(), RULER_HEIGHT, bgLighter);
+
   painter.setClipRect(TRACK_HEAD_WIDTH, 0, contentWidth, RULER_HEIGHT);
 
-  painter.setPen(QColor("#6b7280"));
+  painter.setPen(textMuted);
   QFont font = painter.font();
   font.setPointSize(8);
   painter.setFont(font);
@@ -401,7 +409,7 @@ void TimelinePanel::drawRuler(QPainter &painter) {
       tickLen = 5; // Minor tick (shortest)
     }
 
-    painter.setPen(QColor("#404040"));
+    painter.setPen(borderDark);
     painter.drawLine(x, RULER_HEIGHT - tickLen, x, RULER_HEIGHT);
   }
 
@@ -430,7 +438,7 @@ void TimelinePanel::drawRuler(QPainter &painter) {
                   .arg(min, 2, 10, QChar('0'))
                   .arg(sec, 2, 10, QChar('0'));
     }
-    painter.setPen(QColor("#6b7280"));
+    painter.setPen(textMuted);
     painter.drawText(x - 30, 2, 60, 14, Qt::AlignCenter, label);
   }
 

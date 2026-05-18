@@ -241,8 +241,8 @@ void ConfigDialog::setupUi() {
     genLayout->addWidget(themeLabel);
     themeSelector_ = new ThemeSelectorWidget(generalPage);
     themeSelector_->addTheme("dark", "#151515", "#1e1e1e", "#3b82f6");
-    themeSelector_->addTheme("oled", "#0a0a0a", "#121212", "#10b981");
-    themeSelector_->addTheme("midnight", "#111218", "#171821", "#6366f1");
+    themeSelector_->addTheme("oled", "#000000", "#09090b", "#10b981");
+    themeSelector_->addTheme("midnight", "#020617", "#0f172a", "#6366f1");
     genLayout->addWidget(themeSelector_);
 
     auto *colorLabel = new QLabel(tr("主色调 (Primary Color)"), generalPage);

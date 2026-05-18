@@ -1,4 +1,5 @@
 #include "SoftwareVideoRenderer.h"
+#include "ThemeManager.h"
 
 #include <QElapsedTimer>
 #include <QPainter>
@@ -85,7 +86,8 @@ void SoftwareVideoRenderer::paintEvent(QPaintEvent *event) {
   timer.start();
 
   QPainter painter(this);
-  painter.fillRect(rect(), QColor("#1e1e1e"));
+  QColor bgPanel = ThemeManager::instance().getBgPanelColor();
+  painter.fillRect(rect(), bgPanel);
 
   QImage imageToDraw;
   bool hasFrame;
