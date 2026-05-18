@@ -223,6 +223,7 @@ auto *tbLayout = new QHBoxLayout(toolbar);
 
   // Font combo
   fontCombo_ = new QComboBox(toolbar);
+  fontCombo_->setFocusPolicy(Qt::NoFocus);
   fontCombo_->setObjectName("PreviewFontCombo");
   fontCombo_->setFixedSize(140, 28);
 populateFontCombo();
@@ -233,11 +234,13 @@ populateFontCombo();
 
   // Size combo
   sizeCombo_ = new QComboBox(toolbar);
+  sizeCombo_->setFocusPolicy(Qt::NoFocus);
   sizeCombo_->setObjectName("PreviewSizeCombo");
   sizeCombo_->setFixedSize(80, 28);
   sizeCombo_->setMaxVisibleItems(10);
   sizeCombo_->setEditable(true);
   if (sizeCombo_->lineEdit()) {
+      sizeCombo_->lineEdit()->setFocusPolicy(Qt::NoFocus);
       sizeCombo_->lineEdit()->setObjectName("PreviewSizeComboLineEdit");
       sizeCombo_->lineEdit()->setStyleSheet("background: transparent; border: none; color: inherit; padding: 0px; margin: 0px;");
   }
