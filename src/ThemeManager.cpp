@@ -28,18 +28,31 @@ void ThemeManager::init() {
         "#9ca3af"  // textMuted
     };
 
-    themeNames_["light"] = tr("浅色 (Light)");
-    themes_["light"] = {
-        "#f3f4f6", // bgBase
-        "#ffffff", // bgPanel
-        "#e5e7eb", // bgLighter
-        "#d1d5db", // border
-        "#9ca3af", // borderDark
-        "#111827", // textNormal
-        "#4b5563"  // textMuted
+    // OLED (Deep Gray)
+    themeNames_["oled"] = tr("深度灰黑 (Deep Gray)");
+    themes_["oled"] = {
+        "#0a0a0a", // bgBase
+        "#121212", // bgPanel
+        "#1e1e1e", // bgLighter
+        "#262626", // border
+        "#333333", // borderDark
+        "#eeeeee", // textNormal
+        "#9ca3af"  // textMuted
+    };
+
+    // Midnight (Pro Blue)
+    themeNames_["midnight"] = tr("专业午夜蓝 (Midnight)");
+    themes_["midnight"] = {
+        "#111218", // bgBase
+        "#171821", // bgPanel
+        "#212330", // bgLighter
+        "#2d2f3f", // border
+        "#33354a", // borderDark
+        "#c0caf5", // textNormal
+        "#565f89"  // textMuted
     };
     
-    // TODO: Add OLED and Sepia later
+    // TODO: Add Sepia later
 
     // Primary Colors Definitions
     primaries_["purple"]  = {"#a855f7", "#c084fc", "#7e22ce"};
@@ -56,6 +69,10 @@ void ThemeManager::init() {
 
 void ThemeManager::applyTheme() {
     QString themeId = ConfigManager::instance().theme();
+    if (themeId == "light") {
+        themeId = "dark";
+        ConfigManager::instance().setValue("", "theme", "dark");
+    }
     QString primaryId = ConfigManager::instance().primaryColor();
 
     qDebug() << "[ThemeManager] Applying Theme:" << themeId << "Primary:" << primaryId;
@@ -181,7 +198,7 @@ QColor ThemeManager::getTextMutedColor() const {
 }
 
 QStringList ThemeManager::availableThemes() const {
-    return {"dark", "light"}; // Order matters for UI
+    return {"dark", "oled", "midnight"}; // Order matters for UI
 }
 
 QStringList ThemeManager::availablePrimaryColors() const {
