@@ -21,6 +21,8 @@
 #include <QVBoxLayout>
 #include <QValidator>
 
+#include "ThemeManager.h"
+
 #define LOG_SUB_debug(msg) qDebug() << "[SubtitleOverlay]" << msg
 #define LOG_SUB(level, msg) LOG_SUB_##level(msg)
 
@@ -37,6 +39,10 @@ public:
     setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
     setCursor(Qt::PointingHandCursor);
     setMouseTracking(true);
+
+    connect(&ThemeManager::instance(), &ThemeManager::themeChanged, this, [this]() {
+        update();
+    });
 }
   void setRatio(double ratio) {
     ratio_ = qBound(0.0, ratio, 1.0);
@@ -60,15 +66,22 @@ protected:
     int trackH = 4;
     int trackY = (height() - trackH) / 2;
 
+    // Use colors from ThemeManager
+    auto& tm = ThemeManager::instance();
+    QColor trackBg = tm.getBgLighterColor();
+    QColor fillBg = tm.getPrimaryColor();
+    QColor textMuted = tm.getTextMutedColor();
+    QColor textNormal = tm.getTextNormalColor();
+
     // Track background
     painter.setPen(Qt::NoPen);
-    painter.setBrush(QColor("#333333"));
+    painter.setBrush(trackBg);
     painter.drawRoundedRect(0, trackY, width(), trackH, 2, 2);
 
     // Progress fill
     int fillW = static_cast<int>(width() * ratio_);
     if (fillW > 0) {
-      painter.setBrush(QColor("#38bdf8"));
+      painter.setBrush(fillBg);
       painter.drawRoundedRect(0, trackY, fillW, trackH, 2, 2);
     }
 
@@ -79,10 +92,10 @@ protected:
     int handleY = (height() - handleSize) / 2;
 
     if (hover_ && totalDurationMs_ > 0) {
-      painter.setBrush(QColor("#ffffff"));
+      painter.setBrush(textNormal);
       painter.drawEllipse(handleX, handleY, handleSize, handleSize);
     } else {
-      painter.setBrush(QColor("#9ca3af"));
+      painter.setBrush(textMuted);
       painter.drawEllipse(handleX, handleY, handleSize, handleSize);
     }
   }
