@@ -203,28 +203,38 @@ void ConfigDialog::setupUi() {
     stackedWidget_ = new QStackedWidget(contentWidget);
     stackedWidget_->setObjectName("ConfigStackedWidget");
     
-    // Create Pages
+    // ------------------------------------------------------------------------
+    // General Page
+    // ------------------------------------------------------------------------
     auto *generalPage = new QWidget();
     auto *genLayout = new QVBoxLayout(generalPage);
     genLayout->setContentsMargins(30, 20, 30, 30);
-    genLayout->setSpacing(20);
+    genLayout->setSpacing(15);
+    
     auto *genTitle = new QLabel(tr("常规设置"), generalPage);
     genTitle->setObjectName("ConfigPageTitle");
     genLayout->addWidget(genTitle);
-    auto *genForm = new QGridLayout();
-    genForm->setVerticalSpacing(15);
-    genForm->setHorizontalSpacing(20);
-    genForm->addWidget(new QLabel(tr("界面语言:"), generalPage), 0, 0);
+
+    auto *langLabel = new QLabel(tr("界面语言 (Language)"), generalPage);
+    langLabel->setObjectName("ConfigFieldLabel");
+    genLayout->addWidget(langLabel);
     langCombo_ = new QComboBox(generalPage);
+    langCombo_->setFixedHeight(32);
     langCombo_->addItem("简体中文", "zh_CN");
     langCombo_->addItem("English", "en_US");
-    genForm->addWidget(langCombo_, 0, 1);
-    genForm->addWidget(new QLabel(tr("主题模式:"), generalPage), 1, 0, Qt::AlignTop);
+    genLayout->addWidget(langCombo_);
+
+    auto *themeLabel = new QLabel(tr("主题模式 (Theme)"), generalPage);
+    themeLabel->setObjectName("ConfigFieldLabel");
+    genLayout->addWidget(themeLabel);
     themeSelector_ = new ThemeSelectorWidget(generalPage);
     themeSelector_->addTheme("dark", "#151515", "#1e1e1e", "#3b82f6");
     themeSelector_->addTheme("light", "#f3f4f6", "#ffffff", "#3b82f6");
-    genForm->addWidget(themeSelector_, 1, 1);
-    genForm->addWidget(new QLabel(tr("主色调:"), generalPage), 2, 0, Qt::AlignTop);
+    genLayout->addWidget(themeSelector_);
+
+    auto *colorLabel = new QLabel(tr("主色调 (Primary Color)"), generalPage);
+    colorLabel->setObjectName("ConfigFieldLabel");
+    genLayout->addWidget(colorLabel);
     colorSelector_ = new ColorSelectorWidget(generalPage);
     colorSelector_->addColor("purple", "#a855f7");
     colorSelector_->addColor("indigo", "#6366f1");
@@ -236,65 +246,105 @@ void ConfigDialog::setupUi() {
     colorSelector_->addColor("pink", "#ec4899");
     colorSelector_->addColor("red", "#ef4444");
     colorSelector_->addColor("sepia", "#d4ba8a");
-    genForm->addWidget(colorSelector_, 2, 1);
-    genLayout->addLayout(genForm);
+    genLayout->addWidget(colorSelector_);
+
     genLayout->addStretch();
     stackedWidget_->addWidget(generalPage);
 
+    // ------------------------------------------------------------------------
+    // Storage Page
+    // ------------------------------------------------------------------------
     auto *storagePage = new QWidget();
     auto *stLayout = new QVBoxLayout(storagePage);
     stLayout->setContentsMargins(30, 20, 30, 30);
-    stLayout->setSpacing(20);
+    stLayout->setSpacing(12);
+    
     auto *stTitle = new QLabel(tr("存储设置"), storagePage);
     stTitle->setObjectName("ConfigPageTitle");
     stLayout->addWidget(stTitle);
-    auto *stForm = new QGridLayout();
-    stForm->setSpacing(15);
-    stForm->addWidget(new QLabel(tr("存储提供商:"), storagePage), 0, 0);
+
+    auto *stProvLabel = new QLabel(tr("存储提供商"), storagePage);
+    stProvLabel->setObjectName("ConfigFieldLabel");
+    stLayout->addWidget(stProvLabel);
     storageProviderCombo_ = new QComboBox(storagePage);
+    storageProviderCombo_->setFixedHeight(32);
     storageProviderCombo_->addItem("阿里云 OSS", "aliyun_oss");
-    stForm->addWidget(storageProviderCombo_, 0, 1);
-    stForm->addWidget(new QLabel(tr("Bucket:"), storagePage), 1, 0);
+    stLayout->addWidget(storageProviderCombo_);
+
+    auto *bucketLabel = new QLabel(tr("存储桶 (Bucket)"), storagePage);
+    bucketLabel->setObjectName("ConfigFieldLabel");
+    stLayout->addWidget(bucketLabel);
     ossBucketEdit_ = new QLineEdit(storagePage);
-    stForm->addWidget(ossBucketEdit_, 1, 1);
-    stForm->addWidget(new QLabel(tr("Region:"), storagePage), 2, 0);
+    ossBucketEdit_->setFixedHeight(32);
+    stLayout->addWidget(ossBucketEdit_);
+
+    auto *regionLabel = new QLabel(tr("地域 (Region)"), storagePage);
+    regionLabel->setObjectName("ConfigFieldLabel");
+    stLayout->addWidget(regionLabel);
     ossRegionEdit_ = new QLineEdit(storagePage);
-    stForm->addWidget(ossRegionEdit_, 2, 1);
-    stForm->addWidget(new QLabel(tr("Access Key ID:"), storagePage), 3, 0);
+    ossRegionEdit_->setFixedHeight(32);
+    stLayout->addWidget(ossRegionEdit_);
+
+    auto *akLabel = new QLabel(tr("访问密钥 ID (Access Key ID)"), storagePage);
+    akLabel->setObjectName("ConfigFieldLabel");
+    stLayout->addWidget(akLabel);
     ossAccessKeyEdit_ = new QLineEdit(storagePage);
-    stForm->addWidget(ossAccessKeyEdit_, 3, 1);
-    stForm->addWidget(new QLabel(tr("Access Key Secret:"), storagePage), 4, 0);
+    ossAccessKeyEdit_->setFixedHeight(32);
+    stLayout->addWidget(ossAccessKeyEdit_);
+
+    auto *skLabel = new QLabel(tr("访问密钥 (Access Key Secret)"), storagePage);
+    skLabel->setObjectName("ConfigFieldLabel");
+    stLayout->addWidget(skLabel);
     ossSecretKeyEdit_ = new QLineEdit(storagePage);
+    ossSecretKeyEdit_->setFixedHeight(32);
     ossSecretKeyEdit_->setEchoMode(QLineEdit::Password);
-    stForm->addWidget(ossSecretKeyEdit_, 4, 1);
-    stLayout->addLayout(stForm);
+    stLayout->addWidget(ossSecretKeyEdit_);
+
     stLayout->addStretch();
     stackedWidget_->addWidget(storagePage);
 
+    // ------------------------------------------------------------------------
+    // ASR Page
+    // ------------------------------------------------------------------------
     auto *asrPage = new QWidget();
     auto *asrLayout = new QVBoxLayout(asrPage);
     asrLayout->setContentsMargins(30, 20, 30, 30);
-    asrLayout->setSpacing(20);
+    asrLayout->setSpacing(12);
+    
     auto *asrTitle = new QLabel(tr("语音识别设置"), asrPage);
     asrTitle->setObjectName("ConfigPageTitle");
     asrLayout->addWidget(asrTitle);
-    auto *asrForm = new QGridLayout();
-    asrForm->setSpacing(15);
-    asrForm->addWidget(new QLabel(tr("识别提供商:"), asrPage), 0, 0);
+
+    auto *asrProvLabel = new QLabel(tr("识别提供商"), asrPage);
+    asrProvLabel->setObjectName("ConfigFieldLabel");
+    asrLayout->addWidget(asrProvLabel);
     asrProviderCombo_ = new QComboBox(asrPage);
+    asrProviderCombo_->setFixedHeight(32);
     asrProviderCombo_->addItem("腾讯云 ASR", "tencent_asr");
-    asrForm->addWidget(asrProviderCombo_, 0, 1);
-    asrForm->addWidget(new QLabel(tr("App ID:"), asrPage), 1, 0);
+    asrLayout->addWidget(asrProviderCombo_);
+
+    auto *appIdLabel = new QLabel(tr("应用 ID (App ID)"), asrPage);
+    appIdLabel->setObjectName("ConfigFieldLabel");
+    asrLayout->addWidget(appIdLabel);
     tencentAppIdEdit_ = new QLineEdit(asrPage);
-    asrForm->addWidget(tencentAppIdEdit_, 1, 1);
-    asrForm->addWidget(new QLabel(tr("Secret ID:"), asrPage), 2, 0);
+    tencentAppIdEdit_->setFixedHeight(32);
+    asrLayout->addWidget(tencentAppIdEdit_);
+
+    auto *sidLabel = new QLabel(tr("密钥 ID (Secret ID)"), asrPage);
+    sidLabel->setObjectName("ConfigFieldLabel");
+    asrLayout->addWidget(sidLabel);
     tencentSecretIdEdit_ = new QLineEdit(asrPage);
-    asrForm->addWidget(tencentSecretIdEdit_, 2, 1);
-    asrForm->addWidget(new QLabel(tr("Secret Key:"), asrPage), 3, 0);
+    tencentSecretIdEdit_->setFixedHeight(32);
+    asrLayout->addWidget(tencentSecretIdEdit_);
+
+    auto *skeyLabel = new QLabel(tr("密钥 (Secret Key)"), asrPage);
+    skeyLabel->setObjectName("ConfigFieldLabel");
+    asrLayout->addWidget(skeyLabel);
     tencentSecretKeyEdit_ = new QLineEdit(asrPage);
+    tencentSecretKeyEdit_->setFixedHeight(32);
     tencentSecretKeyEdit_->setEchoMode(QLineEdit::Password);
-    asrForm->addWidget(tencentSecretKeyEdit_, 3, 1);
-    asrLayout->addLayout(asrForm);
+    asrLayout->addWidget(tencentSecretKeyEdit_);
+
     asrLayout->addStretch();
     stackedWidget_->addWidget(asrPage);
 
