@@ -30,6 +30,25 @@ clang-tidy src/*.cpp -- -std=c++17
 cmake --build cmake-build-debug
 ```
 
+## Runtime Debugging & Interaction
+
+### 1. Logging & Execution
+When debugging runtime issues, use `nohup` to start the application and collect logs:
+```bash
+nohup ./cmake-build-debug/subtitles-editor > startup.log 2>&1 &
+```
+Analyze `startup.log` (Qt warnings, FFmpeg errors, custom `qDebug()` output) to diagnose problems.
+
+### 2. Visual Feedback (Screenshots)
+When UI verification or error dialog inspection is needed, invoke the system screenshot tool:
+- **macOS**: `screencapture -ui`
+- **Action**: Instruct the user to "Select the relevant area in the pop-up tool" and wait for the capture.
+
+### 3. Investigation Workflow
+- **Capture**: Run app with logging → Reproduce issue → Collect logs/screenshots.
+- **Analyze**: Cross-reference logs with code logic to identify root causes.
+- **Verify**: Re-run and confirm logs are clear after fix.
+
 ## Architecture
 
 C++17 Qt6 desktop app for video subtitle editing. macOS bundle.
