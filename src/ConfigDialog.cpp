@@ -78,7 +78,9 @@ void ConfigDialog::loadConfig() {
     if (initialConfig_["language"].toString().isEmpty()) initialConfig_["language"] = "zh_CN";
     
     initialConfig_["theme"] = cfg.getString("", "theme");
-    if (initialConfig_["theme"].toString().isEmpty()) initialConfig_["theme"] = "dark";
+    if (initialConfig_["theme"].toString() == "light" || initialConfig_["theme"].toString().isEmpty()) {
+        initialConfig_["theme"] = "dark";
+    }
 
     initialConfig_["primary_color"] = cfg.getString("", "primary_color");
     if (initialConfig_["primary_color"].toString().isEmpty()) initialConfig_["primary_color"] = "blue";
@@ -229,7 +231,8 @@ void ConfigDialog::setupUi() {
     genLayout->addWidget(themeLabel);
     themeSelector_ = new ThemeSelectorWidget(generalPage);
     themeSelector_->addTheme("dark", "#151515", "#1e1e1e", "#3b82f6");
-    themeSelector_->addTheme("light", "#f3f4f6", "#ffffff", "#3b82f6");
+    themeSelector_->addTheme("oled", "#0a0a0a", "#121212", "#10b981");
+    themeSelector_->addTheme("midnight", "#111218", "#171821", "#6366f1");
     genLayout->addWidget(themeSelector_);
 
     auto *colorLabel = new QLabel(tr("主色调 (Primary Color)"), generalPage);
