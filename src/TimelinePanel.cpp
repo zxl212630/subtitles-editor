@@ -153,7 +153,7 @@ void TimelinePanel::setCurrentTime(qint64 ms) {
   }
 
   // Auto-scroll during playback to keep playhead at configured anchor
-  // position within the viewport. Do NOT auto-scroll on manual seek.
+  // position within the viewport.
   if (isPlaying_) {
     int playheadX = timeToX(currentTimeMs_);
     int viewportWidth = canvas_->width() - TRACK_HEAD_WIDTH;
@@ -182,6 +182,21 @@ void TimelinePanel::setCurrentTime(qint64 ms) {
       int contentX =
           static_cast<int>(currentTimeMs_ * pixelsPerSecond_ / 1000.0);
       scrollOffsetX_ = contentX - targetOffset;
+      clampScrollOffset();
+      updateScrollBar();
+    }
+  } else {
+    // Manual seek (e.g. from subtitle list) - ensure playhead is visible
+    int playheadX = timeToX(currentTimeMs_);
+    int viewportWidth = canvas_->width() - TRACK_HEAD_WIDTH;
+    int leftLimit = TRACK_HEAD_WIDTH;
+    int rightLimit = canvas_->width();
+
+    if (playheadX < leftLimit || playheadX > rightLimit) {
+      // Move scroll offset so playhead appears in the center of the viewport
+      int contentX =
+          static_cast<int>(currentTimeMs_ * pixelsPerSecond_ / 1000.0);
+      scrollOffsetX_ = contentX - (viewportWidth / 2);
       clampScrollOffset();
       updateScrollBar();
     }
