@@ -145,7 +145,8 @@ void ColorSelectorWidget::paintEvent(QPaintEvent *) {
 
     int radius = 16;
     int spacing = 16;
-    int x = radius;
+    int xOffset = 4;
+    int x = xOffset + radius;
 
     for (int i = 0; i < items_.size(); ++i) {
         const auto &item = items_[i];
@@ -180,11 +181,12 @@ void ColorSelectorWidget::paintEvent(QPaintEvent *) {
 void ColorSelectorWidget::mousePressEvent(QMouseEvent *event) {
     int radius = 16;
     int spacing = 16;
+    int xOffset = 4;
     int cellWidth = radius * 2 + spacing;
     
-    int index = event->pos().x() / cellWidth;
+    int index = (event->pos().x() - xOffset) / cellWidth;
     if (index >= 0 && index < items_.size()) {
-        int xCenter = index * cellWidth + radius;
+        int xCenter = xOffset + index * cellWidth + radius;
         if (qAbs(event->pos().x() - xCenter) <= radius) {
             setCurrentColor(items_[index].id);
         }
@@ -194,12 +196,13 @@ void ColorSelectorWidget::mousePressEvent(QMouseEvent *event) {
 void ColorSelectorWidget::mouseMoveEvent(QMouseEvent *event) {
     int radius = 16;
     int spacing = 16;
+    int xOffset = 4;
     int cellWidth = radius * 2 + spacing;
-    int index = event->pos().x() / cellWidth;
+    int index = (event->pos().x() - xOffset) / cellWidth;
     
     int newHover = -1;
     if (index >= 0 && index < items_.size()) {
-        int xCenter = index * cellWidth + radius;
+        int xCenter = xOffset + index * cellWidth + radius;
         if (qAbs(event->pos().x() - xCenter) <= radius) {
             newHover = index;
         }

@@ -12,6 +12,7 @@ add_executable(TestThemeManager TestThemeManager.cpp
     ../src/ThemeManager.cpp 
     ../src/ConfigManager.cpp
     ../include/ThemeManager.h
+    ../resources/resources.qrc
 )
 target_include_directories(TestThemeManager PRIVATE ../include)
 target_link_libraries(TestThemeManager PRIVATE Qt::Core Qt::Gui Qt::Widgets Qt::Test)

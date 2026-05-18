@@ -14,5 +14,7 @@
         <file>icons/resize-right.svg</file>
         <file>icons/settings.svg</file>
         <file>themes/dark.qss</file>
+        <file>themes/midnight.qss</file>
+        <file>themes/oled.qss</file>
     </qresource>
 </RCC>

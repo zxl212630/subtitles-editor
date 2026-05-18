@@ -14,46 +14,6 @@ QLabel {
     color: @text_normal;
 }
 
-/* Generic Button Styling to prevent native look */
-QPushButton {
-    background-color: @bg_lighter;
-    color: @text_normal;
-    border: 1px solid @border_color;
-    border-radius: 4px;
-    padding: 4px 12px;
-    font-size: 12px;
-}
-
-QPushButton:hover {
-    background-color: @border_dark;
-}
-
-QPushButton:pressed {
-    background-color: @border_color;
-}
-
-QPushButton:disabled {
-    background-color: @bg_base;
-    color: @text_muted;
-    border-color: @border_dark;
-}
-
-/* Primary buttons */
-QPushButton#SubtitleActionBtn, 
-QPushButton#ConfigApplyButton, 
-QPushButton#ConfigOkButton {
-    background-color: @primary_color;
-    color: #ffffff;
-    border: none;
-    font-weight: bold;
-}
-
-QPushButton#SubtitleActionBtn:hover,
-QPushButton#ConfigApplyButton:hover,
-QPushButton#ConfigOkButton:hover {
-    background-color: @primary_hover;
-}
-
 /* Title Bar */
 QFrame#TitleBar {
     background-color: @bg_lighter;
