@@ -21,6 +21,11 @@ QFrame#TitleBar {
     border-bottom: 1px solid @border_dark;
 }
 
+QDialog#ConfigDialog QFrame#TitleBar,
+QDialog#VideoPropertyDialog QFrame#TitleBar {
+    border-bottom: none;
+}
+
 QWidget#TitleLeftContainer {
     background-color: @bg_lighter;
     border-right: 1px solid @border_dark;

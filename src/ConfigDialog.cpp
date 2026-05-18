@@ -63,7 +63,7 @@ void ConfigDialog::setupTitleBar() {
     leftContainer->setObjectName("TitleLeftContainer");
     auto *leftLayout = new QHBoxLayout(leftContainer);
     leftLayout->setContentsMargins(12, 0, 12, 0);
-    titleLeftLabel = new QLabel(tr("设置"), leftContainer);
+    titleLeftLabel = new QLabel("", leftContainer);
     titleLeftLabel->setObjectName("ConfigTitleLeftLabel");
     leftLayout->addWidget(titleLeftLabel);
     layout->addWidget(leftContainer);
@@ -75,7 +75,9 @@ void ConfigDialog::setupTitleBar() {
     rightLayout->setContentsMargins(20, 0, 20, 0);
     titleRightLabel = new QLabel("", rightContainer);
     titleRightLabel->setObjectName("ConfigTitleRightLabel");
+    rightLayout->addStretch();
     rightLayout->addWidget(titleRightLabel);
+    rightLayout->addStretch();
     layout->addWidget(rightContainer);
 }
 
@@ -209,8 +211,8 @@ void ConfigDialog::setupUi() {
     sidebarList_ = new QListWidget(contentWidget);
     sidebarList_->setObjectName("ConfigSidebar");
     sidebarList_->setFixedWidth(180);
-    sidebarList_->addItem(tr("常规"));
-    sidebarList_->addItem(tr("存储"));
+    sidebarList_->addItem(tr("常规配置"));
+    sidebarList_->addItem(tr("对象存储"));
     sidebarList_->addItem(tr("语音识别"));
     contentLayout->addWidget(sidebarList_);
 
