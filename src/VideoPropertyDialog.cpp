@@ -7,83 +7,139 @@
 #include <QScrollArea>
 #include <QVBoxLayout>
 #include <QWidget>
+#include <QWindowKit/QWKWidgets/widgetwindowagent.h>
 
 VideoPropertyDialog::VideoPropertyDialog(const QList<Section> &sections,
                                          QWidget *parent)
     : QDialog(parent), m_sections(sections) {
+  setObjectName("VideoPropertyDialog");
+  setMinimumSize(480, 560);
+  resize(520, 640);
+
+  windowAgent = new QWK::WidgetWindowAgent(this);
+  windowAgent->setup(this);
+
+  setupTitleBar();
   setupUi();
+
+  windowAgent->setTitleBar(titleBar);
+}
+
+void VideoPropertyDialog::setupTitleBar() {
+  titleBar = new QFrame(this);
+  titleBar->setFixedHeight(36);
+  titleBar->setObjectName("TitleBar");
+
+  auto *layout = new QHBoxLayout(titleBar);
+  layout->setContentsMargins(12, 0, 12, 0);
+  layout->setSpacing(0);
+
+  layout->addStretch(); // 左侧填充
+
+  titleLabel = new QLabel(tr("视频属性"), titleBar);
+  titleLabel->setObjectName("ConfigTitleLeftLabel");
+  layout->addWidget(titleLabel);
+
+  layout->addStretch(); // 右侧填充
 }
 
 void VideoPropertyDialog::setupUi() {
-  setWindowTitle("属性");
-  setMinimumSize(420, 400);
-  resize(520, 600);
-
-  // Apply dark background to dialog and all child widgets
-auto *mainLayout = new QVBoxLayout(this);
-  mainLayout->setContentsMargins(24, 20, 24, 20);
+  auto *mainLayout = new QVBoxLayout(this);
+  mainLayout->setContentsMargins(0, 0, 0, 0);
   mainLayout->setSpacing(0);
 
+  mainLayout->addWidget(titleBar);
+
+  auto *contentWidget = new QWidget(this);
+  contentWidget->setObjectName("ConfigContentWidget");
+  auto *contentLayout = new QVBoxLayout(contentWidget);
+  contentLayout->setContentsMargins(30, 20, 30, 20);
+  contentLayout->setSpacing(0);
+
   // Scroll area for sections
-  auto *scrollArea = new QScrollArea(this);
+  auto *scrollArea = new QScrollArea(contentWidget);
   scrollArea->setWidgetResizable(true);
   scrollArea->setFrameShape(QFrame::NoFrame);
-auto *scrollContent = new QWidget(scrollArea);
+  scrollArea->setObjectName("PropertyScrollArea");
+
+  auto *scrollContent = new QWidget(scrollArea);
+  scrollContent->setObjectName("PropertyScrollContent");
   auto *scrollLayout = new QVBoxLayout(scrollContent);
-  scrollLayout->setContentsMargins(0, 0, 12, 0);
+  scrollLayout->setContentsMargins(0, 0, 10, 0);
   scrollLayout->setSpacing(20);
   scrollLayout->setAlignment(Qt::AlignTop);
 
   for (const auto &section : m_sections) {
     // Section title
-    auto *sectionTitle = new QLabel(section.first, scrollContent);
-scrollLayout->addWidget(sectionTitle);
+    auto *sectionHeader = new QWidget(scrollContent);
+    auto *headerLayout = new QVBoxLayout(sectionHeader);
+    headerLayout->setContentsMargins(0, 10, 0, 5);
+    headerLayout->setSpacing(8);
+
+    auto *sectionTitle = new QLabel(section.first, sectionHeader);
+    sectionTitle->setObjectName("ConfigFieldLabel");
+    headerLayout->addWidget(sectionTitle);
 
     // Section divider
-    auto *sectionDivider = new QWidget(scrollContent);
+    auto *sectionDivider = new QFrame(sectionHeader);
+    sectionDivider->setObjectName("SectionDivider");
     sectionDivider->setFixedHeight(1);
-scrollLayout->addWidget(sectionDivider);
+    sectionDivider->setStyleSheet("background-color: rgba(255, 255, 255, 0.1);");
+    headerLayout->addWidget(sectionDivider);
+
+    scrollLayout->addWidget(sectionHeader);
 
     // Properties in this section
+    auto *propertiesGrid = new QWidget(scrollContent);
+    auto *gridLayout = new QVBoxLayout(propertiesGrid);
+    gridLayout->setContentsMargins(0, 5, 0, 5);
+    gridLayout->setSpacing(12);
+
     for (auto it = section.second.constBegin(); it != section.second.constEnd();
          ++it) {
-      auto *row = new QWidget(scrollContent);
+      auto *row = new QWidget(propertiesGrid);
       auto *rowLayout = new QHBoxLayout(row);
-      rowLayout->setContentsMargins(0, 4, 0, 4);
+      rowLayout->setContentsMargins(0, 0, 0, 0);
       rowLayout->setSpacing(16);
 
-      auto *keyLabel = new QLabel(it.key() + ":", row);
-      keyLabel->setFixedWidth(100);
-      keyLabel->setAlignment(Qt::AlignRight | Qt::AlignVCenter);
-auto *valueContainer = new QWidget(row);
-auto *valueLayout = new QHBoxLayout(valueContainer);
-      valueLayout->setContentsMargins(10, 6, 10, 6);
-      valueLayout->setSpacing(0);
+      auto *keyLabel = new QLabel(it.key(), row);
+      keyLabel->setFixedWidth(120);
+      keyLabel->setObjectName("PropertyKeyLabel");
+      keyLabel->setStyleSheet("color: rgba(255, 255, 255, 0.5);");
+      keyLabel->setAlignment(Qt::AlignLeft | Qt::AlignVCenter);
 
-      auto *valueLabel = new QLabel(it.value(), valueContainer);
+      auto *valueLabel = new QLabel(it.value(), row);
+      valueLabel->setObjectName("PropertyValueLabel");
       valueLabel->setWordWrap(true);
       valueLabel->setTextInteractionFlags(Qt::TextSelectableByMouse);
       valueLabel->setContextMenuPolicy(Qt::NoContextMenu);
-valueLayout->addWidget(valueLabel);
 
       rowLayout->addWidget(keyLabel);
-      rowLayout->addWidget(valueContainer, 1);
-      scrollLayout->addWidget(row);
+      rowLayout->addWidget(valueLabel, 1);
+      gridLayout->addWidget(row);
     }
+    scrollLayout->addWidget(propertiesGrid);
   }
 
   scrollLayout->addStretch();
   scrollArea->setWidget(scrollContent);
-  mainLayout->addWidget(scrollArea, 1);
+  contentLayout->addWidget(scrollArea);
+  mainLayout->addWidget(contentWidget, 1);
 
-  // Spacer between content and button
-  mainLayout->addSpacing(16);
+  // Footer
+  auto *footer = new QWidget(this);
+  footer->setObjectName("ConfigFooter");
+  footer->setFixedHeight(60);
+  auto *footerLayout = new QHBoxLayout(footer);
+  footerLayout->setContentsMargins(20, 0, 20, 0);
 
-  // Button box
-  auto *buttonBox = new QDialogButtonBox(QDialogButtonBox::Ok, this);
-if (QPushButton *okBtn = buttonBox->button(QDialogButtonBox::Ok)) {
-    okBtn->setText("确定");
-  }
-  connect(buttonBox, &QDialogButtonBox::accepted, this, &QDialog::accept);
-  mainLayout->addWidget(buttonBox, 0, Qt::AlignCenter);
+  footerLayout->addStretch();
+
+  auto *btnOk = new QPushButton(tr("确定"), footer);
+  btnOk->setObjectName("ConfigOkButton");
+  btnOk->setFixedWidth(100);
+  connect(btnOk, &QPushButton::clicked, this, &QDialog::accept);
+
+  footerLayout->addWidget(btnOk);
+  mainLayout->addWidget(footer);
 }
