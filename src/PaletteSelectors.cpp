@@ -34,7 +34,7 @@ void ThemeSelectorWidget::paintEvent(QPaintEvent *) {
     int itemWidth = 80;
     int itemHeight = 60;
     int spacing = 15;
-    int x = 0;
+    int x = 5; // Start with some offset to avoid clipping the selection border
 
     for (int i = 0; i < items_.size(); ++i) {
         const auto &item = items_[i];
@@ -82,11 +82,12 @@ void ThemeSelectorWidget::paintEvent(QPaintEvent *) {
 void ThemeSelectorWidget::mousePressEvent(QMouseEvent *event) {
     int itemWidth = 80;
     int spacing = 15;
+    int xStart = 5;
     
-    int index = event->pos().x() / (itemWidth + spacing);
+    int index = (event->pos().x() - xStart) / (itemWidth + spacing);
     if (index >= 0 && index < items_.size()) {
-        int xOffset = event->pos().x() % (itemWidth + spacing);
-        if (xOffset <= itemWidth) {
+        int xInItem = (event->pos().x() - xStart) % (itemWidth + spacing);
+        if (xInItem >= 0 && xInItem <= itemWidth) {
             setCurrentTheme(items_[index].id);
         }
     }
@@ -95,11 +96,13 @@ void ThemeSelectorWidget::mousePressEvent(QMouseEvent *event) {
 void ThemeSelectorWidget::mouseMoveEvent(QMouseEvent *event) {
     int itemWidth = 80;
     int spacing = 15;
-    int index = event->pos().x() / (itemWidth + spacing);
+    int xStart = 5;
+    int index = (event->pos().x() - xStart) / (itemWidth + spacing);
     
     int newHover = -1;
     if (index >= 0 && index < items_.size()) {
-        if (event->pos().x() % (itemWidth + spacing) <= itemWidth) {
+        int xInItem = (event->pos().x() - xStart) % (itemWidth + spacing);
+        if (xInItem >= 0 && xInItem <= itemWidth) {
             newHover = index;
         }
     }

@@ -329,7 +329,19 @@ void ConfigDialog::saveConfig() {
     cfg.setValue("tencent_asr", "secret_key", tencentSecretKeyEdit_->text());
     
     cfg.sync();
-    loadConfig(); // Reset initial state to current
+    
+    // Update initialConfig_ directly to reflect saved state
+    initialConfig_["language"] = langCombo_->currentData().toString();
+    initialConfig_["theme"] = themeSelector_->currentTheme();
+    initialConfig_["primary_color"] = colorSelector_->currentColor();
+    initialConfig_["oss_bucket"] = ossBucketEdit_->text();
+    initialConfig_["oss_region"] = ossRegionEdit_->text();
+    initialConfig_["oss_ak"] = ossAccessKeyEdit_->text();
+    initialConfig_["oss_sk"] = ossSecretKeyEdit_->text();
+    initialConfig_["tc_appid"] = tencentAppIdEdit_->text();
+    initialConfig_["tc_sid"] = tencentSecretIdEdit_->text();
+    initialConfig_["tc_skey"] = tencentSecretKeyEdit_->text();
+
     checkDirtyState();
 }
 
