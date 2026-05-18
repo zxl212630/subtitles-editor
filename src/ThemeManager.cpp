@@ -111,6 +111,42 @@ QColor ThemeManager::getBgBaseColor() const {
     return QColor(themes_[id].bgBase);
 }
 
+QColor ThemeManager::getBgPanelColor() const {
+    QString id = ConfigManager::instance().theme();
+    if (!themes_.contains(id)) id = "dark";
+    return QColor(themes_[id].bgPanel);
+}
+
+QColor ThemeManager::getBgLighterColor() const {
+    QString id = ConfigManager::instance().theme();
+    if (!themes_.contains(id)) id = "dark";
+    return QColor(themes_[id].bgLighter);
+}
+
+QColor ThemeManager::getBorderColor() const {
+    QString id = ConfigManager::instance().theme();
+    if (!themes_.contains(id)) id = "dark";
+    return QColor(themes_[id].border);
+}
+
+QColor ThemeManager::getBorderDarkColor() const {
+    QString id = ConfigManager::instance().theme();
+    if (!themes_.contains(id)) id = "dark";
+    return QColor(themes_[id].borderDark);
+}
+
+QColor ThemeManager::getTextNormalColor() const {
+    QString id = ConfigManager::instance().theme();
+    if (!themes_.contains(id)) id = "dark";
+    return QColor(themes_[id].textNormal);
+}
+
+QColor ThemeManager::getTextMutedColor() const {
+    QString id = ConfigManager::instance().theme();
+    if (!themes_.contains(id)) id = "dark";
+    return QColor(themes_[id].textMuted);
+}
+
 QStringList ThemeManager::availableThemes() const {
     return {"dark", "light"}; // Order matters for UI
 }

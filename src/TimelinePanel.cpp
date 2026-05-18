@@ -5,6 +5,7 @@
 #include "SubtitleItem.h"
 #include "SubtitleTrack.h"
 #include "TencentAsrService.h"
+#include "ThemeManager.h"
 
 #include <QApplication>
 #include <QContextMenuEvent>
@@ -64,6 +65,7 @@ TimelinePanel::TimelinePanel(QWidget *parent) : QWidget(parent) {
   canvas_ = new TimelineCanvas(this, this);
 
   hScrollBar_ = new QScrollBar(Qt::Horizontal, this);
+  hScrollBar_->setObjectName("TimelineScrollBar");
   hScrollBar_->setFixedHeight(12);
 connect(hScrollBar_, &QScrollBar::valueChanged, this, [this](int value) {
     scrollOffsetX_ = value;
@@ -274,9 +276,15 @@ void TimelinePanel::drawOnCanvas(QPainter &painter) {
   painter.setClipPath(clipPath);
 
   // Background
-  painter.fillRect(canvas_->rect(), QColor("#1e1e1e"));
+  QColor bgPanel = ThemeManager::instance().getBgPanelColor();
+  painter.fillRect(canvas_->rect(), bgPanel);
 
   drawRuler(painter);
+
+  QColor bgLighter = ThemeManager::instance().getBgLighterColor();
+  QColor textMuted = ThemeManager::instance().getTextMutedColor();
+  QColor borderDark = ThemeManager::instance().getBorderDarkColor();
+  QColor bgBase = ThemeManager::instance().getBgBaseColor();
 
   if (totalDurationMs_ == 0) {
     int subY = RULER_HEIGHT;
@@ -285,11 +293,11 @@ void TimelinePanel::drawOnCanvas(QPainter &painter) {
     // Track heads only (no content background or separators)
     painter.setPen(Qt::NoPen);
     painter.fillRect(0, subY, TRACK_HEAD_WIDTH, SUBTITLE_TRACK_HEIGHT,
-                     QColor("#262626"));
+                     bgLighter);
     painter.fillRect(0, vidY, TRACK_HEAD_WIDTH, VIDEO_TRACK_HEIGHT,
-                     QColor("#262626"));
+                     bgLighter);
 
-    painter.setPen(QColor("#9ca3af"));
+    painter.setPen(textMuted);
     QFont font = painter.font();
     font.setPointSize(10);
     painter.setFont(font);
@@ -299,7 +307,7 @@ void TimelinePanel::drawOnCanvas(QPainter &painter) {
                      Qt::AlignVCenter | Qt::AlignLeft, "F  视频1");
 
     // Separator between track heads
-    painter.setPen(QColor("#333333"));
+    painter.setPen(borderDark);
     painter.drawLine(0, vidY, TRACK_HEAD_WIDTH, vidY);
 
     // Unified right-side background for empty state
@@ -307,7 +315,7 @@ void TimelinePanel::drawOnCanvas(QPainter &painter) {
     painter.fillRect(TRACK_HEAD_WIDTH, subY,
                      canvas_->width() - TRACK_HEAD_WIDTH - PANEL_RIGHT_MARGIN,
                      SUBTITLE_TRACK_HEIGHT + VIDEO_TRACK_HEIGHT,
-                     QColor("#2a2a2a"));
+                     bgBase);
 
     drawEmptyState(painter);
   } else {
@@ -416,15 +424,20 @@ void TimelinePanel::drawRuler(QPainter &painter) {
 
 void TimelinePanel::drawSubtitleTrack(QPainter &painter, int y) {
   int contentWidth = canvas_->width() - TRACK_HEAD_WIDTH - PANEL_RIGHT_MARGIN;
+  QColor bgBase = ThemeManager::instance().getBgBaseColor();
+  QColor bgLighter = ThemeManager::instance().getBgLighterColor();
+  QColor textMuted = ThemeManager::instance().getTextMutedColor();
+  QColor borderDark = ThemeManager::instance().getBorderDarkColor();
+
   // Track background
   painter.fillRect(TRACK_HEAD_WIDTH, y, contentWidth, SUBTITLE_TRACK_HEIGHT,
-                   QColor("#2a2a2a"));
+                   bgBase);
 
   // Track head
   painter.setPen(Qt::NoPen);
   painter.fillRect(0, y, TRACK_HEAD_WIDTH, SUBTITLE_TRACK_HEIGHT,
-                   QColor("#262626"));
-  painter.setPen(QColor("#9ca3af"));
+                   bgLighter);
+  painter.setPen(textMuted);
   QFont font = painter.font();
   font.setPointSize(10);
   painter.setFont(font);
@@ -432,7 +445,7 @@ void TimelinePanel::drawSubtitleTrack(QPainter &painter, int y) {
                    Qt::AlignVCenter | Qt::AlignLeft, "T  字幕1");
 
   // Separator (full width including track head)
-  painter.setPen(QColor("#333333"));
+  painter.setPen(borderDark);
   painter.drawLine(0, y + SUBTITLE_TRACK_HEIGHT - 1,
                    TRACK_HEAD_WIDTH + contentWidth,
                    y + SUBTITLE_TRACK_HEIGHT - 1);
@@ -442,6 +455,9 @@ void TimelinePanel::drawSubtitleTrack(QPainter &painter, int y) {
 
   painter.save();
   painter.setClipRect(TRACK_HEAD_WIDTH, y, contentWidth, SUBTITLE_TRACK_HEIGHT);
+
+  QColor primaryColor = ThemeManager::instance().getPrimaryColor();
+  QColor primaryHover = primaryColor.lighter(110); // Simple derivation for selected state
 
   // Subtitle bars
   for (const auto &item : track_->items()) {
@@ -462,12 +478,12 @@ void TimelinePanel::drawSubtitleTrack(QPainter &painter, int y) {
     if (x > canvas_->width() - PANEL_RIGHT_MARGIN)
       continue;
 
-    QColor barColor = item.selected ? QColor("#0ea5e9") : QColor("#38bdf8");
+    QColor barColor = item.selected ? primaryHover : primaryColor;
     painter.setPen(Qt::NoPen);
     painter.setBrush(barColor);
     painter.drawRoundedRect(x, y + 2, w, SUBTITLE_TRACK_HEIGHT - 4, 4, 4);
 
-    painter.setPen(QColor("#e5e5e5"));
+    painter.setPen(Qt::white);
     QFont barFont = painter.font();
     barFont.setPointSize(9);
     painter.setFont(barFont);
@@ -487,13 +503,17 @@ void TimelinePanel::drawSubtitleTrack(QPainter &painter, int y) {
 
 void TimelinePanel::drawVideoTrack(QPainter &painter, int y) {
   int contentWidth = canvas_->width() - TRACK_HEAD_WIDTH - PANEL_RIGHT_MARGIN;
+  QColor bgBase = ThemeManager::instance().getBgBaseColor();
+  QColor bgLighter = ThemeManager::instance().getBgLighterColor();
+  QColor textMuted = ThemeManager::instance().getTextMutedColor();
+
   painter.fillRect(TRACK_HEAD_WIDTH, y, contentWidth, VIDEO_TRACK_HEIGHT,
-                   QColor("#2a2a2a"));
+                   bgBase);
 
   painter.setPen(Qt::NoPen);
   painter.fillRect(0, y, TRACK_HEAD_WIDTH, VIDEO_TRACK_HEIGHT,
-                   QColor("#262626"));
-  painter.setPen(QColor("#9ca3af"));
+                   bgLighter);
+  painter.setPen(textMuted);
   QFont font = painter.font();
   font.setPointSize(10);
   painter.setFont(font);
@@ -506,7 +526,8 @@ void TimelinePanel::drawVideoTrack(QPainter &painter, int y) {
   // Video bar (duration-based) - only draw if a video file is loaded
   if (!mediaFilePath_.isEmpty()) {
     painter.setPen(Qt::NoPen);
-    painter.setBrush(QColor("#0284c7"));
+    QColor videoBarColor = ThemeManager::instance().getPrimaryColor().darker(120);
+    painter.setBrush(videoBarColor);
     int videoX = timeToX(0);
     int videoEndX = timeToX(totalDurationMs_);
     int videoWidth = videoEndX - videoX;
@@ -514,7 +535,7 @@ void TimelinePanel::drawVideoTrack(QPainter &painter, int y) {
       videoWidth = 4;
     painter.drawRoundedRect(videoX, y + 2, videoWidth, VIDEO_TRACK_HEIGHT - 4,
                             4, 4);
-    painter.setPen(QColor("#e5e5e5"));
+    painter.setPen(Qt::white);
     painter.drawText(TRACK_HEAD_WIDTH + 16, y, contentWidth - 32,
                      VIDEO_TRACK_HEIGHT, Qt::AlignVCenter | Qt::AlignLeft,
                      mediaFileName_);

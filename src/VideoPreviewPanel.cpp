@@ -214,6 +214,7 @@ auto *layout = new QVBoxLayout(this);
 
   // --- Toolbar ---
   auto *toolbar = new QFrame(this);
+  toolbar->setObjectName("PreviewToolbar");
   toolbar->setFixedHeight(40);
 auto *tbLayout = new QHBoxLayout(toolbar);
   tbLayout->setContentsMargins(12, 0, 16, 0);
@@ -222,6 +223,7 @@ auto *tbLayout = new QHBoxLayout(toolbar);
 
   // Font combo
   fontCombo_ = new QComboBox(toolbar);
+  fontCombo_->setObjectName("PreviewFontCombo");
   fontCombo_->setFixedSize(140, 28);
 populateFontCombo();
   tbLayout->addWidget(fontCombo_);
@@ -231,11 +233,13 @@ populateFontCombo();
 
   // Size combo
   sizeCombo_ = new QComboBox(toolbar);
+  sizeCombo_->setObjectName("PreviewSizeCombo");
   sizeCombo_->setFixedSize(70, 28);
   sizeCombo_->setMaxVisibleItems(10);
   sizeCombo_->setEditable(true);
   if (sizeCombo_->lineEdit()) {
-      sizeCombo_->lineEdit()->setStyleSheet("background: transparent; border: none; color: #ffffff; padding: 0px; margin: 0px;");
+      sizeCombo_->lineEdit()->setObjectName("PreviewSizeComboLineEdit");
+      sizeCombo_->lineEdit()->setStyleSheet("background: transparent; border: none; color: inherit; padding: 0px; margin: 0px;");
   }
 populateSizeCombo();
   tbLayout->addWidget(sizeCombo_);
@@ -250,29 +254,47 @@ populateSizeCombo();
 
   // Elastic spacer
   auto *tbSpacer = new QWidget(toolbar);
+  tbSpacer->setObjectName("PreviewToolbarSpacer");
   tbSpacer->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Preferred);
 tbLayout->addWidget(tbSpacer);
 
   // Format buttons group (tighter internal spacing)
   auto *btnGroup = new QWidget(toolbar);
+  btnGroup->setObjectName("PreviewFormatBtnGroup");
 auto *btnGroupLayout = new QHBoxLayout(btnGroup);
   btnGroupLayout->setContentsMargins(0, 0, 0, 0);
   btnGroupLayout->setSpacing(6);
-  btnGroupLayout->addWidget(createTextBtn(btnGroup, "B", 28, 28));
-  btnGroupLayout->addWidget(createTextBtn(btnGroup, "I", 28, 28));
-  btnGroupLayout->addWidget(createTextBtn(btnGroup, "U", 28, 28));
-  btnGroupLayout->addWidget(
-      createTextBtn(btnGroup, QString(QChar(0x2261)), 28, 28));
-  btnGroupLayout->addWidget(
-      createTextBtn(btnGroup, QString(QChar(0x2261)), 28, 28));
-  btnGroupLayout->addWidget(
-      createTextBtn(btnGroup, QString(QChar(0x2261)), 28, 28));
+  auto *bBtn = createTextBtn(btnGroup, "B", 28, 28);
+  bBtn->setObjectName("PreviewTextBtn");
+  btnGroupLayout->addWidget(bBtn);
+  
+  auto *iBtn = createTextBtn(btnGroup, "I", 28, 28);
+  iBtn->setObjectName("PreviewTextBtn");
+  btnGroupLayout->addWidget(iBtn);
+  
+  auto *uBtn = createTextBtn(btnGroup, "U", 28, 28);
+  uBtn->setObjectName("PreviewTextBtn");
+  btnGroupLayout->addWidget(uBtn);
+
+  auto *alBtn = createTextBtn(btnGroup, QString(QChar(0x2261)), 28, 28);
+  alBtn->setObjectName("PreviewTextBtn");
+  btnGroupLayout->addWidget(alBtn);
+
+  auto *acBtn = createTextBtn(btnGroup, QString(QChar(0x2261)), 28, 28);
+  acBtn->setObjectName("PreviewTextBtn");
+  btnGroupLayout->addWidget(acBtn);
+
+  auto *arBtn = createTextBtn(btnGroup, QString(QChar(0x2261)), 28, 28);
+  arBtn->setObjectName("PreviewTextBtn");
+  btnGroupLayout->addWidget(arBtn);
+  
   tbLayout->addWidget(btnGroup);
 
   layout->addWidget(toolbar);
 
   // --- Video display area ---
   videoArea_ = new QFrame(this);
+  videoArea_->setObjectName("PreviewVideoArea");
 videoArea_->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
   auto *vaLayout = new QVBoxLayout(videoArea_);
   vaLayout->setContentsMargins(0, 0, 0, 0);
@@ -286,6 +308,7 @@ videoArea_->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
 
   // --- Playback control bar ---
   auto *controlBar = new QFrame(this);
+  controlBar->setObjectName("PreviewControlBar");
   controlBar->setFixedHeight(36);
 auto *cbLayout = new QHBoxLayout(controlBar);
   cbLayout->setContentsMargins(8, 0, 12, 0);
@@ -293,9 +316,13 @@ auto *cbLayout = new QHBoxLayout(controlBar);
   cbLayout->setAlignment(Qt::AlignVCenter);
 
   stepBwdBtn_ = createIconBtn(controlBar, ":/icons/step-backward.svg", 28, 28);
+  stepBwdBtn_->setObjectName("PreviewIconBtn");
   playPauseBtn_ = createIconBtn(controlBar, ":/icons/play.svg", 28, 28);
+  playPauseBtn_->setObjectName("PreviewIconBtn");
   stopBtn_ = createIconBtn(controlBar, ":/icons/stop.svg", 28, 28);
+  stopBtn_->setObjectName("PreviewIconBtn");
   stepFwdBtn_ = createIconBtn(controlBar, ":/icons/step-forward.svg", 28, 28);
+  stepFwdBtn_->setObjectName("PreviewIconBtn");
 
   cbLayout->addWidget(stepBwdBtn_);
   cbLayout->addWidget(playPauseBtn_);
@@ -318,28 +345,24 @@ auto *cbLayout = new QHBoxLayout(controlBar);
 
   // Progress bar
   progressBar_ = new ProgressBarWidget(this, controlBar);
+  progressBar_->setObjectName("PreviewProgressBar");
   cbLayout->addWidget(progressBar_);
 
   currentTimeLabel_ = new QLabel("00:00:00.000 / 00:00:00.000", controlBar);
+  currentTimeLabel_->setObjectName("PreviewCurrentTimeLabel");
   currentTimeLabel_->setFixedWidth(170);
-  currentTimeLabel_->setStyleSheet(
-      "color: #d1d5db; font-family: Inter, sans-serif; "
-      "font-size: 11px; background: transparent;");
   cbLayout->addWidget(currentTimeLabel_);
 
   auto *volLabel = new QLabel("Vol", controlBar);
+  volLabel->setObjectName("PreviewVolLabel");
   volLabel->setFixedSize(24, 16);
   volLabel->setAlignment(Qt::AlignCenter);
-  volLabel->setStyleSheet(
-      "color: #d1d5db; font-family: Inter; font-size: 12px; "
-      "background: transparent;");
   cbLayout->addWidget(volLabel);
 
   auto *fsLabel = new QLabel("FS", controlBar);
+  fsLabel->setObjectName("PreviewFsLabel");
   fsLabel->setFixedSize(20, 16);
   fsLabel->setAlignment(Qt::AlignCenter);
-  fsLabel->setStyleSheet("color: #d1d5db; font-family: Inter; font-size: 12px; "
-                         "background: transparent;");
   cbLayout->addWidget(fsLabel);
 
   layout->addWidget(controlBar);

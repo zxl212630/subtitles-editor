@@ -35,6 +35,12 @@ public:
     // Get specific colors if needed by C++ paints
     QColor getPrimaryColor() const;
     QColor getBgBaseColor() const;
+    QColor getBgPanelColor() const;
+    QColor getBgLighterColor() const;
+    QColor getBorderColor() const;
+    QColor getBorderDarkColor() const;
+    QColor getTextNormalColor() const;
+    QColor getTextMutedColor() const;
     
     // Get lists for UI
     QStringList availableThemes() const;

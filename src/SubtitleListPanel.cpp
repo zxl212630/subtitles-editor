@@ -121,6 +121,7 @@ auto *layout = new QVBoxLayout(this);
 
   // --- Panel header (tabs) ---
   auto *panelHeader = new QFrame(this);
+  panelHeader->setObjectName("SubtitlePanelHeader");
   panelHeader->setFixedHeight(40);
 auto *phLayout = new QHBoxLayout(panelHeader);
   phLayout->setContentsMargins(12, 6, 0, 6);
@@ -129,9 +130,9 @@ auto *phLayout = new QHBoxLayout(panelHeader);
 
   auto addTab = [&](const QString &text, bool active) {
     auto *tab = new QPushButton(text, panelHeader);
+    tab->setObjectName("SubtitleTabBtn");
+    tab->setProperty("active", active);
     tab->setFixedSize(60, 28);
-    QString bg = active ? "#333333" : "#262626";
-    QString fg = active ? "#e5e5e5" : "#9ca3af";
 phLayout->addWidget(tab);
   };
 
@@ -144,6 +145,7 @@ phLayout->addWidget(tab);
 
   // --- Panel content ---
   auto *panelContent = new QFrame(this);
+  panelContent->setObjectName("SubtitlePanelContent");
 panelContent->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
   auto *pcLayout = new QVBoxLayout(panelContent);
   pcLayout->setContentsMargins(12, 12, 12, 12);
@@ -151,6 +153,7 @@ panelContent->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
 
   // Search bar
   auto *searchBar = new QFrame(panelContent);
+  searchBar->setObjectName("SubtitleSearchBar");
   searchBar->setFixedHeight(40);
 auto *sbLayout = new QHBoxLayout(searchBar);
   sbLayout->setContentsMargins(0, 0, 0, 0);
@@ -158,19 +161,22 @@ auto *sbLayout = new QHBoxLayout(searchBar);
 
   // Search input container (icon + text inside a single frame)
   auto *searchInput = new QFrame(searchBar);
+  searchInput->setObjectName("SubtitleSearchInputContainer");
   searchInput->setFixedHeight(28);
 auto *siLayout = new QHBoxLayout(searchInput);
-  siLayout->setContentsMargins(4, 0, 8, 0);
+  siLayout->setContentsMargins(8, 0, 8, 0);
   siLayout->setSpacing(6);
   siLayout->setAlignment(Qt::AlignVCenter);
 
   auto *searchIcon = new QLabel(searchInput);
+  searchIcon->setObjectName("SubtitleSearchIcon");
   searchIcon->setText("\u2315"); // ⌕ search icon
-searchIcon->setFixedSize(24, 24);
+searchIcon->setFixedSize(20, 20);
   searchIcon->setAlignment(Qt::AlignCenter);
   siLayout->addWidget(searchIcon);
 
   searchEdit_ = new QLineEdit(searchInput);
+  searchEdit_->setObjectName("SubtitleSearchEdit");
   searchEdit_->setPlaceholderText("请输入查找内容");
   searchEdit_->setFixedHeight(28);
 siLayout->addWidget(searchEdit_);
@@ -183,6 +189,7 @@ siLayout->addWidget(searchEdit_);
 
   // List container
   auto *listContainer = new QFrame(panelContent);
+  listContainer->setObjectName("SubtitleListContainer");
 listContainer->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
   auto *lcLayout = new QVBoxLayout(listContainer);
   lcLayout->setContentsMargins(0, 0, 0, 0);
@@ -190,6 +197,7 @@ listContainer->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
 
   // Table header
   auto *tableHeader = new QFrame(listContainer);
+  tableHeader->setObjectName("SubtitleTableHeader");
   tableHeader->setFixedHeight(32);
 auto *thLayout = new QHBoxLayout(tableHeader);
   thLayout->setContentsMargins(12, 0, 12, 0);
@@ -197,38 +205,38 @@ auto *thLayout = new QHBoxLayout(tableHeader);
   thLayout->setAlignment(Qt::AlignVCenter);
 
   auto *headerLeft = new QFrame(tableHeader);
+  headerLeft->setObjectName("SubtitleHeaderLeft");
 auto *hlLayout = new QHBoxLayout(headerLeft);
   hlLayout->setContentsMargins(0, 0, 0, 0);
   hlLayout->setSpacing(80);
   hlLayout->setAlignment(Qt::AlignVCenter);
 
   auto *headerTime = new QLabel("时间码", headerLeft);
-  headerTime->setStyleSheet("color: #9ca3af; font-family: Inter, sans-serif; "
-                            "font-size: 11px; background: transparent;");
+  headerTime->setObjectName("SubtitleHeaderLabel");
   hlLayout->addWidget(headerTime);
 
   auto *headerText = new QLabel("字幕", headerLeft);
-  headerText->setStyleSheet("color: #9ca3af; font-family: Inter, sans-serif; "
-                            "font-size: 11px; background: transparent;");
+  headerText->setObjectName("SubtitleHeaderLabel");
   hlLayout->addWidget(headerText);
 
   thLayout->addWidget(headerLeft);
   thLayout->addStretch();
 
   auto *headerAction = new QLabel("操作", tableHeader);
-  headerAction->setStyleSheet("color: #9ca3af; font-family: Inter, sans-serif; "
-                              "font-size: 11px; background: transparent;");
+  headerAction->setObjectName("SubtitleHeaderLabel");
   thLayout->addWidget(headerAction);
 
   lcLayout->addWidget(tableHeader);
 
   // Separator line
   auto *headerSeparator = new QFrame(listContainer);
+  headerSeparator->setObjectName("SubtitleHeaderSeparator");
   headerSeparator->setFixedHeight(1);
 lcLayout->addWidget(headerSeparator);
 
   // Subtitle list
   listView_ = new QListView(listContainer);
+  listView_->setObjectName("SubtitleListView");
 listView_->setSelectionMode(QAbstractItemView::SingleSelection);
   listView_->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
 
