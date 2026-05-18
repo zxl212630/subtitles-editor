@@ -12,11 +12,10 @@
 #define SRTPARSER_H
 
 #include <algorithm>
-#include <codecvt>
+#include <filesystem>
 #include <fstream>
 #include <iostream>
 #include <iterator>
-#include <locale>
 #include <sstream>
 #include <vector>
 
@@ -187,7 +186,7 @@ inline std::vector<SubtitleItem *> SubtitleParser::getSubtitles() {
 inline std::string SubtitleParser::getFileData() // returns whole read file i.e.
                                                  // contents of input.srt
 {
-  std::ifstream infile(_fileName);
+  std::ifstream infile(std::filesystem::u8path(_fileName));
   std::string allData = "";
   std::string line;
   while (std::getline(infile, line)) {
@@ -207,10 +206,7 @@ inline SubRipParser::SubRipParser(void) {}
 
 inline void SubRipParser::parse(std::string fileName) // srt parser
 {
-  std::wstring_convert<std::codecvt_utf8<wchar_t>> converter;
-  std::wstring fileNameW = converter.from_bytes(fileName);
-  std::ifstream infile(fileNameW.c_str());
-  infile.imbue(std::locale(std::locale(), new std::codecvt_utf8<wchar_t>()));
+  std::ifstream infile(std::filesystem::u8path(fileName));
   std::string line, start, end, completeLine = "", timeLine = "";
   int subNo, turn = 0;
 
