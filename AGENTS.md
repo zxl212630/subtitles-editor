@@ -1,49 +1,17 @@
 # AGENTS.md
 
-## Build & Run
+本文件为 OpenCode 及其相关 Agent 提供指导。
 
-```bash
-cmake -B cmake-build-debug -S .
-cmake --build cmake-build-debug
-./cmake-build-debug/subtitles-editor            # optional: pass video file path as arg
-```
+> ℹ️ **单一事实来源**：有关本项目详细的**架构设计**、**组件定义**、**构建命令**及**UI 规范**，请严格参考 [CLAUDE.md](./CLAUDE.md)。
 
-SDK paths default to `~/Tools/Qt/6.5.7`, `~/Tools/Qt/QwindowKit/Qt6`, `~/Tools/ffmpeg/8.0`. Override with `-DQt6_ROOT=…`, `-DQWindowKit_ROOT=…`, `-DFFMPEG_ROOT=…`.
+## 快速参考
 
-**Note:** CMakeLists.txt says Qt 6.5.7 but CLAUDE.md says 6.5.8. The CMakeLists.txt is the source of truth.
+- **构建与运行**：参考 `CLAUDE.md` 中的 `Build Commands`。
+- **代码规范**：参考 `CLAUDE.md` 中的 `Formatting & Analysis`（提交前必须运行 `clang-format`）。
+- **SDK 路径**：默认路径及覆盖方式见 `CLAUDE.md` 的 `SDK Paths` 部分。
 
-## Pre-Commit
+## 特定说明 (Agent Specific)
 
-```bash
-clang-format -i src/*.cpp include/*.h
-cmake --build cmake-build-debug
-```
-
-No test suite exists.
-
-## Architecture
-
-C++17 Qt6 macOS desktop app (frameless window via QWindowKit). FFmpeg 8.0 for video/audio decode.
-
-- **AppWindow** — Pimpl, owns everything, wires cross-panel signals in `setupSplitterLayout()`
-- **SubtitleTrack** — Shared `QList<SubtitleItem>` data model, emits `dataChanged`
-- **MediaPlayer** — Owns `FFmpegDecoder`, `QtAudioOutput`, `SoftwareVideoRenderer`; drives playback timer
-- **FFmpegDecoder** — `QThread` subclass, owns all AV contexts, queues decoded frames
-- **ConfigManager** — Singleton, reads `config.ini` from `QStandardPaths::AppConfigLocation`
-- **SubtitleExporter** — Static methods: `exportToSRT`, `exportToASS`, `exportToVTT`, `exportToPremiereXML`
-- **AsrServiceBase** — Abstract ASR interface; `TencentAsrService` impl requires Tencent cloud + Aliyun OSS config
-
-Signal flow: `TimelinePanel → MediaPlayer` (seek/play), `MediaPlayer → TimelinePanel/VideoPreviewPanel` (time/state sync), `SubtitleTrack → VideoPreviewPanel` (subtitle refresh).
-
-## Conventions
-
-- Pimpl pattern for `AppWindow` (struct `Private`, `std::unique_ptr<Private> d`)
-- All Qt Widgets classes, no QML
-- `#pragma once` for include guards
-- Chinese UI strings throughout (window titles, message boxes)
-- Stylesheet-based theming (dark palette ~`#151515`/`#262626`/`#0a0a0a`)
-- Splitter handles 10px, `#0a0a0a`; all splitters non-collapsible
-
-## Config
-
-Copy `config.ini.template` to `~/Library/Application Support/subtitles-editor/config.ini` (or equivalent `AppConfigLocation`), fill in FFmpeg path, Tencent ASR, and Aliyun OSS credentials. App warns at launch if config is incomplete.
+- **信号流向**：`TimelinePanel` → `MediaPlayer` (seek/play), `MediaPlayer` → `TimelinePanel/VideoPreviewPanel` (time/state sync), `SubtitleTrack` → `VideoPreviewPanel` (subtitle refresh)。
+- **Pimpl 模式**：`AppWindow` 必须使用 Pimpl 模式（结构体 `Private`，`std::unique_ptr<Private> d`）。
+- **配置**：`config.ini` 从 `QStandardPaths::AppConfigLocation` 读取。
