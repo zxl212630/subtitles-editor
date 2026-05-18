@@ -234,7 +234,7 @@ populateFontCombo();
   // Size combo
   sizeCombo_ = new QComboBox(toolbar);
   sizeCombo_->setObjectName("PreviewSizeCombo");
-  sizeCombo_->setFixedSize(70, 28);
+  sizeCombo_->setFixedSize(80, 28);
   sizeCombo_->setMaxVisibleItems(10);
   sizeCombo_->setEditable(true);
   if (sizeCombo_->lineEdit()) {

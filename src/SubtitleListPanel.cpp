@@ -2,6 +2,7 @@
 #include "SubtitleListDelegate.h"
 #include "SubtitleListModel.h"
 #include "SubtitleTrack.h"
+#include "ThemeManager.h"
 
 #include <QFrame>
 #include <QHBoxLayout>
@@ -29,7 +30,9 @@ public:
     layout->setAlignment(Qt::AlignCenter);
 
     addBtn_ = createBtn(":/icons/add.svg", "添加");
+    addBtn_->setObjectName("SubtitleActionBtn");
     mergeBtn_ = createBtn(":/icons/merge.svg", "合并");
+    mergeBtn_->setObjectName("SubtitleActionBtn");
 
     layout->addStretch();
     layout->addWidget(addBtn_);
@@ -54,16 +57,6 @@ public:
 
     addBtn_->setEnabled(canAdd);
     mergeBtn_->setEnabled(canMerge);
-
-    // Style adjustments based on enabled state
-    auto updateBtnStyle = [](QPushButton *btn) {
-      bool enabled = btn->isEnabled();
-      QString color = enabled ? "#38bdf8" : "#4b5563"; // Sky-400 vs Gray-600
-      QString bg = enabled ? "#0c4a6e" : "#1f2937";    // Sky-900 vs Gray-800
-};
-
-    updateBtnStyle(addBtn_);
-    updateBtnStyle(mergeBtn_);
   }
 
 signals:
@@ -75,8 +68,9 @@ protected:
     QPainter painter(this);
     painter.setRenderHint(QPainter::Antialiasing);
 
-    // Blue horizontal line
-    painter.setPen(QPen(QColor("#38bdf8"), 1));
+    // Dynamic horizontal line using primary color
+    QColor primaryColor = ThemeManager::instance().getPrimaryColor();
+    painter.setPen(QPen(primaryColor, 1));
     int midY = height() / 2;
     painter.drawLine(0, midY, width(), midY);
   }
@@ -164,14 +158,14 @@ auto *sbLayout = new QHBoxLayout(searchBar);
   searchInput->setObjectName("SubtitleSearchInputContainer");
   searchInput->setFixedHeight(28);
 auto *siLayout = new QHBoxLayout(searchInput);
-  siLayout->setContentsMargins(8, 0, 8, 0);
-  siLayout->setSpacing(6);
+  siLayout->setContentsMargins(10, 0, 10, 0);
+  siLayout->setSpacing(8);
   siLayout->setAlignment(Qt::AlignVCenter);
 
   auto *searchIcon = new QLabel(searchInput);
   searchIcon->setObjectName("SubtitleSearchIcon");
   searchIcon->setText("\u2315"); // ⌕ search icon
-searchIcon->setFixedSize(20, 20);
+searchIcon->setFixedSize(22, 22);
   searchIcon->setAlignment(Qt::AlignCenter);
   siLayout->addWidget(searchIcon);
 

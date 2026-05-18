@@ -375,9 +375,18 @@ QScrollBar#TimelineScrollBar::handle:horizontal:hover {
     background: @text_muted;
 }
 
+QPushButton#TitleBarSettingsBtn {
+    background-color: transparent;
+    border: none;
+    border-radius: 4px;
+}
+QPushButton#TitleBarSettingsBtn:hover {
+    background-color: @border_dark;
+}
+
 QPushButton#SubtitleActionBtn {
-    background-color: #0c4a6e;
-    color: @primary_color;
+    background-color: @primary_color;
+    color: #ffffff;
     border: none;
     border-radius: 6px;
     padding: 4px 12px;
@@ -386,9 +395,9 @@ QPushButton#SubtitleActionBtn {
     font-weight: bold;
 }
 QPushButton#SubtitleActionBtn:hover:enabled {
-    background-color: #075985;
+    background-color: @primary_hover;
 }
 QPushButton#SubtitleActionBtn:disabled {
-    background-color: #1f2937;
-    color: #4b5563;
+    background-color: @border_dark;
+    color: @text_muted;
 }

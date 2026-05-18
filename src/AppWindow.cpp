@@ -136,6 +136,7 @@ void AppWindow::setupTitleBar() {
   layout->addWidget(rightSpacer);
 
   auto *settingsBtn = new QPushButton(d->titleBar);
+  settingsBtn->setObjectName("TitleBarSettingsBtn");
   settingsBtn->setIcon(QIcon(":/icons/settings.svg"));
   settingsBtn->setIconSize(QSize(20, 20));
   settingsBtn->setFixedSize(32, 32);
