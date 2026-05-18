@@ -95,6 +95,10 @@ QString ConfigManager::theme() const {
     return getString("general", "theme");
 }
 
+QString ConfigManager::primaryColor() const {
+    return getString("general", "primary_color");
+}
+
 QString ConfigManager::language() const {
     return getString("general", "language");
 }

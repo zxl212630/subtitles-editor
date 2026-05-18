@@ -16,7 +16,6 @@ SoftwareVideoRenderer::SoftwareVideoRenderer(QWidget *parent)
   setAttribute(Qt::WA_OpaquePaintEvent);
   setMinimumSize(320, 180);
   setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Preferred);
-  setStyleSheet("background-color: #1e1e1e;");
 }
 
 void SoftwareVideoRenderer::renderFrame(const DecodedVideoFrame &frame) {

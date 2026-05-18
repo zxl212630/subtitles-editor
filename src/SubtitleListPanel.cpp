@@ -60,23 +60,7 @@ public:
       bool enabled = btn->isEnabled();
       QString color = enabled ? "#38bdf8" : "#4b5563"; // Sky-400 vs Gray-600
       QString bg = enabled ? "#0c4a6e" : "#1f2937";    // Sky-900 vs Gray-800
-      btn->setStyleSheet(QString(R"(
-        QPushButton {
-          background-color: %1;
-          color: %2;
-          border: none;
-          border-radius: 6px;
-          padding: 4px 12px;
-          font-family: Inter, sans-serif;
-          font-size: 11px;
-          font-weight: bold;
-        }
-        QPushButton:hover:enabled {
-          background-color: #075985;
-        }
-      )")
-                             .arg(bg, color));
-    };
+};
 
     updateBtnStyle(addBtn_);
     updateBtnStyle(mergeBtn_);
@@ -131,29 +115,14 @@ void SubtitleListPanel::setTotalDuration(qint64 ms) { totalDurationMs_ = ms; }
 void SubtitleListPanel::setupUi() {
   setObjectName("SubtitleListPanel");
   setAttribute(Qt::WA_StyledBackground);
-  setStyleSheet(R"(
-        QWidget#SubtitleListPanel {
-            background-color: #1e1e1e;
-            border-radius: 10px;
-        }
-    )");
-
-  auto *layout = new QVBoxLayout(this);
+auto *layout = new QVBoxLayout(this);
   layout->setContentsMargins(0, 0, 0, 0);
   layout->setSpacing(0);
 
   // --- Panel header (tabs) ---
   auto *panelHeader = new QFrame(this);
   panelHeader->setFixedHeight(40);
-  panelHeader->setStyleSheet(R"(
-        QFrame {
-            background-color: #262626;
-            border-top-left-radius: 10px;
-            border-top-right-radius: 10px;
-            border: none;
-        }
-    )");
-  auto *phLayout = new QHBoxLayout(panelHeader);
+auto *phLayout = new QHBoxLayout(panelHeader);
   phLayout->setContentsMargins(12, 6, 0, 6);
   phLayout->setSpacing(4);
   phLayout->setAlignment(Qt::AlignLeft | Qt::AlignVCenter);
@@ -163,18 +132,7 @@ void SubtitleListPanel::setupUi() {
     tab->setFixedSize(60, 28);
     QString bg = active ? "#333333" : "#262626";
     QString fg = active ? "#e5e5e5" : "#9ca3af";
-    tab->setStyleSheet(QString(R"(
-            QPushButton {
-                background-color: %1;
-                color: %2;
-                border: none;
-                border-radius: 5px;
-                font-family: Inter, sans-serif;
-                font-size: 12px;
-            }
-        )")
-                           .arg(bg, fg));
-    phLayout->addWidget(tab);
+phLayout->addWidget(tab);
   };
 
   addTab("字幕", true);
@@ -186,8 +144,7 @@ void SubtitleListPanel::setupUi() {
 
   // --- Panel content ---
   auto *panelContent = new QFrame(this);
-  panelContent->setStyleSheet("background-color: transparent; border: none;");
-  panelContent->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
+panelContent->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
   auto *pcLayout = new QVBoxLayout(panelContent);
   pcLayout->setContentsMargins(12, 12, 12, 12);
   pcLayout->setSpacing(0);
@@ -195,41 +152,28 @@ void SubtitleListPanel::setupUi() {
   // Search bar
   auto *searchBar = new QFrame(panelContent);
   searchBar->setFixedHeight(40);
-  searchBar->setStyleSheet("background-color: transparent; border: none;");
-  auto *sbLayout = new QHBoxLayout(searchBar);
+auto *sbLayout = new QHBoxLayout(searchBar);
   sbLayout->setContentsMargins(0, 0, 0, 0);
   sbLayout->setAlignment(Qt::AlignVCenter);
 
   // Search input container (icon + text inside a single frame)
   auto *searchInput = new QFrame(searchBar);
   searchInput->setFixedHeight(28);
-  searchInput->setStyleSheet("background-color: #141414; border-radius: 5px;");
-  auto *siLayout = new QHBoxLayout(searchInput);
+auto *siLayout = new QHBoxLayout(searchInput);
   siLayout->setContentsMargins(4, 0, 8, 0);
   siLayout->setSpacing(6);
   siLayout->setAlignment(Qt::AlignVCenter);
 
   auto *searchIcon = new QLabel(searchInput);
   searchIcon->setText("\u2315"); // ⌕ search icon
-  searchIcon->setStyleSheet(
-      "color: #6b7280; font-size: 24px; background: transparent;");
-  searchIcon->setFixedSize(24, 24);
+searchIcon->setFixedSize(24, 24);
   searchIcon->setAlignment(Qt::AlignCenter);
   siLayout->addWidget(searchIcon);
 
   searchEdit_ = new QLineEdit(searchInput);
   searchEdit_->setPlaceholderText("请输入查找内容");
   searchEdit_->setFixedHeight(28);
-  searchEdit_->setStyleSheet(R"(
-        QLineEdit {
-            background-color: transparent;
-            color: #d1d5db;
-            border: none;
-            font-family: Inter, sans-serif;
-            font-size: 12px;
-        }
-    )");
-  siLayout->addWidget(searchEdit_);
+siLayout->addWidget(searchEdit_);
 
   sbLayout->addWidget(searchInput);
   pcLayout->addWidget(searchBar);
@@ -239,13 +183,7 @@ void SubtitleListPanel::setupUi() {
 
   // List container
   auto *listContainer = new QFrame(panelContent);
-  listContainer->setStyleSheet(R"(
-        QFrame {
-            background-color: #141414;
-            border-radius: 5px;
-        }
-    )");
-  listContainer->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
+listContainer->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
   auto *lcLayout = new QVBoxLayout(listContainer);
   lcLayout->setContentsMargins(0, 0, 0, 0);
   lcLayout->setSpacing(0);
@@ -253,15 +191,13 @@ void SubtitleListPanel::setupUi() {
   // Table header
   auto *tableHeader = new QFrame(listContainer);
   tableHeader->setFixedHeight(32);
-  tableHeader->setStyleSheet("background-color: transparent; border: none;");
-  auto *thLayout = new QHBoxLayout(tableHeader);
+auto *thLayout = new QHBoxLayout(tableHeader);
   thLayout->setContentsMargins(12, 0, 12, 0);
   thLayout->setSpacing(12);
   thLayout->setAlignment(Qt::AlignVCenter);
 
   auto *headerLeft = new QFrame(tableHeader);
-  headerLeft->setStyleSheet("background-color: transparent; border: none;");
-  auto *hlLayout = new QHBoxLayout(headerLeft);
+auto *hlLayout = new QHBoxLayout(headerLeft);
   hlLayout->setContentsMargins(0, 0, 0, 0);
   hlLayout->setSpacing(80);
   hlLayout->setAlignment(Qt::AlignVCenter);
@@ -289,45 +225,11 @@ void SubtitleListPanel::setupUi() {
   // Separator line
   auto *headerSeparator = new QFrame(listContainer);
   headerSeparator->setFixedHeight(1);
-  headerSeparator->setStyleSheet("background-color: #262626; border: none;");
-  lcLayout->addWidget(headerSeparator);
+lcLayout->addWidget(headerSeparator);
 
   // Subtitle list
   listView_ = new QListView(listContainer);
-  listView_->setStyleSheet(R"(
-        QListView {
-            background-color: transparent;
-            border: none;
-            outline: none;
-        }
-        QListView::item {
-            height: 56px;
-            background-color: transparent;
-            border: none;
-        }
-        QListView::item:selected {
-            background-color: transparent;
-            border: none;
-        }
-        QScrollBar:vertical {
-            background: #2a2a2a;
-            width: 8px;
-            border-radius: 4px;
-        }
-        QScrollBar::handle:vertical {
-            background: #4a4a4a;
-            border-radius: 4px;
-            min-height: 30px;
-        }
-        QScrollBar::handle:vertical:hover {
-            background: #5a5a5a;
-        }
-        QScrollBar::add-line:vertical,
-        QScrollBar::sub-line:vertical {
-            height: 0px;
-        }
-    )");
-  listView_->setSelectionMode(QAbstractItemView::SingleSelection);
+listView_->setSelectionMode(QAbstractItemView::SingleSelection);
   listView_->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
 
   model_ = new SubtitleListModel(this);

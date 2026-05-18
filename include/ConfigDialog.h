@@ -8,6 +8,8 @@ class QComboBox;
 class QLabel;
 class QPushButton;
 class QLineEdit;
+class ThemeSelectorWidget;
+class ColorSelectorWidget;
 
 namespace QWK {
 class WidgetWindowAgent;
@@ -42,7 +44,8 @@ private:
     
     // General Page
     QComboBox *langCombo_;
-    QComboBox *themeCombo_;
+    ThemeSelectorWidget *themeSelector_;
+    ColorSelectorWidget *colorSelector_;
 
     // Storage Page
     QComboBox *storageProviderCombo_;

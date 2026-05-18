@@ -1,5 +1,7 @@
 #include "ConfigDialog.h"
 #include "ConfigManager.h"
+#include "ThemeManager.h"
+#include "PaletteSelectors.h"
 #include <QHBoxLayout>
 #include <QVBoxLayout>
 #include <QListWidget>
@@ -73,13 +75,24 @@ void ConfigDialog::setupUi() {
     langCombo_->addItem("English", "en_US");
     generalLayout->addWidget(langCombo_);
 
-    auto *themeLabel = new QLabel(tr("主题 (Theme)"), generalPage);
+    auto *themeLabel = new QLabel(tr("外观 (Theme)"), generalPage);
     themeLabel->setObjectName("ConfigFieldLabel");
     generalLayout->addWidget(themeLabel);
-    themeCombo_ = new QComboBox(generalPage);
-    themeCombo_->addItem(tr("深色 (Dark)"), "dark");
-    themeCombo_->addItem(tr("浅色 (Light)"), "light");
-    generalLayout->addWidget(themeCombo_);
+
+    themeSelector_ = new ThemeSelectorWidget(generalPage);
+    themeSelector_->addTheme("dark", "#151515", "#1e1e1e", "#3b82f6");
+    themeSelector_->addTheme("light", "#f3f4f6", "#ffffff", "#3b82f6");
+    generalLayout->addWidget(themeSelector_);
+
+    auto *colorLabel = new QLabel(tr("主色 (Primary Color)"), generalPage);
+    colorLabel->setObjectName("ConfigFieldLabel");
+    generalLayout->addWidget(colorLabel);
+
+    colorSelector_ = new ColorSelectorWidget(generalPage);
+    for (const QString& cid : ThemeManager::instance().availablePrimaryColors()) {
+        colorSelector_->addColor(cid, ThemeManager::instance().getPrimaryColorHex(cid));
+    }
+    generalLayout->addWidget(colorSelector_);
 
     stackedWidget_->addWidget(generalPage);
 
@@ -206,7 +219,14 @@ void ConfigDialog::setupUi() {
     connect(btnOk_, &QPushButton::clicked, this, &ConfigDialog::onOk);
     
     connect(langCombo_, &QComboBox::currentTextChanged, this, &ConfigDialog::checkDirtyState);
-    connect(themeCombo_, &QComboBox::currentTextChanged, this, &ConfigDialog::checkDirtyState);
+    connect(themeSelector_, &ThemeSelectorWidget::themeSelected, this, [this](const QString&) {
+        checkDirtyState();
+        ThemeManager::instance().applyTheme();
+    });
+    connect(colorSelector_, &ColorSelectorWidget::colorSelected, this, [this](const QString&) {
+        checkDirtyState();
+        ThemeManager::instance().applyTheme();
+    });
     connect(storageProviderCombo_, &QComboBox::currentTextChanged, this, &ConfigDialog::checkDirtyState);
     connect(asrProviderCombo_, &QComboBox::currentTextChanged, this, &ConfigDialog::checkDirtyState);
 
@@ -250,8 +270,12 @@ void ConfigDialog::loadConfig() {
     initialConfig_["theme"] = cfg.getString("general", "theme");
     if (initialConfig_["theme"].toString().isEmpty()) initialConfig_["theme"] = "dark";
 
+    initialConfig_["primary_color"] = cfg.getString("general", "primary_color");
+    if (initialConfig_["primary_color"].toString().isEmpty()) initialConfig_["primary_color"] = "blue";
+
     langCombo_->setCurrentIndex(langCombo_->findData(initialConfig_["language"]));
-    themeCombo_->setCurrentIndex(themeCombo_->findData(initialConfig_["theme"]));
+    themeSelector_->setCurrentTheme(initialConfig_["theme"].toString());
+    colorSelector_->setCurrentColor(initialConfig_["primary_color"].toString());
 
     initialConfig_["oss_bucket"] = cfg.ossBucket();
     ossBucketEdit_->setText(cfg.ossBucket());
@@ -272,7 +296,8 @@ void ConfigDialog::loadConfig() {
 
 bool ConfigDialog::isDirty() const {
     return (langCombo_->currentData().toString() != initialConfig_["language"]) ||
-           (themeCombo_->currentData().toString() != initialConfig_["theme"]) ||
+           (themeSelector_->currentTheme() != initialConfig_["theme"]) ||
+           (colorSelector_->currentColor() != initialConfig_["primary_color"]) ||
            (ossBucketEdit_->text() != initialConfig_["oss_bucket"].toString()) ||
            (ossRegionEdit_->text() != initialConfig_["oss_region"].toString()) ||
            (ossAccessKeyEdit_->text() != initialConfig_["oss_ak"].toString()) ||
@@ -291,7 +316,8 @@ void ConfigDialog::checkDirtyState() {
 void ConfigDialog::saveConfig() {
     auto &cfg = ConfigManager::instance();
     cfg.setValue("general", "language", langCombo_->currentData().toString());
-    cfg.setValue("general", "theme", themeCombo_->currentData().toString());
+    cfg.setValue("general", "theme", themeSelector_->currentTheme());
+    cfg.setValue("general", "primary_color", colorSelector_->currentColor());
     
     cfg.setValue("aliyun_oss", "bucket", ossBucketEdit_->text());
     cfg.setValue("aliyun_oss", "region", ossRegionEdit_->text());
@@ -307,9 +333,23 @@ void ConfigDialog::saveConfig() {
     checkDirtyState();
 }
 
-void ConfigDialog::onApply() { saveConfig(); }
-void ConfigDialog::onOk() { saveConfig(); accept(); }
+void ConfigDialog::onApply() { 
+    saveConfig(); 
+    ThemeManager::instance().applyTheme();
+}
+
+void ConfigDialog::onOk() { 
+    saveConfig(); 
+    ThemeManager::instance().applyTheme();
+    accept(); 
+}
 
 void ConfigDialog::onCancel() {
+    if (themeSelector_->currentTheme() != initialConfig_["theme"].toString() || 
+        colorSelector_->currentColor() != initialConfig_["primary_color"].toString()) {
+        ConfigManager::instance().setValue("general", "theme", initialConfig_["theme"]);
+        ConfigManager::instance().setValue("general", "primary_color", initialConfig_["primary_color"]);
+        ThemeManager::instance().applyTheme();
+    }
     reject();
 }

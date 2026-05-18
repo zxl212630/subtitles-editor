@@ -37,8 +37,7 @@ public:
     setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
     setCursor(Qt::PointingHandCursor);
     setMouseTracking(true);
-    setStyleSheet("background-color: transparent;");
-  }
+}
   void setRatio(double ratio) {
     ratio_ = qBound(0.0, ratio, 1.0);
     update();
@@ -172,19 +171,7 @@ static QPushButton *createTextBtn(QWidget *parent, const QString &text, int w,
                                   const QString &color = "#d1d5db") {
   auto *btn = new QPushButton(text, parent);
   btn->setFixedSize(w, h);
-  btn->setStyleSheet(QString(R"(
-        QPushButton {
-            background-color: %1;
-            color: %2;
-            border: none;
-            border-radius: 4px;
-            font-family: Inter, sans-serif;
-            font-size: 12px;
-            font-weight: bold;
-        }
-    )")
-                         .arg(bg, color));
-  return btn;
+return btn;
 }
 
 static QPushButton *createIconBtn(QWidget *parent, const QString &iconPath,
@@ -192,22 +179,7 @@ static QPushButton *createIconBtn(QWidget *parent, const QString &iconPath,
                                   const QString &hoverBg = "#333333") {
   auto *btn = new QPushButton(parent);
   btn->setFixedSize(w, h);
-  btn->setStyleSheet(QString(R"(
-        QPushButton {
-            background-color: transparent;
-            border: none;
-            border-radius: 4px;
-        }
-        QPushButton:hover {
-            background-color: %1;
-        }
-        QPushButton::icon {
-            width: 16px;
-            height: 16px;
-        }
-    )")
-                         .arg(hoverBg));
-  if (!iconPath.isEmpty()) {
+if (!iconPath.isEmpty()) {
     btn->setIcon(QIcon(iconPath));
     btn->setIconSize(QSize(16, 16));
   }
@@ -236,29 +208,14 @@ VideoPreviewPanel::VideoPreviewPanel(QWidget *parent) : QWidget(parent) {
 void VideoPreviewPanel::setupUi() {
   setObjectName("VideoPreviewPanel");
   setAttribute(Qt::WA_StyledBackground);
-  setStyleSheet(R"(
-        QWidget#VideoPreviewPanel {
-            background-color: #1e1e1e;
-            border-radius: 10px;
-        }
-    )");
-
-  auto *layout = new QVBoxLayout(this);
+auto *layout = new QVBoxLayout(this);
   layout->setContentsMargins(0, 0, 0, 0);
   layout->setSpacing(0);
 
   // --- Toolbar ---
   auto *toolbar = new QFrame(this);
   toolbar->setFixedHeight(40);
-  toolbar->setStyleSheet(R"(
-        QFrame {
-            background-color: #262626;
-            border-top-left-radius: 10px;
-            border-top-right-radius: 10px;
-            border: none;
-        }
-    )");
-  auto *tbLayout = new QHBoxLayout(toolbar);
+auto *tbLayout = new QHBoxLayout(toolbar);
   tbLayout->setContentsMargins(12, 0, 16, 0);
   tbLayout->setSpacing(12);
   tbLayout->setAlignment(Qt::AlignVCenter);
@@ -266,73 +223,7 @@ void VideoPreviewPanel::setupUi() {
   // Font combo
   fontCombo_ = new QComboBox(toolbar);
   fontCombo_->setFixedSize(140, 28);
-  fontCombo_->setStyleSheet(R"(
-        QComboBox {
-            background-color: #1e1e1e;
-            color: #ffffff;
-            border: 1px solid #3f3f46;
-            border-radius: 6px;
-            padding: 0px 25px 0px 8px;
-            font-family: Inter, sans-serif;
-            font-size: 12px;
-            combobox-popup: 0;
-        }
-        QComboBox:focus, QComboBox:on {
-            border: 1px solid #38bdf8;
-        }
-        QComboBox::drop-down {
-            border: none;
-            width: 25px;
-            subcontrol-position: center right;
-        }
-        QComboBox::down-arrow {
-            image: url(:/icons/down-arrow.svg);
-            width: 12px;
-            height: 12px;
-        }
-        QComboBox QAbstractItemView {
-            background-color: #1e1e1e;
-            color: #ffffff;
-            border: 1px solid #3f3f46;
-            border-radius: 8px;
-            outline: none;
-            padding: 4px;
-            margin-top: 2px;
-            min-width: 220px;
-        }
-        QComboBox QAbstractItemView::item {
-            min-height: 28px;
-            padding: 4px 12px;
-            border-radius: 4px;
-            margin: 2px;
-        }
-        QComboBox QAbstractItemView::item:selected {
-            background-color: #3f3f46;
-            color: #ffffff;
-        }
-        QComboBox QAbstractItemView::item:hover {
-            background-color: #3f3f46;
-        }
-        QComboBox QAbstractItemView QScrollBar:vertical {
-            background: #1e1e1e;
-            width: 8px;
-            margin: 4px 0;
-            border-radius: 4px;
-        }
-        QComboBox QAbstractItemView QScrollBar::handle:vertical {
-            background: #4a4a4e;
-            border-radius: 4px;
-            min-height: 30px;
-        }
-        QComboBox QAbstractItemView QScrollBar::handle:vertical:hover {
-            background: #5a5a5e;
-        }
-        QComboBox QAbstractItemView QScrollBar::add-line:vertical,
-        QComboBox QAbstractItemView QScrollBar::sub-line:vertical {
-            height: 0px;
-        }
-    )");
-  populateFontCombo();
+populateFontCombo();
   tbLayout->addWidget(fontCombo_);
 
   connect(fontCombo_, QOverload<int>::of(&QComboBox::currentIndexChanged), this,
@@ -346,72 +237,7 @@ void VideoPreviewPanel::setupUi() {
   if (sizeCombo_->lineEdit()) {
       sizeCombo_->lineEdit()->setStyleSheet("background: transparent; border: none; color: #ffffff; padding: 0px; margin: 0px;");
   }
-  sizeCombo_->setStyleSheet(R"(
-        QComboBox {
-            background-color: #1e1e1e;
-            color: #ffffff;
-            border: 1px solid #3f3f46;
-            border-radius: 6px;
-            padding: 0px 25px 0px 8px;
-            font-family: Inter, sans-serif;
-            font-size: 12px;
-            combobox-popup: 0;
-        }
-        QComboBox:focus, QComboBox:on {
-            border: 1px solid #38bdf8;
-        }
-        QComboBox::drop-down {
-            border: none;
-            width: 25px;
-            subcontrol-position: center right;
-        }
-        QComboBox::down-arrow {
-            image: url(:/icons/down-arrow.svg);
-            width: 12px;
-            height: 12px;
-        }
-        QComboBox QAbstractItemView {
-            background-color: #1e1e1e;
-            color: #ffffff;
-            border: 1px solid #3f3f46;
-            border-radius: 8px;
-            outline: none;
-            padding: 4px;
-            margin-top: 2px;
-        }
-        QComboBox QAbstractItemView::item {
-            min-height: 28px;
-            padding: 4px 8px;
-            border-radius: 4px;
-            margin: 2px;
-        }
-        QComboBox QAbstractItemView::item:selected {
-            background-color: #3f3f46;
-            color: #ffffff;
-        }
-        QComboBox QAbstractItemView::item:hover {
-            background-color: #3f3f46;
-        }
-        QComboBox QAbstractItemView QScrollBar:vertical {
-            background: #1e1e1e;
-            width: 8px;
-            margin: 4px 0;
-            border-radius: 4px;
-        }
-        QComboBox QAbstractItemView QScrollBar::handle:vertical {
-            background: #4a4a4e;
-            border-radius: 4px;
-            min-height: 30px;
-        }
-        QComboBox QAbstractItemView QScrollBar::handle:vertical:hover {
-            background: #5a5a5e;
-        }
-        QComboBox QAbstractItemView QScrollBar::add-line:vertical,
-        QComboBox QAbstractItemView QScrollBar::sub-line:vertical {
-            height: 0px;
-        }
-    )");
-  populateSizeCombo();
+populateSizeCombo();
   tbLayout->addWidget(sizeCombo_);
 
   connect(
@@ -425,13 +251,11 @@ void VideoPreviewPanel::setupUi() {
   // Elastic spacer
   auto *tbSpacer = new QWidget(toolbar);
   tbSpacer->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Preferred);
-  tbSpacer->setStyleSheet("background: transparent;");
-  tbLayout->addWidget(tbSpacer);
+tbLayout->addWidget(tbSpacer);
 
   // Format buttons group (tighter internal spacing)
   auto *btnGroup = new QWidget(toolbar);
-  btnGroup->setStyleSheet("background: transparent;");
-  auto *btnGroupLayout = new QHBoxLayout(btnGroup);
+auto *btnGroupLayout = new QHBoxLayout(btnGroup);
   btnGroupLayout->setContentsMargins(0, 0, 0, 0);
   btnGroupLayout->setSpacing(6);
   btnGroupLayout->addWidget(createTextBtn(btnGroup, "B", 28, 28));
@@ -449,8 +273,7 @@ void VideoPreviewPanel::setupUi() {
 
   // --- Video display area ---
   videoArea_ = new QFrame(this);
-  videoArea_->setStyleSheet("background-color: transparent; border: none;");
-  videoArea_->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
+videoArea_->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
   auto *vaLayout = new QVBoxLayout(videoArea_);
   vaLayout->setContentsMargins(0, 0, 0, 0);
 
@@ -464,15 +287,7 @@ void VideoPreviewPanel::setupUi() {
   // --- Playback control bar ---
   auto *controlBar = new QFrame(this);
   controlBar->setFixedHeight(36);
-  controlBar->setStyleSheet(R"(
-        QFrame {
-            background-color: #262626;
-            border-bottom-left-radius: 10px;
-            border-bottom-right-radius: 10px;
-            border: none;
-        }
-    )");
-  auto *cbLayout = new QHBoxLayout(controlBar);
+auto *cbLayout = new QHBoxLayout(controlBar);
   cbLayout->setContentsMargins(8, 0, 12, 0);
   cbLayout->setSpacing(8);
   cbLayout->setAlignment(Qt::AlignVCenter);

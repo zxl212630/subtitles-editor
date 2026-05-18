@@ -65,47 +65,11 @@ TimelinePanel::TimelinePanel(QWidget *parent) : QWidget(parent) {
 
   hScrollBar_ = new QScrollBar(Qt::Horizontal, this);
   hScrollBar_->setFixedHeight(12);
-  hScrollBar_->setStyleSheet(R"(
-      QScrollBar:horizontal {
-          background: transparent;
-          height: 14px;
-          border: none;
-      }
-      QScrollBar::groove:horizontal {
-          background: transparent;
-          height: 14px;
-          border: none;
-      }
-      QScrollBar::handle:horizontal {
-          background: #4a4a4a;
-          border-radius: 4px;
-          min-width: 20px;
-          margin: 2px 0px;
-      }
-      QScrollBar::handle:horizontal:hover {
-          background: #5a5a5a;
-      }
-      QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal {
-          width: 0px;
-          border: none;
-      }
-      QScrollBar::add-page:horizontal, QScrollBar::sub-page:horizontal {
-          background: transparent;
-          border: none;
-      }
-  )");
-
-  connect(hScrollBar_, &QScrollBar::valueChanged, this, [this](int value) {
+connect(hScrollBar_, &QScrollBar::valueChanged, this, [this](int value) {
     scrollOffsetX_ = value;
     canvas_->update();
   });
 
-  setStyleSheet(R"(
-      QWidget#TimelinePanel {
-          background-color: #1e1e1e;
-          border-radius: 10px;
-      }
-  )");
 }
 
 int TimelinePanel::timeToX(qint64 ms) const {
@@ -1076,23 +1040,7 @@ void TimelinePanel::contextMenuEvent(QContextMenuEvent *event) {
     return;
 
   QMenu menu(this);
-  menu.setStyleSheet(R"(
-      QMenu {
-          background-color: #1e1e1e;
-          border: 1px solid #333333;
-          padding: 4px;
-      }
-      QMenu::item {
-          color: #d1d5db;
-          padding: 8px 24px;
-          font-size: 13px;
-      }
-      QMenu::item:selected {
-          background-color: #2a2a2a;
-      }
-  )");
-
-  QAction *propAction = menu.addAction("属性");
+QAction *propAction = menu.addAction("属性");
   QAction *openLocAction = menu.addAction("打开文件所在位置");
   QAction *asrAction = menu.addAction("语音转文字");
 

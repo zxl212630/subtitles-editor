@@ -40,31 +40,6 @@ static void applyMessageBoxStyle(QMessageBox *box) {
   if (auto *btn = box->button(QMessageBox::Cancel))
     btn->setText("取消");
 
-  box->setStyleSheet(R"(
-        QMessageBox {
-            background-color: #1e1e1e;
-        }
-        QLabel {
-            color: #d1d5db;
-            font-size: 13px;
-            background: transparent;
-        }
-        QPushButton {
-            background-color: #0284c7;
-            color: #ffffff;
-            border: none;
-            border-radius: 6px;
-            padding: 8px 24px;
-            font-size: 13px;
-            font-weight: bold;
-        }
-        QPushButton:hover {
-            background-color: #0369a1;
-        }
-        QPushButton:pressed {
-            background-color: #075985;
-        }
-    )");
 }
 
 struct AppWindow::Private {
@@ -118,15 +93,6 @@ void AppWindow::setupUi() {
   resize(1440, 900);
   setMinimumSize(960, 600);
 
-  QString theme = ConfigManager::instance().theme();
-  if (theme.isEmpty())
-    theme = "dark";
-
-  QFile f(QString(":/themes/%1.qss").arg(theme));
-  if (f.open(QFile::ReadOnly | QFile::Text)) {
-    qApp->setStyleSheet(QTextStream(&f).readAll());
-  }
-
   d->windowAgent = new QWK::WidgetWindowAgent(this);
   d->windowAgent->setup(this);
 
@@ -175,20 +141,7 @@ void AppWindow::setupTitleBar() {
   settingsBtn->setFixedSize(32, 32);
   settingsBtn->setToolTip("设置");
   settingsBtn->setCursor(Qt::PointingHandCursor);
-  settingsBtn->setStyleSheet(R"(
-    QPushButton {
-        background: transparent;
-        border: none;
-        border-radius: 4px;
-    }
-    QPushButton:hover {
-        background: rgba(255, 255, 255, 0.1);
-    }
-    QPushButton:pressed {
-        background: rgba(255, 255, 255, 0.2);
-    }
-  )");
-  layout->addWidget(settingsBtn);
+layout->addWidget(settingsBtn);
   connect(settingsBtn, &QPushButton::clicked, this, &AppWindow::onSettingsRequested);
 
   d->windowAgent->setHitTestVisible(settingsBtn, true);

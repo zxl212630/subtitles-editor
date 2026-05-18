@@ -54,7 +54,7 @@ set(SOURCES
     src/VideoPreviewPanel.cpp
     src/SubtitleListPanel.cpp
     src/TimelinePanel.cpp
-    src/ConfigManager.cpp
+    src/ConfigManager.cpp src/ThemeManager.cpp src/PaletteSelectors.cpp
     src/AudioTranscoder.cpp
     src/OssUploader.cpp
     src/FFmpegDecoder.cpp
@@ -77,7 +77,7 @@ set(HEADERS
     include/VideoPreviewPanel.h
     include/SubtitleListPanel.h
     include/TimelinePanel.h
-    include/ConfigManager.h
+    include/ConfigManager.h include/ThemeManager.h include/PaletteSelectors.h
     include/AudioTranscoder.h
     include/OssUploader.h
     include/FFmpegDecoder.h
