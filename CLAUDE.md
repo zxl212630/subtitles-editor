@@ -35,13 +35,13 @@ cmake --build cmake-build-debug
 ### 1. Logging & Execution
 When debugging runtime issues, use `nohup` to start the application and collect logs:
 ```bash
-nohup ./cmake-build-debug/subtitles-editor > startup.log 2>&1 &
+nohup ./cmake-build-debug/subtitles-editor > /tmp/startup.log 2>&1 &
 ```
-Analyze `startup.log` (Qt warnings, FFmpeg errors, custom `qDebug()` output) to diagnose problems.
+Analyze `/tmp/startup.log` (Qt warnings, FFmpeg errors, custom `qDebug()` output) to diagnose problems.
 
 ### 2. Visual Feedback (Screenshots)
 When UI verification or error dialog inspection is needed, invoke the system screenshot tool:
-- **macOS**: `screencapture -ui`
+- **macOS**: `screencapture -i /tmp/asr_screenshot.png`
 - **Action**: Instruct the user to "Select the relevant area in the pop-up tool" and wait for the capture.
 
 ### 3. Investigation Workflow
