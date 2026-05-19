@@ -41,14 +41,6 @@ QTEST_MAIN(TestConfigManager)
 
 - [ ] **Step 2: Add tests to CMake build system**
 
-Modify `CMakeLists.txt` (append to end):
-```cmake
-# ============================================================
-# Tests
-# ============================================================
-enable_testing()
-add_subdirectory(tests)
-```
 
 Create `tests/CMakeLists.txt`:
 ```cmake
