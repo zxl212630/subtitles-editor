@@ -81,12 +81,18 @@ void AsrProgressDialog::onAnimationTick() {
 }
 
 void AsrProgressDialog::onCancelClicked() {
-    emit canceled();
+    if (!canceled_) {
+        canceled_ = true;
+        emit canceled();
+    }
     close();
 }
 
 void AsrProgressDialog::closeEvent(QCloseEvent *event) {
-    emit canceled();
+    if (!canceled_) {
+        canceled_ = true;
+        emit canceled();
+    }
     event->accept();
 }
 

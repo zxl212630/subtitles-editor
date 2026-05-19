@@ -38,6 +38,7 @@ private:
 
     Stage currentStage_ = Stage::Extraction;
     bool isError_ = false;
+    bool canceled_ = false;
 
     QLabel *statusLabel_ = nullptr;
     QLabel *subStatusLabel_ = nullptr;
