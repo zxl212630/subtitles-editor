@@ -63,6 +63,7 @@ set(SOURCES
     src/MediaPlayer.cpp
     src/VideoPropertyDialog.cpp
     src/ConfigDialog.cpp
+    src/AsrProgressDialog.cpp
 )
 
 set(HEADERS
@@ -86,6 +87,7 @@ set(HEADERS
     include/MediaPlayer.h
     include/VideoPropertyDialog.h
     include/ConfigDialog.h
+    include/AsrProgressDialog.h
 )
 
 set(RESOURCES

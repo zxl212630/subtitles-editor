@@ -6,6 +6,7 @@
 
 class QPushButton;
 class QLabel;
+class QPainter;
 
 class AsrProgressDialog : public QDialog {
     Q_OBJECT
@@ -31,6 +32,10 @@ private slots:
     void onCancelClicked();
 
 private:
+    void drawSourceIcon(QPainter &p, int cx, int cy, int size);
+    void drawTargetIcon(QPainter &p, int cx, int cy, int size);
+    void drawParticles(QPainter &p, int x1, int x2, int cy);
+
     Stage currentStage_ = Stage::Extraction;
     bool isError_ = false;
 
