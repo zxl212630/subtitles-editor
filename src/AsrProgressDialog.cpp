@@ -123,7 +123,7 @@ void AsrProgressDialog::paintEvent(QPaintEvent *event) {
     // ── Step indicator area ──
     const int stepY = 30;
     const int stepR = 14;
-    const int lineY = stepY + stepR;
+    const int lineY = stepY;
     const int stepSpacing = 140;
     int stepStartX = (w - stepSpacing * 2) / 2;
 
@@ -147,15 +147,22 @@ void AsrProgressDialog::paintEvent(QPaintEvent *event) {
     // Highlight completed/active lines
     int currentIdx = static_cast<int>(currentStage_) - 1;
     if (isError_) {
-        QPen errLinePen(errorColor, 2);
-        p.setPen(errLinePen);
-        if (currentIdx > 0) {
-            p.drawLine(stepStartX + stepR + 4, lineY,
-                       stepStartX + stepSpacing - stepR - 4, lineY);
+        // Completed lines before the error stage stay green
+        QPen completedPen(primary, 2);
+        p.setPen(completedPen);
+        for (int i = 0; i < currentIdx - 1; i++) {
+            int x1 = stepStartX + stepSpacing * i + stepR + 4;
+            int x2 = stepStartX + stepSpacing * (i + 1) - stepR - 4;
+            p.drawLine(x1, lineY, x2, lineY);
         }
-        if (currentIdx > 1) {
-            p.drawLine(stepStartX + stepSpacing + stepR + 4, lineY,
-                       stepStartX + stepSpacing * 2 - stepR - 4, lineY);
+        // Only the line leading to the error stage turns red
+        if (currentIdx > 0) {
+            QPen errLinePen(errorColor, 2);
+            p.setPen(errLinePen);
+            int lineIdx = currentIdx - 1;
+            int x1 = stepStartX + stepSpacing * lineIdx + stepR + 4;
+            int x2 = stepStartX + stepSpacing * (lineIdx + 1) - stepR - 4;
+            p.drawLine(x1, lineY, x2, lineY);
         }
     } else {
         QPen activeLinePen(primary, 2);
