@@ -68,7 +68,7 @@ protected:
 
     // Use colors from ThemeManager
     auto& tm = ThemeManager::instance();
-    QColor trackBg = tm.getBgLighterColor();
+    QColor trackBg = tm.getBorderDarkColor();
     QColor fillBg = tm.getPrimaryColor();
     QColor textMuted = tm.getTextMutedColor();
     QColor textNormal = tm.getTextNormalColor();
