@@ -3,15 +3,19 @@
 #include <QObject>
 #include <QString>
 
+class QNetworkReply;
+
 class OssUploader : public QObject {
   Q_OBJECT
 
 public:
   explicit OssUploader(QObject *parent = nullptr);
+  void abort();
 
 signals:
   void uploadStarted();
   void uploadProgress(int percent);
+  void uploadProgressBytes(qint64 bytesSent, qint64 bytesTotal);
   void uploadFinished(const QString &ossUrl, const QString &presignedUrl);
   void uploadFailed(const QString &errorMessage);
 
@@ -28,4 +32,6 @@ private:
   QString ossRegion_;
   QString ossAccessKeyId_;
   QString ossAccessKeySecret_;
+  QNetworkReply *reply_ = nullptr;
+  bool aborting_ = false;
 };

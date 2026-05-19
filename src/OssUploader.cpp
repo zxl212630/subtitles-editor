@@ -18,6 +18,14 @@ OssUploader::OssUploader(QObject *parent) : QObject(parent) {
   ossRegion_ = ConfigManager::instance().ossRegion();
 }
 
+void OssUploader::abort() {
+  if (reply_ && reply_->isRunning()) {
+    aborting_ = true;
+    reply_->abort();
+    emit uploadFailed(tr("用户已取消上传"));
+  }
+}
+
 QString OssUploader::generateOssPath(const QString &localPath) {
   QFileInfo info(localPath);
   QString timestamp = QString::number(QDateTime::currentMSecsSinceEpoch());
@@ -108,6 +116,8 @@ void OssUploader::upload(const QString &localFilePath) {
   qDebug() << "=== OssUploader::upload() ===";
   qDebug() << "Local file:" << localFilePath;
 
+  aborting_ = false;
+
   // Validate credentials
   if (ossAccessKeyId_.isEmpty() || ossAccessKeySecret_.isEmpty() ||
       ossBucket_.isEmpty() || ossRegion_.isEmpty()) {
@@ -195,41 +205,50 @@ void OssUploader::upload(const QString &localFilePath) {
   qDebug() << "=== Sending Request ===";
 
   QNetworkAccessManager *manager = new QNetworkAccessManager(this);
-  QNetworkReply *reply = manager->put(request, fileData);
+  reply_ = manager->put(request, fileData);
 
-  connect(reply, &QNetworkReply::uploadProgress, this,
+  connect(reply_, &QNetworkReply::uploadProgress, this,
           [this](qint64 bytesSent, qint64 bytesTotal) {
             qDebug() << "Progress:" << bytesSent << "/" << bytesTotal;
+            emit uploadProgressBytes(bytesSent, bytesTotal);
             if (bytesTotal > 0) {
               int percent = static_cast<int>((bytesSent * 100) / bytesTotal);
               emit uploadProgress(percent);
             }
           });
 
-  connect(reply, &QNetworkReply::finished, this,
-          [this, reply, urlStr, ossPath]() {
-            qDebug() << "=== Request Finished ===";
-            qDebug() << "Error:" << reply->error() << reply->errorString();
-            QByteArray response = reply->readAll();
-            qDebug() << "Response body:" << response;
+  connect(reply_, &QNetworkReply::finished, this, [this, urlStr, ossPath]() {
+    qDebug() << "=== Request Finished ===";
+    if (!reply_)
+      return;
+    qDebug() << "Error:" << reply_->error() << reply_->errorString();
+    QByteArray response = reply_->readAll();
+    qDebug() << "Response body:" << response;
 
-            if (reply->error() == QNetworkReply::NoError) {
-              QString presignedUrl = generatePresignedUrl(ossPath);
-              qDebug() << "Upload SUCCESS! URL:" << urlStr;
-              qDebug() << "Presigned URL:" << presignedUrl;
-              emit uploadFinished(urlStr, presignedUrl);
-            } else {
-              QString errorMsg =
-                  QString("Upload failed: %1").arg(reply->errorString());
-              if (!response.isEmpty()) {
-                errorMsg +=
-                    QString(" | Response: %1").arg(QString::fromUtf8(response));
-              }
-              qDebug() << "Upload FAILED:" << errorMsg;
-              emit uploadFailed(errorMsg);
-            }
-            reply->deleteLater();
-          });
+    if (aborting_) {
+      aborting_ = false;
+      reply_->deleteLater();
+      reply_ = nullptr;
+      return;
+    }
+
+    if (reply_->error() == QNetworkReply::NoError) {
+      QString presignedUrl = generatePresignedUrl(ossPath);
+      qDebug() << "Upload SUCCESS! URL:" << urlStr;
+      qDebug() << "Presigned URL:" << presignedUrl;
+      emit uploadFinished(urlStr, presignedUrl);
+    } else {
+      QString errorMsg =
+          QString("Upload failed: %1").arg(reply_->errorString());
+      if (!response.isEmpty()) {
+        errorMsg += QString(" | Response: %1").arg(QString::fromUtf8(response));
+      }
+      qDebug() << "Upload FAILED:" << errorMsg;
+      emit uploadFailed(errorMsg);
+    }
+    reply_->deleteLater();
+    reply_ = nullptr;
+  });
 
   emit uploadStarted();
 }
