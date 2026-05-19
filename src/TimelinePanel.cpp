@@ -1,4 +1,5 @@
 #include "TimelinePanel.h"
+#include "AsrProgressDialog.h"
 #include "AudioTranscoder.h"
 #include "OssUploader.h"
 #include "QUuid"
@@ -7,6 +8,7 @@
 #include "TencentAsrService.h"
 #include "ThemeManager.h"
 
+#include <QPointer>
 #include <QApplication>
 #include <QContextMenuEvent>
 #include <QDateTime>
@@ -937,36 +939,54 @@ void TimelinePanel::dropEvent(QDropEvent *event) {
 
 void TimelinePanel::startAsrPipeline(const QString &localPath) {
   qDebug() << "=== Starting ASR Pipeline ===";
-  qDebug() << "File:" << localPath;
 
-  // Trigger ASR pipeline
+  auto *dialog = new AsrProgressDialog(this);
+  dialog->setStage(AsrProgressDialog::Stage::Extraction);
+  dialog->show();
+
   AudioTranscoder *transcoder = new AudioTranscoder(this);
   OssUploader *uploader = new OssUploader(this);
   TencentAsrService *asrService = new TencentAsrService(this);
 
-  // Connect pipeline
-  connect(transcoder, &AudioTranscoder::transcodingFinished, uploader,
-          &OssUploader::upload);
-  // Use presignedUrl for ASR (public accessible URL with signature)
-  connect(uploader, &OssUploader::uploadFinished, asrService,
-          [asrService](const QString &, const QString &presignedUrl) {
-            qDebug() << "Using presigned URL for ASR:" << presignedUrl;
+  connect(dialog, &AsrProgressDialog::canceled, this,
+          [dialog, transcoder, uploader, asrService]() {
+            QPointer<AudioTranscoder> t(transcoder);
+            QPointer<OssUploader> u(uploader);
+            QPointer<TencentAsrService> a(asrService);
+            if (t)
+              t->abort();
+            if (u)
+              u->abort();
+            if (a)
+              a->abort();
+            dialog->deleteLater();
+          });
+
+  connect(transcoder, &AudioTranscoder::transcodingFinished, this,
+          [dialog, uploader](const QString &path) {
+            dialog->setStage(AsrProgressDialog::Stage::Upload);
+            uploader->upload(path);
+          });
+
+  connect(uploader, &OssUploader::uploadFinished, this,
+          [dialog, asrService](const QString &, const QString &presignedUrl) {
+            dialog->setStage(AsrProgressDialog::Stage::Recognition);
             asrService->transcribe(presignedUrl);
           });
+
   connect(asrService, &AsrServiceBase::transcribeFinished, this,
-          [this, transcoder, uploader,
-           asrService](const AsrServiceBase::TranscriptResult &result) {
+          [this, transcoder, uploader, asrService,
+           dialog](const AsrServiceBase::TranscriptResult &result) {
             if (!result.success) {
-              qWarning() << "ASR failed:" << result.errorMessage;
+              dialog->setError(result.errorMessage);
+              dialog->deleteLater();
               emit asrFailed(
                   QString("语音识别失败: %1").arg(result.errorMessage));
             } else {
-              qDebug() << "=== ASR Finished ===";
-              qDebug() << "Segments count:" << result.segments.size();
-              track_->clear(); // 清空旧字幕数据
+              dialog->accept();
+              dialog->deleteLater();
+              track_->clear();
               for (const auto &seg : result.segments) {
-                qDebug() << "Segment:" << seg.startMs << "-" << seg.endMs << ":"
-                         << seg.text;
                 SubtitleItem item;
                 item.id = QUuid::createUuid().toString();
                 item.text = seg.text;
@@ -982,25 +1002,17 @@ void TimelinePanel::startAsrPipeline(const QString &localPath) {
           });
 
   connect(transcoder, &AudioTranscoder::transcodingFailed, this,
-          [this, uploader, asrService](const QString &error) {
-            qWarning() << "Transcoding failed:" << error;
-            emit asrFailed(QString("转码失败: %1").arg(error));
+          [dialog, uploader, asrService](const QString &error) {
+            dialog->setError(QString("转码失败: %1").arg(error));
+            dialog->deleteLater();
             uploader->deleteLater();
             asrService->deleteLater();
           });
 
   connect(uploader, &OssUploader::uploadFailed, this,
-          [this, transcoder, asrService](const QString &error) {
-            qWarning() << "Upload failed:" << error;
-            QString displayError = error;
-            if (error.contains("AccessDenied")) {
-              displayError = " OSS 上传失败：权限不足。请检查 RAM 用户的 "
-                             "oss:PutObject 权限是否已授权。";
-            } else if (error.contains("Connection closed")) {
-              displayError =
-                  " OSS 上传失败：连接被拒绝。请检查 OSS Bucket 权限设置。";
-            }
-            emit asrFailed(displayError);
+          [dialog, transcoder, asrService](const QString &error) {
+            dialog->setError(QString("上传失败: %1").arg(error));
+            dialog->deleteLater();
             transcoder->deleteLater();
             asrService->deleteLater();
           });
