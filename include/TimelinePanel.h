@@ -118,4 +118,6 @@ private:
   qint64 dragTempStartMs_ = 0; // current temp startMs during drag
   qint64 dragTempEndMs_ = 0;   // current temp endMs during drag
   static constexpr int DRAG_EDGE_THRESHOLD_PX = 6;
+
+  bool asrCancelledByUser_ = false;
 };

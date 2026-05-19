@@ -22,6 +22,9 @@ TencentAsrService::TencentAsrService(QObject *parent)
 TencentAsrService::~TencentAsrService() = default;
 
 void TencentAsrService::abort() {
+  qDebug() << "[TencentAsrService] abort(), isAborted_=" << isAborted_
+           << "activeReply_=" << activeReply_
+           << "isRunning=" << (activeReply_ ? activeReply_->isRunning() : false);
   if (isAborted_)
     return;
   isAborted_ = true;
@@ -31,6 +34,7 @@ void TencentAsrService::abort() {
   TranscriptResult result;
   result.success = false;
   result.errorMessage = "用户已取消识别";
+  qDebug() << "[TencentAsrService] abort() emitting transcribeFinished";
   emit transcribeFinished(result);
 }
 

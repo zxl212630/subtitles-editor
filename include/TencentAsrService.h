@@ -3,6 +3,7 @@
 #include "AsrServiceBase.h"
 #include <QJsonArray>
 #include <QNetworkReply>
+#include <QPointer>
 
 class QNetworkAccessManager;
 
@@ -33,7 +34,7 @@ private:
   QString appId_;
   QString currentTaskId_;
   QNetworkAccessManager *networkManager_;
-  QNetworkReply *activeReply_ = nullptr;
+  QPointer<QNetworkReply> activeReply_;
   bool isAborted_ = false;
   int pollingAttempts_ = 0;
   static constexpr int kMaxPollingAttempts = 60;

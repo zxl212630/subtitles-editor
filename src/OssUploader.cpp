@@ -20,6 +20,7 @@ OssUploader::OssUploader(QObject *parent)
 }
 
 void OssUploader::abort() {
+  qDebug() << "[OssUploader] abort(), reply_=" << reply_ << "isRunning=" << (reply_ ? reply_->isRunning() : false);
   if (reply_ && reply_->isRunning()) {
     aborting_ = true;
     reply_->abort();

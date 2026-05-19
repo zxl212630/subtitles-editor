@@ -2,6 +2,7 @@
 #include "ThemeManager.h"
 
 #include <QCloseEvent>
+#include <QDebug>
 #include <QHBoxLayout>
 #include <QLabel>
 #include <QPainter>
@@ -81,16 +82,21 @@ void AsrProgressDialog::onAnimationTick() {
 }
 
 void AsrProgressDialog::onCancelClicked() {
+    qDebug() << "[ASR Dialog] onCancelClicked, canceled_=" << canceled_;
     if (!canceled_) {
         canceled_ = true;
+        qDebug() << "[ASR Dialog] emitting canceled signal";
         emit canceled();
     }
+    qDebug() << "[ASR Dialog] calling close()";
     close();
 }
 
 void AsrProgressDialog::closeEvent(QCloseEvent *event) {
+    qDebug() << "[ASR Dialog] closeEvent, canceled_=" << canceled_;
     if (!canceled_) {
         canceled_ = true;
+        qDebug() << "[ASR Dialog] closeEvent emitting canceled signal";
         emit canceled();
     }
     event->accept();

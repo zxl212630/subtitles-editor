@@ -939,8 +939,10 @@ void TimelinePanel::dropEvent(QDropEvent *event) {
 
 void TimelinePanel::startAsrPipeline(const QString &localPath) {
   qDebug() << "=== Starting ASR Pipeline ===";
+  asrCancelledByUser_ = false;
 
   auto *dialog = new AsrProgressDialog(this);
+  dialog->setModal(true);
   dialog->setStage(AsrProgressDialog::Stage::Extraction);
   dialog->show();
 
@@ -949,7 +951,9 @@ void TimelinePanel::startAsrPipeline(const QString &localPath) {
   TencentAsrService *asrService = new TencentAsrService(this);
 
   connect(dialog, &AsrProgressDialog::canceled, this,
-          [dialog, transcoder, uploader, asrService]() {
+          [this, dialog, transcoder, uploader, asrService]() {
+            qDebug() << "[ASR] canceled signal received";
+            asrCancelledByUser_ = true;
             QPointer<AudioTranscoder> t(transcoder);
             QPointer<OssUploader> u(uploader);
             QPointer<TencentAsrService> a(asrService);
@@ -959,7 +963,11 @@ void TimelinePanel::startAsrPipeline(const QString &localPath) {
               u->abort();
             if (a)
               a->abort();
+            qDebug() << "[ASR] cancel handler done, cleaning up";
             dialog->deleteLater();
+            transcoder->deleteLater();
+            uploader->deleteLater();
+            asrService->deleteLater();
           });
 
   connect(transcoder, &AudioTranscoder::transcodingFinished, this,
@@ -977,11 +985,19 @@ void TimelinePanel::startAsrPipeline(const QString &localPath) {
   connect(asrService, &AsrServiceBase::transcribeFinished, this,
           [this, transcoder, uploader, asrService,
            dialog](const AsrServiceBase::TranscriptResult &result) {
+            qDebug() << "[ASR] transcribeFinished success=" << result.success
+                     << "asrCancelledByUser_=" << asrCancelledByUser_;
             if (!result.success) {
-              dialog->setError(result.errorMessage);
-              dialog->deleteLater();
-              emit asrFailed(
-                  QString("语音识别失败: %1").arg(result.errorMessage));
+              if (!asrCancelledByUser_) {
+                qDebug() << "[ASR] real recognition error, showing on dialog";
+                dialog->setError(result.errorMessage);
+              } else {
+                qDebug() << "[ASR] cancelled by user, closing dialog";
+                dialog->deleteLater();
+                transcoder->deleteLater();
+                uploader->deleteLater();
+                asrService->deleteLater();
+              }
             } else {
               dialog->accept();
               dialog->deleteLater();
@@ -995,26 +1011,22 @@ void TimelinePanel::startAsrPipeline(const QString &localPath) {
                 track_->addItem(item);
               }
               emit asrSucceeded();
+              transcoder->deleteLater();
+              uploader->deleteLater();
+              asrService->deleteLater();
             }
-            transcoder->deleteLater();
-            uploader->deleteLater();
-            asrService->deleteLater();
           });
 
   connect(transcoder, &AudioTranscoder::transcodingFailed, this,
-          [dialog, uploader, asrService](const QString &error) {
+          [dialog](const QString &error) {
+            qDebug() << "[ASR] transcodingFailed:" << error;
             dialog->setError(QString("转码失败: %1").arg(error));
-            dialog->deleteLater();
-            uploader->deleteLater();
-            asrService->deleteLater();
           });
 
   connect(uploader, &OssUploader::uploadFailed, this,
-          [dialog, transcoder, asrService](const QString &error) {
+          [dialog](const QString &error) {
+            qDebug() << "[ASR] uploadFailed:" << error;
             dialog->setError(QString("上传失败: %1").arg(error));
-            dialog->deleteLater();
-            transcoder->deleteLater();
-            asrService->deleteLater();
           });
 
   transcoder->transcode(localPath);

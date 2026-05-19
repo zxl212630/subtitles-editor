@@ -278,15 +278,6 @@ void AppWindow::setupSplitterLayout() {
             d->timelinePanel->update();
           });
 
-  connect(d->timelinePanel, &TimelinePanel::asrFailed, this,
-          [](const QString &error) {
-            auto *box = new QMessageBox(QMessageBox::Critical, "语音识别失败",
-                                        error, QMessageBox::Ok);
-            applyMessageBoxStyle(box);
-            box->exec();
-            delete box;
-          });
-
   connect(d->timelinePanel, &TimelinePanel::asrSucceeded, this, []() {
     auto *box = new QMessageBox(QMessageBox::Information, "语音识别完成",
                                 "字幕已成功生成！", QMessageBox::Ok);
