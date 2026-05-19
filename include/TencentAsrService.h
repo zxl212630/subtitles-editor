@@ -14,6 +14,7 @@ public:
   ~TencentAsrService();
 
   void transcribe(const QString &audioUrl) override;
+  void abort();
 
 private slots:
   void onTaskCreated(QNetworkReply *reply);
@@ -32,6 +33,8 @@ private:
   QString appId_;
   QString currentTaskId_;
   QNetworkAccessManager *networkManager_;
+  QNetworkReply *activeReply_ = nullptr;
+  bool isAborted_ = false;
   int pollingAttempts_ = 0;
   static constexpr int kMaxPollingAttempts = 60;
 };

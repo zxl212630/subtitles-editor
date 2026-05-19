@@ -21,7 +21,22 @@ TencentAsrService::TencentAsrService(QObject *parent)
 
 TencentAsrService::~TencentAsrService() = default;
 
+void TencentAsrService::abort() {
+  if (isAborted_)
+    return;
+  isAborted_ = true;
+  if (activeReply_ && activeReply_->isRunning()) {
+    activeReply_->abort();
+  }
+  TranscriptResult result;
+  result.success = false;
+  result.errorMessage = "用户已取消识别";
+  emit transcribeFinished(result);
+}
+
 void TencentAsrService::transcribe(const QString &audioUrl) {
+  isAborted_ = false;
+  pollingAttempts_ = 0;
   createRecTask(audioUrl);
 }
 
@@ -141,6 +156,7 @@ void TencentAsrService::createRecTask(const QString &audioUrl) {
   qDebug() << "Request payload:" << QString::fromUtf8(payloadBytes);
 
   QNetworkReply *reply = networkManager_->post(request, payloadBytes);
+  activeReply_ = reply;
   connect(reply, &QNetworkReply::finished, this,
           [this, reply]() { onTaskCreated(reply); });
 }
@@ -156,6 +172,10 @@ QJsonObject TencentAsrService::payload(const QString &audioUrl) {
 }
 
 void TencentAsrService::onTaskCreated(QNetworkReply *reply) {
+  if (isAborted_) {
+    reply->deleteLater();
+    return;
+  }
   if (reply->error() != QNetworkReply::NoError) {
     TranscriptResult result;
     result.success = false;
@@ -267,11 +287,16 @@ void TencentAsrService::queryTaskStatus(const QString &taskId) {
   request.setRawHeader("Authorization", authorization.toUtf8());
 
   QNetworkReply *reply = networkManager_->post(request, payloadBytes);
+  activeReply_ = reply;
   connect(reply, &QNetworkReply::finished, this,
           [this, reply, taskId]() { onResultQueried(reply); });
 }
 
 void TencentAsrService::onResultQueried(QNetworkReply *reply) {
+  if (isAborted_) {
+    reply->deleteLater();
+    return;
+  }
   if (reply->error() != QNetworkReply::NoError) {
     TranscriptResult result;
     result.success = false;
@@ -325,7 +350,8 @@ void TencentAsrService::onResultQueried(QNetworkReply *reply) {
     } else {
       // 继续轮询
       QTimer::singleShot(1000, this, [this, taskId = currentTaskId_]() {
-        queryTaskStatus(taskId);
+        if (!isAborted_)
+          queryTaskStatus(taskId);
       });
       emit transcribeProgress(50);
     }
