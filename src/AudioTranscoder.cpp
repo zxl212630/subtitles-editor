@@ -7,14 +7,20 @@
 AudioTranscoder::AudioTranscoder(QObject *parent) : QObject(parent) {
   ffmpegPath_ = ConfigManager::instance().ffmpegPath();
   if (ffmpegPath_.isEmpty()) {
-    ffmpegPath_ = "/Users/zxl/Tools/ffmpeg/8.0/bin/ffmpeg";
+    ffmpegPath_ = "ffmpeg";
   }
 }
 
 void AudioTranscoder::abort() {
   if (process_ && process_->state() != QProcess::NotRunning) {
-    process_->kill();
-    process_->waitForFinished(3000);
+    aborting_ = true;
+    process_->terminate();
+    connect(process_, &QProcess::finished, this, [this]() {
+      if (process_) {
+        process_->deleteLater();
+        process_ = nullptr;
+      }
+    });
     emit transcodingFailed(tr("用户已取消转码"));
   }
 }
@@ -66,6 +72,7 @@ void AudioTranscoder::transcode(const QString &inputPath) {
 
   process_ = new QProcess(this);
   durationMs_ = 0;
+  aborting_ = false;
 
   connect(process_, &QProcess::readyReadStandardError, this, [this]() {
     if (!process_)
@@ -97,6 +104,14 @@ void AudioTranscoder::transcode(const QString &inputPath) {
   connect(
       process_, QOverload<int, QProcess::ExitStatus>::of(&QProcess::finished),
       this, [this, outputPath](int exitCode, QProcess::ExitStatus status) {
+        if (!process_)
+          return;
+        if (aborting_) {
+          aborting_ = false;
+          process_->deleteLater();
+          process_ = nullptr;
+          return;
+        }
         if (status == QProcess::NormalExit && exitCode == 0) {
           emit progress(100);
           emit transcodingFinished(outputPath);
@@ -109,8 +124,10 @@ void AudioTranscoder::transcode(const QString &inputPath) {
       });
 
   connect(process_, &QProcess::errorOccurred, this,
-          [this](QProcess::ProcessError error) {
-            emit transcodingFailed(tr("进程错误: ") + QString::number(error));
+          [this](QProcess::ProcessError) {
+            if (!process_)
+              return;
+            emit transcodingFailed(tr("进程错误: ") + process_->errorString());
             process_->deleteLater();
             process_ = nullptr;
           });

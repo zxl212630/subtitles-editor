@@ -27,4 +27,5 @@ private:
   QString ffmpegPath_;
   QProcess *process_ = nullptr;
   int durationMs_ = 0;
+  bool aborting_ = false;
 };
