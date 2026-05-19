@@ -11,7 +11,8 @@
 #include <QUrl>
 #include <QUrlQuery>
 
-OssUploader::OssUploader(QObject *parent) : QObject(parent) {
+OssUploader::OssUploader(QObject *parent)
+    : QObject(parent), networkManager_(new QNetworkAccessManager(this)) {
   ossAccessKeyId_ = ConfigManager::instance().ossAccessKeyId();
   ossAccessKeySecret_ = ConfigManager::instance().ossAccessKeySecret();
   ossBucket_ = ConfigManager::instance().ossBucket();
@@ -88,16 +89,11 @@ QString OssUploader::generatePresignedUrl(const QString &ossPath) {
                              .arg(ossBucket_)
                              .arg(ossPath);
 
-  qDebug() << "=== Presigned URL StringToSign ===";
-  qDebug() << stringToSign;
-
   // Compute signature using HMAC-SHA1
   QByteArray key = ossAccessKeySecret_.toUtf8();
   QByteArray data = stringToSign.toUtf8();
   QByteArray signatureBytes = hmacSha1(key, data);
   QString signature = QString::fromLatin1(signatureBytes.toBase64());
-
-  qDebug() << "Signature (base64):" << signature;
 
   // Build URL manually with proper query parameters
   QString urlStr =
@@ -108,14 +104,10 @@ QString OssUploader::generatePresignedUrl(const QString &ossPath) {
           .arg(ossAccessKeyId_)
           .arg(QString::fromLatin1(QUrl::toPercentEncoding(signature)));
 
-  qDebug() << "Final presigned URL:" << urlStr;
   return urlStr;
 }
 
 void OssUploader::upload(const QString &localFilePath) {
-  qDebug() << "=== OssUploader::upload() ===";
-  qDebug() << "Local file:" << localFilePath;
-
   aborting_ = false;
 
   // Validate credentials
@@ -129,29 +121,22 @@ void OssUploader::upload(const QString &localFilePath) {
     return;
   }
 
-  qDebug() << "AccessKeyId:" << ossAccessKeyId_;
-  qDebug() << "Bucket:" << ossBucket_;
-  qDebug() << "Region:" << ossRegion_;
-
-  QFile *file = new QFile(localFilePath, this);
-  if (!file->open(QIODevice::ReadOnly)) {
+  QFile file(localFilePath);
+  if (!file.open(QIODevice::ReadOnly)) {
     QString error = "Cannot open file: " + localFilePath;
     qDebug() << "ERROR:" << error;
     emit uploadFailed(error);
     return;
   }
 
-  QByteArray fileData = file->readAll();
-  qDebug() << "File size:" << fileData.size() << "bytes";
-  file->close();
+  QByteArray fileData = file.readAll();
+  file.close();
 
   QString ossPath = generateOssPath(localFilePath);
-  qDebug() << "OSS path:" << ossPath;
 
   QString endpoint =
       "https://" + ossBucket_ + ".oss-" + ossRegion_ + ".aliyuncs.com";
   QString urlStr = endpoint + "/" + ossPath;
-  qDebug() << "URL:" << urlStr;
 
   QNetworkRequest request((QUrl(urlStr)));
 
@@ -164,7 +149,6 @@ void OssUploader::upload(const QString &localFilePath) {
   // Calculate Content-MD5 first (needed for signature)
   QByteArray contentMd5 =
       QCryptographicHash::hash(fileData, QCryptographicHash::Md5).toBase64();
-  qDebug() << "Content-MD5:" << contentMd5;
 
   // StringToSign format:
   // PUT\n
@@ -180,36 +164,24 @@ void OssUploader::upload(const QString &localFilePath) {
   stringToSign += date + "\n";
   stringToSign += "/" + ossBucket_ + "/" + ossPath;
 
-  qDebug() << "=== Signature Calculation ===";
-  qDebug() << "StringToSign (raw):" << stringToSign;
-  qDebug() << "StringToSign (escaped):" << stringToSign.toUtf8().toHex();
-
   // Calculate HMAC-SHA1
   QByteArray key = ossAccessKeySecret_.toUtf8();
   QByteArray data = stringToSign.toUtf8();
-  qDebug() << "Key length:" << key.length();
-  qDebug() << "Data length:" << data.length();
 
   QByteArray hash = hmacSha1(key, data);
   QString signature = hash.toBase64();
-  qDebug() << "HMAC-SHA1 (base64):" << signature;
 
   QString authHeader = QString("OSS %1:%2").arg(ossAccessKeyId_).arg(signature);
-  qDebug() << "Authorization header:" << authHeader;
 
   request.setRawHeader("Authorization", authHeader.toUtf8());
   request.setRawHeader("Content-Type", contentType.toUtf8());
   request.setRawHeader("Content-MD5", contentMd5);
   request.setRawHeader("Date", date.toUtf8());
 
-  qDebug() << "=== Sending Request ===";
-
-  QNetworkAccessManager *manager = new QNetworkAccessManager(this);
-  reply_ = manager->put(request, fileData);
+  reply_ = networkManager_->put(request, fileData);
 
   connect(reply_, &QNetworkReply::uploadProgress, this,
           [this](qint64 bytesSent, qint64 bytesTotal) {
-            qDebug() << "Progress:" << bytesSent << "/" << bytesTotal;
             emit uploadProgressBytes(bytesSent, bytesTotal);
             if (bytesTotal > 0) {
               int percent = static_cast<int>((bytesSent * 100) / bytesTotal);
@@ -218,12 +190,9 @@ void OssUploader::upload(const QString &localFilePath) {
           });
 
   connect(reply_, &QNetworkReply::finished, this, [this, urlStr, ossPath]() {
-    qDebug() << "=== Request Finished ===";
     if (!reply_)
       return;
-    qDebug() << "Error:" << reply_->error() << reply_->errorString();
     QByteArray response = reply_->readAll();
-    qDebug() << "Response body:" << response;
 
     if (aborting_) {
       aborting_ = false;
@@ -234,8 +203,6 @@ void OssUploader::upload(const QString &localFilePath) {
 
     if (reply_->error() == QNetworkReply::NoError) {
       QString presignedUrl = generatePresignedUrl(ossPath);
-      qDebug() << "Upload SUCCESS! URL:" << urlStr;
-      qDebug() << "Presigned URL:" << presignedUrl;
       emit uploadFinished(urlStr, presignedUrl);
     } else {
       QString errorMsg =
@@ -243,7 +210,6 @@ void OssUploader::upload(const QString &localFilePath) {
       if (!response.isEmpty()) {
         errorMsg += QString(" | Response: %1").arg(QString::fromUtf8(response));
       }
-      qDebug() << "Upload FAILED:" << errorMsg;
       emit uploadFailed(errorMsg);
     }
     reply_->deleteLater();

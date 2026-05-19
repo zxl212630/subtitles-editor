@@ -3,6 +3,7 @@
 #include <QObject>
 #include <QString>
 
+class QNetworkAccessManager;
 class QNetworkReply;
 
 class OssUploader : public QObject {
@@ -32,6 +33,7 @@ private:
   QString ossRegion_;
   QString ossAccessKeyId_;
   QString ossAccessKeySecret_;
+  QNetworkAccessManager *networkManager_ = nullptr;
   QNetworkReply *reply_ = nullptr;
   bool aborting_ = false;
 };
