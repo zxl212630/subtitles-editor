@@ -278,14 +278,6 @@ void AppWindow::setupSplitterLayout() {
             d->timelinePanel->update();
           });
 
-  connect(d->timelinePanel, &TimelinePanel::asrSucceeded, this, []() {
-    auto *box = new QMessageBox(QMessageBox::Information, "语音识别完成",
-                                "字幕已成功生成！", QMessageBox::Ok);
-    applyMessageBoxStyle(box);
-    box->exec();
-    delete box;
-  });
-
   // 12. TimelinePanel subtitle drop -> AppWindow
   connect(d->timelinePanel, &TimelinePanel::subtitleFileDropped, this,
           &AppWindow::onSubtitleFileDropped);
