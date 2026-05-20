@@ -438,3 +438,82 @@ QPushButton#SubtitleActionBtn:disabled {
     background-color: @border_dark;
     color: @text_muted;
 }
+
+/* AppMessageBox */
+QLabel#MessageBoxIcon {
+    font-size: 36px;
+    background: transparent;
+}
+
+QLabel#MessageBoxText {
+    color: @text_normal;
+    font-size: 13px;
+    background: transparent;
+    line-height: 1.5;
+}
+
+QLabel#MessageBoxTitle {
+    color: @text_normal;
+    font-family: Inter, sans-serif;
+    font-size: 13px;
+    font-weight: bold;
+    background: transparent;
+}
+
+QWidget#MessageBoxContent {
+    background-color: @bg_panel;
+}
+
+QWidget#MessageBoxFooter {
+    background-color: @bg_lighter;
+    border-top: 1px solid @border_dark;
+}
+
+QPushButton#MessageBoxOkBtn, QPushButton#MessageBoxYesBtn {
+    background-color: @primary_color;
+    color: #ffffff;
+    border: none;
+    padding: 7px 18px;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 500;
+    min-width: 70px;
+}
+
+QPushButton#MessageBoxOkBtn:hover, QPushButton#MessageBoxYesBtn:hover {
+    background-color: @primary_hover;
+}
+
+QPushButton#MessageBoxNoBtn, QPushButton#MessageBoxCancelBtn {
+    background-color: @border_color;
+    color: @text_normal;
+    border: none;
+    padding: 7px 18px;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 500;
+    min-width: 70px;
+}
+
+QPushButton#MessageBoxNoBtn:hover, QPushButton#MessageBoxCancelBtn:hover {
+    background-color: @text_muted;
+}
+
+/* AsrProgressDialog title bar */
+QDialog#AsrProgressDialog QFrame#TitleBar {
+    border-bottom: none;
+}
+
+QPushButton#AsrCancelButton {
+    background-color: @border_color;
+    color: @text_normal;
+    border: none;
+    padding: 7px 18px;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 500;
+}
+
+QPushButton#AsrCancelButton:hover {
+    background-color: @text_muted;
+}

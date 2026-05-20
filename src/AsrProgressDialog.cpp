@@ -9,18 +9,24 @@
 #include <QPainterPath>
 #include <QPushButton>
 #include <QVBoxLayout>
+#include <QWindowKit/QWKWidgets/widgetwindowagent.h>
 #include <QtMath>
 
 AsrProgressDialog::AsrProgressDialog(QWidget *parent) : QDialog(parent) {
   setObjectName("AsrProgressDialog");
   setWindowTitle(tr("语音识别"));
   setFixedSize(460, 320);
-  setWindowFlags(windowFlags() & ~Qt::WindowContextHelpButtonHint);
+
+  windowAgent_ = new QWK::WidgetWindowAgent(this);
+  windowAgent_->setup(this);
+
+  setupTitleBar();
 
   auto *mainLayout = new QVBoxLayout(this);
   mainLayout->setContentsMargins(0, 0, 0, 20);
   mainLayout->setSpacing(0);
 
+  mainLayout->addWidget(titleBar_);
   mainLayout->addStretch();
 
   statusLabel_ = new QLabel(tr("准备中..."), this);
@@ -54,6 +60,8 @@ AsrProgressDialog::AsrProgressDialog(QWidget *parent) : QDialog(parent) {
   connect(animTimer_, &QTimer::timeout, this,
           &AsrProgressDialog::onAnimationTick);
   animTimer_->start();
+
+  windowAgent_->setTitleBar(titleBar_);
 }
 
 AsrProgressDialog::~AsrProgressDialog() = default;
@@ -103,6 +111,24 @@ void AsrProgressDialog::closeEvent(QCloseEvent *event) {
     emit canceled();
   }
   event->accept();
+}
+
+void AsrProgressDialog::setupTitleBar() {
+  titleBar_ = new QFrame(this);
+  titleBar_->setFixedHeight(36);
+  titleBar_->setObjectName("TitleBar");
+
+  auto *layout = new QHBoxLayout(titleBar_);
+  layout->setContentsMargins(12, 0, 12, 0);
+  layout->setSpacing(0);
+
+  layout->addStretch();
+
+  titleLabel_ = new QLabel(tr("语音识别"), titleBar_);
+  titleLabel_->setObjectName("ConfigTitleLeftLabel");
+  layout->addWidget(titleLabel_);
+
+  layout->addStretch();
 }
 
 void AsrProgressDialog::paintEvent(QPaintEvent *event) {

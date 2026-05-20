@@ -1,4 +1,5 @@
 #include "AppWindow.h"
+#include "AppMessageBox.h"
 #include "ConfigDialog.h"
 #include "ConfigManager.h"
 #include "MediaPlayer.h"
@@ -21,7 +22,6 @@
 #include <QFrame>
 #include <QHBoxLayout>
 #include <QLabel>
-#include <QMessageBox>
 #include <QProcess>
 #include <QPushButton>
 #include <QSplitter>
@@ -31,17 +31,6 @@
 #include <QVBoxLayout>
 #include <QWidget>
 #include <QWindowKit/QWKWidgets/widgetwindowagent.h>
-
-static void applyMessageBoxStyle(QMessageBox *box) {
-  if (auto *btn = box->button(QMessageBox::Ok))
-    btn->setText(QCoreApplication::translate("AppWindow", "确定"));
-  if (auto *btn = box->button(QMessageBox::Yes))
-    btn->setText(QCoreApplication::translate("AppWindow", "是"));
-  if (auto *btn = box->button(QMessageBox::No))
-    btn->setText(QCoreApplication::translate("AppWindow", "否"));
-  if (auto *btn = box->button(QMessageBox::Cancel))
-    btn->setText(QCoreApplication::translate("AppWindow", "取消"));
-}
 
 struct AppWindow::Private {
   QWK::WidgetWindowAgent *windowAgent = nullptr;
@@ -74,16 +63,13 @@ AppWindow::AppWindow(QWidget *parent)
 void AppWindow::checkConfig() {
   if (!ConfigManager::instance().isValid()) {
     QString configPath = ConfigManager::instance().configFilePath();
-    auto *box = new QMessageBox(
-        QMessageBox::Warning, tr("配置缺失"),
+    AppMessageBox::warning(
+        this, tr("配置缺失"),
         QString(
             tr("未检测到有效配置文件，部分功能（如语音识别）将无法使用。\n\n"
                "请在以下路径创建或编辑配置文件：\n%1\n\n"
                "确保包含 ffmpeg、腾讯云 ASR 和阿里云 OSS 的必要配置项。"))
-            .arg(configPath),
-        QMessageBox::Ok, this);
-    applyMessageBoxStyle(box);
-    box->exec();
+            .arg(configPath));
   }
 }
 
@@ -363,14 +349,10 @@ void AppWindow::onSubtitleFileDropped(const QString &path) {
 
   // Confirm overwrite if track not empty
   if (!d->subtitleTrack->items().isEmpty()) {
-    auto *box = new QMessageBox(
-        QMessageBox::Question, tr("确认覆盖"),
-        tr("字幕轨道已有内容，继续导入将清空现有字幕，是否继续？"),
-        QMessageBox::Yes | QMessageBox::No, this);
-    box->setDefaultButton(QMessageBox::No);
-    applyMessageBoxStyle(box);
-    int ret = box->exec();
-    if (ret != QMessageBox::Yes)
+    int ret = AppMessageBox::question(
+        this, tr("确认覆盖"),
+        tr("字幕轨道已有内容，继续导入将清空现有字幕，是否继续？"));
+    if (ret != AppMessageBox::Yes)
       return;
     d->subtitleTrack->clear();
   }
@@ -423,11 +405,8 @@ void AppWindow::onSubtitleFileDropped(const QString &path) {
       d->mediaPlayer->seek(0);
 
   } catch (...) {
-    auto *box = new QMessageBox(QMessageBox::Critical, tr("字幕文件格式错误"),
-                                tr("无法解析字幕文件，请检查文件格式。"),
-                                QMessageBox::Ok, this);
-    applyMessageBoxStyle(box);
-    box->exec();
+    AppMessageBox::critical(this, tr("字幕文件格式错误"),
+                            tr("无法解析字幕文件，请检查文件格式。"));
   }
 }
 
@@ -440,14 +419,10 @@ void AppWindow::onVideoAsrRequested() {
     return;
 
   if (!d->subtitleTrack->items().isEmpty()) {
-    auto *box = new QMessageBox(
-        QMessageBox::Question, tr("确认覆盖"),
-        tr("字幕轨道已有内容，语音识别将清空现有字幕，是否继续？"),
-        QMessageBox::Yes | QMessageBox::No, this);
-    box->setDefaultButton(QMessageBox::No);
-    applyMessageBoxStyle(box);
-    int ret = box->exec();
-    if (ret != QMessageBox::Yes)
+    int ret = AppMessageBox::question(
+        this, tr("确认覆盖"),
+        tr("字幕轨道已有内容，语音识别将清空现有字幕，是否继续？"));
+    if (ret != AppMessageBox::Yes)
       return;
   }
 
@@ -593,11 +568,8 @@ void AppWindow::setupDummyData() {
 
 void AppWindow::onExportRequested() {
   if (!d->subtitleTrack || d->subtitleTrack->items().isEmpty()) {
-    auto *box = new QMessageBox(QMessageBox::Warning, tr("导出字幕"),
-                                tr("当前没有字幕内容，无法导出。"),
-                                QMessageBox::Ok, this);
-    applyMessageBoxStyle(box);
-    box->exec();
+    AppMessageBox::warning(this, tr("导出字幕"),
+                           tr("当前没有字幕内容，无法导出。"));
     return;
   }
 
@@ -624,11 +596,8 @@ void AppWindow::onExportRequested() {
   }
 
   if (!success) {
-    auto *box = new QMessageBox(QMessageBox::Critical, tr("导出失败"),
-                                tr("导出字幕失败，请检查文件路径和权限。"),
-                                QMessageBox::Ok, this);
-    applyMessageBoxStyle(box);
-    box->exec();
+    AppMessageBox::critical(this, tr("导出失败"),
+                            tr("导出字幕失败，请检查文件路径和权限。"));
   }
 }
 
