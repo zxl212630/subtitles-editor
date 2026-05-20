@@ -7,6 +7,7 @@
 class QLabel;
 class QPushButton;
 class QFrame;
+class QVBoxLayout;
 
 namespace QWK {
 class WidgetWindowAgent;
@@ -64,6 +65,7 @@ private:
   void onButtonClicked(StandardButton button);
 
   QWK::WidgetWindowAgent *windowAgent_ = nullptr;
+  QVBoxLayout *mainLayout_ = nullptr;
   QFrame *titleBar_ = nullptr;
   QLabel *titleLabel_ = nullptr;
   QLabel *iconLabel_ = nullptr;

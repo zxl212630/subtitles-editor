@@ -149,8 +149,12 @@ void AsrProgressDialog::paintEvent(QPaintEvent *event) {
 
   int w = width();
 
+  // Title bar offset: paintEvent draws on dialog rect, but title bar
+  // occupies the top 36px. Shift all Y coordinates down.
+  const int titleH = 36;
+
   // ── Step indicator area ──
-  const int stepY = 30;
+  const int stepY = 30 + titleH;
   const int stepR = 14;
   const int lineY = stepY;
   const int stepSpacing = 140;
@@ -269,7 +273,7 @@ void AsrProgressDialog::paintEvent(QPaintEvent *event) {
   }
 
   // ── Animation area ──
-  const int animTop = 90;
+  const int animTop = 90 + titleH;
   const int animH = 130;
   const int animCenter = w / 2;
   const int iconSize = 48;

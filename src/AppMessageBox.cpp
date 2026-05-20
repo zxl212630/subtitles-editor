@@ -150,11 +150,11 @@ void AppMessageBox::setupTitleBar() {
 }
 
 void AppMessageBox::setupContent() {
-  auto *mainLayout = new QVBoxLayout(this);
-  mainLayout->setContentsMargins(0, 0, 0, 0);
-  mainLayout->setSpacing(0);
+  mainLayout_ = new QVBoxLayout(this);
+  mainLayout_->setContentsMargins(0, 0, 0, 0);
+  mainLayout_->setSpacing(0);
 
-  mainLayout->addWidget(titleBar_);
+  mainLayout_->addWidget(titleBar_);
 
   auto *content = new QWidget(this);
   content->setObjectName("MessageBoxContent");
@@ -177,12 +177,11 @@ void AppMessageBox::setupContent() {
   textLabel_->setTextInteractionFlags(Qt::TextSelectableByMouse);
   contentLayout->addWidget(textLabel_, 1);
 
-  mainLayout->addWidget(content);
+  mainLayout_->addWidget(content);
 }
 
 void AppMessageBox::setupFooter() {
-  auto *mainLayout = layout();
-  if (!mainLayout)
+  if (!mainLayout_)
     return;
 
   auto *footer = new QWidget(this);
@@ -204,7 +203,7 @@ void AppMessageBox::setupFooter() {
   if (okBtn_)
     footerLayout->addWidget(okBtn_);
 
-  mainLayout->addWidget(footer);
+  mainLayout_->addWidget(footer);
 }
 
 // ── Button handler ──
