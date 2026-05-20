@@ -8,19 +8,19 @@
 #include "TencentAsrService.h"
 #include "ThemeManager.h"
 
-#include <QPointer>
 #include <QApplication>
 #include <QContextMenuEvent>
 #include <QDateTime>
 #include <QFileInfo>
 #include <QFontDatabase>
+#include <QIcon>
 #include <QMenu>
 #include <QMimeData>
 #include <QMouseEvent>
 #include <QPainter>
 #include <QPainterPath>
+#include <QPointer>
 #include <QScrollBar>
-#include <QIcon>
 #include <QWheelEvent>
 
 static QCursor createSvgCursor(const QString &path, int hotX, int hotY) {
@@ -69,11 +69,10 @@ TimelinePanel::TimelinePanel(QWidget *parent) : QWidget(parent) {
   hScrollBar_ = new QScrollBar(Qt::Horizontal, this);
   hScrollBar_->setObjectName("TimelineScrollBar");
   hScrollBar_->setFixedHeight(12);
-connect(hScrollBar_, &QScrollBar::valueChanged, this, [this](int value) {
+  connect(hScrollBar_, &QScrollBar::valueChanged, this, [this](int value) {
     scrollOffsetX_ = value;
     canvas_->update();
   });
-
 }
 
 int TimelinePanel::timeToX(qint64 ms) const {
@@ -311,17 +310,16 @@ void TimelinePanel::drawOnCanvas(QPainter &painter) {
     painter.setPen(Qt::NoPen);
     painter.fillRect(0, subY, TRACK_HEAD_WIDTH, SUBTITLE_TRACK_HEIGHT,
                      bgLighter);
-    painter.fillRect(0, vidY, TRACK_HEAD_WIDTH, VIDEO_TRACK_HEIGHT,
-                     bgLighter);
+    painter.fillRect(0, vidY, TRACK_HEAD_WIDTH, VIDEO_TRACK_HEIGHT, bgLighter);
 
     painter.setPen(textMuted);
     QFont font = painter.font();
     font.setPointSize(10);
     painter.setFont(font);
     painter.drawText(12, subY, TRACK_HEAD_WIDTH - 24, SUBTITLE_TRACK_HEIGHT,
-                     Qt::AlignVCenter | Qt::AlignLeft, "T  字幕1");
+                     Qt::AlignVCenter | Qt::AlignLeft, tr("T  字幕1"));
     painter.drawText(12, vidY, TRACK_HEAD_WIDTH - 24, VIDEO_TRACK_HEIGHT,
-                     Qt::AlignVCenter | Qt::AlignLeft, "F  视频1");
+                     Qt::AlignVCenter | Qt::AlignLeft, tr("F  视频1"));
 
     // Separator between track heads
     painter.setPen(borderDark);
@@ -331,8 +329,7 @@ void TimelinePanel::drawOnCanvas(QPainter &painter) {
     painter.setPen(Qt::NoPen);
     painter.fillRect(TRACK_HEAD_WIDTH, subY,
                      canvas_->width() - TRACK_HEAD_WIDTH - PANEL_RIGHT_MARGIN,
-                     SUBTITLE_TRACK_HEIGHT + VIDEO_TRACK_HEIGHT,
-                     bgBase);
+                     SUBTITLE_TRACK_HEIGHT + VIDEO_TRACK_HEIGHT, bgBase);
 
     drawEmptyState(painter);
   } else {
@@ -345,13 +342,14 @@ void TimelinePanel::drawOnCanvas(QPainter &painter) {
 void TimelinePanel::drawRuler(QPainter &painter) {
   painter.save();
   int contentWidth = canvas_->width() - TRACK_HEAD_WIDTH - PANEL_RIGHT_MARGIN;
-  
+
   QColor bgLighter = ThemeManager::instance().getBgLighterColor();
   QColor textMuted = ThemeManager::instance().getTextMutedColor();
   QColor borderDark = ThemeManager::instance().getBorderDarkColor();
 
   // Background for ruler
-  painter.fillRect(canvas_->rect().left(), 0, canvas_->rect().width(), RULER_HEIGHT, bgLighter);
+  painter.fillRect(canvas_->rect().left(), 0, canvas_->rect().width(),
+                   RULER_HEIGHT, bgLighter);
 
   painter.setClipRect(TRACK_HEAD_WIDTH, 0, contentWidth, RULER_HEIGHT);
 
@@ -460,14 +458,13 @@ void TimelinePanel::drawSubtitleTrack(QPainter &painter, int y) {
 
   // Track head
   painter.setPen(Qt::NoPen);
-  painter.fillRect(0, y, TRACK_HEAD_WIDTH, SUBTITLE_TRACK_HEIGHT,
-                   bgLighter);
+  painter.fillRect(0, y, TRACK_HEAD_WIDTH, SUBTITLE_TRACK_HEIGHT, bgLighter);
   painter.setPen(textMuted);
   QFont font = painter.font();
   font.setPointSize(10);
   painter.setFont(font);
   painter.drawText(12, y, TRACK_HEAD_WIDTH - 24, SUBTITLE_TRACK_HEIGHT,
-                   Qt::AlignVCenter | Qt::AlignLeft, "T  字幕1");
+                   Qt::AlignVCenter | Qt::AlignLeft, tr("T  字幕1"));
 
   // Separator (full width including track head)
   painter.setPen(borderDark);
@@ -482,7 +479,8 @@ void TimelinePanel::drawSubtitleTrack(QPainter &painter, int y) {
   painter.setClipRect(TRACK_HEAD_WIDTH, y, contentWidth, SUBTITLE_TRACK_HEIGHT);
 
   QColor primaryColor = ThemeManager::instance().getPrimaryColor();
-  QColor primaryHover = primaryColor.lighter(110); // Simple derivation for selected state
+  QColor primaryHover =
+      primaryColor.lighter(110); // Simple derivation for selected state
 
   // Subtitle bars
   for (const auto &item : track_->items()) {
@@ -536,14 +534,13 @@ void TimelinePanel::drawVideoTrack(QPainter &painter, int y) {
                    bgBase);
 
   painter.setPen(Qt::NoPen);
-  painter.fillRect(0, y, TRACK_HEAD_WIDTH, VIDEO_TRACK_HEIGHT,
-                   bgLighter);
+  painter.fillRect(0, y, TRACK_HEAD_WIDTH, VIDEO_TRACK_HEIGHT, bgLighter);
   painter.setPen(textMuted);
   QFont font = painter.font();
   font.setPointSize(10);
   painter.setFont(font);
   painter.drawText(12, y, TRACK_HEAD_WIDTH - 24, VIDEO_TRACK_HEIGHT,
-                   Qt::AlignVCenter | Qt::AlignLeft, "F  视频1");
+                   Qt::AlignVCenter | Qt::AlignLeft, tr("F  视频1"));
 
   painter.save();
   painter.setClipRect(TRACK_HEAD_WIDTH, y, contentWidth, VIDEO_TRACK_HEIGHT);
@@ -551,7 +548,8 @@ void TimelinePanel::drawVideoTrack(QPainter &painter, int y) {
   // Video bar (duration-based) - only draw if a video file is loaded
   if (!mediaFilePath_.isEmpty()) {
     painter.setPen(Qt::NoPen);
-    QColor videoBarColor = ThemeManager::instance().getPrimaryColor().darker(120);
+    QColor videoBarColor =
+        ThemeManager::instance().getPrimaryColor().darker(120);
     painter.setBrush(videoBarColor);
     int videoX = timeToX(0);
     int videoEndX = timeToX(totalDurationMs_);
@@ -628,7 +626,7 @@ void TimelinePanel::drawEmptyState(QPainter &painter) {
   painter.setFont(hintFont);
   int textY = boxRect.bottom() - 28;
   painter.drawText(centerX - boxW / 2, textY, boxW, 24, Qt::AlignCenter,
-                   "将视频和资源拖拽到此处，开始创作");
+                   tr("将视频和资源拖拽到此处，开始创作"));
 }
 
 void TimelinePanel::drawPlayhead(QPainter &painter) {
@@ -1020,13 +1018,13 @@ void TimelinePanel::startAsrPipeline(const QString &localPath) {
   connect(transcoder, &AudioTranscoder::transcodingFailed, this,
           [dialog](const QString &error) {
             qDebug() << "[ASR] transcodingFailed:" << error;
-            dialog->setError(QString("转码失败: %1").arg(error));
+            dialog->setError(tr("转码失败: %1").arg(error));
           });
 
   connect(uploader, &OssUploader::uploadFailed, this,
           [dialog](const QString &error) {
             qDebug() << "[ASR] uploadFailed:" << error;
-            dialog->setError(QString("上传失败: %1").arg(error));
+            dialog->setError(tr("上传失败: %1").arg(error));
           });
 
   transcoder->transcode(localPath);
@@ -1108,9 +1106,9 @@ void TimelinePanel::contextMenuEvent(QContextMenuEvent *event) {
     return;
 
   QMenu menu(this);
-QAction *propAction = menu.addAction("属性");
-  QAction *openLocAction = menu.addAction("打开文件所在位置");
-  QAction *asrAction = menu.addAction("语音转文字");
+  QAction *propAction = menu.addAction(tr("属性"));
+  QAction *openLocAction = menu.addAction(tr("打开文件所在位置"));
+  QAction *asrAction = menu.addAction(tr("语音转文字"));
 
   QAction *selected = menu.exec(event->globalPos());
   if (selected == propAction) {

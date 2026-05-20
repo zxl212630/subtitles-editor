@@ -4,6 +4,7 @@
 #include "SubtitleTrack.h"
 #include "ThemeManager.h"
 
+#include <QCoreApplication>
 #include <QFrame>
 #include <QHBoxLayout>
 #include <QHeaderView>
@@ -29,9 +30,9 @@ public:
     layout->setSpacing(10);
     layout->setAlignment(Qt::AlignCenter);
 
-    addBtn_ = createBtn(":/icons/add.svg", "添加");
+    addBtn_ = createBtn(":/icons/add.svg", tr("添加"));
     addBtn_->setObjectName("SubtitleActionBtn");
-    mergeBtn_ = createBtn(":/icons/merge.svg", "合并");
+    mergeBtn_ = createBtn(":/icons/merge.svg", tr("合并"));
     mergeBtn_->setObjectName("SubtitleActionBtn");
 
     layout->addStretch();
@@ -39,14 +40,11 @@ public:
     layout->addWidget(mergeBtn_);
     layout->addStretch();
 
-    connect(addBtn_, &QPushButton::clicked, this, [this]() {
-      emit addClicked(gapStart_, gapEnd_);
-    });
-    connect(mergeBtn_, &QPushButton::clicked, this, [this]() {
-      emit mergeClicked();
-    });
-    }
-
+    connect(addBtn_, &QPushButton::clicked, this,
+            [this]() { emit addClicked(gapStart_, gapEnd_); });
+    connect(mergeBtn_, &QPushButton::clicked, this,
+            [this]() { emit mergeClicked(); });
+  }
 
   void updateState(qint64 gapStart, qint64 gapEnd, bool canMerge, double fps) {
     gapStart_ = gapStart;
@@ -109,7 +107,7 @@ void SubtitleListPanel::setTotalDuration(qint64 ms) { totalDurationMs_ = ms; }
 void SubtitleListPanel::setupUi() {
   setObjectName("SubtitleListPanel");
   setAttribute(Qt::WA_StyledBackground);
-auto *layout = new QVBoxLayout(this);
+  auto *layout = new QVBoxLayout(this);
   layout->setContentsMargins(0, 0, 0, 0);
   layout->setSpacing(0);
 
@@ -117,7 +115,7 @@ auto *layout = new QVBoxLayout(this);
   auto *panelHeader = new QFrame(this);
   panelHeader->setObjectName("SubtitlePanelHeader");
   panelHeader->setFixedHeight(40);
-auto *phLayout = new QHBoxLayout(panelHeader);
+  auto *phLayout = new QHBoxLayout(panelHeader);
   phLayout->setContentsMargins(12, 6, 0, 6);
   phLayout->setSpacing(4);
   phLayout->setAlignment(Qt::AlignLeft | Qt::AlignVCenter);
@@ -127,20 +125,20 @@ auto *phLayout = new QHBoxLayout(panelHeader);
     tab->setObjectName("SubtitleTabBtn");
     tab->setProperty("active", active);
     tab->setFixedSize(60, 28);
-phLayout->addWidget(tab);
+    phLayout->addWidget(tab);
   };
 
-  addTab("字幕", true);
-  addTab("预设", false);
-  addTab("自定义", false);
-  addTab("动画", false);
+  addTab(tr("字幕"), true);
+  addTab(tr("预设"), false);
+  addTab(tr("自定义"), false);
+  addTab(tr("动画"), false);
   phLayout->addStretch();
   layout->addWidget(panelHeader);
 
   // --- Panel content ---
   auto *panelContent = new QFrame(this);
   panelContent->setObjectName("SubtitlePanelContent");
-panelContent->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
+  panelContent->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
   auto *pcLayout = new QVBoxLayout(panelContent);
   pcLayout->setContentsMargins(12, 12, 12, 12);
   pcLayout->setSpacing(0);
@@ -149,7 +147,7 @@ panelContent->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
   auto *searchBar = new QFrame(panelContent);
   searchBar->setObjectName("SubtitleSearchBar");
   searchBar->setFixedHeight(40);
-auto *sbLayout = new QHBoxLayout(searchBar);
+  auto *sbLayout = new QHBoxLayout(searchBar);
   sbLayout->setContentsMargins(0, 0, 0, 0);
   sbLayout->setAlignment(Qt::AlignVCenter);
 
@@ -157,7 +155,7 @@ auto *sbLayout = new QHBoxLayout(searchBar);
   auto *searchInput = new QFrame(searchBar);
   searchInput->setObjectName("SubtitleSearchInputContainer");
   searchInput->setFixedHeight(28);
-auto *siLayout = new QHBoxLayout(searchInput);
+  auto *siLayout = new QHBoxLayout(searchInput);
   siLayout->setContentsMargins(10, 0, 10, 0);
   siLayout->setSpacing(8);
   siLayout->setAlignment(Qt::AlignVCenter);
@@ -165,15 +163,15 @@ auto *siLayout = new QHBoxLayout(searchInput);
   auto *searchIcon = new QLabel(searchInput);
   searchIcon->setObjectName("SubtitleSearchIcon");
   searchIcon->setText("\u2315"); // ⌕ search icon
-searchIcon->setFixedSize(22, 22);
+  searchIcon->setFixedSize(22, 22);
   searchIcon->setAlignment(Qt::AlignCenter);
   siLayout->addWidget(searchIcon);
 
   searchEdit_ = new QLineEdit(searchInput);
   searchEdit_->setObjectName("SubtitleSearchEdit");
-  searchEdit_->setPlaceholderText("请输入查找内容");
+  searchEdit_->setPlaceholderText(tr("请输入查找内容"));
   searchEdit_->setFixedHeight(28);
-siLayout->addWidget(searchEdit_);
+  siLayout->addWidget(searchEdit_);
 
   sbLayout->addWidget(searchInput);
   pcLayout->addWidget(searchBar);
@@ -184,7 +182,7 @@ siLayout->addWidget(searchEdit_);
   // List container
   auto *listContainer = new QFrame(panelContent);
   listContainer->setObjectName("SubtitleListContainer");
-listContainer->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
+  listContainer->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
   auto *lcLayout = new QVBoxLayout(listContainer);
   lcLayout->setContentsMargins(0, 0, 0, 0);
   lcLayout->setSpacing(0);
@@ -193,30 +191,30 @@ listContainer->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
   auto *tableHeader = new QFrame(listContainer);
   tableHeader->setObjectName("SubtitleTableHeader");
   tableHeader->setFixedHeight(32);
-auto *thLayout = new QHBoxLayout(tableHeader);
+  auto *thLayout = new QHBoxLayout(tableHeader);
   thLayout->setContentsMargins(12, 0, 12, 0);
   thLayout->setSpacing(12);
   thLayout->setAlignment(Qt::AlignVCenter);
 
   auto *headerLeft = new QFrame(tableHeader);
   headerLeft->setObjectName("SubtitleHeaderLeft");
-auto *hlLayout = new QHBoxLayout(headerLeft);
+  auto *hlLayout = new QHBoxLayout(headerLeft);
   hlLayout->setContentsMargins(0, 0, 0, 0);
   hlLayout->setSpacing(80);
   hlLayout->setAlignment(Qt::AlignVCenter);
 
-  auto *headerTime = new QLabel("时间码", headerLeft);
+  auto *headerTime = new QLabel(tr("时间码"), headerLeft);
   headerTime->setObjectName("SubtitleHeaderLabel");
   hlLayout->addWidget(headerTime);
 
-  auto *headerText = new QLabel("字幕", headerLeft);
+  auto *headerText = new QLabel(tr("字幕"), headerLeft);
   headerText->setObjectName("SubtitleHeaderLabel");
   hlLayout->addWidget(headerText);
 
   thLayout->addWidget(headerLeft);
   thLayout->addStretch();
 
-  auto *headerAction = new QLabel("操作", tableHeader);
+  auto *headerAction = new QLabel(tr("操作"), tableHeader);
   headerAction->setObjectName("SubtitleHeaderLabel");
   thLayout->addWidget(headerAction);
 
@@ -226,12 +224,12 @@ auto *hlLayout = new QHBoxLayout(headerLeft);
   auto *headerSeparator = new QFrame(listContainer);
   headerSeparator->setObjectName("SubtitleHeaderSeparator");
   headerSeparator->setFixedHeight(1);
-lcLayout->addWidget(headerSeparator);
+  lcLayout->addWidget(headerSeparator);
 
   // Subtitle list
   listView_ = new QListView(listContainer);
   listView_->setObjectName("SubtitleListView");
-listView_->setSelectionMode(QAbstractItemView::SingleSelection);
+  listView_->setSelectionMode(QAbstractItemView::SingleSelection);
   listView_->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
 
   model_ = new SubtitleListModel(this);
@@ -328,7 +326,8 @@ bool SubtitleListPanel::eventFilter(QObject *watched, QEvent *event) {
 
         // Check Split Button
         if (delegate_->splitButtonRect(option).contains(me->pos())) {
-          QString id = model_->data(index, SubtitleListModel::IdRole).toString();
+          QString id =
+              model_->data(index, SubtitleListModel::IdRole).toString();
           int pos = -1;
           QString text;
           if (delegate_->getActiveEditorInfo(index, pos, text)) {
@@ -343,7 +342,8 @@ bool SubtitleListPanel::eventFilter(QObject *watched, QEvent *event) {
 
         // Check Delete Button
         if (delegate_->deleteButtonRect(option).contains(me->pos())) {
-          QString id = model_->data(index, SubtitleListModel::IdRole).toString();
+          QString id =
+              model_->data(index, SubtitleListModel::IdRole).toString();
           if (track_)
             track_->removeItem(id);
           return true; // Handled
@@ -415,9 +415,11 @@ bool SubtitleListPanel::eventFilter(QObject *watched, QEvent *event) {
 
           if (y != -1) {
             // Map viewport Y to listContainer coordinates
-            QPoint posInContainer = listView_->viewport()->mapTo(listView_->parentWidget(), QPoint(0, y));
-            
-            actionOverlay_->move(0, posInContainer.y() - actionOverlay_->height() / 2);
+            QPoint posInContainer = listView_->viewport()->mapTo(
+                listView_->parentWidget(), QPoint(0, y));
+
+            actionOverlay_->move(0, posInContainer.y() -
+                                        actionOverlay_->height() / 2);
             actionOverlay_->resize(listView_->parentWidget()->width(),
                                    actionOverlay_->height());
 

@@ -32,6 +32,7 @@ private:
   void setupSplitterLayout();
   void setupDummyData();
   void checkConfig();
+  void retranslateUi();
 
   void onSubtitleFileDropped(const QString &path);
   void onVideoAsrRequested();

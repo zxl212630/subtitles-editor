@@ -1,33 +1,29 @@
 #include "AppWindow.h"
 #include "ConfigManager.h"
 #include "ThemeManager.h"
+#include "TranslationManager.h"
 #include <QApplication>
 #include <QDebug>
-#include <QTranslator>
-#include <QStyleFactory>
 #include <QPalette>
+#include <QStyleFactory>
 
 int main(int argc, char *argv[]) {
   QApplication app(argc, argv);
   app.setApplicationName("Subtitles Editor");
 
-  // Use Fusion style for better dark theme support and cross-platform consistency
+  // Use Fusion style for better dark theme support and cross-platform
+  // consistency
   app.setStyle(QStyleFactory::create("Fusion"));
-  
+
   // Ensure ConfigManager is initialized after app properties are set
   ConfigManager::instance();
-  
+
   // Apply theme dynamically using the new ThemeManager
   ThemeManager::instance().applyTheme();
 
-  QTranslator translator;
-  QString lang = ConfigManager::instance().language();
-  if (lang.isEmpty())
-    lang = "zh_CN";
-
-  if (translator.load(QString(":/translations/%1.qm").arg(lang))) {
-    app.installTranslator(&translator);
-  }
+  // Load translation for the configured language
+  TranslationManager::instance().loadLanguage(
+      ConfigManager::instance().language());
 
   AppWindow window;
   window.show();

@@ -17,55 +17,68 @@ class WidgetWindowAgent;
 class QFrame;
 
 class ConfigDialog : public QDialog {
-    Q_OBJECT
+  Q_OBJECT
 public:
-    explicit ConfigDialog(QWidget *parent = nullptr);
-    ~ConfigDialog() override = default;
+  explicit ConfigDialog(QWidget *parent = nullptr);
+  ~ConfigDialog() override = default;
 
 private slots:
-    void onApply();
-    void onOk();
-    void onCancel();
-    void checkDirtyState();
+  void onApply();
+  void onOk();
+  void onCancel();
+  void checkDirtyState();
 
 private:
-    void setupUi();
-    void setupTitleBar();
-    void loadConfig();
-    void saveConfig();
-    bool isDirty() const;
+  void setupUi();
+  void setupTitleBar();
+  void loadConfig();
+  void saveConfig();
+  void retranslateUi();
+  bool isDirty() const;
 
-    QWK::WidgetWindowAgent *windowAgent = nullptr;
-    QFrame *titleBar = nullptr;
-    QLabel *titleLeftLabel = nullptr;
-    QLabel *titleRightLabel = nullptr;
+  QWK::WidgetWindowAgent *windowAgent = nullptr;
+  QFrame *titleBar = nullptr;
+  QLabel *titleLeftLabel = nullptr;
+  QLabel *titleRightLabel = nullptr;
 
-    QListWidget *sidebarList_;
-    QStackedWidget *stackedWidget_;
-    
-    // General Page
-    QComboBox *langCombo_;
-    ThemeSelectorWidget *themeSelector_;
-    ColorSelectorWidget *colorSelector_;
+  QListWidget *sidebarList_;
+  QStackedWidget *stackedWidget_;
 
-    // Storage Page
-    QComboBox *storageProviderCombo_;
-    QLineEdit *ossBucketEdit_;
-    QLineEdit *ossRegionEdit_;
-    QLineEdit *ossAccessKeyEdit_;
-    QLineEdit *ossSecretKeyEdit_;
+  // General Page
+  QComboBox *langCombo_;
+  ThemeSelectorWidget *themeSelector_;
+  ColorSelectorWidget *colorSelector_;
+  QLabel *langLabel_;
+  QLabel *themeLabel_;
+  QLabel *colorLabel_;
 
-    // ASR Page
-    QComboBox *asrProviderCombo_;
-    QLineEdit *tencentAppIdEdit_;
-    QLineEdit *tencentSecretIdEdit_;
-    QLineEdit *tencentSecretKeyEdit_;
+  // Storage Page
+  QComboBox *storageProviderCombo_;
+  QLineEdit *ossBucketEdit_;
+  QLineEdit *ossRegionEdit_;
+  QLineEdit *ossAccessKeyEdit_;
+  QLineEdit *ossSecretKeyEdit_;
+  QLabel *stProvLabel_;
+  QLabel *bucketLabel_;
+  QLabel *regionLabel_;
+  QLabel *akLabel_;
+  QLabel *skLabel_;
 
-    // Footer
-    QLabel *dirtyLabel_;
-    QPushButton *btnApply_;
-    QPushButton *btnOk_;
-    QPushButton *btnCancel_;
+  // ASR Page
+  QComboBox *asrProviderCombo_;
+  QLineEdit *tencentAppIdEdit_;
+  QLineEdit *tencentSecretIdEdit_;
+  QLineEdit *tencentSecretKeyEdit_;
+  QLabel *asrProvLabel_;
+  QLabel *appIdLabel_;
+  QLabel *sidLabel_;
+  QLabel *skeyLabel_;
 
-    QVariantMap initialConfig_;
+  // Footer
+  QLabel *dirtyLabel_;
+  QPushButton *btnApply_;
+  QPushButton *btnOk_;
+  QPushButton *btnCancel_;
+
+  QVariantMap initialConfig_;
 };
