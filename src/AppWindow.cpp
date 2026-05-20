@@ -2,6 +2,7 @@
 #include "ConfigDialog.h"
 #include "ConfigManager.h"
 #include "MediaPlayer.h"
+#include "SubtitleExporter.h"
 #include "SubtitleItem.h"
 #include "SubtitleListPanel.h"
 #include "SubtitleTrack.h"
@@ -46,6 +47,7 @@ struct AppWindow::Private {
   QWK::WidgetWindowAgent *windowAgent = nullptr;
   QFrame *titleBar = nullptr;
   QLabel *titleLabel = nullptr;
+  QPushButton *exportBtn = nullptr;
   QPushButton *settingsBtn = nullptr;
 
   QSplitter *verticalSplitter = nullptr;
@@ -151,6 +153,18 @@ void AppWindow::setupTitleBar() {
   connect(d->settingsBtn, &QPushButton::clicked, this,
           &AppWindow::onSettingsRequested);
 
+  d->exportBtn = new QPushButton(d->titleBar);
+  d->exportBtn->setObjectName("TitleBarExportBtn");
+  d->exportBtn->setIcon(QIcon(":/icons/export.svg"));
+  d->exportBtn->setIconSize(QSize(18, 18));
+  d->exportBtn->setFixedSize(32, 32);
+  d->exportBtn->setToolTip(tr("导出字幕"));
+  d->exportBtn->setCursor(Qt::PointingHandCursor);
+  layout->addWidget(d->exportBtn);
+  connect(d->exportBtn, &QPushButton::clicked, this,
+          &AppWindow::onExportRequested);
+
+  d->windowAgent->setHitTestVisible(d->exportBtn, true);
   d->windowAgent->setHitTestVisible(d->settingsBtn, true);
 }
 
@@ -577,6 +591,47 @@ void AppWindow::setupDummyData() {
   addItem("PremierePro-supported XML format", 8000, 11170);
 }
 
+void AppWindow::onExportRequested() {
+  if (!d->subtitleTrack || d->subtitleTrack->items().isEmpty()) {
+    auto *box = new QMessageBox(QMessageBox::Warning, tr("导出字幕"),
+                                tr("当前没有字幕内容，无法导出。"),
+                                QMessageBox::Ok, this);
+    applyMessageBoxStyle(box);
+    box->exec();
+    return;
+  }
+
+  QString filter = tr("SRT 字幕 (*.srt);;纯文本 (*.txt)");
+  QString selectedFilter;
+  QString filePath = QFileDialog::getSaveFileName(
+      this, tr("导出字幕"), QString(), filter, &selectedFilter);
+
+  if (filePath.isEmpty())
+    return;
+
+  // Ensure correct extension based on selected filter
+  QString ext = QFileInfo(filePath).suffix().toLower();
+  bool isSrt = selectedFilter.contains("*.srt", Qt::CaseInsensitive);
+  if (ext.isEmpty()) {
+    filePath += isSrt ? ".srt" : ".txt";
+  }
+
+  bool success = false;
+  if (isSrt) {
+    success = SubtitleExporter::exportToSRT(*d->subtitleTrack, filePath);
+  } else {
+    success = SubtitleExporter::exportToTXT(*d->subtitleTrack, filePath);
+  }
+
+  if (!success) {
+    auto *box = new QMessageBox(QMessageBox::Critical, tr("导出失败"),
+                                tr("导出字幕失败，请检查文件路径和权限。"),
+                                QMessageBox::Ok, this);
+    applyMessageBoxStyle(box);
+    box->exec();
+  }
+}
+
 void AppWindow::onSettingsRequested() {
   ConfigDialog dialog(this);
   dialog.exec();
@@ -585,6 +640,8 @@ void AppWindow::onSettingsRequested() {
 void AppWindow::retranslateUi() {
   setWindowTitle(tr("字幕编辑"));
   d->titleLabel->setText(tr("字幕编辑"));
+  if (d->exportBtn)
+    d->exportBtn->setToolTip(tr("导出字幕"));
   if (d->settingsBtn)
     d->settingsBtn->setToolTip(tr("设置"));
 }

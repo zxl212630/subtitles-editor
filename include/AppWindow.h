@@ -39,6 +39,7 @@ private:
   void onVideoPropertyRequested();
   void onOpenFileLocationRequested();
   void onSettingsRequested();
+  void onExportRequested();
 
 private:
   struct Private;

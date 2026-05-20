@@ -412,6 +412,14 @@ QPushButton#TitleBarSettingsBtn {
 QPushButton#TitleBarSettingsBtn:hover {
     background-color: @border_dark;
 }
+QPushButton#TitleBarExportBtn {
+    background-color: transparent;
+    border: none;
+    border-radius: 4px;
+}
+QPushButton#TitleBarExportBtn:hover {
+    background-color: @border_dark;
+}
 
 QPushButton#SubtitleActionBtn {
     background-color: @primary_color;

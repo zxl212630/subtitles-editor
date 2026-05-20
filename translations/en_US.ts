@@ -178,6 +178,31 @@ Make sure to include the necessary settings for FFmpeg, Tencent Cloud ASR, and A
         <source>音频信息</source>
         <translation>Audio Info</translation>
     </message>
+    <message>
+        <location filename="../src/AppWindow.cpp" line="596"/>
+        <source>导出字幕</source>
+        <translation>Export Subtitles</translation>
+    </message>
+    <message>
+        <location filename="../src/AppWindow.cpp" line="597"/>
+        <source>当前没有字幕内容，无法导出。</source>
+        <translation>No subtitles to export.</translation>
+    </message>
+    <message>
+        <location filename="../src/AppWindow.cpp" line="602"/>
+        <source>SRT 字幕 (*.srt);;纯文本 (*.txt)</source>
+        <translation>SRT Subtitle (*.srt);;Plain Text (*.txt)</translation>
+    </message>
+    <message>
+        <location filename="../src/AppWindow.cpp" line="627"/>
+        <source>导出失败</source>
+        <translation>Export Failed</translation>
+    </message>
+    <message>
+        <location filename="../src/AppWindow.cpp" line="628"/>
+        <source>导出字幕失败，请检查文件路径和权限。</source>
+        <translation>Failed to export subtitles. Please check the file path and permissions.</translation>
+    </message>
 </context>
 <context>
     <name>AsrProgressDialog</name>

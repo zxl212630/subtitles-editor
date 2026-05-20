@@ -178,6 +178,31 @@
         <source>音频信息</source>
         <translation>音频信息</translation>
     </message>
+    <message>
+        <location filename="../src/AppWindow.cpp" line="596"/>
+        <source>导出字幕</source>
+        <translation>导出字幕</translation>
+    </message>
+    <message>
+        <location filename="../src/AppWindow.cpp" line="597"/>
+        <source>当前没有字幕内容，无法导出。</source>
+        <translation>当前没有字幕内容，无法导出。</translation>
+    </message>
+    <message>
+        <location filename="../src/AppWindow.cpp" line="602"/>
+        <source>SRT 字幕 (*.srt);;纯文本 (*.txt)</source>
+        <translation>SRT 字幕 (*.srt);;纯文本 (*.txt)</translation>
+    </message>
+    <message>
+        <location filename="../src/AppWindow.cpp" line="627"/>
+        <source>导出失败</source>
+        <translation>导出失败</translation>
+    </message>
+    <message>
+        <location filename="../src/AppWindow.cpp" line="628"/>
+        <source>导出字幕失败，请检查文件路径和权限。</source>
+        <translation>导出字幕失败，请检查文件路径和权限。</translation>
+    </message>
 </context>
 <context>
     <name>AsrProgressDialog</name>

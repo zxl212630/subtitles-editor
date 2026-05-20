@@ -13,6 +13,7 @@
         <file>icons/resize-left.svg</file>
         <file>icons/resize-right.svg</file>
         <file>icons/settings.svg</file>
+        <file>icons/export.svg</file>
         <file>themes/dark.qss</file>
         <file>themes/midnight.qss</file>
         <file>themes/oled.qss</file>
