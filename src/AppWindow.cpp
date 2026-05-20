@@ -156,7 +156,7 @@ void AppWindow::setupTitleBar() {
   d->exportBtn = new QPushButton(d->titleBar);
   d->exportBtn->setObjectName("TitleBarExportBtn");
   d->exportBtn->setIcon(QIcon(":/icons/export.svg"));
-  d->exportBtn->setIconSize(QSize(18, 18));
+  d->exportBtn->setIconSize(QSize(20, 20));
   d->exportBtn->setFixedSize(32, 32);
   d->exportBtn->setToolTip(tr("导出字幕"));
   d->exportBtn->setCursor(Qt::PointingHandCursor);
