@@ -84,7 +84,8 @@ void VideoPropertyDialog::setupUi() {
     auto *sectionDivider = new QFrame(sectionHeader);
     sectionDivider->setObjectName("SectionDivider");
     sectionDivider->setFixedHeight(1);
-    sectionDivider->setStyleSheet("background-color: rgba(255, 255, 255, 0.1);");
+    sectionDivider->setStyleSheet(
+        "background-color: rgba(255, 255, 255, 0.1);");
     headerLayout->addWidget(sectionDivider);
 
     scrollLayout->addWidget(sectionHeader);

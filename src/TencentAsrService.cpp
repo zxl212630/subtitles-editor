@@ -23,8 +23,8 @@ TencentAsrService::~TencentAsrService() = default;
 
 void TencentAsrService::abort() {
   qDebug() << "[TencentAsrService] abort(), isAborted_=" << isAborted_
-           << "activeReply_=" << activeReply_
-           << "isRunning=" << (activeReply_ ? activeReply_->isRunning() : false);
+           << "activeReply_=" << activeReply_ << "isRunning="
+           << (activeReply_ ? activeReply_->isRunning() : false);
   if (isAborted_)
     return;
   isAborted_ = true;

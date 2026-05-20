@@ -26,7 +26,8 @@ void SubtitleListDelegate::paint(QPainter *painter,
   if (isSelected) {
     painter->setPen(Qt::NoPen);
     QColor highlight = ThemeManager::instance().getPrimaryColor();
-    highlight.setAlpha(60); // Use a semi-transparent version of primary for row selection
+    highlight.setAlpha(
+        60); // Use a semi-transparent version of primary for row selection
     painter->setBrush(highlight);
     painter->drawRoundedRect(rect.adjusted(4, 2, -4, -2), 5, 5);
   }
@@ -224,13 +225,13 @@ SubtitleListDelegate::createEditor(QWidget *parent,
     lastCursorPos_ = -1;
   });
 
-  editor->setStyleSheet(QString(
-      "QTextEdit { background-color: %1; color: %2; "
-      "border: 1px solid %3; border-radius: 4px; padding: 2px 6px; "
-      "font-family: Inter, sans-serif; font-size: 12px; }")
-      .arg(ThemeManager::instance().getBgBaseColor().name())
-      .arg(ThemeManager::instance().getTextNormalColor().name())
-      .arg(ThemeManager::instance().getPrimaryColor().name()));
+  editor->setStyleSheet(
+      QString("QTextEdit { background-color: %1; color: %2; "
+              "border: 1px solid %3; border-radius: 4px; padding: 2px 6px; "
+              "font-family: Inter, sans-serif; font-size: 12px; }")
+          .arg(ThemeManager::instance().getBgBaseColor().name())
+          .arg(ThemeManager::instance().getTextNormalColor().name())
+          .arg(ThemeManager::instance().getPrimaryColor().name()));
   editor->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
   editor->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
 

@@ -26,7 +26,8 @@ public:
   QString ossRegion() const;
 
   QString getString(const QString &group, const QString &key) const;
-  void setValue(const QString &group, const QString &key, const QVariant &value);
+  void setValue(const QString &group, const QString &key,
+                const QVariant &value);
   void sync();
   QString theme() const;
   QString primaryColor() const;

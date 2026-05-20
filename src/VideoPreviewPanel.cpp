@@ -40,10 +40,9 @@ public:
     setCursor(Qt::PointingHandCursor);
     setMouseTracking(true);
 
-    connect(&ThemeManager::instance(), &ThemeManager::themeChanged, this, [this]() {
-        update();
-    });
-}
+    connect(&ThemeManager::instance(), &ThemeManager::themeChanged, this,
+            [this]() { update(); });
+  }
   void setRatio(double ratio) {
     ratio_ = qBound(0.0, ratio, 1.0);
     update();
@@ -67,7 +66,7 @@ protected:
     int trackY = (height() - trackH) / 2;
 
     // Use colors from ThemeManager
-    auto& tm = ThemeManager::instance();
+    auto &tm = ThemeManager::instance();
     QColor trackBg = tm.getBorderDarkColor();
     QColor fillBg = tm.getPrimaryColor();
     QColor textMuted = tm.getTextMutedColor();
@@ -184,7 +183,7 @@ static QPushButton *createTextBtn(QWidget *parent, const QString &text, int w,
                                   const QString &color = "#d1d5db") {
   auto *btn = new QPushButton(text, parent);
   btn->setFixedSize(w, h);
-return btn;
+  return btn;
 }
 
 static QPushButton *createIconBtn(QWidget *parent, const QString &iconPath,
@@ -192,7 +191,7 @@ static QPushButton *createIconBtn(QWidget *parent, const QString &iconPath,
                                   const QString &hoverBg = "#333333") {
   auto *btn = new QPushButton(parent);
   btn->setFixedSize(w, h);
-if (!iconPath.isEmpty()) {
+  if (!iconPath.isEmpty()) {
     btn->setIcon(QIcon(iconPath));
     btn->setIconSize(QSize(16, 16));
   }
@@ -221,7 +220,7 @@ VideoPreviewPanel::VideoPreviewPanel(QWidget *parent) : QWidget(parent) {
 void VideoPreviewPanel::setupUi() {
   setObjectName("VideoPreviewPanel");
   setAttribute(Qt::WA_StyledBackground);
-auto *layout = new QVBoxLayout(this);
+  auto *layout = new QVBoxLayout(this);
   layout->setContentsMargins(0, 0, 0, 0);
   layout->setSpacing(0);
 
@@ -229,7 +228,7 @@ auto *layout = new QVBoxLayout(this);
   auto *toolbar = new QFrame(this);
   toolbar->setObjectName("PreviewToolbar");
   toolbar->setFixedHeight(40);
-auto *tbLayout = new QHBoxLayout(toolbar);
+  auto *tbLayout = new QHBoxLayout(toolbar);
   tbLayout->setContentsMargins(12, 0, 16, 0);
   tbLayout->setSpacing(12);
   tbLayout->setAlignment(Qt::AlignVCenter);
@@ -239,7 +238,7 @@ auto *tbLayout = new QHBoxLayout(toolbar);
   fontCombo_->setFocusPolicy(Qt::NoFocus);
   fontCombo_->setObjectName("PreviewFontCombo");
   fontCombo_->setFixedSize(140, 28);
-populateFontCombo();
+  populateFontCombo();
   tbLayout->addWidget(fontCombo_);
 
   connect(fontCombo_, QOverload<int>::of(&QComboBox::currentIndexChanged), this,
@@ -253,11 +252,13 @@ populateFontCombo();
   sizeCombo_->setMaxVisibleItems(10);
   sizeCombo_->setEditable(true);
   if (sizeCombo_->lineEdit()) {
-      sizeCombo_->lineEdit()->setFocusPolicy(Qt::NoFocus);
-      sizeCombo_->lineEdit()->setObjectName("PreviewSizeComboLineEdit");
-      sizeCombo_->lineEdit()->setStyleSheet("background: transparent; border: none; color: inherit; padding: 0px; margin: 0px;");
+    sizeCombo_->lineEdit()->setFocusPolicy(Qt::NoFocus);
+    sizeCombo_->lineEdit()->setObjectName("PreviewSizeComboLineEdit");
+    sizeCombo_->lineEdit()->setStyleSheet(
+        "background: transparent; border: none; color: inherit; padding: 0px; "
+        "margin: 0px;");
   }
-populateSizeCombo();
+  populateSizeCombo();
   tbLayout->addWidget(sizeCombo_);
 
   connect(
@@ -272,22 +273,22 @@ populateSizeCombo();
   auto *tbSpacer = new QWidget(toolbar);
   tbSpacer->setObjectName("PreviewToolbarSpacer");
   tbSpacer->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Preferred);
-tbLayout->addWidget(tbSpacer);
+  tbLayout->addWidget(tbSpacer);
 
   // Format buttons group (tighter internal spacing)
   auto *btnGroup = new QWidget(toolbar);
   btnGroup->setObjectName("PreviewFormatBtnGroup");
-auto *btnGroupLayout = new QHBoxLayout(btnGroup);
+  auto *btnGroupLayout = new QHBoxLayout(btnGroup);
   btnGroupLayout->setContentsMargins(0, 0, 0, 0);
   btnGroupLayout->setSpacing(6);
   auto *bBtn = createTextBtn(btnGroup, "B", 28, 28);
   bBtn->setObjectName("PreviewTextBtn");
   btnGroupLayout->addWidget(bBtn);
-  
+
   auto *iBtn = createTextBtn(btnGroup, "I", 28, 28);
   iBtn->setObjectName("PreviewTextBtn");
   btnGroupLayout->addWidget(iBtn);
-  
+
   auto *uBtn = createTextBtn(btnGroup, "U", 28, 28);
   uBtn->setObjectName("PreviewTextBtn");
   btnGroupLayout->addWidget(uBtn);
@@ -303,7 +304,7 @@ auto *btnGroupLayout = new QHBoxLayout(btnGroup);
   auto *arBtn = createTextBtn(btnGroup, QString(QChar(0x2261)), 28, 28);
   arBtn->setObjectName("PreviewTextBtn");
   btnGroupLayout->addWidget(arBtn);
-  
+
   tbLayout->addWidget(btnGroup);
 
   layout->addWidget(toolbar);
@@ -311,7 +312,7 @@ auto *btnGroupLayout = new QHBoxLayout(btnGroup);
   // --- Video display area ---
   videoArea_ = new QFrame(this);
   videoArea_->setObjectName("PreviewVideoArea");
-videoArea_->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
+  videoArea_->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
   auto *vaLayout = new QVBoxLayout(videoArea_);
   vaLayout->setContentsMargins(0, 0, 0, 0);
 
@@ -326,7 +327,7 @@ videoArea_->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
   auto *controlBar = new QFrame(this);
   controlBar->setObjectName("PreviewControlBar");
   controlBar->setFixedHeight(36);
-auto *cbLayout = new QHBoxLayout(controlBar);
+  auto *cbLayout = new QHBoxLayout(controlBar);
   cbLayout->setContentsMargins(8, 0, 12, 0);
   cbLayout->setSpacing(8);
   cbLayout->setAlignment(Qt::AlignVCenter);
@@ -405,7 +406,8 @@ void VideoPreviewPanel::populateFontCombo() {
   if (auto *view = fontCombo_->view()) {
     view->setMinimumWidth(220);
     if (QWidget *w = view->window()) {
-      w->setWindowFlags(Qt::Popup | Qt::FramelessWindowHint | Qt::NoDropShadowWindowHint);
+      w->setWindowFlags(Qt::Popup | Qt::FramelessWindowHint |
+                        Qt::NoDropShadowWindowHint);
       w->setAttribute(Qt::WA_TranslucentBackground);
     }
   }
@@ -421,7 +423,8 @@ void VideoPreviewPanel::populateSizeCombo() {
 
   if (auto *view = sizeCombo_->view()) {
     if (QWidget *w = view->window()) {
-      w->setWindowFlags(Qt::Popup | Qt::FramelessWindowHint | Qt::NoDropShadowWindowHint);
+      w->setWindowFlags(Qt::Popup | Qt::FramelessWindowHint |
+                        Qt::NoDropShadowWindowHint);
       w->setAttribute(Qt::WA_TranslucentBackground);
     }
   }
