@@ -265,7 +265,7 @@
     <message>
         <location filename="../src/ConfigDialog.cpp" line="230"/>
         <source>界面语言 (Language)</source>
-        <translation>界面语言</translation>
+        <translation>语言</translation>
     </message>
     <message>
         <location filename="../src/ConfigDialog.cpp" line="235"/>
