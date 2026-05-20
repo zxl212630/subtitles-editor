@@ -265,7 +265,7 @@
     <message>
         <location filename="../src/ConfigDialog.cpp" line="230"/>
         <source>界面语言 (Language)</source>
-        <translation>界面语言 (Language)</translation>
+        <translation>界面语言</translation>
     </message>
     <message>
         <location filename="../src/ConfigDialog.cpp" line="235"/>
@@ -280,12 +280,12 @@
     <message>
         <location filename="../src/ConfigDialog.cpp" line="239"/>
         <source>主题模式 (Theme)</source>
-        <translation>主题模式 (Theme)</translation>
+        <translation>主题模式</translation>
     </message>
     <message>
         <location filename="../src/ConfigDialog.cpp" line="248"/>
         <source>主色调 (Primary Color)</source>
-        <translation>主色调 (Primary Color)</translation>
+        <translation>主色调</translation>
     </message>
     <message>
         <location filename="../src/ConfigDialog.cpp" line="275"/>
@@ -300,22 +300,22 @@
     <message>
         <location filename="../src/ConfigDialog.cpp" line="283"/>
         <source>存储桶 (Bucket)</source>
-        <translation>存储桶 (Bucket)</translation>
+        <translation>存储桶</translation>
     </message>
     <message>
         <location filename="../src/ConfigDialog.cpp" line="290"/>
         <source>地域 (Region)</source>
-        <translation>地域 (Region)</translation>
+        <translation>地域</translation>
     </message>
     <message>
         <location filename="../src/ConfigDialog.cpp" line="297"/>
         <source>访问密钥 ID (Access Key ID)</source>
-        <translation>访问密钥 ID (Access Key ID)</translation>
+        <translation>访问密钥 ID</translation>
     </message>
     <message>
         <location filename="../src/ConfigDialog.cpp" line="304"/>
         <source>访问密钥 (Access Key Secret)</source>
-        <translation>访问密钥 (Access Key Secret)</translation>
+        <translation>访问密钥</translation>
     </message>
     <message>
         <location filename="../src/ConfigDialog.cpp" line="323"/>
@@ -330,17 +330,17 @@
     <message>
         <location filename="../src/ConfigDialog.cpp" line="331"/>
         <source>应用 ID (App ID)</source>
-        <translation>应用 ID (App ID)</translation>
+        <translation>应用 ID</translation>
     </message>
     <message>
         <location filename="../src/ConfigDialog.cpp" line="338"/>
         <source>密钥 ID (Secret ID)</source>
-        <translation>密钥 ID (Secret ID)</translation>
+        <translation>密钥 ID</translation>
     </message>
     <message>
         <location filename="../src/ConfigDialog.cpp" line="345"/>
         <source>密钥 (Secret Key)</source>
-        <translation>密钥 (Secret Key)</translation>
+        <translation>密钥</translation>
     </message>
     <message>
         <location filename="../src/ConfigDialog.cpp" line="366"/>
@@ -428,17 +428,17 @@
     <message>
         <location filename="../src/ThemeManager.cpp" line="20"/>
         <source>深色 (Dark)</source>
-        <translation>深色 (Dark)</translation>
+        <translation>深色</translation>
     </message>
     <message>
         <location filename="../src/ThemeManager.cpp" line="32"/>
         <source>纯黑 OLED (Pure Black)</source>
-        <translation>纯黑 OLED (Pure Black)</translation>
+        <translation>纯黑 OLED</translation>
     </message>
     <message>
         <location filename="../src/ThemeManager.cpp" line="44"/>
         <source>深邃午夜蓝 (Midnight)</source>
-        <translation>深邃午夜蓝 (Midnight)</translation>
+        <translation>深邃午夜蓝</translation>
     </message>
 </context>
 <context>
