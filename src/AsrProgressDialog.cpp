@@ -31,14 +31,17 @@ AsrProgressDialog::AsrProgressDialog(QWidget *parent) : QDialog(parent) {
   mainLayout->addWidget(titleBar_);
   mainLayout->addStretch();
 
-  statusLabel_ = new QLabel(tr("准备中..."), this);
+  statusLabel_ = new QLabel(tr("Initializing..."), this);
   statusLabel_->setObjectName("AsrStatusLabel");
   statusLabel_->setAlignment(Qt::AlignCenter);
+  statusLabel_->setStyleSheet("font-size: 13px; font-weight: bold; color: " + ThemeManager::instance().getTextNormalColor().name() + ";");
   mainLayout->addWidget(statusLabel_);
 
   subStatusLabel_ = new QLabel(this);
   subStatusLabel_->setObjectName("AsrSubStatusLabel");
   subStatusLabel_->setAlignment(Qt::AlignCenter);
+  subStatusLabel_->setStyleSheet("font-size: 11px; color: " + ThemeManager::instance().getTextMutedColor().name() + ";");
+  subStatusLabel_->hide(); // Permanently hide as requested
   mainLayout->addWidget(subStatusLabel_);
 
   mainLayout->addSpacing(12);
@@ -70,22 +73,76 @@ AsrProgressDialog::~AsrProgressDialog() = default;
 
 void AsrProgressDialog::setStage(Stage stage) {
   currentStage_ = stage;
+  retranslateUi();
   update();
+}
+
+void AsrProgressDialog::retranslateUi() {
+  setWindowTitle(tr("AI Subtitle Generation"));
+  if (titleLabel_) titleLabel_->setText(tr("AI Subtitle Generation"));
+
+  if (!isError_) {
+      switch (currentStage_) {
+        case Stage::Extraction:
+          statusLabel_->setText(tr("Extracting Audio..."));
+          break;
+        case Stage::Upload:
+          statusLabel_->setText(tr("Uploading to Cloud..."));
+          break;
+        case Stage::Recognition:
+          statusLabel_->setText(tr("Recognizing Speech..."));
+          break;
+      }
+      cancelButton_->setText(tr("Cancel"));
+  } else {
+      statusLabel_->setText(tr("Error Occurred"));
+      cancelButton_->setText(tr("Close"));
+  }
+}
+
+void AsrProgressDialog::changeEvent(QEvent *event) {
+  if (event->type() == QEvent::LanguageChange) {
+    retranslateUi();
+  }
+  QDialog::changeEvent(event);
 }
 
 void AsrProgressDialog::setStatus(const QString &mainText,
                                   const QString &subText) {
   statusLabel_->setText(mainText);
-  subStatusLabel_->setText(subText);
 }
 
 void AsrProgressDialog::setError(const QString &errorMessage) {
   isError_ = true;
   animTimer_->stop();
-  statusLabel_->setText(errorMessage);
-  statusLabel_->setStyleSheet("color: #ef4444;");
-  subStatusLabel_->clear();
-  cancelButton_->setText(tr("关闭"));
+  
+  // Clean error message (extract <Message> from XML or just keep first line)
+  QString cleanMsg = errorMessage;
+  if (errorMessage.contains("<Message>")) {
+      int start = errorMessage.indexOf("<Message>") + 9;
+      int end = errorMessage.indexOf("</Message>");
+      if (end > start) {
+          cleanMsg = errorMessage.mid(start, end - start);
+      }
+  } else if (errorMessage.contains(" - server replied:")) {
+      // Common Qt Network error format
+      cleanMsg = errorMessage.section(" - server replied:", 1).trimmed();
+  }
+  
+  // If it's still too long, take the first sentence or first 100 chars
+  if (cleanMsg.length() > 120) {
+      cleanMsg = cleanMsg.left(117) + "...";
+  }
+
+  retranslateUi(); // Sets title to "Error Occurred"
+  statusLabel_->setStyleSheet("font-size: 13px; font-weight: bold; color: #ef4444;");
+  
+  // Reuse subStatusLabel for the cleaned error message but SHOW it only for errors
+  subStatusLabel_->setText(cleanMsg);
+  subStatusLabel_->setWordWrap(true);
+  subStatusLabel_->setFixedWidth(width() - 80);
+  subStatusLabel_->show();
+  
   update();
 }
 
@@ -166,9 +223,9 @@ void AsrProgressDialog::paintEvent(QPaintEvent *event) {
     QString label;
     Stage stage;
   };
-  StepInfo steps[] = {{tr("提取"), Stage::Extraction},
-                      {tr("上传"), Stage::Upload},
-                      {tr("识别"), Stage::Recognition}};
+  StepInfo steps[] = {{tr("Extraction"), Stage::Extraction},
+                      {tr("Upload"), Stage::Upload},
+                      {tr("Recognition"), Stage::Recognition}};
 
   // Draw connecting lines
   QPen linePen(textMuted, 2);
@@ -275,21 +332,23 @@ void AsrProgressDialog::paintEvent(QPaintEvent *event) {
   }
 
   // ── Animation area ──
-  const int animTop = 90 + titleH;
-  const int animH = 130;
-  const int animCenter = w / 2;
-  const int iconSize = 48;
-  const int srcX = animCenter - 110;
-  const int dstX = animCenter + 110;
+  if (!isError_) {
+      const int animTop = 75 + titleH; // Reduced from 90 to shrink vertical gap
+      const int animH = 130;
+      const int animCenter = w / 2;
+      const int iconSize = 48;
+      const int srcX = animCenter - 75; 
+      const int dstX = animCenter + 75; 
 
-  // Source icon
-  drawSourceIcon(p, srcX, animTop + animH / 2, iconSize);
-  // Target icon
-  drawTargetIcon(p, dstX, animTop + animH / 2, iconSize);
+      // Source icon
+      drawSourceIcon(p, srcX, animTop + animH / 2, iconSize);
+      // Target icon
+      drawTargetIcon(p, dstX, animTop + animH / 2, iconSize);
 
-  // Animated particles
-  drawParticles(p, srcX + iconSize / 2 + 8, dstX - iconSize / 2 - 8,
-                animTop + animH / 2);
+      // Animated particles
+      drawParticles(p, srcX + iconSize / 2 + 8, dstX - iconSize / 2 - 8,
+                    animTop + animH / 2);
+  }
 }
 
 void AsrProgressDialog::renderSVG(QPainter &p, const QString &resPath, const QRect &rect, const QColor &color) {
@@ -319,7 +378,7 @@ void AsrProgressDialog::drawSourceIcon(QPainter &p, int cx, int cy, int size) {
     // 2. NATIVE: Film tracks scrolling (Inside SVG frame)
     p.setPen(Qt::NoPen);
     p.setBrush(QColor(0x1e, 0x1e, 0x1e));
-    int scrollOffset = (tickCount_ * 2) % 10;
+    int scrollOffset = (tickCount_ / 2) % 10; // Slowed down further from tickCount_ % 10
     // We draw slightly inside the 48x48 rect
     for (int y = -10; y < size + 10; y += 10) {
         p.drawRect(cx - half + 2.5, cy - half + y + scrollOffset, 5, 5);

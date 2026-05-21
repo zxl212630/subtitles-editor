@@ -1018,13 +1018,13 @@ void TimelinePanel::startAsrPipeline(const QString &localPath) {
   connect(transcoder, &AudioTranscoder::transcodingFailed, this,
           [dialog](const QString &error) {
             qDebug() << "[ASR] transcodingFailed:" << error;
-            dialog->setError(tr("转码失败: %1").arg(error));
+            dialog->setError(tr("Transcoding failed: %1").arg(error));
           });
 
   connect(uploader, &OssUploader::uploadFailed, this,
           [dialog](const QString &error) {
             qDebug() << "[ASR] uploadFailed:" << error;
-            dialog->setError(tr("上传失败: %1").arg(error));
+            dialog->setError(tr("Upload failed: %1").arg(error));
           });
 
   transcoder->transcode(localPath);

@@ -116,7 +116,14 @@ void SubtitleListPanel::setTotalDuration(qint64 ms) { totalDurationMs_ = ms; }
 void SubtitleListPanel::retranslateUi() {
   if (actionOverlay_)
     actionOverlay_->retranslateUi();
-  searchEdit_->setPlaceholderText(tr("请输入查找内容"));
+  searchEdit_->setPlaceholderText(tr("Search..."));
+  if (tabSubtitle_) tabSubtitle_->setText(tr("Subtitle"));
+  if (tabPreset_) tabPreset_->setText(tr("Preset"));
+  if (tabCustom_) tabCustom_->setText(tr("Custom"));
+  if (tabAnimation_) tabAnimation_->setText(tr("Animation"));
+  if (headerTime_) headerTime_->setText(tr("Timecode"));
+  if (headerText_) headerText_->setText(tr("Subtitle"));
+  if (headerAction_) headerAction_->setText(tr("Action"));
 }
 
 void SubtitleListPanel::setupUi() {
@@ -135,18 +142,30 @@ void SubtitleListPanel::setupUi() {
   phLayout->setSpacing(4);
   phLayout->setAlignment(Qt::AlignLeft | Qt::AlignVCenter);
 
-  auto addTab = [&](const QString &text, bool active) {
-    auto *tab = new QPushButton(text, panelHeader);
-    tab->setObjectName("SubtitleTabBtn");
-    tab->setProperty("active", active);
-    tab->setFixedSize(60, 28);
-    phLayout->addWidget(tab);
-  };
+  tabSubtitle_ = new QPushButton(tr("Subtitle"), panelHeader);
+  tabSubtitle_->setObjectName("SubtitleTabBtn");
+  tabSubtitle_->setProperty("active", true);
+  tabSubtitle_->setFixedSize(60, 28);
+  phLayout->addWidget(tabSubtitle_);
 
-  addTab(tr("字幕"), true);
-  addTab(tr("预设"), false);
-  addTab(tr("自定义"), false);
-  addTab(tr("动画"), false);
+  tabPreset_ = new QPushButton(tr("Preset"), panelHeader);
+  tabPreset_->setObjectName("SubtitleTabBtn");
+  tabPreset_->setProperty("active", false);
+  tabPreset_->setFixedSize(60, 28);
+  phLayout->addWidget(tabPreset_);
+
+  tabCustom_ = new QPushButton(tr("Custom"), panelHeader);
+  tabCustom_->setObjectName("SubtitleTabBtn");
+  tabCustom_->setProperty("active", false);
+  tabCustom_->setFixedSize(60, 28);
+  phLayout->addWidget(tabCustom_);
+
+  tabAnimation_ = new QPushButton(tr("Animation"), panelHeader);
+  tabAnimation_->setObjectName("SubtitleTabBtn");
+  tabAnimation_->setProperty("active", false);
+  tabAnimation_->setFixedSize(60, 28);
+  phLayout->addWidget(tabAnimation_);
+
   phLayout->addStretch();
   layout->addWidget(panelHeader);
 
@@ -184,7 +203,7 @@ void SubtitleListPanel::setupUi() {
 
   searchEdit_ = new QLineEdit(searchInput);
   searchEdit_->setObjectName("SubtitleSearchEdit");
-  searchEdit_->setPlaceholderText(tr("请输入查找内容"));
+  searchEdit_->setPlaceholderText(tr("Search..."));
   searchEdit_->setFixedHeight(28);
   siLayout->addWidget(searchEdit_);
 
@@ -218,20 +237,20 @@ void SubtitleListPanel::setupUi() {
   hlLayout->setSpacing(80);
   hlLayout->setAlignment(Qt::AlignVCenter);
 
-  auto *headerTime = new QLabel(tr("时间码"), headerLeft);
-  headerTime->setObjectName("SubtitleHeaderLabel");
-  hlLayout->addWidget(headerTime);
+  headerTime_ = new QLabel(tr("Timecode"), headerLeft);
+  headerTime_->setObjectName("SubtitleHeaderLabel");
+  hlLayout->addWidget(headerTime_);
 
-  auto *headerText = new QLabel(tr("字幕"), headerLeft);
-  headerText->setObjectName("SubtitleHeaderLabel");
-  hlLayout->addWidget(headerText);
+  headerText_ = new QLabel(tr("Subtitle"), headerLeft);
+  headerText_->setObjectName("SubtitleHeaderLabel");
+  hlLayout->addWidget(headerText_);
 
   thLayout->addWidget(headerLeft);
   thLayout->addStretch();
 
-  auto *headerAction = new QLabel(tr("操作"), tableHeader);
-  headerAction->setObjectName("SubtitleHeaderLabel");
-  thLayout->addWidget(headerAction);
+  headerAction_ = new QLabel(tr("Action"), tableHeader);
+  headerAction_->setObjectName("SubtitleHeaderLabel");
+  thLayout->addWidget(headerAction_);
 
   lcLayout->addWidget(tableHeader);
 

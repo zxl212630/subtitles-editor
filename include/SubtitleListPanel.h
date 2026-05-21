@@ -8,6 +8,7 @@ class SubtitleListDelegate;
 class QListView;
 class QLineEdit;
 class QPushButton;
+class QLabel;
 class SubtitleActionOverlay;
 
 class SubtitleListPanel : public QWidget {
@@ -40,6 +41,14 @@ private:
   QListView *listView_ = nullptr;
   QLineEdit *searchEdit_ = nullptr;
   SubtitleActionOverlay *actionOverlay_ = nullptr;
+
+  QPushButton *tabSubtitle_ = nullptr;
+  QPushButton *tabPreset_ = nullptr;
+  QPushButton *tabCustom_ = nullptr;
+  QPushButton *tabAnimation_ = nullptr;
+  QLabel *headerTime_ = nullptr;
+  QLabel *headerText_ = nullptr;
+  QLabel *headerAction_ = nullptr;
 
   double videoFps_ = 25.0;
   qint64 totalDurationMs_ = 0;

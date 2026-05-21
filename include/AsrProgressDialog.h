@@ -31,6 +31,7 @@ signals:
 protected:
   void paintEvent(QPaintEvent *event) override;
   void closeEvent(QCloseEvent *event) override;
+  void changeEvent(QEvent *event) override;
 
 private slots:
   void onAnimationTick();
@@ -41,6 +42,7 @@ private:
   void drawTargetIcon(QPainter &p, int cx, int cy, int size);
   void drawParticles(QPainter &p, int x1, int x2, int cy);
   void renderSVG(QPainter &p, const QString &resPath, const QRect &rect, const QColor &color);
+  void retranslateUi();
   void setupTitleBar();
 
   Stage currentStage_ = Stage::Extraction;
