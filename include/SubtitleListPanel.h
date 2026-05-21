@@ -32,6 +32,7 @@ private:
   void onItemClicked(const QModelIndex &index);
   void onItemDoubleClicked(const QModelIndex &index);
   bool eventFilter(QObject *watched, QEvent *event) override;
+  void leaveEvent(QEvent *event) override;
 
   SubtitleTrack *track_ = nullptr;
   SubtitleListModel *model_ = nullptr;

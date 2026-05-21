@@ -97,9 +97,8 @@ private:
 SubtitleListPanel::SubtitleListPanel(QWidget *parent) : QWidget(parent) {
   setupUi();
 
-  connect(&TranslationManager::instance(),
-          &TranslationManager::languageChanged, this,
-          [this]() { retranslateUi(); });
+  connect(&TranslationManager::instance(), &TranslationManager::languageChanged,
+          this, [this]() { retranslateUi(); });
 }
 
 void SubtitleListPanel::setTrack(SubtitleTrack *track) {
@@ -293,6 +292,7 @@ void SubtitleListPanel::setupUi() {
 
   listView_->setMouseTracking(true);
   listView_->viewport()->installEventFilter(this);
+  actionOverlay_->installEventFilter(this);
 
   connect(listView_, &QListView::clicked, this,
           &SubtitleListPanel::onItemClicked);
@@ -331,6 +331,15 @@ void SubtitleListPanel::onItemDoubleClicked(const QModelIndex &index) {
 }
 
 bool SubtitleListPanel::eventFilter(QObject *watched, QEvent *event) {
+  if (watched == actionOverlay_) {
+    if (event->type() == QEvent::Leave) {
+      if (actionOverlay_ && !actionOverlay_->underMouse()) {
+        actionOverlay_->hide();
+      }
+    }
+    return false;
+  }
+
   if (watched == listView_->viewport()) {
     if (event->type() == QEvent::MouseButtonPress) {
       auto *me = static_cast<QMouseEvent *>(event);
@@ -462,18 +471,19 @@ bool SubtitleListPanel::eventFilter(QObject *watched, QEvent *event) {
       return false;
     } else if (event->type() == QEvent::Leave) {
       delegate_->setHoveredIndex(QModelIndex(), 0);
-      // Logic for hiding: check if mouse actually left the logical interaction
-      // zone
-      if (actionOverlay_) {
-        QPoint globalPos = QCursor::pos();
-        QPoint localPos = actionOverlay_->mapFromGlobal(globalPos);
-        if (!actionOverlay_->rect().contains(localPos)) {
-          actionOverlay_->hide();
-        }
+      if (actionOverlay_ && !actionOverlay_->underMouse()) {
+        actionOverlay_->hide();
       }
       return false;
     }
   }
   return QWidget::eventFilter(watched, event);
+}
+
+void SubtitleListPanel::leaveEvent(QEvent *event) {
+  if (actionOverlay_ && !actionOverlay_->underMouse()) {
+    actionOverlay_->hide();
+  }
+  QWidget::leaveEvent(event);
 }
 #include "SubtitleListPanel.moc"
