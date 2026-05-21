@@ -129,6 +129,10 @@ AppMessageBox::AppMessageBox(Icon icon, const QString &title,
   setupFooter();
 
   windowAgent_->setTitleBar(titleBar_);
+
+  // Fix size to disable maximize button on macOS
+  adjustSize();
+  setFixedSize(size());
 }
 
 // ── Setup methods ──

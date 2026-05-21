@@ -28,6 +28,7 @@ signals:
 
 private:
   void setupUi();
+  void retranslateUi();
   void onItemClicked(const QModelIndex &index);
   void onItemDoubleClicked(const QModelIndex &index);
   bool eventFilter(QObject *watched, QEvent *event) override;

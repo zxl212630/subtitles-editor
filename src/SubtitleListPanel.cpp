@@ -3,6 +3,7 @@
 #include "SubtitleListModel.h"
 #include "SubtitleTrack.h"
 #include "ThemeManager.h"
+#include "TranslationManager.h"
 
 #include <QCoreApplication>
 #include <QFrame>
@@ -57,6 +58,11 @@ public:
     mergeBtn_->setEnabled(canMerge);
   }
 
+  void retranslateUi() {
+    addBtn_->setText(tr("添加"));
+    mergeBtn_->setText(tr("合并"));
+  }
+
 signals:
   void addClicked(qint64 start, qint64 end);
   void mergeClicked();
@@ -90,6 +96,10 @@ private:
 
 SubtitleListPanel::SubtitleListPanel(QWidget *parent) : QWidget(parent) {
   setupUi();
+
+  connect(&TranslationManager::instance(),
+          &TranslationManager::languageChanged, this,
+          [this]() { retranslateUi(); });
 }
 
 void SubtitleListPanel::setTrack(SubtitleTrack *track) {
@@ -103,6 +113,12 @@ void SubtitleListPanel::setVideoFps(double fps) {
 }
 
 void SubtitleListPanel::setTotalDuration(qint64 ms) { totalDurationMs_ = ms; }
+
+void SubtitleListPanel::retranslateUi() {
+  if (actionOverlay_)
+    actionOverlay_->retranslateUi();
+  searchEdit_->setPlaceholderText(tr("请输入查找内容"));
+}
 
 void SubtitleListPanel::setupUi() {
   setObjectName("SubtitleListPanel");
