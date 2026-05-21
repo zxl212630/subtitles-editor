@@ -858,8 +858,9 @@ void TimelinePanel::mouseMoveEvent(QMouseEvent *event) {
     canvas_->update();
 
     qint64 now = QDateTime::currentMSecsSinceEpoch();
-    qint64 intervalMs = static_cast<qint64>(1000.0 / videoFps_);
-    if (now - lastPreviewSystemTime_ >= intervalMs) {
+    constexpr qint64 MIN_PREVIEW_INTERVAL_MS =
+        50; // 限制发射频率在 50ms (20 FPS)
+    if (now - lastPreviewSystemTime_ >= MIN_PREVIEW_INTERVAL_MS) {
       lastPreviewSystemTime_ = now;
       emit previewSeekRequested(ms);
     }

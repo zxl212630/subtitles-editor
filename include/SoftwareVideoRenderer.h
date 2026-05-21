@@ -24,7 +24,9 @@ protected:
   int heightForWidth(int width) const override;
 
 private:
-  QImage currentImage_;
+  QByteArray currentRgbaData_;
+  int currentWidth_ = 0;
+  int currentHeight_ = 0;
   bool hasFrame_ = false;
   QMutex imageMutex_;
   QSize videoSize_;

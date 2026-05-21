@@ -141,6 +141,8 @@ private:
   QMutex queueFullMutex_;
   QWaitCondition queueNotFull_;
 
+  bool discardBeforeTarget_ = false;
+
   static constexpr int MAX_VIDEO_QUEUE_MS = 500;
   static constexpr int MAX_AUDIO_QUEUE_MS = 500;
 };

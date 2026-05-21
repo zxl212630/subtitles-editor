@@ -26,10 +26,9 @@ void SoftwareVideoRenderer::renderFrame(const DecodedVideoFrame &frame) {
 #endif
   {
     QMutexLocker lock(&imageMutex_);
-    currentImage_ =
-        QImage(reinterpret_cast<const uchar *>(frame.rgbaData.constData()),
-               frame.width, frame.height, QImage::Format_RGBA8888)
-            .copy();
+    currentRgbaData_ = frame.rgbaData; // O(1) 隐式共享，无数据拷贝
+    currentWidth_ = frame.width;
+    currentHeight_ = frame.height;
     hasFrame_ = true;
   }
   videoSize_ = QSize(frame.width, frame.height);
@@ -39,7 +38,7 @@ void SoftwareVideoRenderer::renderFrame(const DecodedVideoFrame &frame) {
   static int renderLogCounter2 = 0;
   if (++renderLogCounter2 % 30 == 0) {
     qInfo() << "[TIMING:render_copy] size=" << frame.width << "x"
-            << frame.height << " copy_us=" << (copyTimer.nsecsElapsed() / 1000);
+            << frame.height << " cost_us=" << (copyTimer.nsecsElapsed() / 1000);
   }
 #else
   LOG_RENDER(debug,
@@ -89,23 +88,31 @@ void SoftwareVideoRenderer::paintEvent(QPaintEvent *event) {
   QColor bgPanel = ThemeManager::instance().getBgPanelColor();
   painter.fillRect(rect(), bgPanel);
 
-  QImage imageToDraw;
-  bool hasFrame;
+  QByteArray rgbaSnapshot;
+  int w = 0;
+  int h = 0;
+  bool hasFrame = false;
   {
     QMutexLocker lock(&imageMutex_);
     hasFrame = hasFrame_;
     if (hasFrame) {
-      imageToDraw = currentImage_;
+      rgbaSnapshot = currentRgbaData_; // O(1) 引用计数拷贝
+      w = currentWidth_;
+      h = currentHeight_;
     }
   }
 
   // Compute video target rect (used for both video and subtitle clipping)
   QRect targetRect;
-  if (hasFrame && !imageToDraw.isNull()) {
+  if (hasFrame && w > 0 && h > 0) {
+    // 构造零拷贝的 QImage，直接使用 rgbaSnapshot 的数据缓冲区
+    QImage imageToDraw(
+        reinterpret_cast<const uchar *>(rgbaSnapshot.constData()), w, h, w * 4,
+        QImage::Format_RGBA8888);
+
     double widgetRatio =
         static_cast<double>(width()) / static_cast<double>(height());
-    double imageRatio = static_cast<double>(imageToDraw.width()) /
-                        static_cast<double>(imageToDraw.height());
+    double imageRatio = static_cast<double>(w) / static_cast<double>(h);
 
     int newWidth;
     int newHeight;
@@ -151,8 +158,7 @@ void SoftwareVideoRenderer::paintEvent(QPaintEvent *event) {
   static int paintLogCounter = 0;
   if (++paintLogCounter % 30 == 0) {
     qInfo() << "[TIMING:paint] size=" << width() << "x" << height()
-            << " image=" << imageToDraw.width() << "x" << imageToDraw.height()
-            << " paint_us=" << elapsed;
+            << " image=" << w << "x" << h << " paint_us=" << elapsed;
   }
 #endif
 }

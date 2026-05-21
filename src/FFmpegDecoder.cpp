@@ -78,6 +78,9 @@ bool FFmpegDecoder::open(const QString &path) {
             QString("Failed to copy video codec parameters: %1").arg(errbuf));
         return false;
       }
+      // Enable multi-threaded video decoding
+      videoCodecCtx_->thread_count = 0; // auto
+      videoCodecCtx_->thread_type = FF_THREAD_FRAME | FF_THREAD_SLICE;
       ret = avcodec_open2(videoCodecCtx_, codec, nullptr);
       if (ret < 0) {
         char errbuf[256];
@@ -130,6 +133,9 @@ bool FFmpegDecoder::open(const QString &path) {
             QString("Failed to copy audio codec parameters: %1").arg(errbuf));
         return false;
       }
+      // Enable multi-threaded audio decoding
+      audioCodecCtx_->thread_count = 0; // auto
+      audioCodecCtx_->thread_type = FF_THREAD_FRAME | FF_THREAD_SLICE;
       ret = avcodec_open2(audioCodecCtx_, codec, nullptr);
       if (ret < 0) {
         char errbuf[256];
@@ -267,22 +273,34 @@ void FFmpegDecoder::stop() {
 }
 
 std::optional<DecodedVideoFrame> FFmpegDecoder::dequeueVideoFrame() {
-  QMutexLocker locker(&videoQueueMutex_);
-  if (videoQueue_.isEmpty()) {
-    return std::nullopt;
+  std::optional<DecodedVideoFrame> frame;
+  {
+    QMutexLocker locker(&videoQueueMutex_);
+    if (videoQueue_.isEmpty()) {
+      return std::nullopt;
+    }
+    frame = videoQueue_.dequeue();
   }
-  auto frame = videoQueue_.dequeue();
-  queueNotFull_.wakeAll();
+  {
+    QMutexLocker locker(&queueFullMutex_);
+    queueNotFull_.wakeAll();
+  }
   return frame;
 }
 
 std::optional<DecodedAudioFrame> FFmpegDecoder::dequeueAudioFrame() {
-  QMutexLocker locker(&audioQueueMutex_);
-  if (audioQueue_.isEmpty()) {
-    return std::nullopt;
+  std::optional<DecodedAudioFrame> frame;
+  {
+    QMutexLocker locker(&audioQueueMutex_);
+    if (audioQueue_.isEmpty()) {
+      return std::nullopt;
+    }
+    frame = audioQueue_.dequeue();
   }
-  auto frame = audioQueue_.dequeue();
-  queueNotFull_.wakeAll();
+  {
+    QMutexLocker locker(&queueFullMutex_);
+    queueNotFull_.wakeAll();
+  }
   return frame;
 }
 
@@ -375,11 +393,27 @@ void FFmpegDecoder::run() {
     }
 
     if (!playing_.load()) {
-      QMutexLocker locker(&playControlMutex_);
-      if (!playing_.load()) {
-        playCondition_.wait(&playControlMutex_, 50);
+      bool needWarmup = false;
+      if (hasVideo_) {
+        QMutexLocker locker(&videoQueueMutex_);
+        if (videoQueue_.isEmpty()) {
+          needWarmup = true;
+        }
       }
-      continue;
+      if (hasAudio_ && !needWarmup) {
+        QMutexLocker locker(&audioQueueMutex_);
+        if (audioQueue_.isEmpty()) {
+          needWarmup = true;
+        }
+      }
+
+      if (!needWarmup) {
+        QMutexLocker locker(&playControlMutex_);
+        if (!playing_.load()) {
+          playCondition_.wait(&playControlMutex_, 50);
+        }
+        continue;
+      }
     }
 
     bool videoFull = !hasVideo_ || videoQueueDurationMs() >= MAX_VIDEO_QUEUE_MS;
@@ -449,6 +483,7 @@ void FFmpegDecoder::performSeek(qint64 targetMs) {
     avcodec_flush_buffers(audioCodecCtx_);
   }
   clearAllQueues();
+  discardBeforeTarget_ = true;
 
 #if PROFILE_TIMING
   qint64 elapsed = seekTimer.nsecsElapsed() / 1000;
@@ -497,6 +532,14 @@ bool FFmpegDecoder::decodeVideoPacket(AVPacket *packet) {
       pts = f->best_effort_timestamp;
     }
     qint64 ptsMs = static_cast<qint64>(pts * av_q2d(videoTimeBase_) * 1000.0);
+
+    // Seek frame filtering: discard frames before target timestamp
+    if (discardBeforeTarget_) {
+      if (ptsMs < seekTargetMs_.load() - 50) {
+        return;
+      }
+      discardBeforeTarget_ = false;
+    }
 
     int w = f->width;
     int h = f->height;

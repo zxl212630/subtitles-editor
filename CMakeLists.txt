@@ -58,6 +58,7 @@ set(SOURCES
     src/AudioTranscoder.cpp
     src/OssUploader.cpp
     src/FFmpegDecoder.cpp
+    src/SeekDecoder.cpp
     src/QtAudioOutput.cpp
     src/SoftwareVideoRenderer.cpp
     src/MediaPlayer.cpp
@@ -83,6 +84,7 @@ set(HEADERS
     include/AudioTranscoder.h
     include/OssUploader.h
     include/FFmpegDecoder.h
+    include/SeekDecoder.h
     include/QtAudioOutput.h
     include/SoftwareVideoRenderer.h
     include/MediaPlayer.h
@@ -167,4 +169,7 @@ qt_add_translations(${PROJECT_NAME}
         translations/en_US.ts
     RESOURCE_PREFIX "/translations"
 )
+
+
+
 

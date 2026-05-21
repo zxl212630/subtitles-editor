@@ -1,6 +1,7 @@
 #include "MediaPlayer.h"
 #include "FFmpegDecoder.h"
 #include "QtAudioOutput.h"
+#include "SeekDecoder.h"
 #include "SoftwareVideoRenderer.h"
 
 #include <QDebug>
@@ -17,8 +18,13 @@
 
 MediaPlayer::MediaPlayer(QObject *parent) : QObject(parent) {
   decoder_ = new FFmpegDecoder(this);
+  seekDecoder_ = new SeekDecoder(this);
   audioOutput_ = new QtAudioOutput(this);
   playbackTimer_ = new QTimer(this);
+
+  seekCoalesceTimer_ = new QTimer(this);
+  seekCoalesceTimer_->setSingleShot(true);
+  seekCoalesceTimer_->setInterval(8); // 8ms 合并延迟窗口
 
   connect(decoder_, &FFmpegDecoder::decodeError, this,
           &MediaPlayer::onDecoderError);
@@ -26,12 +32,17 @@ MediaPlayer::MediaPlayer(QObject *parent) : QObject(parent) {
           &MediaPlayer::onEndOfStream);
   connect(playbackTimer_, &QTimer::timeout, this,
           &MediaPlayer::onPlaybackTimer);
+  connect(seekCoalesceTimer_, &QTimer::timeout, this,
+          &MediaPlayer::executePendingSeek);
+  connect(seekDecoder_, &SeekDecoder::frameReady, this,
+          &MediaPlayer::onSeekFrameReady, Qt::QueuedConnection);
 }
 
 MediaPlayer::~MediaPlayer() {
   stop();
   delete audioOutput_;
   delete decoder_;
+  delete seekDecoder_;
 }
 
 void MediaPlayer::setVideoRenderer(SoftwareVideoRenderer *renderer) {
@@ -60,6 +71,10 @@ bool MediaPlayer::load(const QString &path) {
 
   if (decoder_->hasVideo()) {
     videoRenderer_->clear();
+    seekDecoder_->open(path);
+    if (videoRenderer_) {
+      seekDecoder_->setOutputSize(videoRenderer_->size());
+    }
   }
 
   decoder_->start();
@@ -121,6 +136,7 @@ void MediaPlayer::stop() {
   playbackTimerRunning_ = false;
   decoder_->stop();
   decoder_->wait(5000);
+  seekDecoder_->close();
   audioOutput_->close();
   if (videoRenderer_) {
     videoRenderer_->clear();
@@ -141,20 +157,20 @@ void MediaPlayer::seek(qint64 ms) {
     pause();
   }
 
-  decoder_->requestSeek(ms);
   currentTimeMs_ = ms;
   seekTargetMs_ = ms;
   pendingVideoFrame_ = std::nullopt;
   previewFrameRendered_ = false;
 
   if (oldState == Playing) {
+    decoder_->requestSeek(ms);
+    decoder_->clearAllQueues();
     play();
   } else {
-    decoder_->setPlaying(true);
     seekPreviewMode_ = true;
-    seekPreviewTimer_.start();
-    playbackTimer_->start(16);
-    LOG_MP(info, "seek() preview mode started");
+    seekDecoder_->requestSeek(ms);
+    decoder_->requestSeek(ms);
+    decoder_->clearAllQueues();
   }
 
   emit timeChanged(currentTimeMs_);
@@ -165,8 +181,6 @@ void MediaPlayer::previewSeek(qint64 ms) {
   if (!decoder_)
     return;
 
-  // Always update current time so UI (progress bar, subtitles) refreshes
-  // even when there is no video loaded.
   currentTimeMs_ = ms;
   emit timeChanged(currentTimeMs_);
 
@@ -183,15 +197,34 @@ void MediaPlayer::previewSeek(qint64 ms) {
     LOG_MP(info, "previewSeek() drag started target=" << ms);
   }
 
-  lastRenderedPreviewPts_ = -1;
-  seekTargetMs_ = ms;
-  previewFrameRendered_ = false;
-  decoder_->requestSeek(ms);
-  decoder_->setPlaying(true);
+  pendingSeekMs_ = ms;
+  hasPendingSeek_ = true;
+  if (!seekCoalesceTimer_->isActive()) {
+    seekCoalesceTimer_->start();
+  }
+}
 
-  if (!playbackTimerRunning_) {
-    playbackTimer_->start(16);
-    playbackTimerRunning_ = true;
+void MediaPlayer::executePendingSeek() {
+  if (!hasPendingSeek_)
+    return;
+  hasPendingSeek_ = false;
+  seekTargetMs_ = pendingSeekMs_;
+
+  if (seekDecoder_ && seekDecoder_->isRunning()) {
+    seekDecoder_->requestSeek(pendingSeekMs_);
+  }
+}
+
+void MediaPlayer::onSeekFrameReady(DecodedVideoFrame frame) {
+  if (!isPreviewDragging_ && !seekPreviewMode_)
+    return;
+
+  if (videoRenderer_) {
+    videoRenderer_->renderFrame(frame);
+  }
+
+  if (!isPreviewDragging_) {
+    seekPreviewMode_ = false;
   }
 }
 
@@ -199,13 +232,18 @@ void MediaPlayer::stopPreviewDragging() {
   if (!isPreviewDragging_)
     return;
 
+  seekCoalesceTimer_->stop();
+  hasPendingSeek_ = false;
   isPreviewDragging_ = false;
+  seekPreviewMode_ = false;
 
-  if (decoder_) {
-    decoder_->clearAudioQueue();
+  decoder_->requestSeek(currentTimeMs_);
+  decoder_->clearAudioQueue();
+
+  if (playbackTimerRunning_) {
+    playbackTimer_->stop();
+    playbackTimerRunning_ = false;
   }
-
-  seek(currentTimeMs_);
 }
 
 double MediaPlayer::decoderFps() const {
@@ -228,77 +266,15 @@ void MediaPlayer::stepBackward() {
 
 void MediaPlayer::onPlaybackTimer() {
   if (seekPreviewMode_) {
-    // Discard accumulated audio frames during preview
     while (decoder_->audioQueueSize() > 0) {
       decoder_->dequeueAudioFrame();
     }
 
-    if (isPreviewDragging_) {
-      // Drag mode: render frames up to seekTargetMs_ to reach the
-      // drag position. Skip old frames (before last rendered) and
-      // discard frames past the target to prevent continuous playback
-      // when the mouse stops moving.
-      auto frame = decoder_->dequeueVideoFrame();
-      while (frame) {
-        if (frame->ptsMs > lastRenderedPreviewPts_ &&
-            frame->ptsMs <= seekTargetMs_ && videoRenderer_) {
-          videoRenderer_->renderFrame(*frame);
-          lastRenderedPreviewPts_ = frame->ptsMs;
-        }
-        frame = decoder_->dequeueVideoFrame();
-      }
-      // Keep decoder running for next seek
-      decoder_->setPlaying(true);
-
-      if (seekPreviewTimer_.elapsed() > 5000) {
-        decoder_->setPlaying(false);
-        playbackTimer_->stop();
-        playbackTimerRunning_ = false;
-        seekPreviewMode_ = false;
-        isPreviewDragging_ = false;
-        LOG_MP(warning, "drag preview timed out");
-      }
-      return;
-    }
-
-    // Non-drag seek preview (single click): drain frames until we reach
-    // the exact target position, then stop.
-    if (!previewFrameRendered_) {
-      auto frame = decoder_->dequeueVideoFrame();
-      while (frame) {
-        if (frame->ptsMs >= seekTargetMs_) {
-          if (videoRenderer_)
-            videoRenderer_->renderFrame(*frame);
-          previewFrameRendered_ = true;
-          break;
-        }
-        frame = decoder_->dequeueVideoFrame();
-      }
-
-      if (previewFrameRendered_) {
-        decoder_->setPlaying(false);
-        playbackTimer_->stop();
-        playbackTimerRunning_ = false;
-        seekPreviewMode_ = false;
-        LOG_MP(info,
-               "seek preview frame rendered at " << seekTargetMs_ << "ms");
-        return;
-      }
-
-      // Target frame not yet available: keep decoder running
-      decoder_->setPlaying(true);
-
-      if (seekPreviewTimer_.elapsed() > 3000) {
-        auto lastFrame = decoder_->dequeueVideoFrame();
-        if (lastFrame && videoRenderer_) {
-          videoRenderer_->renderFrame(*lastFrame);
-        }
-        decoder_->setPlaying(false);
-        playbackTimer_->stop();
-        playbackTimerRunning_ = false;
-        seekPreviewMode_ = false;
-        LOG_MP(warning, "seek preview timed out");
-      }
+    if (seekPreviewTimer_.elapsed() > 3000) {
+      seekPreviewMode_ = false;
+      playbackTimer_->stop();
+      playbackTimerRunning_ = false;
+      LOG_MP(warning, "seek preview timed out");
     }
     return;
   }

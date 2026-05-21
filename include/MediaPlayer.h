@@ -9,6 +9,7 @@
 #include <optional>
 
 class FFmpegDecoder;
+class SeekDecoder;
 class QtAudioOutput;
 class SoftwareVideoRenderer;
 
@@ -59,9 +60,12 @@ private slots:
   void onPlaybackTimer();
   void onDecoderError(const QString &error);
   void onEndOfStream();
+  void executePendingSeek();
+  void onSeekFrameReady(DecodedVideoFrame frame);
 
 private:
   FFmpegDecoder *decoder_ = nullptr;
+  SeekDecoder *seekDecoder_ = nullptr;
   QtAudioOutput *audioOutput_ = nullptr;
   SoftwareVideoRenderer *videoRenderer_ = nullptr;
   QTimer *playbackTimer_ = nullptr;
@@ -84,4 +88,8 @@ private:
   qint64 lastRenderedPreviewPts_ = -1;
 
   QElapsedTimer previewE2eTimer_;
+
+  QTimer *seekCoalesceTimer_ = nullptr;
+  qint64 pendingSeekMs_ = 0;
+  bool hasPendingSeek_ = false;
 };
