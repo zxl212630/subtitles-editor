@@ -53,7 +53,6 @@ AppMessageBox::AppMessageBox(Icon icon, const QString &title,
 
   setupTitleBar();
   setupContent();
-  setupFooter();
 
   // Set title text
   titleLabel_->setText(title);
@@ -125,6 +124,9 @@ AppMessageBox::AppMessageBox(Icon icon, const QString &title,
     defaultBtn->setDefault(true);
     defaultBtn->setFocus();
   }
+
+  // Setup footer after buttons are created
+  setupFooter();
 
   windowAgent_->setTitleBar(titleBar_);
 }
