@@ -11,6 +11,8 @@
 #include <QVBoxLayout>
 #include <QWindowKit/QWKWidgets/widgetwindowagent.h>
 #include <QtMath>
+#include <QSvgRenderer>
+#include <QFile>
 
 AsrProgressDialog::AsrProgressDialog(QWidget *parent) : QDialog(parent) {
   setObjectName("AsrProgressDialog");
@@ -290,46 +292,80 @@ void AsrProgressDialog::paintEvent(QPaintEvent *event) {
                 animTop + animH / 2);
 }
 
+void AsrProgressDialog::renderSVG(QPainter &p, const QString &resPath, const QRect &rect, const QColor &color) {
+    QFile file(resPath);
+    if (!file.open(QIODevice::ReadOnly)) return;
+    
+    QByteArray svgData = file.readAll();
+    // Replace currentColor with actual theme color
+    svgData.replace("currentColor", color.name().toUtf8());
+    
+    QSvgRenderer renderer(svgData);
+    renderer.render(&p, rect);
+}
+
 void AsrProgressDialog::drawSourceIcon(QPainter &p, int cx, int cy, int size) {
   int half = size / 2;
   QRect r(cx - half, cy - half, size, size);
 
   auto &theme = ThemeManager::instance();
-  QColor color = isError_ ? QColor(0xef, 0x44, 0x44) : theme.getPrimaryColor();
-  p.setPen(QPen(color, 2));
-  p.setBrush(Qt::NoBrush);
+  QColor primary = isError_ ? QColor(0xef, 0x44, 0x44) : theme.getPrimaryColor();
 
   switch (currentStage_) {
   case Stage::Extraction: {
-    // Film / video rectangle
-    p.drawRoundedRect(r, 4, 4);
-    // Play triangle
+    // 1. SVG Base for video frame
+    renderSVG(p, ":/icons/asr_video_base.svg", r, primary);
+    
+    // 2. NATIVE: Film tracks scrolling (Inside SVG frame)
+    p.setPen(Qt::NoPen);
+    p.setBrush(QColor(0x1e, 0x1e, 0x1e));
+    int scrollOffset = (tickCount_ * 2) % 10;
+    // We draw slightly inside the 48x48 rect
+    for (int y = -10; y < size + 10; y += 10) {
+        p.drawRect(cx - half + 2.5, cy - half + y + scrollOffset, 5, 5);
+        p.drawRect(cx + half - 7.5, cy - half + y + scrollOffset, 5, 5);
+    }
+    
+    // 3. NATIVE: Pulsing Play triangle
+    double pulse = (qSin(tickCount_ * 0.15) + 1.0) * 0.5;
+    double scale = 0.9 + pulse * 0.2;
+    p.save();
+    p.translate(cx, cy);
+    p.scale(scale, scale);
     QPolygonF tri;
-    tri << QPointF(cx - 6, cy - 10) << QPointF(cx - 6, cy + 10)
-        << QPointF(cx + 10, cy);
-    p.setBrush(color);
+    tri << QPointF(-4, -8) << QPointF(-4, 8) << QPointF(8, 0);
+    p.setBrush(primary);
     p.setPen(Qt::NoPen);
     p.drawPolygon(tri);
+    p.restore();
     break;
   }
   case Stage::Upload: {
-    // Audio wave icon
-    p.setPen(QPen(color, 2.5, Qt::SolidLine, Qt::RoundCap));
+    // Audio wave icon (source) - Slower pulse
+    p.setPen(QPen(primary, 2.5, Qt::SolidLine, Qt::RoundCap));
     for (int i = -2; i <= 2; i++) {
-      int barH = (i == 0) ? 20 : (qAbs(i) == 1 ? 14 : 8);
-      p.drawLine(cx + i * 7, cy - barH / 2, cx + i * 7, cy + barH / 2);
+      double waveScale = (qSin(tickCount_ * 0.2 + i * 0.5) + 1.0) * 0.5;
+      int baseH = (i == 0) ? 24 : (qAbs(i) == 1 ? 16 : 10);
+      int barH = baseH * (0.8 + waveScale * 0.4);
+      p.drawLine(cx + i * 8, cy - barH / 2, cx + i * 8, cy + barH / 2);
     }
     break;
   }
   case Stage::Recognition: {
-    // Cloud icon
-    QPainterPath cloud;
-    cloud.addEllipse(cx - 14, cy + 2, 20, 16);
-    cloud.addEllipse(cx - 6, cy - 10, 22, 22);
-    cloud.addEllipse(cx + 6, cy, 18, 16);
-    p.setPen(QPen(color, 2));
-    p.setBrush(Qt::NoBrush);
-    p.drawPath(cloud);
+    // 1. SVG Base for cloud
+    double floatY = qSin(tickCount_ * 0.1) * 3;
+    p.save();
+    p.translate(0, floatY);
+    renderSVG(p, ":/icons/asr_cloud.svg", r, primary);
+    
+    // 2. NATIVE: Inner voice bars (wrapped in cloud)
+    p.setPen(QPen(primary, 2, Qt::SolidLine, Qt::RoundCap));
+    for (int i = -1; i <= 1; i++) {
+        double waveScale = (qSin(tickCount_ * 0.3 + i * 0.8) + 1.0) * 0.5;
+        int barH = (i == 0 ? 18 : 10) * (0.7 + waveScale * 0.6);
+        p.drawLine(cx + i * 6, cy - barH / 2 + 2, cx + i * 6, cy + barH / 2 + 2);
+    }
+    p.restore();
     break;
   }
   }
@@ -340,41 +376,71 @@ void AsrProgressDialog::drawTargetIcon(QPainter &p, int cx, int cy, int size) {
   QRect r(cx - half, cy - half, size, size);
 
   auto &theme = ThemeManager::instance();
-  QColor color = isError_ ? QColor(0xef, 0x44, 0x44) : theme.getPrimaryColor();
-  p.setPen(QPen(color, 2));
-  p.setBrush(Qt::NoBrush);
+  QColor primary = isError_ ? QColor(0xef, 0x44, 0x44) : theme.getPrimaryColor();
 
   switch (currentStage_) {
   case Stage::Extraction: {
     // Audio wave icon (target)
-    p.setPen(QPen(color, 2.5, Qt::SolidLine, Qt::RoundCap));
+    p.setPen(QPen(primary, 2.5, Qt::SolidLine, Qt::RoundCap));
     for (int i = -2; i <= 2; i++) {
-      int barH = (i == 0) ? 20 : (qAbs(i) == 1 ? 14 : 8);
-      p.drawLine(cx + i * 7, cy - barH / 2, cx + i * 7, cy + barH / 2);
+      double waveScale = (qSin(tickCount_ * 0.2 + i * 0.5) + 1.0) * 0.5;
+      int baseH = (i == 0) ? 24 : (qAbs(i) == 1 ? 16 : 10);
+      int barH = baseH * (0.8 + waveScale * 0.4);
+      p.drawLine(cx + i * 8, cy - barH / 2, cx + i * 8, cy + barH / 2);
     }
     break;
   }
   case Stage::Upload: {
-    // Cloud icon (target)
-    QPainterPath cloud;
-    cloud.addEllipse(cx - 14, cy + 2, 20, 16);
-    cloud.addEllipse(cx - 6, cy - 10, 22, 22);
-    cloud.addEllipse(cx + 6, cy, 18, 16);
-    p.setPen(QPen(color, 2));
-    p.setBrush(Qt::NoBrush);
-    p.drawPath(cloud);
+    // 1. SVG Base for Symmetrical Cloud
+    double pulse = (qSin(tickCount_ * 0.1) + 1.0) * 0.5;
+    double scale = 0.95 + pulse * 0.1;
+    
+    p.save();
+    p.translate(cx, cy);
+    p.scale(scale, scale);
+    p.translate(-cx, -cy);
+    renderSVG(p, ":/icons/asr_cloud.svg", r, primary);
+    
+    // 2. NATIVE: Glow effect
+    QRadialGradient glow(cx, cy, 30);
+    QColor glowColor = primary;
+    glowColor.setAlphaF(pulse * 0.3);
+    glow.setColorAt(0, glowColor);
+    glow.setColorAt(1, Qt::transparent);
+    p.setBrush(glow);
+    p.setPen(Qt::NoPen);
+    p.drawEllipse(QPoint(cx, cy), 40, 40);
+    p.restore();
     break;
   }
   case Stage::Recognition: {
-    // Text lines icon (target)
-    p.setPen(QPen(color, 2, Qt::SolidLine, Qt::RoundCap));
-    int lineW = 24;
-    for (int i = -1; i <= 1; i++) {
-      int lw = (i == 0) ? lineW : lineW - 6;
-      int lx = cx - lw / 2;
-      int ly = cy + i * 10;
-      p.drawLine(lx, ly, lx + lw, ly);
+    // 1. SVG Base for Text Frame
+    renderSVG(p, ":/icons/asr_text_base.svg", r, primary);
+    
+    // 2. NATIVE: Typewriter lines
+    p.setBrush(primary);
+    int lineCount = 4;
+    int lineSpacing = 8;
+    int startY = cy - (lineCount * lineSpacing) / 2 + 4;
+    
+    for (int i = 0; i < lineCount; i++) {
+        double typePhase = fmod(tickCount_ * 0.02 + i * 0.25, 1.0);
+        double lineWeight = (i == 3) ? 0.5 : (i % 2 == 0 ? 0.8 : 0.6);
+        double currentWidth = (size - 16) * lineWeight;
+        if (typePhase < 0.4) currentWidth *= (typePhase / 0.4);
+        p.setOpacity(0.9);
+        p.drawRoundedRect(cx - (size - 16) * lineWeight / 2, startY + i * lineSpacing, 
+                          currentWidth, 3, 1.5, 1.5);
     }
+    p.setOpacity(1.0);
+
+    // 3. NATIVE: Scanning beam
+    double scanY = fmod(tickCount_ * 0.03, 1.0);
+    QLinearGradient scanGrad(0, cy - half + scanY * size - 5, 0, cy - half + scanY * size + 5);
+    scanGrad.setColorAt(0, Qt::transparent);
+    scanGrad.setColorAt(0.5, QColor(primary.red(), primary.green(), primary.blue(), 60));
+    scanGrad.setColorAt(1, Qt::transparent);
+    p.fillRect(cx - half + 4, cy - half + 4, size - 8, size - 8, scanGrad);
     break;
   }
   }
@@ -387,20 +453,34 @@ void AsrProgressDialog::drawParticles(QPainter &p, int x1, int x2, int cy) {
   auto &theme = ThemeManager::instance();
   QColor color = theme.getPrimaryColor();
 
-  const int particleCount = 6;
+  const int particleCount = 20; // Increased count
   double span = x2 - x1;
-  double speed = 0.02;
-
+  
   for (int i = 0; i < particleCount; i++) {
+    // Each particle has its own speed and horizontal phase
+    // We use i to seed pseudo-randomness for Y offset and delay
+    double speed = 0.01 + (double)(i % 5) * 0.005; 
     double phase = fmod(tickCount_ * speed + (double)i / particleCount, 1.0);
+    
     double x = x1 + phase * span;
+    
+    // Messy vertical distribution
+    int yOffset = ((i * 17) % 40) - 20; // Spread between -20 and 20
+    double y = cy + yOffset;
+    
     double alpha = qSin(phase * M_PI);
     QColor c = color;
-    c.setAlphaF(alpha * 0.8);
+    c.setAlphaF(alpha * 0.7);
 
-    int r = 3 + static_cast<int>(alpha * 2);
     p.setPen(Qt::NoPen);
     p.setBrush(c);
-    p.drawEllipse(QPointF(x, cy), r, r);
+    p.drawEllipse(QPointF(x, y), 1.5, 1.5); // Smaller particles
+    
+    // Subtle glow for some particles
+    if (i % 3 == 0) {
+        c.setAlphaF(alpha * 0.2);
+        p.setBrush(c);
+        p.drawEllipse(QPointF(x, y), 4, 4);
+    }
   }
 }

@@ -40,6 +40,7 @@ private:
   void drawSourceIcon(QPainter &p, int cx, int cy, int size);
   void drawTargetIcon(QPainter &p, int cx, int cy, int size);
   void drawParticles(QPainter &p, int x1, int x2, int cy);
+  void renderSVG(QPainter &p, const QString &resPath, const QRect &rect, const QColor &color);
   void setupTitleBar();
 
   Stage currentStage_ = Stage::Extraction;

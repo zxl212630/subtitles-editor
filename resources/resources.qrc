@@ -14,6 +14,9 @@
         <file>icons/resize-right.svg</file>
         <file>icons/settings.svg</file>
         <file>icons/export.svg</file>
+        <file>icons/asr_video_base.svg</file>
+        <file>icons/asr_cloud.svg</file>
+        <file>icons/asr_text_base.svg</file>
         <file>themes/dark.qss</file>
         <file>themes/midnight.qss</file>
         <file>themes/oled.qss</file>
