@@ -117,13 +117,20 @@ void SubtitleListPanel::retranslateUi() {
   if (actionOverlay_)
     actionOverlay_->retranslateUi();
   searchEdit_->setPlaceholderText(tr("Search..."));
-  if (tabSubtitle_) tabSubtitle_->setText(tr("Subtitle"));
-  if (tabPreset_) tabPreset_->setText(tr("Preset"));
-  if (tabCustom_) tabCustom_->setText(tr("Custom"));
-  if (tabAnimation_) tabAnimation_->setText(tr("Animation"));
-  if (headerTime_) headerTime_->setText(tr("Timecode"));
-  if (headerText_) headerText_->setText(tr("Subtitle"));
-  if (headerAction_) headerAction_->setText(tr("Action"));
+  if (tabSubtitle_)
+    tabSubtitle_->setText(tr("Subtitle"));
+  if (tabPreset_)
+    tabPreset_->setText(tr("Preset"));
+  if (tabCustom_)
+    tabCustom_->setText(tr("Custom"));
+  if (tabAnimation_)
+    tabAnimation_->setText(tr("Animation"));
+  if (headerTime_)
+    headerTime_->setText(tr("Timecode"));
+  if (headerText_)
+    headerText_->setText(tr("Subtitle"));
+  if (headerAction_)
+    headerAction_->setText(tr("Action"));
 }
 
 void SubtitleListPanel::setupUi() {
@@ -191,13 +198,12 @@ void SubtitleListPanel::setupUi() {
   searchInput->setFixedHeight(28);
   auto *siLayout = new QHBoxLayout(searchInput);
   siLayout->setContentsMargins(10, 0, 10, 0);
-  siLayout->setSpacing(8);
+  siLayout->setSpacing(4);
   siLayout->setAlignment(Qt::AlignVCenter);
 
   auto *searchIcon = new QLabel(searchInput);
   searchIcon->setObjectName("SubtitleSearchIcon");
-  searchIcon->setText("\u2315"); // ⌕ search icon
-  searchIcon->setFixedSize(22, 22);
+  searchIcon->setFixedSize(14, 14);
   searchIcon->setAlignment(Qt::AlignCenter);
   siLayout->addWidget(searchIcon);
 

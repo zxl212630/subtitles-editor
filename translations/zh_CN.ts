@@ -546,7 +546,7 @@
         <location filename="../src/SubtitleListPanel.cpp" line="119"/>
         <location filename="../src/SubtitleListPanel.cpp" line="206"/>
         <source>Search...</source>
-        <translation type="unfinished"></translation>
+        <translation>搜索...</translation>
     </message>
     <message>
         <location filename="../src/SubtitleListPanel.cpp" line="120"/>
