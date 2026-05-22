@@ -60,6 +60,7 @@ protected:
   void wheelEvent(QWheelEvent *event) override;
   void resizeEvent(QResizeEvent *event) override;
   void contextMenuEvent(QContextMenuEvent *event) override;
+  void changeEvent(QEvent *event) override;
 
 private:
   void drawRuler(QPainter &painter);

@@ -500,14 +500,14 @@
 <context>
     <name>SubtitleActionOverlay</name>
     <message>
-        <location filename="../src/SubtitleListPanel.cpp" line="34"/>
-        <location filename="../src/SubtitleListPanel.cpp" line="62"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="35"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="63"/>
         <source>添加</source>
         <translation>添加</translation>
     </message>
     <message>
-        <location filename="../src/SubtitleListPanel.cpp" line="36"/>
-        <location filename="../src/SubtitleListPanel.cpp" line="63"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="37"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="64"/>
         <source>合并</source>
         <translation>合并</translation>
     </message>
@@ -543,46 +543,52 @@
         <translation type="vanished">操作</translation>
     </message>
     <message>
-        <location filename="../src/SubtitleListPanel.cpp" line="119"/>
-        <location filename="../src/SubtitleListPanel.cpp" line="206"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="120"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="220"/>
         <source>Search...</source>
         <translation>搜索...</translation>
     </message>
     <message>
-        <location filename="../src/SubtitleListPanel.cpp" line="120"/>
-        <location filename="../src/SubtitleListPanel.cpp" line="125"/>
-        <location filename="../src/SubtitleListPanel.cpp" line="145"/>
-        <location filename="../src/SubtitleListPanel.cpp" line="244"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="122"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="230"/>
+        <source>Clear</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/SubtitleListPanel.cpp" line="124"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="134"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="155"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="274"/>
         <source>Subtitle</source>
         <translation>字幕</translation>
     </message>
     <message>
-        <location filename="../src/SubtitleListPanel.cpp" line="121"/>
-        <location filename="../src/SubtitleListPanel.cpp" line="151"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="126"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="161"/>
         <source>Preset</source>
         <translation>预设</translation>
     </message>
     <message>
-        <location filename="../src/SubtitleListPanel.cpp" line="122"/>
-        <location filename="../src/SubtitleListPanel.cpp" line="157"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="128"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="167"/>
         <source>Custom</source>
         <translation>自定义</translation>
     </message>
     <message>
-        <location filename="../src/SubtitleListPanel.cpp" line="123"/>
-        <location filename="../src/SubtitleListPanel.cpp" line="163"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="130"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="173"/>
         <source>Animation</source>
         <translation>动画</translation>
     </message>
     <message>
-        <location filename="../src/SubtitleListPanel.cpp" line="124"/>
-        <location filename="../src/SubtitleListPanel.cpp" line="240"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="132"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="270"/>
         <source>Timecode</source>
         <translation>时间码</translation>
     </message>
     <message>
-        <location filename="../src/SubtitleListPanel.cpp" line="126"/>
-        <location filename="../src/SubtitleListPanel.cpp" line="251"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="136"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="281"/>
         <source>Action</source>
         <translation>操作</translation>
     </message>
@@ -608,29 +614,37 @@
 <context>
     <name>TimelinePanel</name>
     <message>
-        <location filename="../src/TimelinePanel.cpp" line="320"/>
-        <location filename="../src/TimelinePanel.cpp" line="467"/>
         <source>T  字幕1</source>
-        <translation>T  字幕1</translation>
+        <translation type="vanished">T  字幕1</translation>
     </message>
     <message>
-        <location filename="../src/TimelinePanel.cpp" line="322"/>
-        <location filename="../src/TimelinePanel.cpp" line="543"/>
         <source>F  视频1</source>
-        <translation>F  视频1</translation>
+        <translation type="vanished">F  视频1</translation>
     </message>
     <message>
-        <location filename="../src/TimelinePanel.cpp" line="629"/>
+        <location filename="../src/TimelinePanel.cpp" line="346"/>
+        <location filename="../src/TimelinePanel.cpp" line="511"/>
+        <source>字幕</source>
+        <translation type="unfinished">字幕</translation>
+    </message>
+    <message>
+        <location filename="../src/TimelinePanel.cpp" line="357"/>
+        <location filename="../src/TimelinePanel.cpp" line="596"/>
+        <source>视频</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/TimelinePanel.cpp" line="682"/>
         <source>将视频和资源拖拽到此处，开始创作</source>
         <translation>将视频和资源拖拽到此处，开始创作</translation>
     </message>
     <message>
-        <location filename="../src/TimelinePanel.cpp" line="1021"/>
+        <location filename="../src/TimelinePanel.cpp" line="1075"/>
         <source>Transcoding failed: %1</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TimelinePanel.cpp" line="1027"/>
+        <location filename="../src/TimelinePanel.cpp" line="1081"/>
         <source>Upload failed: %1</source>
         <translation>上传失败: %1</translation>
     </message>
@@ -643,17 +657,17 @@
         <translation type="vanished">上传失败: %1</translation>
     </message>
     <message>
-        <location filename="../src/TimelinePanel.cpp" line="1109"/>
+        <location filename="../src/TimelinePanel.cpp" line="1163"/>
         <source>属性</source>
         <translation>属性</translation>
     </message>
     <message>
-        <location filename="../src/TimelinePanel.cpp" line="1110"/>
+        <location filename="../src/TimelinePanel.cpp" line="1164"/>
         <source>打开文件所在位置</source>
         <translation>打开文件所在位置</translation>
     </message>
     <message>
-        <location filename="../src/TimelinePanel.cpp" line="1111"/>
+        <location filename="../src/TimelinePanel.cpp" line="1165"/>
         <source>语音转文字</source>
         <translation>语音转文字</translation>
     </message>

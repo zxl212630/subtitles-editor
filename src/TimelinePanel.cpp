@@ -13,6 +13,7 @@
 #include <QApplication>
 #include <QContextMenuEvent>
 #include <QDateTime>
+#include <QEvent>
 #include <QFileInfo>
 #include <QFontDatabase>
 #include <QIcon>
@@ -1171,6 +1172,15 @@ void TimelinePanel::contextMenuEvent(QContextMenuEvent *event) {
   } else if (selected == asrAction) {
     emit videoAsrRequested();
   }
+}
+
+void TimelinePanel::changeEvent(QEvent *event) {
+  if (event->type() == QEvent::LanguageChange) {
+    if (canvas_) {
+      canvas_->update();
+    }
+  }
+  QWidget::changeEvent(event);
 }
 
 void TimelinePanel::updateIcons() {

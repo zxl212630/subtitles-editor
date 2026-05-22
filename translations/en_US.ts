@@ -233,7 +233,7 @@ Make sure to include the necessary settings for FFmpeg, Tencent Cloud ASR, and A
     <name>AsrProgressDialog</name>
     <message>
         <location filename="../src/AsrProgressDialog.cpp" line="19"/>
-        <location filename="../src/AsrProgressDialog.cpp" line="142"/>
+        <location filename="../src/AsrProgressDialog.cpp" line="186"/>
         <source>语音识别</source>
         <translation>Speech Recognition</translation>
     </message>
@@ -242,7 +242,7 @@ Make sure to include the necessary settings for FFmpeg, Tencent Cloud ASR, and A
         <translation type="vanished">Preparing...</translation>
     </message>
     <message>
-        <location filename="../src/AsrProgressDialog.cpp" line="52"/>
+        <location filename="../src/AsrProgressDialog.cpp" line="53"/>
         <source>取消</source>
         <translation>Cancel</translation>
     </message>
@@ -252,39 +252,71 @@ Make sure to include the necessary settings for FFmpeg, Tencent Cloud ASR, and A
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/AsrProgressDialog.cpp" line="77"/>
+        <location filename="../src/AsrProgressDialog.cpp" line="81"/>
+        <location filename="../src/AsrProgressDialog.cpp" line="82"/>
+        <source>AI Subtitle Generation</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/AsrProgressDialog.cpp" line="87"/>
         <source>Extracting Audio...</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/AsrProgressDialog.cpp" line="80"/>
+        <location filename="../src/AsrProgressDialog.cpp" line="90"/>
         <source>Uploading to Cloud...</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/AsrProgressDialog.cpp" line="83"/>
+        <location filename="../src/AsrProgressDialog.cpp" line="93"/>
         <source>Recognizing Speech...</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/AsrProgressDialog.cpp" line="101"/>
+        <location filename="../src/AsrProgressDialog.cpp" line="96"/>
+        <source>Cancel</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/AsrProgressDialog.cpp" line="98"/>
+        <source>Error Occurred</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/AsrProgressDialog.cpp" line="99"/>
+        <source>Close</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/AsrProgressDialog.cpp" line="226"/>
+        <source>Extraction</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/AsrProgressDialog.cpp" line="227"/>
+        <source>Upload</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/AsrProgressDialog.cpp" line="228"/>
+        <source>Recognition</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
         <source>关闭</source>
-        <translation>Close</translation>
+        <translation type="vanished">Close</translation>
     </message>
     <message>
-        <location filename="../src/AsrProgressDialog.cpp" line="182"/>
         <source>提取</source>
-        <translation>Extract</translation>
+        <translation type="vanished">Extract</translation>
     </message>
     <message>
-        <location filename="../src/AsrProgressDialog.cpp" line="183"/>
         <source>上传</source>
-        <translation>Upload</translation>
+        <translation type="vanished">Upload</translation>
     </message>
     <message>
-        <location filename="../src/AsrProgressDialog.cpp" line="184"/>
         <source>识别</source>
-        <translation>Recognize</translation>
+        <translation type="vanished">Recognize</translation>
     </message>
 </context>
 <context>
@@ -468,14 +500,14 @@ Make sure to include the necessary settings for FFmpeg, Tencent Cloud ASR, and A
 <context>
     <name>SubtitleActionOverlay</name>
     <message>
-        <location filename="../src/SubtitleListPanel.cpp" line="34"/>
-        <location filename="../src/SubtitleListPanel.cpp" line="62"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="35"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="63"/>
         <source>添加</source>
         <translation>Add</translation>
     </message>
     <message>
-        <location filename="../src/SubtitleListPanel.cpp" line="36"/>
-        <location filename="../src/SubtitleListPanel.cpp" line="63"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="37"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="64"/>
         <source>合并</source>
         <translation>Merge</translation>
     </message>
@@ -483,41 +515,82 @@ Make sure to include the necessary settings for FFmpeg, Tencent Cloud ASR, and A
 <context>
     <name>SubtitleListPanel</name>
     <message>
-        <location filename="../src/SubtitleListPanel.cpp" line="146"/>
-        <location filename="../src/SubtitleListPanel.cpp" line="225"/>
         <source>字幕</source>
-        <translation>Subtitles</translation>
+        <translation type="vanished">Subtitles</translation>
     </message>
     <message>
-        <location filename="../src/SubtitleListPanel.cpp" line="147"/>
         <source>预设</source>
-        <translation>Presets</translation>
+        <translation type="vanished">Presets</translation>
     </message>
     <message>
-        <location filename="../src/SubtitleListPanel.cpp" line="148"/>
         <source>自定义</source>
-        <translation>Custom</translation>
+        <translation type="vanished">Custom</translation>
     </message>
     <message>
-        <location filename="../src/SubtitleListPanel.cpp" line="149"/>
         <source>动画</source>
-        <translation>Animation</translation>
+        <translation type="vanished">Animation</translation>
     </message>
     <message>
-        <location filename="../src/SubtitleListPanel.cpp" line="119"/>
-        <location filename="../src/SubtitleListPanel.cpp" line="187"/>
         <source>请输入查找内容</source>
-        <translation>Search subtitles...</translation>
+        <translation type="vanished">Search subtitles...</translation>
     </message>
     <message>
-        <location filename="../src/SubtitleListPanel.cpp" line="221"/>
         <source>时间码</source>
-        <translation>Timecode</translation>
+        <translation type="vanished">Timecode</translation>
     </message>
     <message>
-        <location filename="../src/SubtitleListPanel.cpp" line="232"/>
         <source>操作</source>
-        <translation>Actions</translation>
+        <translation type="vanished">Actions</translation>
+    </message>
+    <message>
+        <location filename="../src/SubtitleListPanel.cpp" line="120"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="220"/>
+        <source>Search...</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/SubtitleListPanel.cpp" line="122"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="230"/>
+        <source>Clear</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/SubtitleListPanel.cpp" line="124"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="134"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="155"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="274"/>
+        <source>Subtitle</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/SubtitleListPanel.cpp" line="126"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="161"/>
+        <source>Preset</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/SubtitleListPanel.cpp" line="128"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="167"/>
+        <source>Custom</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/SubtitleListPanel.cpp" line="130"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="173"/>
+        <source>Animation</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/SubtitleListPanel.cpp" line="132"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="270"/>
+        <source>Timecode</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/SubtitleListPanel.cpp" line="136"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="281"/>
+        <source>Action</source>
+        <translation type="unfinished"></translation>
     </message>
 </context>
 <context>
@@ -541,44 +614,60 @@ Make sure to include the necessary settings for FFmpeg, Tencent Cloud ASR, and A
 <context>
     <name>TimelinePanel</name>
     <message>
-        <location filename="../src/TimelinePanel.cpp" line="320"/>
-        <location filename="../src/TimelinePanel.cpp" line="467"/>
         <source>T  字幕1</source>
-        <translation>T  Subtitle 1</translation>
+        <translation type="vanished">T  Subtitle 1</translation>
     </message>
     <message>
-        <location filename="../src/TimelinePanel.cpp" line="322"/>
-        <location filename="../src/TimelinePanel.cpp" line="543"/>
         <source>F  视频1</source>
-        <translation>F  Video 1</translation>
+        <translation type="vanished">F  Video 1</translation>
     </message>
     <message>
-        <location filename="../src/TimelinePanel.cpp" line="629"/>
+        <location filename="../src/TimelinePanel.cpp" line="682"/>
         <source>将视频和资源拖拽到此处，开始创作</source>
         <translation>Drag video and resources here to start creating</translation>
     </message>
     <message>
-        <location filename="../src/TimelinePanel.cpp" line="1021"/>
         <source>转码失败: %1</source>
-        <translation>Transcoding failed: %1</translation>
+        <translation type="vanished">Transcoding failed: %1</translation>
     </message>
     <message>
-        <location filename="../src/TimelinePanel.cpp" line="1027"/>
         <source>上传失败: %1</source>
-        <translation>Upload failed: %1</translation>
+        <translation type="vanished">Upload failed: %1</translation>
     </message>
     <message>
-        <location filename="../src/TimelinePanel.cpp" line="1109"/>
+        <location filename="../src/TimelinePanel.cpp" line="346"/>
+        <location filename="../src/TimelinePanel.cpp" line="511"/>
+        <source>字幕</source>
+        <translation type="unfinished">Subtitles</translation>
+    </message>
+    <message>
+        <location filename="../src/TimelinePanel.cpp" line="357"/>
+        <location filename="../src/TimelinePanel.cpp" line="596"/>
+        <source>视频</source>
+        <translation>Video</translation>
+    </message>
+    <message>
+        <location filename="../src/TimelinePanel.cpp" line="1075"/>
+        <source>Transcoding failed: %1</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/TimelinePanel.cpp" line="1081"/>
+        <source>Upload failed: %1</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/TimelinePanel.cpp" line="1163"/>
         <source>属性</source>
         <translation>Properties</translation>
     </message>
     <message>
-        <location filename="../src/TimelinePanel.cpp" line="1110"/>
+        <location filename="../src/TimelinePanel.cpp" line="1164"/>
         <source>打开文件所在位置</source>
         <translation>Open File Location</translation>
     </message>
     <message>
-        <location filename="../src/TimelinePanel.cpp" line="1111"/>
+        <location filename="../src/TimelinePanel.cpp" line="1165"/>
         <source>语音转文字</source>
         <translation>Speech to Text</translation>
     </message>

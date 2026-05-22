@@ -242,17 +242,18 @@ void VideoPreviewPanel::setupUi() {
   tbLayout->addWidget(fontCombo_);
 
   connect(fontCombo_, QOverload<int>::of(&QComboBox::currentIndexChanged), this,
-          [this]() { emit fontChanged(fontCombo_->currentText()); });
+          [this]() {
+            emit fontChanged(fontCombo_->currentText());
+            updateSubtitleOverlay();
+          });
 
   // Size combo
   sizeCombo_ = new QComboBox(toolbar);
-  sizeCombo_->setFocusPolicy(Qt::NoFocus);
   sizeCombo_->setObjectName("PreviewSizeCombo");
   sizeCombo_->setFixedSize(80, 28);
   sizeCombo_->setMaxVisibleItems(10);
   sizeCombo_->setEditable(true);
   if (sizeCombo_->lineEdit()) {
-    sizeCombo_->lineEdit()->setFocusPolicy(Qt::NoFocus);
     sizeCombo_->lineEdit()->setObjectName("PreviewSizeComboLineEdit");
     sizeCombo_->lineEdit()->setStyleSheet(
         "background: transparent; border: none; color: inherit; padding: 0px; "
@@ -261,9 +262,24 @@ void VideoPreviewPanel::setupUi() {
   populateSizeCombo();
   tbLayout->addWidget(sizeCombo_);
 
-  connect(
-      sizeCombo_, QOverload<int>::of(&QComboBox::currentIndexChanged), this,
-      [this]() { emit fontSizeChanged(sizeCombo_->currentText().toInt()); });
+  auto onSizeUpdated = [this]() {
+    int size = sizeCombo_->currentText().toInt();
+    if (size > 0) {
+      emit fontSizeChanged(size);
+      updateSubtitleOverlay();
+    }
+  };
+
+  connect(sizeCombo_, QOverload<int>::of(&QComboBox::currentIndexChanged), this,
+          onSizeUpdated);
+
+  if (sizeCombo_->lineEdit()) {
+    connect(sizeCombo_->lineEdit(), &QLineEdit::editingFinished, this,
+            [this, onSizeUpdated]() {
+              onSizeUpdated();
+              sizeCombo_->clearFocus();
+            });
+  }
 
   // Size input validation
   auto *validator = new QIntValidator(1, 999, sizeCombo_);

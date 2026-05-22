@@ -95,6 +95,13 @@ All splitters are non-collapsible.
 1. **Format**: `clang-format -i src/*.cpp include/*.h`
 2. **Compile**: `cmake --build cmake-build-debug`
 
+## Multi-language / Internationalization (I18n)
+
+All user-facing text must support translation and dynamic language changes:
+- **String wrapping**: Wrap all user-visible strings in `tr()` (e.g., `tr("字幕")`, `tr("视频")`, `tr("属性")`).
+- **Dynamic switching**: Any custom widget that does drawing or caches translated text must implement `void changeEvent(QEvent *event) override`.
+- **Event Handling**: Inside `changeEvent()`, check for `QEvent::LanguageChange`. On this event, trigger updates (e.g., `update()` or custom translation refresh functions) to repaint or reload localized text immediately.
+
 ## SDK Paths
 
 Override via CMake `-D` flags (e.g., `-DQt6_ROOT=/path/to/qt`).
