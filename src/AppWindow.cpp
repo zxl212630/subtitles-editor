@@ -131,8 +131,8 @@ void AppWindow::setupTitleBar() {
   d->settingsBtn = new QPushButton(d->titleBar);
   d->settingsBtn->setObjectName("TitleBarSettingsBtn");
   d->settingsBtn->setIcon(QIcon(":/icons/settings.svg"));
-  d->settingsBtn->setIconSize(QSize(20, 20));
-  d->settingsBtn->setFixedSize(32, 32);
+  d->settingsBtn->setIconSize(QSize(16, 16));
+  d->settingsBtn->setFixedSize(26, 26);
   d->settingsBtn->setToolTip(tr("设置"));
   d->settingsBtn->setCursor(Qt::PointingHandCursor);
   layout->addWidget(d->settingsBtn);
@@ -142,8 +142,8 @@ void AppWindow::setupTitleBar() {
   d->exportBtn = new QPushButton(d->titleBar);
   d->exportBtn->setObjectName("TitleBarExportBtn");
   d->exportBtn->setIcon(QIcon(":/icons/export.svg"));
-  d->exportBtn->setIconSize(QSize(20, 20));
-  d->exportBtn->setFixedSize(32, 32);
+  d->exportBtn->setIconSize(QSize(16, 16));
+  d->exportBtn->setFixedSize(26, 26);
   d->exportBtn->setToolTip(tr("导出字幕"));
   d->exportBtn->setCursor(Qt::PointingHandCursor);
   layout->addWidget(d->exportBtn);

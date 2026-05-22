@@ -17,6 +17,7 @@
 #include <QMouseEvent>
 #include <QPainter>
 #include <QPushButton>
+#include <QStyleOption>
 #include <QTime>
 #include <QVBoxLayout>
 #include <QValidator>
@@ -199,60 +200,30 @@ void VolumeButton::leaveEvent(QEvent *event) {
 // VolumeSliderWidget Implementation
 // ==================================================================
 VolumeSliderWidget::VolumeSliderWidget(QWidget *parent) : QFrame(parent) {
+  setObjectName("VolumeSliderWidget");
   setWindowFlags(Qt::ToolTip | Qt::FramelessWindowHint |
                  Qt::NoDropShadowWindowHint);
   setAttribute(Qt::WA_TranslucentBackground);
-
-  setStyleSheet("VolumeSliderWidget {"
-                "  background-color: rgba(30, 30, 30, 230);"
-                "  border: 1px solid #444444;"
-                "  border-radius: 6px;"
-                "}"
-                "QSlider::groove:vertical {"
-                "  background: #333333;"
-                "  width: 4px;"
-                "  border-radius: 2px;"
-                "}"
-                "QSlider::sub-page:vertical {"
-                "  background: #333333;"
-                "  border-radius: 2px;"
-                "}"
-                "QSlider::add-page:vertical {"
-                "  background: #5288c1;"
-                "  border-radius: 2px;"
-                "}"
-                "QSlider::handle:vertical {"
-                "  background: #d1d5db;"
-                "  border: none;"
-                "  height: 12px;"
-                "  width: 12px;"
-                "  margin: 0 -4px;"
-                "  border-radius: 6px;"
-                "}"
-                "QSlider::handle:vertical:hover {"
-                "  background: #ffffff;"
-                "}");
+  setAttribute(Qt::WA_StyledBackground);
 
   auto *layout = new QVBoxLayout(this);
-  layout->setContentsMargins(6, 10, 6, 10);
-  layout->setSpacing(6);
-
-  label_ = new QLabel("100%", this);
-  label_->setAlignment(Qt::AlignCenter);
-  label_->setStyleSheet("color: #d1d5db; font-size: 10px; border: none; "
-                        "background: transparent;");
-  layout->addWidget(label_, 0, Qt::AlignHCenter);
+  layout->setContentsMargins(4, 8, 4, 6);
+  layout->setSpacing(4);
 
   slider_ = new QSlider(Qt::Vertical, this);
   slider_->setRange(0, 100);
   slider_->setValue(100);
-  slider_->setFixedHeight(100);
+  slider_->setFixedHeight(80);
   slider_->setFocusPolicy(Qt::NoFocus);
   slider_->setStyleSheet("border: none; background: transparent;");
   layout->addWidget(slider_, 0, Qt::AlignHCenter);
 
+  label_ = new QLabel("100", this);
+  label_->setAlignment(Qt::AlignCenter);
+  layout->addWidget(label_, 0, Qt::AlignHCenter);
+
   connect(slider_, &QSlider::valueChanged, this, [this](int val) {
-    label_->setText(QString("%1%").arg(val));
+    label_->setText(QString::number(val));
     emit volumeChanged(val / 100.0);
   });
 
@@ -270,14 +241,77 @@ VolumeSliderWidget::VolumeSliderWidget(QWidget *parent) : QFrame(parent) {
   hideTimer_ = new QTimer(this);
   hideTimer_->setSingleShot(true);
   connect(hideTimer_, &QTimer::timeout, this, &QWidget::hide);
+
+  connect(&ThemeManager::instance(), &ThemeManager::themeChanged, this,
+          &VolumeSliderWidget::updateTheme);
+  updateTheme();
+}
+
+void VolumeSliderWidget::updateTheme() {
+  QColor bg = ThemeManager::instance().getBgPanelColor();
+  QColor border = ThemeManager::instance().getBorderColor();
+  QColor primary = ThemeManager::instance().getPrimaryColor();
+  QColor textNormal = ThemeManager::instance().getTextNormalColor();
+
+  QString bgHex = bg.name();
+  QString borderHex = border.name();
+  QString primaryHex = primary.name();
+  QString textHex = textNormal.name();
+
+  setStyleSheet(QString("#VolumeSliderWidget {"
+                        "  background-color: %1;"
+                        "  border: 1px solid %2;"
+                        "  border-radius: 6px;"
+                        "}"
+                        "QSlider::groove:vertical {"
+                        "  background: #333333;"
+                        "  width: 4px;"
+                        "  border-radius: 2px;"
+                        "}"
+                        "QSlider::sub-page:vertical {"
+                        "  background: #333333;"
+                        "  border-radius: 2px;"
+                        "}"
+                        "QSlider::add-page:vertical {"
+                        "  background: %3;"
+                        "  border-radius: 2px;"
+                        "}"
+                        "QSlider::handle:vertical {"
+                        "  background: #d1d5db;"
+                        "  border: none;"
+                        "  height: 12px;"
+                        "  width: 12px;"
+                        "  margin: 0 -4px;"
+                        "  border-radius: 6px;"
+                        "}"
+                        "QSlider::handle:vertical:hover {"
+                        "  background: #ffffff;"
+                        "}")
+                    .arg(bgHex)
+                    .arg(borderHex)
+                    .arg(primaryHex));
+
+  if (label_) {
+    label_->setStyleSheet(
+        QString("color: %1; font-size: 10px; border: none; background: "
+                "transparent;")
+            .arg(textHex));
+  }
 }
 
 void VolumeSliderWidget::setVolume(qreal vol, bool muted) {
   int val = muted ? 0 : static_cast<int>(vol * 100.0);
   slider_->blockSignals(true);
   slider_->setValue(val);
-  label_->setText(QString("%1%").arg(val));
+  label_->setText(QString::number(val));
   slider_->blockSignals(false);
+}
+
+void VolumeSliderWidget::paintEvent(QPaintEvent *event) {
+  QStyleOption opt;
+  opt.initFrom(this);
+  QPainter p(this);
+  style()->drawPrimitive(QStyle::PE_Widget, &opt, &p, this);
 }
 
 void VolumeSliderWidget::startHideTimer() { hideTimer_->start(300); }
@@ -463,7 +497,7 @@ void VideoPreviewPanel::setupUi() {
   controlBar->setObjectName("PreviewControlBar");
   controlBar->setFixedHeight(36);
   auto *cbLayout = new QHBoxLayout(controlBar);
-  cbLayout->setContentsMargins(8, 0, 12, 0);
+  cbLayout->setContentsMargins(8, 0, 6, 0);
   cbLayout->setSpacing(8);
   cbLayout->setAlignment(Qt::AlignVCenter);
 
@@ -500,9 +534,14 @@ void VideoPreviewPanel::setupUi() {
   progressBar_->setObjectName("PreviewProgressBar");
   cbLayout->addWidget(progressBar_);
 
+  // 额外增加播放进度与时间 label
+  // 的间距，平衡右侧音量按钮的视觉空白，达到对称美观
+  cbLayout->addSpacing(4);
+
   currentTimeLabel_ = new QLabel("00:00:00.000 / 00:00:00.000", controlBar);
   currentTimeLabel_->setObjectName("PreviewCurrentTimeLabel");
-  currentTimeLabel_->setFixedWidth(170);
+  currentTimeLabel_->setFixedWidth(190);
+  currentTimeLabel_->setAlignment(Qt::AlignCenter);
   cbLayout->addWidget(currentTimeLabel_);
 
   volBtn_ = new VolumeButton(controlBar);
@@ -729,11 +768,11 @@ void VideoPreviewPanel::showVolumeSlider() {
   sliderWidget_->stopHideTimer();
 
   QPoint globalPos = volBtn_->mapToGlobal(QPoint(0, 0));
-  int w = 40;
-  int h = 150;
+  int w = 32;
+  int h = 125;
   sliderWidget_->setFixedSize(w, h);
   int x = globalPos.x() + (volBtn_->width() - w) / 2;
-  int y = globalPos.y() - h - 4;
+  int y = globalPos.y() - h - 2;
   sliderWidget_->move(x, y);
 
   sliderWidget_->show();

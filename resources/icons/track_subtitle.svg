@@ -1,5 +1,5 @@
 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <!-- 字幕 T 字图标 (高占比，留白2px) -->
-  <path d="M4 3.5H20" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>
-  <path d="M12 3.5V19.5" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>
+  <!-- 字幕 T 字图标 (稍微缩小, 留白增加) -->
+  <path d="M6 5.5H18" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/>
+  <path d="M12 5.5V18.5" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/>
 </svg>

@@ -335,7 +335,7 @@ void TimelinePanel::drawOnCanvas(QPainter &painter) {
     painter.setFont(font);
 
     // 绘制字幕轨道图标与文字
-    int subIconY = subY + (SUBTITLE_TRACK_HEIGHT - 14) / 2 + 1;
+    int subIconY = subY + (SUBTITLE_TRACK_HEIGHT - 14) / 2;
     if (!subIconPixmap_.isNull()) {
       painter.drawPixmap(12, subIconY, subIconPixmap_);
     }
@@ -346,7 +346,7 @@ void TimelinePanel::drawOnCanvas(QPainter &painter) {
                      Qt::AlignVCenter | Qt::AlignLeft, tr("字幕"));
 
     // 绘制视频轨道图标与文字
-    int vidIconY = vidY + (VIDEO_TRACK_HEIGHT - 14) / 2 + 1;
+    int vidIconY = vidY + (VIDEO_TRACK_HEIGHT - 14) / 2;
     if (!videoIconPixmap_.isNull()) {
       painter.drawPixmap(12, vidIconY, videoIconPixmap_);
     }
@@ -500,7 +500,7 @@ void TimelinePanel::drawSubtitleTrack(QPainter &painter, int y) {
   painter.setFont(font);
 
   // 绘制字幕轨道图标与文字
-  int subIconY = y + (SUBTITLE_TRACK_HEIGHT - 14) / 2 + 1;
+  int subIconY = y + (SUBTITLE_TRACK_HEIGHT - 14) / 2;
   if (!subIconPixmap_.isNull()) {
     painter.drawPixmap(12, subIconY, subIconPixmap_);
   }
@@ -585,7 +585,7 @@ void TimelinePanel::drawVideoTrack(QPainter &painter, int y) {
   painter.setFont(font);
 
   // 绘制视频轨道图标与文字
-  int vidIconY = y + (VIDEO_TRACK_HEIGHT - 14) / 2 + 1;
+  int vidIconY = y + (VIDEO_TRACK_HEIGHT - 14) / 2;
   if (!videoIconPixmap_.isNull()) {
     painter.drawPixmap(12, vidIconY, videoIconPixmap_);
   }

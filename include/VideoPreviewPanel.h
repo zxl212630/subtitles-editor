@@ -43,6 +43,10 @@ signals:
 protected:
   void enterEvent(QEnterEvent *event) override;
   void leaveEvent(QEvent *event) override;
+  void paintEvent(QPaintEvent *event) override;
+
+private slots:
+  void updateTheme();
 
 private:
   QSlider *slider_ = nullptr;
