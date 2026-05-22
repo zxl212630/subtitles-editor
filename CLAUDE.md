@@ -102,6 +102,13 @@ All user-facing text must support translation and dynamic language changes:
 - **Dynamic switching**: Any custom widget that does drawing or caches translated text must implement `void changeEvent(QEvent *event) override`.
 - **Event Handling**: Inside `changeEvent()`, check for `QEvent::LanguageChange`. On this event, trigger updates (e.g., `update()` or custom translation refresh functions) to repaint or reload localized text immediately.
 
+## Theme & Styling (Dynamic Theme)
+
+The application supports dynamic adjustment of theme modes (e.g., Dark/Light) and primary color palettes. All new UI components must support this:
+- **Theme Propagation**: Ensure custom widgets respond to theme or palette change events.
+- **Dynamic Updates**: Custom styling (such as QSS stylesheets, palette changes, or custom painting) must be re-applied or repainted when the theme or primary color changes.
+- **Event Handling**: Custom widgets that cache styling values or use stylesheets should handle dynamic theme updates, for instance by checking for `QEvent::PaletteChange`, `QEvent::StyleChange`, or responding to global theme changed signals.
+
 ## SDK Paths
 
 Override via CMake `-D` flags (e.g., `-DQt6_ROOT=/path/to/qt`).
