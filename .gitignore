@@ -30,3 +30,4 @@ doc/plan_verify*.png
 .superpowers/
 .cache
 .antigravitycli
+.agent
