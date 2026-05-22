@@ -79,6 +79,78 @@ void SoftwareVideoRenderer::setSubtitleFont(const QFont &font) {
   update();
 }
 
+void SoftwareVideoRenderer::setSubtitleBg(const QString &imagePath,
+                                           bool is9Patch,
+                                           const QMargins &margins) {
+  {
+    QMutexLocker lock(&bgMutex_);
+    bgImagePath_ = imagePath;
+    bgIs9Patch_ = is9Patch;
+    bgMargins_ = margins;
+  }
+  update();
+}
+
+void SoftwareVideoRenderer::clearSubtitleBg() {
+  {
+    QMutexLocker lock(&bgMutex_);
+    bgImagePath_.clear();
+  }
+  update();
+}
+
+void SoftwareVideoRenderer::drawNinePatch(QPainter &painter, const QImage &src,
+                                           const QRect &target,
+                                           const QMargins &m) {
+  int sw = src.width();
+  int sh = src.height();
+  int tw = target.width();
+  int th = target.height();
+
+  int ml = m.left(), mr = m.right(), mt = m.top(), mb = m.bottom();
+
+  // Clamp margins to source size
+  ml = qMin(ml, sw / 2);
+  mr = qMin(mr, sw / 2);
+  mt = qMin(mt, sh / 2);
+  mb = qMin(mb, sh / 2);
+
+  // Source rects (9 regions)
+  QRect sTL(0, 0, ml, mt);
+  QRect sTC(ml, 0, sw - ml - mr, mt);
+  QRect sTR(sw - mr, 0, mr, mt);
+  QRect sML(0, mt, ml, sh - mt - mb);
+  QRect sMC(ml, mt, sw - ml - mr, sh - mt - mb);
+  QRect sMR(sw - mr, mt, mr, sh - mt - mb);
+  QRect sBL(0, sh - mb, ml, mb);
+  QRect sBC(ml, sh - mb, sw - ml - mr, mb);
+  QRect sBR(sw - mr, sh - mb, mr, mb);
+
+  int tx = target.x(), ty = target.y();
+
+  // Target rects
+  QRect dTL(tx, ty, ml, mt);
+  QRect dTC(tx + ml, ty, tw - ml - mr, mt);
+  QRect dTR(tx + tw - mr, ty, mr, mt);
+  QRect dML(tx, ty + mt, ml, th - mt - mb);
+  QRect dMC(tx + ml, ty + mt, tw - ml - mr, th - mt - mb);
+  QRect dMR(tx + tw - mr, ty + mt, mr, th - mt - mb);
+  QRect dBL(tx, ty + th - mb, ml, mb);
+  QRect dBC(tx + ml, ty + th - mb, tw - ml - mr, mb);
+  QRect dBR(tx + tw - mr, ty + th - mb, mr, mb);
+
+  // Draw 9 patches
+  painter.drawImage(dTL, src, sTL);
+  painter.drawImage(dTC, src, sTC);
+  painter.drawImage(dTR, src, sTR);
+  painter.drawImage(dML, src, sML);
+  painter.drawImage(dMC, src, sMC);
+  painter.drawImage(dMR, src, sMR);
+  painter.drawImage(dBL, src, sBL);
+  painter.drawImage(dBC, src, sBC);
+  painter.drawImage(dBR, src, sBR);
+}
+
 void SoftwareVideoRenderer::paintEvent(QPaintEvent *event) {
   Q_UNUSED(event)
   QElapsedTimer timer;
@@ -138,14 +210,60 @@ void SoftwareVideoRenderer::paintEvent(QPaintEvent *event) {
   // Draw subtitle overlay (clipped to video area)
   QString text;
   QFont font;
+  QString bgPath;
+  bool is9Patch = false;
+  QMargins bgMargins;
   {
     QMutexLocker lock(&subtitleMutex_);
     text = subtitleText_;
     font = subtitleFont_;
   }
+  {
+    QMutexLocker lock(&bgMutex_);
+    bgPath = bgImagePath_;
+    is9Patch = bgIs9Patch_;
+    bgMargins = bgMargins_;
+  }
+
   if (!text.isEmpty()) {
     painter.setFont(font);
     QRect textRect = targetRect.adjusted(40, 0, -40, -20);
+
+    // Draw background image if configured
+    if (!bgPath.isEmpty()) {
+      QImage bgImage;
+      {
+        QMutexLocker lock(&bgMutex_);
+        if (bgCache_.contains(bgPath)) {
+          bgImage = bgCache_[bgPath];
+        } else {
+          bgImage = QImage(bgPath);
+          if (!bgImage.isNull()) {
+            bgCache_[bgPath] = bgImage;
+          }
+        }
+      }
+
+      if (!bgImage.isNull()) {
+        QFontMetrics fm(font);
+        QRect textBounding = fm.boundingRect(
+            textRect, Qt::AlignHCenter | Qt::AlignBottom, text);
+        
+        // Expand with padding margins
+        QRect bgRect = textBounding.adjusted(-bgMargins.left(), -bgMargins.top(),
+                                             bgMargins.right(), bgMargins.bottom());
+
+        if (is9Patch) {
+          drawNinePatch(painter, bgImage, bgRect, bgMargins);
+        } else {
+          // Fixed size: center background image under the text bounding box
+          int imgX = textBounding.center().x() - bgImage.width() / 2;
+          int imgY = textBounding.center().y() - bgImage.height() / 2;
+          painter.drawImage(imgX, imgY, bgImage);
+        }
+      }
+    }
+
     painter.setPen(
         QPen(Qt::black, 3, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin));
     painter.drawText(textRect, Qt::AlignHCenter | Qt::AlignBottom, text);
