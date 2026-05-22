@@ -66,6 +66,7 @@ set(SOURCES
     src/ConfigDialog.cpp
     src/AsrProgressDialog.cpp
     src/AppMessageBox.cpp
+    src/SpeakerManagerDialog.cpp
 )
 
 set(HEADERS
@@ -92,6 +93,7 @@ set(HEADERS
     include/ConfigDialog.h
     include/AsrProgressDialog.h
     include/AppMessageBox.h
+    include/SpeakerManagerDialog.h
 )
 
 set(RESOURCES

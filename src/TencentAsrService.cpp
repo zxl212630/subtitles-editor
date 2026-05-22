@@ -172,6 +172,7 @@ QJsonObject TencentAsrService::payload(const QString &audioUrl) {
   obj["ResTextFormat"] = 3;
   obj["Url"] = audioUrl;
   obj["SourceType"] = 0; // 0=URL
+  obj["SpeakerDiarization"] = 1; // 开启说话人分离
   return obj;
 }
 
@@ -375,6 +376,7 @@ void TencentAsrService::parseResultDetail(const QJsonArray &resultDetail,
     seg.text = sentence["FinalSentence"].toString();
     seg.startMs = sentence["StartMs"].toVariant().toLongLong();
     seg.endMs = sentence["EndMs"].toVariant().toLongLong();
+    seg.speakerId = sentence["SpeakerId"].toInt(-1); // 解析说话人 ID，默认 -1
     if (!seg.text.isEmpty()) {
       segments.append(seg);
     }

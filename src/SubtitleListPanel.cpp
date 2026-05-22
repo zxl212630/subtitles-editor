@@ -4,6 +4,7 @@
 #include "SubtitleTrack.h"
 #include "ThemeManager.h"
 #include "TranslationManager.h"
+#include "SpeakerManagerDialog.h"
 #include <QMenu>
 
 #include <QCoreApplication>
@@ -596,8 +597,8 @@ void SubtitleListPanel::showSpeakerMenu(const QModelIndex &index,
   if (!chosen) return;
 
   if (chosen == manageAction) {
-    // SpeakerManagerDialog dlg(track_, this);
-    // dlg.exec();
+    SpeakerManagerDialog dlg(track_, this);
+    dlg.exec();
     return;
   }
   if (chosen == newAction) {

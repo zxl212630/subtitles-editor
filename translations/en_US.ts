@@ -498,18 +498,160 @@ Make sure to include the necessary settings for FFmpeg, Tencent Cloud ASR, and A
     </message>
 </context>
 <context>
+    <name>SpeakerManagerDialog</name>
+    <message>
+        <location filename="../src/SpeakerManagerDialog.cpp" line="21"/>
+        <location filename="../src/SpeakerManagerDialog.cpp" line="66"/>
+        <source>说话人与字幕背景管理</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/SpeakerManagerDialog.cpp" line="102"/>
+        <source>背景图文件夹:</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/SpeakerManagerDialog.cpp" line="107"/>
+        <source>选择包含背景图片的文件夹...</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/SpeakerManagerDialog.cpp" line="110"/>
+        <source>浏览...</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/SpeakerManagerDialog.cpp" line="120"/>
+        <source>九宫格统一边距:</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/SpeakerManagerDialog.cpp" line="137"/>
+        <source>左</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/SpeakerManagerDialog.cpp" line="142"/>
+        <source>右</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/SpeakerManagerDialog.cpp" line="147"/>
+        <source>上</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/SpeakerManagerDialog.cpp" line="152"/>
+        <source>下</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/SpeakerManagerDialog.cpp" line="172"/>
+        <source>说话人列表</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/SpeakerManagerDialog.cpp" line="181"/>
+        <source>+ 添加</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/SpeakerManagerDialog.cpp" line="182"/>
+        <source>- 删除</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/SpeakerManagerDialog.cpp" line="196"/>
+        <source>说话人名称:</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/SpeakerManagerDialog.cpp" line="203"/>
+        <source>背景图片:</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/SpeakerManagerDialog.cpp" line="210"/>
+        <source>拉伸模式:</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/SpeakerManagerDialog.cpp" line="214"/>
+        <source>九宫格拉伸</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/SpeakerManagerDialog.cpp" line="215"/>
+        <source>固定尺寸</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/SpeakerManagerDialog.cpp" line="219"/>
+        <source>背景预览:</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/SpeakerManagerDialog.cpp" line="246"/>
+        <source>取消</source>
+        <translation type="unfinished">Cancel</translation>
+    </message>
+    <message>
+        <location filename="../src/SpeakerManagerDialog.cpp" line="248"/>
+        <source>保存并应用</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/SpeakerManagerDialog.cpp" line="299"/>
+        <source>无</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/SpeakerManagerDialog.cpp" line="331"/>
+        <source>选择一个说话人以编辑属性</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/SpeakerManagerDialog.cpp" line="400"/>
+        <source>选择背景图文件夹</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/SpeakerManagerDialog.cpp" line="499"/>
+        <source>无背景图片</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/SpeakerManagerDialog.cpp" line="508"/>
+        <source>背景图片加载失败</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/SpeakerManagerDialog.cpp" line="548"/>
+        <source>示例字幕背景预览</source>
+        <translation type="unfinished"></translation>
+    </message>
+</context>
+<context>
     <name>SubtitleActionOverlay</name>
     <message>
-        <location filename="../src/SubtitleListPanel.cpp" line="35"/>
-        <location filename="../src/SubtitleListPanel.cpp" line="63"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="37"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="65"/>
         <source>添加</source>
         <translation>Add</translation>
     </message>
     <message>
-        <location filename="../src/SubtitleListPanel.cpp" line="37"/>
-        <location filename="../src/SubtitleListPanel.cpp" line="64"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="39"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="66"/>
         <source>合并</source>
         <translation>Merge</translation>
+    </message>
+</context>
+<context>
+    <name>SubtitleListDelegate</name>
+    <message>
+        <location filename="../src/SubtitleListDelegate.cpp" line="62"/>
+        <source>未分配</source>
+        <translation type="unfinished"></translation>
     </message>
 </context>
 <context>
@@ -543,53 +685,74 @@ Make sure to include the necessary settings for FFmpeg, Tencent Cloud ASR, and A
         <translation type="vanished">Actions</translation>
     </message>
     <message>
-        <location filename="../src/SubtitleListPanel.cpp" line="120"/>
-        <location filename="../src/SubtitleListPanel.cpp" line="220"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="123"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="225"/>
         <source>Search...</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/SubtitleListPanel.cpp" line="122"/>
-        <location filename="../src/SubtitleListPanel.cpp" line="230"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="125"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="235"/>
         <source>Clear</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/SubtitleListPanel.cpp" line="124"/>
-        <location filename="../src/SubtitleListPanel.cpp" line="134"/>
-        <location filename="../src/SubtitleListPanel.cpp" line="155"/>
-        <location filename="../src/SubtitleListPanel.cpp" line="274"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="127"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="139"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="160"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="285"/>
         <source>Subtitle</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/SubtitleListPanel.cpp" line="126"/>
-        <location filename="../src/SubtitleListPanel.cpp" line="161"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="129"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="166"/>
         <source>Preset</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/SubtitleListPanel.cpp" line="128"/>
-        <location filename="../src/SubtitleListPanel.cpp" line="167"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="131"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="172"/>
         <source>Custom</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/SubtitleListPanel.cpp" line="130"/>
-        <location filename="../src/SubtitleListPanel.cpp" line="173"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="133"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="178"/>
         <source>Animation</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/SubtitleListPanel.cpp" line="132"/>
-        <location filename="../src/SubtitleListPanel.cpp" line="270"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="135"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="275"/>
         <source>Timecode</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/SubtitleListPanel.cpp" line="136"/>
-        <location filename="../src/SubtitleListPanel.cpp" line="281"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="137"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="280"/>
+        <source>Speaker</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/SubtitleListPanel.cpp" line="141"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="292"/>
         <source>Action</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/SubtitleListPanel.cpp" line="579"/>
+        <source>未分配</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/SubtitleListPanel.cpp" line="593"/>
+        <source>+ 新建说话人...</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/SubtitleListPanel.cpp" line="594"/>
+        <source>⚙️ 管理说话人...</source>
         <translation type="unfinished"></translation>
     </message>
 </context>
@@ -647,29 +810,37 @@ Make sure to include the necessary settings for FFmpeg, Tencent Cloud ASR, and A
         <translation>Video</translation>
     </message>
     <message>
-        <location filename="../src/TimelinePanel.cpp" line="1075"/>
+        <location filename="../src/TimelinePanel.cpp" line="1077"/>
         <source>Transcoding failed: %1</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TimelinePanel.cpp" line="1081"/>
+        <location filename="../src/TimelinePanel.cpp" line="1083"/>
         <source>Upload failed: %1</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TimelinePanel.cpp" line="1163"/>
+        <location filename="../src/TimelinePanel.cpp" line="1165"/>
         <source>属性</source>
         <translation>Properties</translation>
     </message>
     <message>
-        <location filename="../src/TimelinePanel.cpp" line="1164"/>
+        <location filename="../src/TimelinePanel.cpp" line="1166"/>
         <source>打开文件所在位置</source>
         <translation>Open File Location</translation>
     </message>
     <message>
-        <location filename="../src/TimelinePanel.cpp" line="1165"/>
+        <location filename="../src/TimelinePanel.cpp" line="1167"/>
         <source>语音转文字</source>
         <translation>Speech to Text</translation>
+    </message>
+</context>
+<context>
+    <name>VideoPreviewPanel</name>
+    <message>
+        <location filename="../src/VideoPreviewPanel.cpp" line="553"/>
+        <source>音量 / 静音</source>
+        <translation type="unfinished"></translation>
     </message>
 </context>
 <context>

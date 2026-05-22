@@ -1060,7 +1060,9 @@ void TimelinePanel::startAsrPipeline(const QString &localPath) {
                 item.text = seg.text;
                 item.startMs = seg.startMs;
                 item.endMs = seg.endMs;
+                item.speakerId = seg.speakerId;
                 track_->addItem(item);
+                track_->autoRegisterSpeaker(seg.speakerId);
               }
               emit asrSucceeded();
               transcoder->deleteLater();
