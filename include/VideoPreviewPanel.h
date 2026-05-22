@@ -5,11 +5,51 @@
 
 #include "MediaPlayer.h"
 
+#include <QFrame>
+#include <QLabel>
+#include <QPushButton>
+#include <QSlider>
+#include <QTimer>
+
 class QComboBox;
 class QLabel;
 class QFrame;
 class QPushButton;
 class ProgressBarWidget;
+
+class VolumeButton : public QPushButton {
+  Q_OBJECT
+public:
+  explicit VolumeButton(QWidget *parent = nullptr);
+signals:
+  void hovered();
+  void unhovered();
+
+protected:
+  void enterEvent(QEnterEvent *event) override;
+  void leaveEvent(QEvent *event) override;
+};
+
+class VolumeSliderWidget : public QFrame {
+  Q_OBJECT
+public:
+  explicit VolumeSliderWidget(QWidget *parent = nullptr);
+  void setVolume(qreal vol, bool muted);
+  void startHideTimer();
+  void stopHideTimer();
+signals:
+  void volumeChanged(qreal volume);
+
+protected:
+  void enterEvent(QEnterEvent *event) override;
+  void leaveEvent(QEvent *event) override;
+
+private:
+  QSlider *slider_ = nullptr;
+  QLabel *label_ = nullptr;
+  QTimer *hideTimer_ = nullptr;
+  bool isDragging_ = false;
+};
 
 class SoftwareVideoRenderer;
 class SubtitleTrack;
@@ -53,6 +93,9 @@ private:
   void populateSizeCombo();
   void updateHandlePositions();
   void onTimeChanged(qint64 ms);
+  void showVolumeSlider();
+  void hideVolumeSliderDeferred();
+  void toggleMute();
 
   QComboBox *fontCombo_ = nullptr;
   QComboBox *sizeCombo_ = nullptr;
@@ -68,6 +111,8 @@ private:
   QPushButton *stepBwdBtn_ = nullptr;
   QLabel *currentTimeLabel_ = nullptr;
   ProgressBarWidget *progressBar_ = nullptr;
+  VolumeButton *volBtn_ = nullptr;
+  VolumeSliderWidget *sliderWidget_ = nullptr;
   bool isPlaying_ = false;
   qint64 totalDurationMs_ = 0;
 };

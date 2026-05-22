@@ -35,6 +35,11 @@ public:
 
   void setVideoRenderer(SoftwareVideoRenderer *renderer);
 
+  void setVolume(qreal volume);
+  qreal volume() const { return volume_; }
+  void setMuted(bool muted);
+  bool isMuted() const { return isMuted_; }
+
   State state() const { return state_; }
   qint64 currentTimeMs() const { return currentTimeMs_; }
   double decoderFps() const;
@@ -55,6 +60,7 @@ signals:
   void timeChanged(qint64 ms);
   void playbackFinished();
   void playbackError(const QString &error);
+  void volumeChanged(qreal volume, bool muted);
 
 private slots:
   void onPlaybackTimer();
@@ -92,4 +98,7 @@ private:
   QTimer *seekCoalesceTimer_ = nullptr;
   qint64 pendingSeekMs_ = 0;
   bool hasPendingSeek_ = false;
+
+  qreal volume_ = 1.0;
+  bool isMuted_ = false;
 };

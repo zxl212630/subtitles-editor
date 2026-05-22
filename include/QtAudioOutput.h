@@ -25,6 +25,7 @@ public:
   qint64 playedUSecs() const;
   qint64 bytesFree() const;
   void setVolume(qreal volume);
+  qreal volume() const { return volume_; }
   bool isOpen() const;
 
 private:
@@ -34,4 +35,5 @@ private:
   qint64 totalBytesWritten_ = 0;
   int sampleRate_ = 0;
   int channels_ = 0;
+  qreal volume_ = 1.0;
 };

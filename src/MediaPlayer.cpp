@@ -1,4 +1,5 @@
 #include "MediaPlayer.h"
+#include "ConfigManager.h"
 #include "FFmpegDecoder.h"
 #include "QtAudioOutput.h"
 #include "SeekDecoder.h"
@@ -17,9 +18,13 @@
 #define LOG_MP(level, msg) LOG_MP_##level(msg)
 
 MediaPlayer::MediaPlayer(QObject *parent) : QObject(parent) {
+  volume_ = ConfigManager::instance().volume();
+  isMuted_ = ConfigManager::instance().muted();
+
   decoder_ = new FFmpegDecoder(this);
   seekDecoder_ = new SeekDecoder(this);
   audioOutput_ = new QtAudioOutput(this);
+  audioOutput_->setVolume(isMuted_ ? 0.0 : volume_);
   playbackTimer_ = new QTimer(this);
 
   seekCoalesceTimer_ = new QTimer(this);
@@ -421,4 +426,43 @@ int MediaPlayer::audioBitDepth() const {
 
 QString MediaPlayer::mediaCreationTime() const {
   return decoder_ ? decoder_->mediaCreationTime() : QString();
+}
+
+void MediaPlayer::setVolume(qreal volume) {
+  volume_ = qBound(0.0, volume, 1.0);
+  ConfigManager::instance().setVolume(volume_);
+
+  if (volume_ == 0.0) {
+    if (!isMuted_) {
+      isMuted_ = true;
+      ConfigManager::instance().setMuted(true);
+    }
+  } else {
+    if (isMuted_) {
+      isMuted_ = false;
+      ConfigManager::instance().setMuted(false);
+    }
+  }
+
+  if (audioOutput_) {
+    audioOutput_->setVolume(isMuted_ ? 0.0 : volume_);
+  }
+  emit volumeChanged(volume_, isMuted_);
+}
+
+void MediaPlayer::setMuted(bool muted) {
+  if (isMuted_ == muted)
+    return;
+  isMuted_ = muted;
+  ConfigManager::instance().setMuted(isMuted_);
+
+  if (!isMuted_ && volume_ <= 0.001) {
+    volume_ = 0.5;
+    ConfigManager::instance().setVolume(volume_);
+  }
+
+  if (audioOutput_) {
+    audioOutput_->setVolume(isMuted_ ? 0.0 : volume_);
+  }
+  emit volumeChanged(volume_, isMuted_);
 }

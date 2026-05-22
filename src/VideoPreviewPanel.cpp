@@ -178,6 +178,124 @@ static QString formatTime(qint64 ms) {
       .toString("hh:mm:ss.zzz");
 }
 
+// ==================================================================
+// VolumeButton Implementation
+// ==================================================================
+VolumeButton::VolumeButton(QWidget *parent) : QPushButton(parent) {
+  setMouseTracking(true);
+}
+
+void VolumeButton::enterEvent(QEnterEvent *event) {
+  emit hovered();
+  QPushButton::enterEvent(event);
+}
+
+void VolumeButton::leaveEvent(QEvent *event) {
+  emit unhovered();
+  QPushButton::leaveEvent(event);
+}
+
+// ==================================================================
+// VolumeSliderWidget Implementation
+// ==================================================================
+VolumeSliderWidget::VolumeSliderWidget(QWidget *parent) : QFrame(parent) {
+  setWindowFlags(Qt::ToolTip | Qt::FramelessWindowHint |
+                 Qt::NoDropShadowWindowHint);
+  setAttribute(Qt::WA_TranslucentBackground);
+
+  setStyleSheet("VolumeSliderWidget {"
+                "  background-color: rgba(30, 30, 30, 230);"
+                "  border: 1px solid #444444;"
+                "  border-radius: 6px;"
+                "}"
+                "QSlider::groove:vertical {"
+                "  background: #333333;"
+                "  width: 4px;"
+                "  border-radius: 2px;"
+                "}"
+                "QSlider::sub-page:vertical {"
+                "  background: #333333;"
+                "  border-radius: 2px;"
+                "}"
+                "QSlider::add-page:vertical {"
+                "  background: #5288c1;"
+                "  border-radius: 2px;"
+                "}"
+                "QSlider::handle:vertical {"
+                "  background: #d1d5db;"
+                "  border: none;"
+                "  height: 12px;"
+                "  width: 12px;"
+                "  margin: 0 -4px;"
+                "  border-radius: 6px;"
+                "}"
+                "QSlider::handle:vertical:hover {"
+                "  background: #ffffff;"
+                "}");
+
+  auto *layout = new QVBoxLayout(this);
+  layout->setContentsMargins(6, 10, 6, 10);
+  layout->setSpacing(6);
+
+  label_ = new QLabel("100%", this);
+  label_->setAlignment(Qt::AlignCenter);
+  label_->setStyleSheet("color: #d1d5db; font-size: 10px; border: none; "
+                        "background: transparent;");
+  layout->addWidget(label_, 0, Qt::AlignHCenter);
+
+  slider_ = new QSlider(Qt::Vertical, this);
+  slider_->setRange(0, 100);
+  slider_->setValue(100);
+  slider_->setFixedHeight(100);
+  slider_->setFocusPolicy(Qt::NoFocus);
+  slider_->setStyleSheet("border: none; background: transparent;");
+  layout->addWidget(slider_, 0, Qt::AlignHCenter);
+
+  connect(slider_, &QSlider::valueChanged, this, [this](int val) {
+    label_->setText(QString("%1%").arg(val));
+    emit volumeChanged(val / 100.0);
+  });
+
+  connect(slider_, &QSlider::sliderPressed, this, [this]() {
+    isDragging_ = true;
+    stopHideTimer();
+  });
+  connect(slider_, &QSlider::sliderReleased, this, [this]() {
+    isDragging_ = false;
+    if (!underMouse()) {
+      startHideTimer();
+    }
+  });
+
+  hideTimer_ = new QTimer(this);
+  hideTimer_->setSingleShot(true);
+  connect(hideTimer_, &QTimer::timeout, this, &QWidget::hide);
+}
+
+void VolumeSliderWidget::setVolume(qreal vol, bool muted) {
+  int val = muted ? 0 : static_cast<int>(vol * 100.0);
+  slider_->blockSignals(true);
+  slider_->setValue(val);
+  label_->setText(QString("%1%").arg(val));
+  slider_->blockSignals(false);
+}
+
+void VolumeSliderWidget::startHideTimer() { hideTimer_->start(300); }
+
+void VolumeSliderWidget::stopHideTimer() { hideTimer_->stop(); }
+
+void VolumeSliderWidget::enterEvent(QEnterEvent *event) {
+  stopHideTimer();
+  QFrame::enterEvent(event);
+}
+
+void VolumeSliderWidget::leaveEvent(QEvent *event) {
+  if (!isDragging_) {
+    startHideTimer();
+  }
+  QFrame::leaveEvent(event);
+}
+
 static QPushButton *createTextBtn(QWidget *parent, const QString &text, int w,
                                   int h, const QString &bg = "#333333",
                                   const QString &color = "#d1d5db") {
@@ -387,11 +505,28 @@ void VideoPreviewPanel::setupUi() {
   currentTimeLabel_->setFixedWidth(170);
   cbLayout->addWidget(currentTimeLabel_);
 
-  auto *volLabel = new QLabel("Vol", controlBar);
-  volLabel->setObjectName("PreviewVolLabel");
-  volLabel->setFixedSize(24, 16);
-  volLabel->setAlignment(Qt::AlignCenter);
-  cbLayout->addWidget(volLabel);
+  volBtn_ = new VolumeButton(controlBar);
+  volBtn_->setObjectName("PreviewIconBtn");
+  volBtn_->setFixedSize(24, 24);
+  volBtn_->setIcon(QIcon(":/icons/volume.svg"));
+  volBtn_->setIconSize(QSize(16, 16));
+  volBtn_->setToolTip(tr("音量 / 静音"));
+  cbLayout->addWidget(volBtn_);
+
+  sliderWidget_ = new VolumeSliderWidget(this);
+  sliderWidget_->hide();
+
+  connect(volBtn_, &VolumeButton::hovered, this,
+          &VideoPreviewPanel::showVolumeSlider);
+  connect(volBtn_, &VolumeButton::unhovered, this,
+          &VideoPreviewPanel::hideVolumeSliderDeferred);
+  connect(volBtn_, &QPushButton::clicked, this, &VideoPreviewPanel::toggleMute);
+  connect(sliderWidget_, &VolumeSliderWidget::volumeChanged, this,
+          [this](qreal vol) {
+            if (mediaPlayer_) {
+              mediaPlayer_->setVolume(vol);
+            }
+          });
 
   layout->addWidget(controlBar);
 }
@@ -477,6 +612,25 @@ void VideoPreviewPanel::setMediaPlayer(MediaPlayer *player) {
   if (mediaPlayer_) {
     connect(mediaPlayer_, &MediaPlayer::timeChanged, this,
             &VideoPreviewPanel::onTimeChanged, Qt::QueuedConnection);
+
+    connect(mediaPlayer_, &MediaPlayer::volumeChanged, this,
+            [this](qreal vol, bool muted) {
+              if (volBtn_) {
+                volBtn_->setIcon(QIcon(muted ? ":/icons/volume-mute.svg"
+                                             : ":/icons/volume.svg"));
+              }
+              if (sliderWidget_) {
+                sliderWidget_->setVolume(vol, muted);
+              }
+            });
+
+    if (volBtn_) {
+      volBtn_->setIcon(QIcon(mediaPlayer_->isMuted() ? ":/icons/volume-mute.svg"
+                                                     : ":/icons/volume.svg"));
+    }
+    if (sliderWidget_) {
+      sliderWidget_->setVolume(mediaPlayer_->volume(), mediaPlayer_->isMuted());
+    }
   }
 }
 
@@ -566,6 +720,34 @@ void VideoPreviewPanel::onPlaybackStateChanged(MediaPlayer::State state) {
     } else {
       playPauseBtn_->setIcon(QIcon(":/icons/play.svg"));
     }
+  }
+}
+
+void VideoPreviewPanel::showVolumeSlider() {
+  if (!volBtn_ || !sliderWidget_)
+    return;
+  sliderWidget_->stopHideTimer();
+
+  QPoint globalPos = volBtn_->mapToGlobal(QPoint(0, 0));
+  int w = 40;
+  int h = 150;
+  sliderWidget_->setFixedSize(w, h);
+  int x = globalPos.x() + (volBtn_->width() - w) / 2;
+  int y = globalPos.y() - h - 4;
+  sliderWidget_->move(x, y);
+
+  sliderWidget_->show();
+}
+
+void VideoPreviewPanel::hideVolumeSliderDeferred() {
+  if (sliderWidget_) {
+    sliderWidget_->startHideTimer();
+  }
+}
+
+void VideoPreviewPanel::toggleMute() {
+  if (mediaPlayer_) {
+    mediaPlayer_->setMuted(!mediaPlayer_->isMuted());
   }
 }
 

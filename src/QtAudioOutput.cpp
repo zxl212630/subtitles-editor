@@ -40,6 +40,7 @@ bool QtAudioOutput::open(int sampleRate, int channels) {
                    audioSink_->format().channelCount() *
                    static_cast<int>(sizeof(int16_t)) / 5;
   audioSink_->setBufferSize(bufferSize);
+  audioSink_->setVolume(volume_);
   ioDevice_ = audioSink_->start();
 
   sampleRate_ = audioSink_->format().sampleRate();
@@ -124,6 +125,7 @@ qint64 QtAudioOutput::bytesFree() const {
 }
 
 void QtAudioOutput::setVolume(qreal volume) {
+  volume_ = volume;
   if (audioSink_) {
     audioSink_->setVolume(volume);
   }

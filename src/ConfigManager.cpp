@@ -115,3 +115,31 @@ QString ConfigManager::primaryColor() const {
 }
 
 QString ConfigManager::language() const { return getString("", "language"); }
+
+qreal ConfigManager::volume() const {
+  QString val = getString("audio", "volume");
+  if (val.isEmpty()) {
+    return 1.0;
+  }
+  bool ok;
+  qreal v = val.toDouble(&ok);
+  if (!ok || v < 0.0 || v > 1.0) {
+    return 1.0;
+  }
+  return v;
+}
+
+void ConfigManager::setVolume(qreal volume) {
+  setValue("audio", "volume", QString::number(volume, 'f', 2));
+  sync();
+}
+
+bool ConfigManager::muted() const {
+  QString val = getString("audio", "muted");
+  return val == "true";
+}
+
+void ConfigManager::setMuted(bool muted) {
+  setValue("audio", "muted", muted ? "true" : "false");
+  sync();
+}

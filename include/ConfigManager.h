@@ -33,6 +33,11 @@ public:
   QString primaryColor() const;
   QString language() const;
 
+  qreal volume() const;
+  void setVolume(qreal volume);
+  bool muted() const;
+  void setMuted(bool muted);
+
 private:
   ConfigManager();
   ~ConfigManager() = default;
