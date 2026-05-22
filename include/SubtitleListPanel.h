@@ -40,6 +40,7 @@ private:
   SubtitleListDelegate *delegate_ = nullptr;
   QListView *listView_ = nullptr;
   QLineEdit *searchEdit_ = nullptr;
+  QPushButton *searchClearBtn_ = nullptr;
   SubtitleActionOverlay *actionOverlay_ = nullptr;
 
   QPushButton *tabSubtitle_ = nullptr;

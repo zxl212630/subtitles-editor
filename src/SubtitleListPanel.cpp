@@ -117,6 +117,8 @@ void SubtitleListPanel::retranslateUi() {
   if (actionOverlay_)
     actionOverlay_->retranslateUi();
   searchEdit_->setPlaceholderText(tr("Search..."));
+  if (searchClearBtn_)
+    searchClearBtn_->setToolTip(tr("Clear"));
   if (tabSubtitle_)
     tabSubtitle_->setText(tr("Subtitle"));
   if (tabPreset_)
@@ -213,11 +215,27 @@ void SubtitleListPanel::setupUi() {
   searchEdit_->setFixedHeight(28);
   siLayout->addWidget(searchEdit_);
 
+  searchClearBtn_ = new QPushButton(searchInput);
+  searchClearBtn_->setObjectName("SubtitleSearchClearButton");
+  searchClearBtn_->setFixedSize(18, 18);
+  searchClearBtn_->setCursor(Qt::PointingHandCursor);
+  searchClearBtn_->setIcon(QIcon(":/icons/close.svg"));
+  searchClearBtn_->setIconSize(QSize(10, 10));
+  searchClearBtn_->setToolTip(tr("Clear"));
+  searchClearBtn_->hide();
+  siLayout->addWidget(searchClearBtn_);
+
   sbLayout->addWidget(searchInput);
   pcLayout->addWidget(searchBar);
 
   connect(searchEdit_, &QLineEdit::textChanged, this,
-          [this](const QString &text) { model_->setFilterText(text); });
+          [this](const QString &text) {
+            model_->setFilterText(text);
+            searchClearBtn_->setVisible(!text.isEmpty());
+          });
+
+  connect(searchClearBtn_, &QPushButton::clicked, this,
+          [this]() { searchEdit_->clear(); });
 
   // List container
   auto *listContainer = new QFrame(panelContent);

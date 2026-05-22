@@ -240,7 +240,7 @@ QPushButton#PreviewIconBtn {
     border-radius: 4px;
 }
 QPushButton#PreviewIconBtn:hover {
-    background-color: @bg_lighter;
+    background-color: @border_dark;
 }
 QComboBox#PreviewFontCombo, QComboBox#PreviewSizeCombo {
     padding: 0px 25px 0px 8px;
@@ -326,6 +326,14 @@ QLineEdit#SubtitleSearchEdit {
     border: none;
     font-family: Inter, sans-serif;
     font-size: 12px;
+}
+QPushButton#SubtitleSearchClearButton {
+    background-color: transparent;
+    border: none;
+    border-radius: 9px;
+}
+QPushButton#SubtitleSearchClearButton:hover {
+    background-color: @border_dark;
 }
 QFrame#SubtitleListContainer {
     background-color: @bg_base;
