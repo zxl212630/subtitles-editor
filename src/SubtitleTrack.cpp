@@ -1,8 +1,11 @@
 #include "SubtitleTrack.h"
 #include <QDebug>
+#include <QSettings>
 #include <QUuid>
 
-SubtitleTrack::SubtitleTrack(QObject *parent) : QObject(parent) {}
+SubtitleTrack::SubtitleTrack(QObject *parent) : QObject(parent) {
+  loadGlobalSettings();
+}
 
 void SubtitleTrack::clear() {
   items_.clear();
@@ -116,6 +119,7 @@ void SubtitleTrack::splitItem(const QString &id, int cursorPosition,
       newItem.text = text2;
       newItem.startMs = splitMs;
       newItem.endMs = original.endMs;
+      newItem.speakerId = original.speakerId;
 
       items_.insert(i + 1, newItem);
 
@@ -174,4 +178,70 @@ void SubtitleTrack::addGapItem(qint64 startMs, qint64 endMs) {
 
   emit itemAdded(newItem);
   emit dataChanged();
+}
+
+// ---- Speaker management ----
+
+void SubtitleTrack::setSpeakerInfo(int id, const SpeakerInfo &info) {
+  speakers_[id] = info;
+  speakers_[id].id = id;
+  emit speakersChanged();
+}
+
+SpeakerInfo SubtitleTrack::speakerInfo(int id) const {
+  return speakers_.value(id);
+}
+
+QList<SpeakerInfo> SubtitleTrack::allSpeakers() const {
+  return speakers_.values();
+}
+
+void SubtitleTrack::clearSpeakers() {
+  speakers_.clear();
+  emit speakersChanged();
+}
+
+void SubtitleTrack::autoRegisterSpeaker(int speakerId) {
+  if (speakerId >= 0 && !speakers_.contains(speakerId)) {
+    SpeakerInfo info;
+    info.id = speakerId;
+    info.name = QString("Speaker %1").arg(speakerId);
+    speakers_[speakerId] = info;
+    emit speakersChanged();
+  }
+}
+
+// ---- Global settings ----
+
+QString SubtitleTrack::globalBgFolder() const { return globalBgFolder_; }
+
+void SubtitleTrack::setGlobalBgFolder(const QString &path) {
+  globalBgFolder_ = path;
+}
+
+QMargins SubtitleTrack::unifiedBorderMargins() const {
+  return unifiedBorderMargins_;
+}
+
+void SubtitleTrack::setUnifiedBorderMargins(const QMargins &margins) {
+  unifiedBorderMargins_ = margins;
+}
+
+void SubtitleTrack::loadGlobalSettings() {
+  QSettings settings;
+  globalBgFolder_ = settings.value("speaker/bgFolder").toString();
+  int left = settings.value("speaker/marginLeft", 15).toInt();
+  int top = settings.value("speaker/marginTop", 15).toInt();
+  int right = settings.value("speaker/marginRight", 15).toInt();
+  int bottom = settings.value("speaker/marginBottom", 15).toInt();
+  unifiedBorderMargins_ = QMargins(left, top, right, bottom);
+}
+
+void SubtitleTrack::saveGlobalSettings() {
+  QSettings settings;
+  settings.setValue("speaker/bgFolder", globalBgFolder_);
+  settings.setValue("speaker/marginLeft", unifiedBorderMargins_.left());
+  settings.setValue("speaker/marginTop", unifiedBorderMargins_.top());
+  settings.setValue("speaker/marginRight", unifiedBorderMargins_.right());
+  settings.setValue("speaker/marginBottom", unifiedBorderMargins_.bottom());
 }
