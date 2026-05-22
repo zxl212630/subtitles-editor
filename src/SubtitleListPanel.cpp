@@ -4,6 +4,7 @@
 #include "SubtitleTrack.h"
 #include "ThemeManager.h"
 #include "TranslationManager.h"
+#include <QMenu>
 
 #include <QCoreApplication>
 #include <QFrame>
@@ -105,6 +106,7 @@ SubtitleListPanel::SubtitleListPanel(QWidget *parent) : QWidget(parent) {
 void SubtitleListPanel::setTrack(SubtitleTrack *track) {
   track_ = track;
   model_->setTrack(track);
+  delegate_->setTrack(track);
 }
 
 void SubtitleListPanel::setVideoFps(double fps) {
@@ -130,6 +132,8 @@ void SubtitleListPanel::retranslateUi() {
     tabAnimation_->setText(tr("Animation"));
   if (headerTime_)
     headerTime_->setText(tr("Timecode"));
+  if (headerSpeaker_)
+    headerSpeaker_->setText(tr("Speaker"));
   if (headerText_)
     headerText_->setText(tr("Subtitle"));
   if (headerAction_)
@@ -264,12 +268,18 @@ void SubtitleListPanel::setupUi() {
   headerLeft->setObjectName("SubtitleHeaderLeft");
   auto *hlLayout = new QHBoxLayout(headerLeft);
   hlLayout->setContentsMargins(0, 0, 0, 0);
-  hlLayout->setSpacing(80);
+  hlLayout->setSpacing(12);
   hlLayout->setAlignment(Qt::AlignVCenter);
 
   headerTime_ = new QLabel(tr("Timecode"), headerLeft);
   headerTime_->setObjectName("SubtitleHeaderLabel");
+  headerTime_->setFixedWidth(100);
   hlLayout->addWidget(headerTime_);
+
+  headerSpeaker_ = new QLabel(tr("Speaker"), headerLeft);
+  headerSpeaker_->setObjectName("SubtitleHeaderLabel");
+  headerSpeaker_->setFixedWidth(80);
+  hlLayout->addWidget(headerSpeaker_);
 
   headerText_ = new QLabel(tr("Subtitle"), headerLeft);
   headerText_->setObjectName("SubtitleHeaderLabel");
@@ -416,6 +426,12 @@ bool SubtitleListPanel::eventFilter(QObject *watched, QEvent *event) {
         option.initFrom(listView_);
         option.rect = listView_->visualRect(index);
 
+        // Check Speaker Pill
+        if (delegate_->speakerRect(option).contains(me->pos())) {
+          showSpeakerMenu(index, me->globalPosition().toPoint());
+          return true; // Handled
+        }
+
         // Check Split Button
         if (delegate_->splitButtonRect(option).contains(me->pos())) {
           QString id =
@@ -553,4 +569,49 @@ void SubtitleListPanel::leaveEvent(QEvent *event) {
   }
   QWidget::leaveEvent(event);
 }
+
+void SubtitleListPanel::showSpeakerMenu(const QModelIndex &index,
+                                        const QPoint &globalPos) {
+  if (!track_) return;
+
+  QMenu menu(this);
+  QAction *unassignAction = menu.addAction(tr("未分配"));
+  unassignAction->setData(-1);
+
+  menu.addSeparator();
+
+  for (const auto &spk : track_->allSpeakers()) {
+    QString label = spk.name.isEmpty()
+                        ? QString("Speaker %1").arg(spk.id)
+                        : QString("%1 (%2)").arg(spk.name).arg(spk.id);
+    QAction *action = menu.addAction(label);
+    action->setData(spk.id);
+  }
+
+  menu.addSeparator();
+  QAction *newAction = menu.addAction(tr("+ 新建说话人..."));
+  QAction *manageAction = menu.addAction(tr("⚙️ 管理说话人..."));
+
+  QAction *chosen = menu.exec(globalPos);
+  if (!chosen) return;
+
+  if (chosen == manageAction) {
+    // SpeakerManagerDialog dlg(track_, this);
+    // dlg.exec();
+    return;
+  }
+  if (chosen == newAction) {
+    int nextId = 0;
+    for (const auto &spk : track_->allSpeakers()) {
+      if (spk.id >= nextId) nextId = spk.id + 1;
+    }
+    track_->autoRegisterSpeaker(nextId);
+    model_->setData(index, nextId, SubtitleListModel::SpeakerIdRole);
+    return;
+  }
+
+  int speakerId = chosen->data().toInt();
+  model_->setData(index, speakerId, SubtitleListModel::SpeakerIdRole);
+}
+
 #include "SubtitleListPanel.moc"

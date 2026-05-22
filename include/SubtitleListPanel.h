@@ -48,8 +48,11 @@ private:
   QPushButton *tabCustom_ = nullptr;
   QPushButton *tabAnimation_ = nullptr;
   QLabel *headerTime_ = nullptr;
+  QLabel *headerSpeaker_ = nullptr;
   QLabel *headerText_ = nullptr;
   QLabel *headerAction_ = nullptr;
+
+  void showSpeakerMenu(const QModelIndex &index, const QPoint &globalPos);
 
   double videoFps_ = 25.0;
   qint64 totalDurationMs_ = 0;
