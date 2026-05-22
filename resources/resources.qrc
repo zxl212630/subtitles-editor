@@ -18,6 +18,8 @@
         <file>icons/asr_video_base.svg</file>
         <file>icons/asr_cloud.svg</file>
         <file>icons/asr_text_base.svg</file>
+        <file>icons/track_subtitle.svg</file>
+        <file>icons/track_video.svg</file>
         <file>themes/dark.qss</file>
         <file>themes/midnight.qss</file>
         <file>themes/oled.qss</file>

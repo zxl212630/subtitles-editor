@@ -1,0 +1,6 @@
+<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- 视频轨道外框 (高占比，留白2px) -->
+  <rect x="2.5" y="3.5" width="19" height="17" rx="3" stroke="currentColor" stroke-width="2.5" fill="currentColor" fill-opacity="0.1"/>
+  <!-- 播放三角形 -->
+  <path d="M10 8V16L15.5 12L10 8Z" fill="currentColor" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/>
+</svg>

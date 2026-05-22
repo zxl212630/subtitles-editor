@@ -295,6 +295,13 @@ void TimelinePanel::updateClipCursor(int mouseX, int mouseY) {
 void TimelinePanel::drawOnCanvas(QPainter &painter) {
   painter.setRenderHint(QPainter::Antialiasing);
 
+  // 校验并动态更新图标 DPR，确保在 Retina 等高分屏下始终清晰且尺寸正确
+  qreal currentDpr = this->devicePixelRatioF();
+  if (subIconPixmap_.isNull() ||
+      subIconPixmap_.devicePixelRatio() != currentDpr) {
+    updateIcons();
+  }
+
   // Clip to rounded rect so the panel corners stay rounded
   QPainterPath clipPath;
   clipPath.addRoundedRect(canvas_->rect().adjusted(1, 1, -1, -1), 10, 10);
@@ -323,31 +330,30 @@ void TimelinePanel::drawOnCanvas(QPainter &painter) {
 
     painter.setPen(textMuted);
     QFont font = painter.font();
-    font.setPointSize(10);
+    font.setPointSize(11);
     painter.setFont(font);
 
     // 绘制字幕轨道图标与文字
-    int subIconY = subY + (SUBTITLE_TRACK_HEIGHT - subIconPixmap_.height()) / 2;
+    int subIconY = subY + (SUBTITLE_TRACK_HEIGHT - 14) / 2 + 1;
     if (!subIconPixmap_.isNull()) {
       painter.drawPixmap(12, subIconY, subIconPixmap_);
     }
-    painter.drawText(
-        12 + (subIconPixmap_.isNull() ? 0 : subIconPixmap_.width() + 6), subY,
-        TRACK_HEAD_WIDTH - 24 -
-            (subIconPixmap_.isNull() ? 0 : subIconPixmap_.width() + 6),
-        SUBTITLE_TRACK_HEIGHT, Qt::AlignVCenter | Qt::AlignLeft, tr("字幕"));
+    int subTextX = 12 + (subIconPixmap_.isNull() ? 0 : 14 + 6);
+    int subTextW =
+        TRACK_HEAD_WIDTH - 12 - 12 - (subIconPixmap_.isNull() ? 0 : 14 + 6);
+    painter.drawText(subTextX, subY, subTextW, SUBTITLE_TRACK_HEIGHT,
+                     Qt::AlignVCenter | Qt::AlignLeft, tr("字幕"));
 
     // 绘制视频轨道图标与文字
-    int vidIconY = vidY + (VIDEO_TRACK_HEIGHT - videoIconPixmap_.height()) / 2;
+    int vidIconY = vidY + (VIDEO_TRACK_HEIGHT - 14) / 2 + 1;
     if (!videoIconPixmap_.isNull()) {
       painter.drawPixmap(12, vidIconY, videoIconPixmap_);
     }
-    painter.drawText(
-        12 + (videoIconPixmap_.isNull() ? 0 : videoIconPixmap_.width() + 6),
-        vidY,
-        TRACK_HEAD_WIDTH - 24 -
-            (videoIconPixmap_.isNull() ? 0 : videoIconPixmap_.width() + 6),
-        VIDEO_TRACK_HEIGHT, Qt::AlignVCenter | Qt::AlignLeft, tr("视频"));
+    int vidTextX = 12 + (videoIconPixmap_.isNull() ? 0 : 14 + 6);
+    int vidTextW =
+        TRACK_HEAD_WIDTH - 12 - 12 - (videoIconPixmap_.isNull() ? 0 : 14 + 6);
+    painter.drawText(vidTextX, vidY, vidTextW, VIDEO_TRACK_HEIGHT,
+                     Qt::AlignVCenter | Qt::AlignLeft, tr("视频"));
 
     // Separator between track heads
     painter.setPen(borderDark);
@@ -489,19 +495,19 @@ void TimelinePanel::drawSubtitleTrack(QPainter &painter, int y) {
   painter.fillRect(0, y, TRACK_HEAD_WIDTH, SUBTITLE_TRACK_HEIGHT, bgLighter);
   painter.setPen(textMuted);
   QFont font = painter.font();
-  font.setPointSize(10);
+  font.setPointSize(11);
   painter.setFont(font);
 
   // 绘制字幕轨道图标与文字
-  int subIconY = y + (SUBTITLE_TRACK_HEIGHT - subIconPixmap_.height()) / 2;
+  int subIconY = y + (SUBTITLE_TRACK_HEIGHT - 14) / 2 + 1;
   if (!subIconPixmap_.isNull()) {
     painter.drawPixmap(12, subIconY, subIconPixmap_);
   }
-  painter.drawText(
-      12 + (subIconPixmap_.isNull() ? 0 : subIconPixmap_.width() + 6), y,
-      TRACK_HEAD_WIDTH - 24 -
-          (subIconPixmap_.isNull() ? 0 : subIconPixmap_.width() + 6),
-      SUBTITLE_TRACK_HEIGHT, Qt::AlignVCenter | Qt::AlignLeft, tr("字幕"));
+  int subTextX = 12 + (subIconPixmap_.isNull() ? 0 : 14 + 6);
+  int subTextW =
+      TRACK_HEAD_WIDTH - 12 - 12 - (subIconPixmap_.isNull() ? 0 : 14 + 6);
+  painter.drawText(subTextX, y, subTextW, SUBTITLE_TRACK_HEIGHT,
+                   Qt::AlignVCenter | Qt::AlignLeft, tr("字幕"));
 
   // Separator (full width including track head)
   painter.setPen(borderDark);
@@ -574,19 +580,19 @@ void TimelinePanel::drawVideoTrack(QPainter &painter, int y) {
   painter.fillRect(0, y, TRACK_HEAD_WIDTH, VIDEO_TRACK_HEIGHT, bgLighter);
   painter.setPen(textMuted);
   QFont font = painter.font();
-  font.setPointSize(10);
+  font.setPointSize(11);
   painter.setFont(font);
 
   // 绘制视频轨道图标与文字
-  int vidIconY = y + (VIDEO_TRACK_HEIGHT - videoIconPixmap_.height()) / 2;
+  int vidIconY = y + (VIDEO_TRACK_HEIGHT - 14) / 2 + 1;
   if (!videoIconPixmap_.isNull()) {
     painter.drawPixmap(12, vidIconY, videoIconPixmap_);
   }
-  painter.drawText(
-      12 + (videoIconPixmap_.isNull() ? 0 : videoIconPixmap_.width() + 6), y,
-      TRACK_HEAD_WIDTH - 24 -
-          (videoIconPixmap_.isNull() ? 0 : videoIconPixmap_.width() + 6),
-      VIDEO_TRACK_HEIGHT, Qt::AlignVCenter | Qt::AlignLeft, tr("视频"));
+  int vidTextX = 12 + (videoIconPixmap_.isNull() ? 0 : 14 + 6);
+  int vidTextW =
+      TRACK_HEAD_WIDTH - 12 - 12 - (videoIconPixmap_.isNull() ? 0 : 14 + 6);
+  painter.drawText(vidTextX, y, vidTextW, VIDEO_TRACK_HEIGHT,
+                   Qt::AlignVCenter | Qt::AlignLeft, tr("视频"));
 
   painter.save();
   painter.setClipRect(TRACK_HEAD_WIDTH, y, contentWidth, VIDEO_TRACK_HEIGHT);
@@ -1169,25 +1175,32 @@ void TimelinePanel::contextMenuEvent(QContextMenuEvent *event) {
 
 void TimelinePanel::updateIcons() {
   QColor textMuted = ThemeManager::instance().getTextMutedColor();
+  qreal dpr = this->devicePixelRatioF();
 
-  auto renderSvgToPixmap = [](const QString &path, const QColor &color,
-                              int size) -> QPixmap {
-    QFile file(path);
-    if (file.open(QIODevice::ReadOnly)) {
-      QByteArray svgData = file.readAll();
-      svgData.replace("currentColor", color.name().toUtf8());
-      QSvgRenderer renderer(svgData);
-      QPixmap pixmap(size, size);
-      pixmap.fill(Qt::transparent);
-      QPainter painter(&pixmap);
-      renderer.render(&painter);
-      return pixmap;
-    }
-    return QPixmap();
+  auto renderSvgToPixmap = [dpr](const QString &path, const QColor &color,
+                                 int size) -> QPixmap {
+    QIcon icon(path);
+    // 直接传入逻辑尺寸，QIcon 内部会自动处理高分屏 DPR 缩放
+    QPixmap pixmap = icon.pixmap(size, size);
+    if (pixmap.isNull())
+      return QPixmap();
+
+    pixmap.setDevicePixelRatio(dpr);
+
+    QPainter tp(&pixmap);
+    tp.setRenderHint(QPainter::Antialiasing);
+    tp.setCompositionMode(QPainter::CompositionMode_SourceIn);
+    tp.fillRect(pixmap.rect(), color);
+    tp.end();
+
+    // 重新设回 DPR，确保其 devicePixelRatio 属性不被 QPainter::end() 篡改
+    pixmap.setDevicePixelRatio(dpr);
+
+    return pixmap;
   };
 
   subIconPixmap_ =
-      renderSvgToPixmap(":/icons/asr_text_base.svg", textMuted, 14);
+      renderSvgToPixmap(":/icons/track_subtitle.svg", textMuted, 14);
   videoIconPixmap_ =
-      renderSvgToPixmap(":/icons/asr_video_base.svg", textMuted, 14);
+      renderSvgToPixmap(":/icons/track_video.svg", textMuted, 14);
 }
