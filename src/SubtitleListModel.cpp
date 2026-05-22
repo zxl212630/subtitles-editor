@@ -59,6 +59,8 @@ QVariant SubtitleListModel::data(const QModelIndex &index, int role) const {
     return formatTime(item.startMs);
   case EndTimeRole:
     return formatTime(item.endMs);
+  case SpeakerIdRole:
+    return item.speakerId;
   default:
     return QVariant();
   }
@@ -81,6 +83,18 @@ bool SubtitleListModel::setData(const QModelIndex &index, const QVariant &value,
     return false;
 
   const auto &item = items[originalIndex];
+
+  if (role == SpeakerIdRole) {
+    SubtitleItem newItem = item;
+    newItem.speakerId = value.toInt();
+    disconnect(track_, &SubtitleTrack::dataChanged, this,
+               &SubtitleListModel::onDataChanged);
+    track_->updateItem(item.id, newItem);
+    connect(track_, &SubtitleTrack::dataChanged, this,
+            &SubtitleListModel::onDataChanged);
+    emit dataChanged(index, index, {SpeakerIdRole});
+    return true;
+  }
 
   if (role == Qt::EditRole || role == TextRole) {
     SubtitleItem newItem = item;
@@ -108,6 +122,7 @@ QHash<int, QByteArray> SubtitleListModel::roleNames() const {
   roles[SelectedRole] = "selected";
   roles[StartTimeRole] = "startTime";
   roles[EndTimeRole] = "endTime";
+  roles[SpeakerIdRole] = "speakerId";
   return roles;
 }
 

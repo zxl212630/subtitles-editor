@@ -17,7 +17,8 @@ public:
     EndMsRole,
     SelectedRole,
     StartTimeRole,
-    EndTimeRole
+    EndTimeRole,
+    SpeakerIdRole
   };
 
   explicit SubtitleListModel(QObject *parent = nullptr);
