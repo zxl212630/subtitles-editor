@@ -306,6 +306,7 @@ void VideoPreviewPanel::setupUi() {
   btnGroupLayout->addWidget(arBtn);
 
   tbLayout->addWidget(btnGroup);
+  btnGroup->hide();
 
   layout->addWidget(toolbar);
 
@@ -375,12 +376,6 @@ void VideoPreviewPanel::setupUi() {
   volLabel->setFixedSize(24, 16);
   volLabel->setAlignment(Qt::AlignCenter);
   cbLayout->addWidget(volLabel);
-
-  auto *fsLabel = new QLabel("FS", controlBar);
-  fsLabel->setObjectName("PreviewFsLabel");
-  fsLabel->setFixedSize(20, 16);
-  fsLabel->setAlignment(Qt::AlignCenter);
-  cbLayout->addWidget(fsLabel);
 
   layout->addWidget(controlBar);
 }

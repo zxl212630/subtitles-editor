@@ -1,5 +1,6 @@
 #pragma once
 
+#include <QPixmap>
 #include <QWidget>
 
 class QResizeEvent;
@@ -120,4 +121,7 @@ private:
   static constexpr int DRAG_EDGE_THRESHOLD_PX = 6;
 
   bool asrCancelledByUser_ = false;
+  QPixmap subIconPixmap_;
+  QPixmap videoIconPixmap_;
+  void updateIcons();
 };

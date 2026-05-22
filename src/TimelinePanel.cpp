@@ -7,6 +7,8 @@
 #include "SubtitleTrack.h"
 #include "TencentAsrService.h"
 #include "ThemeManager.h"
+#include <QFile>
+#include <QSvgRenderer>
 
 #include <QApplication>
 #include <QContextMenuEvent>
@@ -73,6 +75,13 @@ TimelinePanel::TimelinePanel(QWidget *parent) : QWidget(parent) {
     scrollOffsetX_ = value;
     canvas_->update();
   });
+
+  updateIcons();
+  connect(&ThemeManager::instance(), &ThemeManager::themeChanged, this,
+          [this]() {
+            updateIcons();
+            canvas_->update();
+          });
 }
 
 int TimelinePanel::timeToX(qint64 ms) const {
@@ -316,10 +325,29 @@ void TimelinePanel::drawOnCanvas(QPainter &painter) {
     QFont font = painter.font();
     font.setPointSize(10);
     painter.setFont(font);
-    painter.drawText(12, subY, TRACK_HEAD_WIDTH - 24, SUBTITLE_TRACK_HEIGHT,
-                     Qt::AlignVCenter | Qt::AlignLeft, tr("T  字幕1"));
-    painter.drawText(12, vidY, TRACK_HEAD_WIDTH - 24, VIDEO_TRACK_HEIGHT,
-                     Qt::AlignVCenter | Qt::AlignLeft, tr("F  视频1"));
+
+    // 绘制字幕轨道图标与文字
+    int subIconY = subY + (SUBTITLE_TRACK_HEIGHT - subIconPixmap_.height()) / 2;
+    if (!subIconPixmap_.isNull()) {
+      painter.drawPixmap(12, subIconY, subIconPixmap_);
+    }
+    painter.drawText(
+        12 + (subIconPixmap_.isNull() ? 0 : subIconPixmap_.width() + 6), subY,
+        TRACK_HEAD_WIDTH - 24 -
+            (subIconPixmap_.isNull() ? 0 : subIconPixmap_.width() + 6),
+        SUBTITLE_TRACK_HEIGHT, Qt::AlignVCenter | Qt::AlignLeft, tr("字幕"));
+
+    // 绘制视频轨道图标与文字
+    int vidIconY = vidY + (VIDEO_TRACK_HEIGHT - videoIconPixmap_.height()) / 2;
+    if (!videoIconPixmap_.isNull()) {
+      painter.drawPixmap(12, vidIconY, videoIconPixmap_);
+    }
+    painter.drawText(
+        12 + (videoIconPixmap_.isNull() ? 0 : videoIconPixmap_.width() + 6),
+        vidY,
+        TRACK_HEAD_WIDTH - 24 -
+            (videoIconPixmap_.isNull() ? 0 : videoIconPixmap_.width() + 6),
+        VIDEO_TRACK_HEIGHT, Qt::AlignVCenter | Qt::AlignLeft, tr("视频"));
 
     // Separator between track heads
     painter.setPen(borderDark);
@@ -463,8 +491,17 @@ void TimelinePanel::drawSubtitleTrack(QPainter &painter, int y) {
   QFont font = painter.font();
   font.setPointSize(10);
   painter.setFont(font);
-  painter.drawText(12, y, TRACK_HEAD_WIDTH - 24, SUBTITLE_TRACK_HEIGHT,
-                   Qt::AlignVCenter | Qt::AlignLeft, tr("T  字幕1"));
+
+  // 绘制字幕轨道图标与文字
+  int subIconY = y + (SUBTITLE_TRACK_HEIGHT - subIconPixmap_.height()) / 2;
+  if (!subIconPixmap_.isNull()) {
+    painter.drawPixmap(12, subIconY, subIconPixmap_);
+  }
+  painter.drawText(
+      12 + (subIconPixmap_.isNull() ? 0 : subIconPixmap_.width() + 6), y,
+      TRACK_HEAD_WIDTH - 24 -
+          (subIconPixmap_.isNull() ? 0 : subIconPixmap_.width() + 6),
+      SUBTITLE_TRACK_HEIGHT, Qt::AlignVCenter | Qt::AlignLeft, tr("字幕"));
 
   // Separator (full width including track head)
   painter.setPen(borderDark);
@@ -539,8 +576,17 @@ void TimelinePanel::drawVideoTrack(QPainter &painter, int y) {
   QFont font = painter.font();
   font.setPointSize(10);
   painter.setFont(font);
-  painter.drawText(12, y, TRACK_HEAD_WIDTH - 24, VIDEO_TRACK_HEIGHT,
-                   Qt::AlignVCenter | Qt::AlignLeft, tr("F  视频1"));
+
+  // 绘制视频轨道图标与文字
+  int vidIconY = y + (VIDEO_TRACK_HEIGHT - videoIconPixmap_.height()) / 2;
+  if (!videoIconPixmap_.isNull()) {
+    painter.drawPixmap(12, vidIconY, videoIconPixmap_);
+  }
+  painter.drawText(
+      12 + (videoIconPixmap_.isNull() ? 0 : videoIconPixmap_.width() + 6), y,
+      TRACK_HEAD_WIDTH - 24 -
+          (videoIconPixmap_.isNull() ? 0 : videoIconPixmap_.width() + 6),
+      VIDEO_TRACK_HEIGHT, Qt::AlignVCenter | Qt::AlignLeft, tr("视频"));
 
   painter.save();
   painter.setClipRect(TRACK_HEAD_WIDTH, y, contentWidth, VIDEO_TRACK_HEIGHT);
@@ -1119,4 +1165,29 @@ void TimelinePanel::contextMenuEvent(QContextMenuEvent *event) {
   } else if (selected == asrAction) {
     emit videoAsrRequested();
   }
+}
+
+void TimelinePanel::updateIcons() {
+  QColor textMuted = ThemeManager::instance().getTextMutedColor();
+
+  auto renderSvgToPixmap = [](const QString &path, const QColor &color,
+                              int size) -> QPixmap {
+    QFile file(path);
+    if (file.open(QIODevice::ReadOnly)) {
+      QByteArray svgData = file.readAll();
+      svgData.replace("currentColor", color.name().toUtf8());
+      QSvgRenderer renderer(svgData);
+      QPixmap pixmap(size, size);
+      pixmap.fill(Qt::transparent);
+      QPainter painter(&pixmap);
+      renderer.render(&painter);
+      return pixmap;
+    }
+    return QPixmap();
+  };
+
+  subIconPixmap_ =
+      renderSvgToPixmap(":/icons/asr_text_base.svg", textMuted, 14);
+  videoIconPixmap_ =
+      renderSvgToPixmap(":/icons/asr_video_base.svg", textMuted, 14);
 }

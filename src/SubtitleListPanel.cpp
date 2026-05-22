@@ -176,6 +176,11 @@ void SubtitleListPanel::setupUi() {
   tabAnimation_->setFixedSize(60, 28);
   phLayout->addWidget(tabAnimation_);
 
+  tabSubtitle_->setAttribute(Qt::WA_TransparentForMouseEvents, true);
+  tabPreset_->setAttribute(Qt::WA_TransparentForMouseEvents, true);
+  tabCustom_->setAttribute(Qt::WA_TransparentForMouseEvents, true);
+  tabAnimation_->setAttribute(Qt::WA_TransparentForMouseEvents, true);
+
   phLayout->addStretch();
   layout->addWidget(panelHeader);
 
