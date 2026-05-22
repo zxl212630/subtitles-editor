@@ -314,7 +314,11 @@ QFrame#SubtitlePanelContent, QFrame#SubtitleSearchBar, QFrame#SubtitleTableHeade
 }
 QFrame#SubtitleSearchInputContainer {
     background-color: @bg_base;
+    border: 1px solid @border_color;
     border-radius: 5px;
+}
+QFrame#SubtitleSearchInputContainer[focused="true"] {
+    border: 1px solid @primary_color;
 }
 QLabel#SubtitleSearchIcon {
     image: url(:/icons/search.svg);
@@ -337,6 +341,7 @@ QPushButton#SubtitleSearchClearButton:hover {
 }
 QFrame#SubtitleListContainer {
     background-color: @bg_base;
+    border: 1px solid @border_color;
     border-radius: 5px;
 }
 QLabel#SubtitleHeaderLabel {

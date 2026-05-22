@@ -18,6 +18,7 @@
 
 #include <QApplication>
 #include <QPainter>
+#include <QStyle>
 
 class SubtitleActionOverlay : public QWidget {
   Q_OBJECT
@@ -336,6 +337,7 @@ void SubtitleListPanel::setupUi() {
   listView_->setMouseTracking(true);
   listView_->viewport()->installEventFilter(this);
   actionOverlay_->installEventFilter(this);
+  searchEdit_->installEventFilter(this);
 
   connect(listView_, &QListView::clicked, this,
           &SubtitleListPanel::onItemClicked);
@@ -374,6 +376,23 @@ void SubtitleListPanel::onItemDoubleClicked(const QModelIndex &index) {
 }
 
 bool SubtitleListPanel::eventFilter(QObject *watched, QEvent *event) {
+  if (watched == searchEdit_) {
+    if (event->type() == QEvent::FocusIn) {
+      if (auto *parent = qobject_cast<QFrame *>(searchEdit_->parentWidget())) {
+        parent->setProperty("focused", true);
+        parent->style()->unpolish(parent);
+        parent->style()->polish(parent);
+      }
+    } else if (event->type() == QEvent::FocusOut) {
+      if (auto *parent = qobject_cast<QFrame *>(searchEdit_->parentWidget())) {
+        parent->setProperty("focused", false);
+        parent->style()->unpolish(parent);
+        parent->style()->polish(parent);
+      }
+    }
+    return false;
+  }
+
   if (watched == actionOverlay_) {
     if (event->type() == QEvent::Leave) {
       if (actionOverlay_ && !actionOverlay_->underMouse()) {

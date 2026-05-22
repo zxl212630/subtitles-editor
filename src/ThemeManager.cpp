@@ -17,37 +17,37 @@ void ThemeManager::init() {
   // Theme Definitions (Backgrounds)
   themeNames_["dark"] = tr("深色 (Dark)");
   themes_["dark"] = {
-      "#151515", // bgBase
-      "#1e1e1e", // bgPanel
-      "#262626", // bgLighter
-      "#3f3f46", // border
-      "#333333", // borderDark
-      "#ffffff", // textNormal
-      "#9ca3af"  // textMuted
+      "#121214", // bgBase
+      "#1a1a1f", // bgPanel
+      "#24242a", // bgLighter
+      "#2e2e34", // border
+      "#3d3d45", // borderDark
+      "#e3e3e6", // textNormal
+      "#8e8e93"  // textMuted
   };
 
   // OLED (Deep Black)
   themeNames_["oled"] = tr("纯黑 OLED (Pure Black)");
   themes_["oled"] = {
       "#000000", // bgBase
-      "#09090b", // bgPanel
-      "#18181b", // bgLighter
-      "#27272a", // border
-      "#3f3f46", // borderDark
-      "#f4f4f5", // textNormal (Zinc 100)
-      "#71717a"  // textMuted (Zinc 500)
+      "#121214", // bgPanel
+      "#1c1c1f", // bgLighter
+      "#26262b", // border
+      "#33333a", // borderDark
+      "#f3f4f6", // textNormal
+      "#8a8a8f"  // textMuted
   };
 
   // Midnight (Deep Navy)
   themeNames_["midnight"] = tr("深邃午夜蓝 (Midnight)");
   themes_["midnight"] = {
-      "#020617", // bgBase (Slate 950 / Navy Dark)
-      "#0f172a", // bgPanel (Slate 900)
-      "#1e293b", // bgLighter (Slate 800)
-      "#334155", // border (Slate 700)
-      "#475569", // borderDark (Slate 600)
-      "#e2e8f0", // textNormal (Slate 200)
-      "#94a3b8"  // textMuted (Slate 400)
+      "#0a0d16", // bgBase
+      "#121624", // bgPanel
+      "#1a2035", // bgLighter
+      "#252d48", // border
+      "#343f62", // borderDark
+      "#e2e8f0", // textNormal
+      "#8a9bb4"  // textMuted
   };
 
   // TODO: Add Sepia later
