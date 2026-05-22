@@ -5,11 +5,16 @@
 #include <QPersistentModelIndex>
 #include <QStyledItemDelegate>
 
+class SubtitleTrack;
+
 class SubtitleListDelegate : public QStyledItemDelegate {
   Q_OBJECT
 
 public:
   explicit SubtitleListDelegate(QObject *parent = nullptr);
+
+  void setTrack(SubtitleTrack *track);
+  QRect speakerRect(const QStyleOptionViewItem &option) const;
 
   void paint(QPainter *painter, const QStyleOptionViewItem &option,
              const QModelIndex &index) const override;
@@ -39,6 +44,8 @@ signals:
   void splitClicked(const QString &id, int cursorPosition);
   void splitClickedWithData(const QString &id, int cursorPosition,
                             const QString &text);
+  void speakerChangeRequested(const QString &id, int newSpeakerId);
+  void manageSpeakersRequested();
 
 private:
   static QString formatTime(qint64 ms);
@@ -49,4 +56,5 @@ private:
   mutable QWidget *currentEditor_ = nullptr;
   mutable QString currentEditingId_;
   mutable int lastCursorPos_ = -1;
+  SubtitleTrack *track_ = nullptr;
 };
