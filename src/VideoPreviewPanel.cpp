@@ -5,6 +5,7 @@
 #include "SoftwareVideoRenderer.h"
 #include "SubtitleTrack.h"
 
+#include <QDir>
 #include <QAbstractItemView>
 #include <QApplication>
 #include <QComboBox>
@@ -743,12 +744,27 @@ void VideoPreviewPanel::updateSubtitleOverlay() {
 
   if (!activeItem || activeItem->text.isEmpty()) {
     videoRenderer_->setSubtitleText(QString());
+    videoRenderer_->clearSubtitleBg();
     return;
   }
 
   LOG_SUB(debug,
           "active id=" << activeItem->id << " text=" << activeItem->text);
   videoRenderer_->setSubtitleText(activeItem->text);
+
+  if (activeItem->speakerId >= 0 && subtitleTrack_) {
+    SpeakerInfo info = subtitleTrack_->speakerInfo(activeItem->speakerId);
+    QString bgFolder = subtitleTrack_->globalBgFolder();
+    if (!bgFolder.isEmpty() && !info.bgImageFile.isEmpty()) {
+      QString fullPath = QDir(bgFolder).filePath(info.bgImageFile);
+      QMargins margins = subtitleTrack_->unifiedBorderMargins();
+      videoRenderer_->setSubtitleBg(fullPath, info.is9Patch, margins);
+    } else {
+      videoRenderer_->clearSubtitleBg();
+    }
+  } else {
+    videoRenderer_->clearSubtitleBg();
+  }
 }
 
 void VideoPreviewPanel::onPlaybackStateChanged(MediaPlayer::State state) {
