@@ -147,6 +147,54 @@ QLineEdit:focus, QComboBox:focus, QComboBox:on, QSpinBox:focus {
     border: 1px solid @primary_color;
 }
 
+/* QSpinBox Buttons Styling */
+QSpinBox::up-button {
+    subcontrol-origin: border;
+    subcontrol-position: top right;
+    width: 20px;
+    border-left: 1px solid @border_color;
+    border-bottom: 1px solid @border_color;
+    border-top-right-radius: 6px;
+    background-color: transparent;
+}
+
+QSpinBox::up-button:hover {
+    background-color: @border_dark;
+}
+
+QSpinBox::up-button:pressed {
+    background-color: @border_color;
+}
+
+QSpinBox::up-arrow {
+    image: url(:/icons/up-arrow.svg);
+    width: 8px;
+    height: 8px;
+}
+
+QSpinBox::down-button {
+    subcontrol-origin: border;
+    subcontrol-position: bottom right;
+    width: 20px;
+    border-left: 1px solid @border_color;
+    border-bottom-right-radius: 6px;
+    background-color: transparent;
+}
+
+QSpinBox::down-button:hover {
+    background-color: @border_dark;
+}
+
+QSpinBox::down-button:pressed {
+    background-color: @border_color;
+}
+
+QSpinBox::down-arrow {
+    image: url(:/icons/down-arrow.svg);
+    width: 8px;
+    height: 8px;
+}
+
 /* Specific styling for QComboBox popup */
 QComboBox {
     combobox-popup: 0;
