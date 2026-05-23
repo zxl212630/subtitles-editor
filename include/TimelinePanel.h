@@ -35,7 +35,7 @@ public:
   qint64 totalDuration() const { return totalDurationMs_; }
   QString mediaFilePath() const { return mediaFilePath_; }
 
-  void startAsrPipeline(const QString &localPath);
+  void startAsrPipeline(const QString &localPath, const QString &engineModelType, int sentenceMaxLength, bool speakerDiarization);
 
 signals:
   void timeClicked(qint64 ms);

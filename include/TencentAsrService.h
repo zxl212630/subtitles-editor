@@ -17,6 +17,10 @@ public:
   void transcribe(const QString &audioUrl) override;
   void abort();
 
+  void setEngineModelType(const QString &model);
+  void setSentenceMaxLength(int length);
+  void setSpeakerDiarization(bool enabled);
+
 private slots:
   void onTaskCreated(QNetworkReply *reply);
   void onResultQueried(QNetworkReply *reply);
@@ -38,4 +42,8 @@ private:
   bool isAborted_ = false;
   int pollingAttempts_ = 0;
   static constexpr int kMaxPollingAttempts = 60;
+
+  QString engineModelType_;
+  int sentenceMaxLength_ = -1;
+  int speakerDiarization_ = -1; // -1 = unset, 0 = disabled, 1 = enabled
 };

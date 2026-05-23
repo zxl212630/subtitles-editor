@@ -990,7 +990,7 @@ void TimelinePanel::dropEvent(QDropEvent *event) {
   }
 }
 
-void TimelinePanel::startAsrPipeline(const QString &localPath) {
+void TimelinePanel::startAsrPipeline(const QString &localPath, const QString &engineModelType, int sentenceMaxLength, bool speakerDiarization) {
   qDebug() << "=== Starting ASR Pipeline ===";
   asrCancelledByUser_ = false;
 
@@ -1002,6 +1002,9 @@ void TimelinePanel::startAsrPipeline(const QString &localPath) {
   AudioTranscoder *transcoder = new AudioTranscoder(this);
   OssUploader *uploader = new OssUploader(this);
   TencentAsrService *asrService = new TencentAsrService(this);
+  asrService->setEngineModelType(engineModelType);
+  asrService->setSentenceMaxLength(sentenceMaxLength);
+  asrService->setSpeakerDiarization(speakerDiarization);
 
   connect(dialog, &AsrProgressDialog::canceled, this,
           [this, dialog, transcoder, uploader, asrService]() {

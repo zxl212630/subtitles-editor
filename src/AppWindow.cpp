@@ -1,5 +1,6 @@
 #include "AppWindow.h"
 #include "AppMessageBox.h"
+#include "AsrConfigDialog.h"
 #include "ConfigDialog.h"
 #include "ConfigManager.h"
 #include "MediaPlayer.h"
@@ -426,7 +427,16 @@ void AppWindow::onVideoAsrRequested() {
       return;
   }
 
-  d->timelinePanel->startAsrPipeline(videoPath);
+  AsrConfigDialog configDlg(this);
+  if (configDlg.exec() != QDialog::Accepted) {
+    return;
+  }
+
+  QString model = configDlg.engineModelType();
+  int maxLen = configDlg.sentenceMaxLength();
+  bool enableSpeaker = configDlg.speakerDiarization();
+
+  d->timelinePanel->startAsrPipeline(videoPath, model, maxLen, enableSpeaker);
 }
 
 void AppWindow::onVideoPropertyRequested() {
