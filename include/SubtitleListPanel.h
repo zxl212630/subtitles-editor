@@ -33,6 +33,7 @@ private:
   void retranslateUi();
   void onItemClicked(const QModelIndex &index);
   void onItemDoubleClicked(const QModelIndex &index);
+  void onTrackItemSelected(const QString &id);
   bool eventFilter(QObject *watched, QEvent *event) override;
   void leaveEvent(QEvent *event) override;
 

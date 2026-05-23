@@ -9,6 +9,7 @@
 #include <QPainter>
 #include <QStyleOptionViewItem>
 #include <QTextEdit>
+#include <QLineEdit>
 
 SubtitleListDelegate::SubtitleListDelegate(QObject *parent)
     : QStyledItemDelegate(parent) {}
@@ -40,7 +41,7 @@ void SubtitleListDelegate::paint(QPainter *painter,
   QString text = index.data(SubtitleListModel::TextRole).toString();
 
   // Timecode area (left)
-  QRect timeRect(rect.left() + 12, rect.top() + 10, 100, 36);
+  QRect timeRect(rect.left() + 12, rect.top() + 10, 115, 36);
   painter->setPen(QColor("#858e9f"));
   QFont timeFont = painter->font();
   timeFont.setFamily("Inter");
@@ -244,6 +245,35 @@ QWidget *
 SubtitleListDelegate::createEditor(QWidget *parent,
                                    const QStyleOptionViewItem & /*option*/,
                                    const QModelIndex &index) const {
+  if (currentEditZone_ == EditZone::StartTime || currentEditZone_ == EditZone::EndTime) {
+    auto *editor = new QLineEdit(parent);
+    currentEditor_ = editor;
+    currentEditingId_ = getIdAtIndex(index);
+    lastCursorPos_ = -1;
+
+    editor->setStyleSheet(
+        QString("QLineEdit { background-color: %1; color: %2; "
+                "border: 1px solid %3; border-radius: 4px; padding: 0px 4px; "
+                "font-family: Inter; font-size: 11pt; }")
+            .arg(ThemeManager::instance().getBgBaseColor().name())
+            .arg(ThemeManager::instance().getTextNormalColor().name())
+            .arg(ThemeManager::instance().getPrimaryColor().name()));
+
+    connect(editor, &QObject::destroyed, [this]() {
+      currentEditor_ = nullptr;
+      currentEditingId_.clear();
+      lastCursorPos_ = -1;
+    });
+
+    auto *self = const_cast<SubtitleListDelegate *>(this);
+    connect(editor, &QLineEdit::editingFinished, self, [self, editor]() {
+      emit self->commitData(editor);
+      emit self->closeEditor(editor, QAbstractItemDelegate::SubmitModelCache);
+    });
+
+    return editor;
+  }
+
   auto *editor = new SubtitleTextEdit(parent);
   currentEditor_ = editor;
   currentEditingId_ = getIdAtIndex(index);
@@ -274,8 +304,8 @@ SubtitleListDelegate::createEditor(QWidget *parent,
 
   editor->setStyleSheet(
       QString("QTextEdit { background-color: %1; color: %2; "
-              "border: 1px solid %3; border-radius: 4px; padding: 2px 6px; "
-              "font-family: Inter, sans-serif; font-size: 12px; }")
+              "border: 1px solid %3; border-radius: 4px; padding: 1px 4px; "
+              "font-family: Inter; font-size: 12pt; }")
           .arg(ThemeManager::instance().getBgBaseColor().name())
           .arg(ThemeManager::instance().getTextNormalColor().name())
           .arg(ThemeManager::instance().getPrimaryColor().name()));
@@ -293,50 +323,112 @@ SubtitleListDelegate::createEditor(QWidget *parent,
 
 void SubtitleListDelegate::setEditorData(QWidget *editor,
                                          const QModelIndex &index) const {
-  QString text = index.data(SubtitleListModel::TextRole).toString();
-  auto *textEdit = static_cast<SubtitleTextEdit *>(editor);
-  textEdit->setPlainText(text);
+  if (currentEditZone_ == EditZone::StartTime) {
+    QString text = index.data(SubtitleListModel::StartTimeRole).toString();
+    auto *lineEdit = static_cast<QLineEdit *>(editor);
+    lineEdit->setText(text);
+  } else if (currentEditZone_ == EditZone::EndTime) {
+    QString text = index.data(SubtitleListModel::EndTimeRole).toString();
+    auto *lineEdit = static_cast<QLineEdit *>(editor);
+    lineEdit->setText(text);
+  } else {
+    QString text = index.data(SubtitleListModel::TextRole).toString();
+    auto *textEdit = static_cast<SubtitleTextEdit *>(editor);
+    textEdit->setPlainText(text);
 
-  QString id = getIdAtIndex(index);
-  int len = text.length();
+    QString id = getIdAtIndex(index);
+    int len = text.length();
 
-  // Logic: Only reset cursor position to end if we don't already have a valid
-  // middle-text position for THIS specific item. This protects against
-  // re-initialization during click events.
-  if (currentEditingId_ != id || lastCursorPos_ <= 0 || lastCursorPos_ >= len) {
-    QTextCursor cursor = textEdit->textCursor();
-    cursor.movePosition(QTextCursor::End);
-    textEdit->setTextCursor(cursor);
-    lastCursorPos_ = cursor.position();
+    // Logic: Only reset cursor position to end if we don't already have a valid
+    // middle-text position for THIS specific item. This protects against
+    // re-initialization during click events.
+    if (currentEditingId_ != id || lastCursorPos_ <= 0 || lastCursorPos_ >= len) {
+      QTextCursor cursor = textEdit->textCursor();
+      cursor.movePosition(QTextCursor::End);
+      textEdit->setTextCursor(cursor);
+      lastCursorPos_ = cursor.position();
+    }
   }
 }
 
 void SubtitleListDelegate::setModelData(QWidget *editor,
                                         QAbstractItemModel *model,
                                         const QModelIndex &index) const {
-  auto *textEdit = static_cast<SubtitleTextEdit *>(editor);
-  model->setData(index, textEdit->toPlainText(), Qt::EditRole);
+  if (currentEditZone_ == EditZone::StartTime) {
+    auto *lineEdit = static_cast<QLineEdit *>(editor);
+    bool ok = false;
+    qint64 ms = parseTime(lineEdit->text(), ok);
+    if (ok) {
+      model->setData(index, QVariant::fromValue(ms), SubtitleListModel::StartMsRole);
+    }
+  } else if (currentEditZone_ == EditZone::EndTime) {
+    auto *lineEdit = static_cast<QLineEdit *>(editor);
+    bool ok = false;
+    qint64 ms = parseTime(lineEdit->text(), ok);
+    if (ok) {
+      model->setData(index, QVariant::fromValue(ms), SubtitleListModel::EndMsRole);
+    }
+  } else {
+    auto *textEdit = static_cast<SubtitleTextEdit *>(editor);
+    model->setData(index, textEdit->toPlainText(), Qt::EditRole);
+  }
 }
 
 void SubtitleListDelegate::updateEditorGeometry(
     QWidget *editor, const QStyleOptionViewItem &option,
     const QModelIndex & /*index*/) const {
   const QRect rect = option.rect;
-  QRect timeRect(rect.left() + 12, rect.top() + 10, 100, 36);
-  bool showSpeaker = ConfigManager::instance().speakerDiarization();
-  int textLeft = timeRect.right() + 12;
-  if (showSpeaker) {
-    QRect spkRect(timeRect.right() + 12, rect.top(), 80, rect.height());
-    textLeft = spkRect.right() + 12;
+  int timecodeWidth = 115; // Width is 115 to prevent any text occlusion
+
+  if (currentEditZone_ == EditZone::StartTime) {
+    // 110px editor width, slightly inset to match original rendering text
+    editor->setGeometry(rect.left() + 8, rect.top() + 6, 110, 20);
+  } else if (currentEditZone_ == EditZone::EndTime) {
+    editor->setGeometry(rect.left() + 8, rect.top() + 26, 110, 20);
+  } else {
+    QRect timeRect(rect.left() + 12, rect.top() + 10, timecodeWidth, 36);
+    bool showSpeaker = ConfigManager::instance().speakerDiarization();
+    int textLeft = timeRect.right() + 12;
+    if (showSpeaker) {
+      QRect spkRect(timeRect.right() + 12, rect.top(), 80, rect.height());
+      textLeft = spkRect.right() + 12;
+    }
+    int textRight = rect.right() - 12 - 36 - 12;
+    int textWidth = qMax(50, textRight - textLeft);
+    // Adjusted textLeft by -4px and width by +8px to align exactly with text drawing and prevent jumping
+    QRect editRect(textLeft - 4, rect.top() + 8, textWidth + 8, rect.height() - 16);
+    editor->setGeometry(editRect);
   }
-  int textRight = rect.right() - 12 - 36 - 12;
-  int textWidth = qMax(50, textRight - textLeft);
-  QRect editRect(textLeft, rect.top() + 8, textWidth, rect.height() - 16);
-  editor->setGeometry(editRect);
 }
 
 void SubtitleListDelegate::setTrack(SubtitleTrack *track) {
   track_ = track;
+}
+
+void SubtitleListDelegate::setEditZone(EditZone zone) {
+  currentEditZone_ = zone;
+}
+
+SubtitleListDelegate::EditZone SubtitleListDelegate::editZone() const {
+  return currentEditZone_;
+}
+
+qint64 SubtitleListDelegate::parseTime(const QString &str, bool &ok) {
+  ok = false;
+  QStringList parts = str.split(':');
+  if (parts.size() != 4) {
+    return 0;
+  }
+  bool hOk, mOk, sOk, fOk;
+  int h = parts[0].toInt(&hOk);
+  int m = parts[1].toInt(&mOk);
+  int s = parts[2].toInt(&sOk);
+  int f = parts[3].toInt(&fOk);
+  if (!hOk || !mOk || !sOk || !fOk || h < 0 || m < 0 || m >= 60 || s < 0 || s >= 60 || f < 0 || f >= 100) {
+    return 0;
+  }
+  ok = true;
+  return (h * 3600000LL) + (m * 60000LL) + (s * 1000LL) + (f * 10LL);
 }
 
 QRect SubtitleListDelegate::speakerRect(const QStyleOptionViewItem &option) const {
@@ -344,7 +436,7 @@ QRect SubtitleListDelegate::speakerRect(const QStyleOptionViewItem &option) cons
     return QRect();
   }
   const QRect rect = option.rect;
-  QRect timeRect(rect.left() + 12, rect.top() + 10, 100, 36);
+  QRect timeRect(rect.left() + 12, rect.top() + 10, 115, 36);
   return QRect(timeRect.right() + 12, rect.top(), 80, rect.height());
 }
 

@@ -797,6 +797,11 @@ void TimelinePanel::mousePressEvent(QMouseEvent *event) {
         }
       }
 
+      // Jump playhead pointer to the start of the clicked subtitle clip
+      currentTimeMs_ = item->startMs;
+      emit timeClicked(item->startMs);
+      canvas_->update();
+
       // Populate dragClips_ with all selected clips
       for (const auto &it : track_->items()) {
         if (it.selected) {

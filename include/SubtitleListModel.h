@@ -25,6 +25,7 @@ public:
 
   void setTrack(SubtitleTrack *track);
   void setFilterText(const QString &text);
+  QModelIndex indexForId(const QString &id) const;
 
   int rowCount(const QModelIndex &parent = QModelIndex()) const override;
   QVariant data(const QModelIndex &index,

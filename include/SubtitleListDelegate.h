@@ -11,9 +11,17 @@ class SubtitleListDelegate : public QStyledItemDelegate {
   Q_OBJECT
 
 public:
+  enum class EditZone {
+    Text,
+    StartTime,
+    EndTime
+  };
+
   explicit SubtitleListDelegate(QObject *parent = nullptr);
 
   void setTrack(SubtitleTrack *track);
+  void setEditZone(EditZone zone);
+  EditZone editZone() const;
   QRect speakerRect(const QStyleOptionViewItem &option) const;
 
   void paint(QPainter *painter, const QStyleOptionViewItem &option,
@@ -49,6 +57,7 @@ signals:
 
 private:
   static QString formatTime(qint64 ms);
+  static qint64 parseTime(const QString &str, bool &ok);
   static QString getIdAtIndex(const QModelIndex &index);
 
   QModelIndex hoveredIndex_;
@@ -57,4 +66,5 @@ private:
   mutable QString currentEditingId_;
   mutable int lastCursorPos_ = -1;
   SubtitleTrack *track_ = nullptr;
+  EditZone currentEditZone_ = EditZone::Text;
 };

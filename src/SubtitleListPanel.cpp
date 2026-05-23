@@ -106,9 +106,17 @@ SubtitleListPanel::SubtitleListPanel(QWidget *parent) : QWidget(parent) {
 }
 
 void SubtitleListPanel::setTrack(SubtitleTrack *track) {
+  if (track_) {
+    disconnect(track_, &SubtitleTrack::itemSelected, this,
+               &SubtitleListPanel::onTrackItemSelected);
+  }
   track_ = track;
   model_->setTrack(track);
   delegate_->setTrack(track);
+  if (track_) {
+    connect(track_, &SubtitleTrack::itemSelected, this,
+            &SubtitleListPanel::onTrackItemSelected);
+  }
 }
 
 void SubtitleListPanel::setVideoFps(double fps) {
@@ -285,7 +293,7 @@ void SubtitleListPanel::setupUi() {
 
   headerTime_ = new QLabel(tr("Timecode"), headerLeft);
   headerTime_->setObjectName("SubtitleHeaderLabel");
-  headerTime_->setFixedWidth(100);
+  headerTime_->setFixedWidth(115);
   hlLayout->addWidget(headerTime_);
 
   headerSpeaker_ = new QLabel(tr("Speaker"), headerLeft);
@@ -404,6 +412,17 @@ void SubtitleListPanel::onItemDoubleClicked(const QModelIndex &index) {
   emit itemDoubleClicked(id, startMs);
 }
 
+void SubtitleListPanel::onTrackItemSelected(const QString &id) {
+  if (!model_ || !listView_) return;
+  QModelIndex index = model_->indexForId(id);
+  if (index.isValid()) {
+    if (listView_->currentIndex() != index) {
+      listView_->setCurrentIndex(index);
+    }
+    listView_->scrollTo(index, QAbstractItemView::EnsureVisible);
+  }
+}
+
 bool SubtitleListPanel::eventFilter(QObject *watched, QEvent *event) {
   if (watched == searchEdit_) {
     if (event->type() == QEvent::FocusIn) {
@@ -432,6 +451,35 @@ bool SubtitleListPanel::eventFilter(QObject *watched, QEvent *event) {
   }
 
   if (watched == listView_->viewport()) {
+    if (event->type() == QEvent::MouseButtonDblClick) {
+      auto *me = static_cast<QMouseEvent *>(event);
+      QModelIndex index = listView_->indexAt(me->pos());
+      if (index.isValid()) {
+        QStyleOptionViewItem option;
+        option.initFrom(listView_);
+        option.rect = listView_->visualRect(index);
+
+        // Trigger the standard double clicked seek behavior
+        onItemDoubleClicked(index);
+
+        // Determine Edit Zone
+        int timecodeWidth = 115;
+        QRect timeRect(option.rect.left() + 12, option.rect.top() + 6, timecodeWidth, option.rect.height() - 12);
+        if (timeRect.contains(me->pos())) {
+          int midY = option.rect.top() + option.rect.height() / 2;
+          if (me->pos().y() < midY) {
+            delegate_->setEditZone(SubtitleListDelegate::EditZone::StartTime);
+          } else {
+            delegate_->setEditZone(SubtitleListDelegate::EditZone::EndTime);
+          }
+        } else {
+          delegate_->setEditZone(SubtitleListDelegate::EditZone::Text);
+        }
+        listView_->edit(index);
+        return true; // Handled to override QListView default editing triggers
+      }
+    }
+
     if (event->type() == QEvent::MouseButtonPress) {
       auto *me = static_cast<QMouseEvent *>(event);
       QModelIndex index = listView_->indexAt(me->pos());

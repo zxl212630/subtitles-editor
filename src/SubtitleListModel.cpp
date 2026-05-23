@@ -126,10 +126,56 @@ QHash<int, QByteArray> SubtitleListModel::roleNames() const {
   return roles;
 }
 
+QModelIndex SubtitleListModel::indexForId(const QString &id) const {
+  for (int row = 0; row < filteredIndices_.size(); ++row) {
+    int originalIndex = filteredIndices_[row];
+    if (track_ && originalIndex < track_->items().size()) {
+      if (track_->items()[originalIndex].id == id) {
+        return index(row);
+      }
+    }
+  }
+  return QModelIndex();
+}
+
 void SubtitleListModel::onDataChanged() {
-  beginResetModel();
-  rebuildFilteredIndices();
-  endResetModel();
+  QList<int> oldIndices = filteredIndices_;
+
+  QList<int> newIndices;
+  if (track_) {
+    const auto &items = track_->items();
+    for (int i = 0; i < items.size(); ++i) {
+      if (filterText_.isEmpty() ||
+          items[i].text.contains(filterText_, Qt::CaseInsensitive)) {
+        newIndices.append(i);
+      }
+    }
+  }
+
+  bool structureChanged = (oldIndices.size() != newIndices.size());
+  if (!structureChanged && track_) {
+    const auto &items = track_->items();
+    for (int i = 0; i < oldIndices.size(); ++i) {
+      int oldIdx = oldIndices[i];
+      int newIdx = newIndices[i];
+      if (oldIdx != newIdx || oldIdx >= items.size() || newIdx >= items.size() ||
+          items[oldIdx].id != items[newIdx].id) {
+        structureChanged = true;
+        break;
+      }
+    }
+  }
+
+  if (structureChanged) {
+    beginResetModel();
+    filteredIndices_ = newIndices;
+    endResetModel();
+  } else {
+    filteredIndices_ = newIndices;
+    if (!filteredIndices_.isEmpty()) {
+      emit dataChanged(index(0), index(filteredIndices_.size() - 1));
+    }
+  }
 }
 
 void SubtitleListModel::rebuildFilteredIndices() {
