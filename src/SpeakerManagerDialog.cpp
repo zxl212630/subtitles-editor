@@ -16,6 +16,7 @@
 #include <QStyleOptionViewItem>
 #include <QWindowKit/QWKWidgets/widgetwindowagent.h>
 #include <QFrame>
+#include <algorithm>
 
 SpeakerManagerDialog::SpeakerManagerDialog(SubtitleTrack *track, QWidget *parent)
     : QDialog(parent), track_(track) {
@@ -38,13 +39,21 @@ SpeakerManagerDialog::SpeakerManagerDialog(SubtitleTrack *track, QWidget *parent
   connect(cancelBtn_, &QPushButton::clicked, this, &SpeakerManagerDialog::onCancel);
 
   connect(speakerList_, &QListWidget::itemSelectionChanged, this, &SpeakerManagerDialog::onSpeakerSelectionChanged);
-  connect(nameEdit_, &QLineEdit::textChanged, this, &SpeakerManagerDialog::onNameChanged);
-  connect(imageCombo_, &QComboBox::currentTextChanged, this, &SpeakerManagerDialog::onImageFileChanged);
-  connect(drawModeCombo_, &QComboBox::currentIndexChanged, this, &SpeakerManagerDialog::onDrawModeChanged);
+  connect(nameEdit_, &QLineEdit::textChanged, this, [this](const QString &text) {
+    onNameChanged(text);
+  });
+  connect(imageCombo_, &QComboBox::currentTextChanged, this, [this](const QString &text) {
+    onImageFileChanged(text);
+  });
+  connect(drawModeCombo_, &QComboBox::currentIndexChanged, this, [this](int index) {
+    onDrawModeChanged(index);
+  });
 
   auto marginSpins = {marginLeftSpin_, marginRightSpin_, marginTopSpin_, marginBottomSpin_};
   for (auto *spin : marginSpins) {
-    connect(spin, &QSpinBox::valueChanged, this, &SpeakerManagerDialog::onMarginChanged);
+    connect(spin, &QSpinBox::valueChanged, this, [this](int value) {
+      onMarginChanged(value);
+    });
   }
 
   // Connect theme and language change
@@ -123,7 +132,7 @@ void SpeakerManagerDialog::setupUi() {
   marginLabel_ = new QLabel(topSettingsFrame);
   marginLabel_->setObjectName("ConfigFieldLabel");
   marginLabel_->setFixedWidth(100);
-  marginRow->addWidget(marginLabel);
+  marginRow->addWidget(marginLabel_);
 
   auto createMarginSpin = [this, topSettingsFrame](QLabel *&labelField, QSpinBox *&spinField) {
     auto *layout = new QHBoxLayout();
@@ -164,24 +173,24 @@ void SpeakerManagerDialog::setupUi() {
   // 2.1 左侧列表区
   auto *leftWidget = new QWidget(contentWidget);
   leftWidget->setFixedWidth(240);
-  auto *leftLayout = new QVBoxLayout(leftWidget);
-  leftLayout->setContentsMargins(0, 0, 0, 0);
-  leftLayout->setSpacing(8);
+  auto *leftListLayout = new QVBoxLayout(leftWidget);
+  leftListLayout->setContentsMargins(0, 0, 0, 0);
+  leftListLayout->setSpacing(8);
 
   listLabel_ = new QLabel(leftWidget);
   listLabel_->setObjectName("ConfigFieldLabel");
-  leftLayout->addWidget(listLabel_);
+  leftListLayout->addWidget(listLabel_);
 
   speakerList_ = new QListWidget(leftWidget);
   speakerList_->setObjectName("ConfigSidebar"); // 复用 ConfigSidebar 的好看样式
-  leftLayout->addWidget(speakerList_, 1);
+  leftListLayout->addWidget(speakerList_, 1);
 
   auto *btnRow = new QHBoxLayout();
   addBtn_ = new QPushButton(leftWidget);
   removeBtn_ = new QPushButton(leftWidget);
   btnRow->addWidget(addBtn_);
   btnRow->addWidget(removeBtn_);
-  leftLayout->addLayout(btnRow);
+  leftListLayout->addLayout(btnRow);
 
   splitLayout->addWidget(leftWidget);
 

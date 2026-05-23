@@ -500,134 +500,140 @@ Make sure to include the necessary settings for FFmpeg, Tencent Cloud ASR, and A
 <context>
     <name>SpeakerManagerDialog</name>
     <message>
-        <location filename="../src/SpeakerManagerDialog.cpp" line="21"/>
-        <location filename="../src/SpeakerManagerDialog.cpp" line="66"/>
-        <source>说话人与字幕背景管理</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../src/SpeakerManagerDialog.cpp" line="102"/>
-        <source>背景图文件夹:</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../src/SpeakerManagerDialog.cpp" line="107"/>
-        <source>选择包含背景图片的文件夹...</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../src/SpeakerManagerDialog.cpp" line="110"/>
-        <source>浏览...</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../src/SpeakerManagerDialog.cpp" line="120"/>
-        <source>九宫格统一边距:</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../src/SpeakerManagerDialog.cpp" line="137"/>
-        <source>左</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../src/SpeakerManagerDialog.cpp" line="142"/>
-        <source>右</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../src/SpeakerManagerDialog.cpp" line="147"/>
-        <source>上</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../src/SpeakerManagerDialog.cpp" line="152"/>
-        <source>下</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../src/SpeakerManagerDialog.cpp" line="172"/>
-        <source>说话人列表</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../src/SpeakerManagerDialog.cpp" line="181"/>
-        <source>+ 添加</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../src/SpeakerManagerDialog.cpp" line="182"/>
-        <source>- 删除</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../src/SpeakerManagerDialog.cpp" line="196"/>
-        <source>说话人名称:</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../src/SpeakerManagerDialog.cpp" line="203"/>
-        <source>背景图片:</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../src/SpeakerManagerDialog.cpp" line="210"/>
-        <source>拉伸模式:</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../src/SpeakerManagerDialog.cpp" line="214"/>
-        <source>九宫格拉伸</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../src/SpeakerManagerDialog.cpp" line="215"/>
-        <source>固定尺寸</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../src/SpeakerManagerDialog.cpp" line="219"/>
-        <source>背景预览:</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../src/SpeakerManagerDialog.cpp" line="246"/>
         <source>取消</source>
-        <translation type="unfinished">Cancel</translation>
+        <translation type="obsolete">Cancel</translation>
     </message>
     <message>
-        <location filename="../src/SpeakerManagerDialog.cpp" line="248"/>
-        <source>保存并应用</source>
+        <location filename="../src/SpeakerManagerDialog.cpp" line="265"/>
+        <location filename="../src/SpeakerManagerDialog.cpp" line="267"/>
+        <source>Speaker &amp; Subtitle Background Management</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/SpeakerManagerDialog.cpp" line="269"/>
+        <source>Background Folder:</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/SpeakerManagerDialog.cpp" line="271"/>
+        <source>Select folder containing background images...</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/SpeakerManagerDialog.cpp" line="273"/>
+        <source>Browse...</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/SpeakerManagerDialog.cpp" line="275"/>
+        <source>Unified 9-Patch Margins:</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/SpeakerManagerDialog.cpp" line="277"/>
+        <source>Left</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/SpeakerManagerDialog.cpp" line="279"/>
+        <source>Right</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/SpeakerManagerDialog.cpp" line="281"/>
+        <source>Top</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/SpeakerManagerDialog.cpp" line="283"/>
+        <source>Bottom</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/SpeakerManagerDialog.cpp" line="285"/>
+        <source>Speaker List</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/SpeakerManagerDialog.cpp" line="287"/>
+        <source>+ Add</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/SpeakerManagerDialog.cpp" line="289"/>
+        <source>- Delete</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/SpeakerManagerDialog.cpp" line="291"/>
+        <source>Speaker Name:</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/SpeakerManagerDialog.cpp" line="293"/>
+        <source>Background Image:</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/SpeakerManagerDialog.cpp" line="295"/>
+        <source>Draw Mode:</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/SpeakerManagerDialog.cpp" line="297"/>
+        <source>Background Preview:</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../src/SpeakerManagerDialog.cpp" line="299"/>
-        <source>无</source>
+        <source>9-Patch Stretch</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/SpeakerManagerDialog.cpp" line="331"/>
-        <source>选择一个说话人以编辑属性</source>
+        <location filename="../src/SpeakerManagerDialog.cpp" line="300"/>
+        <source>Fixed Size</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/SpeakerManagerDialog.cpp" line="400"/>
-        <source>选择背景图文件夹</source>
+        <location filename="../src/SpeakerManagerDialog.cpp" line="303"/>
+        <source>Cancel</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/SpeakerManagerDialog.cpp" line="499"/>
-        <source>无背景图片</source>
+        <location filename="../src/SpeakerManagerDialog.cpp" line="305"/>
+        <source>Save &amp; Apply</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/SpeakerManagerDialog.cpp" line="508"/>
-        <source>背景图片加载失败</source>
+        <location filename="../src/SpeakerManagerDialog.cpp" line="309"/>
+        <location filename="../src/SpeakerManagerDialog.cpp" line="363"/>
+        <source>None</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/SpeakerManagerDialog.cpp" line="548"/>
-        <source>示例字幕背景预览</source>
+        <location filename="../src/SpeakerManagerDialog.cpp" line="314"/>
+        <location filename="../src/SpeakerManagerDialog.cpp" line="395"/>
+        <source>Select a speaker to edit properties</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/SpeakerManagerDialog.cpp" line="464"/>
+        <source>Select Background Folder</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/SpeakerManagerDialog.cpp" line="563"/>
+        <source>No background image</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/SpeakerManagerDialog.cpp" line="572"/>
+        <source>Failed to load background image</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/SpeakerManagerDialog.cpp" line="612"/>
+        <source>Sample Subtitle Background Preview</source>
         <translation type="unfinished"></translation>
     </message>
 </context>
@@ -650,7 +656,7 @@ Make sure to include the necessary settings for FFmpeg, Tencent Cloud ASR, and A
     <name>SubtitleListDelegate</name>
     <message>
         <location filename="../src/SubtitleListDelegate.cpp" line="62"/>
-        <source>未分配</source>
+        <source>Unassigned</source>
         <translation type="unfinished"></translation>
     </message>
 </context>
@@ -742,17 +748,17 @@ Make sure to include the necessary settings for FFmpeg, Tencent Cloud ASR, and A
     </message>
     <message>
         <location filename="../src/SubtitleListPanel.cpp" line="579"/>
-        <source>未分配</source>
+        <source>Unassigned</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../src/SubtitleListPanel.cpp" line="593"/>
-        <source>+ 新建说话人...</source>
+        <source>+ New Speaker...</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../src/SubtitleListPanel.cpp" line="594"/>
-        <source>⚙️ 管理说话人...</source>
+        <source>⚙️ Manage Speakers...</source>
         <translation type="unfinished"></translation>
     </message>
 </context>
