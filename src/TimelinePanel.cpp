@@ -1330,29 +1330,56 @@ void TimelinePanel::contextMenuEvent(QContextMenuEvent *event) {
   if (totalDurationMs_ <= 0 || mediaFilePath_.isEmpty())
     return;
 
-  int y = event->pos().y();
-  int videoTrackY = RULER_HEIGHT + SUBTITLE_TRACK_HEIGHT;
-  if (y < videoTrackY || y >= videoTrackY + VIDEO_TRACK_HEIGHT)
-    return;
-
   int x = event->pos().x();
-  int videoX = timeToX(0);
-  int videoEndX = timeToX(totalDurationMs_);
-  if (x < videoX || x > videoEndX)
+  int trackX = timeToX(0);
+  int trackEndX = timeToX(totalDurationMs_);
+  if (x < trackX || x > trackEndX)
     return;
 
-  QMenu menu(this);
-  QAction *propAction = menu.addAction(tr("属性"));
-  QAction *openLocAction = menu.addAction(tr("打开文件所在位置"));
-  QAction *asrAction = menu.addAction(tr("语音转文字"));
+  int y = event->pos().y();
+  int subtitleTrackY = RULER_HEIGHT;
+  int videoTrackY = RULER_HEIGHT + SUBTITLE_TRACK_HEIGHT;
 
-  QAction *selected = menu.exec(event->globalPos());
-  if (selected == propAction) {
-    emit videoPropertyRequested();
-  } else if (selected == openLocAction) {
-    emit openFileLocationRequested();
-  } else if (selected == asrAction) {
-    emit videoAsrRequested();
+  if (y >= subtitleTrackY && y < videoTrackY) {
+    // 右键点击在字幕轨道上
+    if (!track_)
+      return;
+
+    QMenu menu(this);
+    QAction *selectAllAction = menu.addAction(tr("全选"));
+    QAction *deselectAllAction = menu.addAction(tr("取消全选"));
+
+    QAction *selected = menu.exec(event->globalPos());
+    if (selected == selectAllAction) {
+      QSet<QString> allIds;
+      for (const auto &item : track_->items()) {
+        allIds.insert(item.id);
+      }
+      track_->setSelectedItems(allIds);
+      canvas_->update();
+    } else if (selected == deselectAllAction) {
+      track_->clearSelection();
+      canvas_->update();
+    }
+    return;
+  }
+
+  if (y >= videoTrackY && y < videoTrackY + VIDEO_TRACK_HEIGHT) {
+    // 右键点击在视频轨道上
+    QMenu menu(this);
+    QAction *propAction = menu.addAction(tr("属性"));
+    QAction *openLocAction = menu.addAction(tr("打开文件所在位置"));
+    QAction *asrAction = menu.addAction(tr("语音转文字"));
+
+    QAction *selected = menu.exec(event->globalPos());
+    if (selected == propAction) {
+      emit videoPropertyRequested();
+    } else if (selected == openLocAction) {
+      emit openFileLocationRequested();
+    } else if (selected == asrAction) {
+      emit videoAsrRequested();
+    }
+    return;
   }
 }
 
