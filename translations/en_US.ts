@@ -618,7 +618,7 @@ Make sure to include the necessary settings for FFmpeg, Tencent Cloud ASR, and A
     <message>
         <location filename="../src/SpeakerManagerDialog.cpp" line="265"/>
         <location filename="../src/SpeakerManagerDialog.cpp" line="267"/>
-        <source>Speaker &amp; Subtitle Background Management</source>
+        <source>Speaker Management</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
@@ -638,7 +638,7 @@ Make sure to include the necessary settings for FFmpeg, Tencent Cloud ASR, and A
     </message>
     <message>
         <location filename="../src/SpeakerManagerDialog.cpp" line="275"/>
-        <source>Unified 9-Patch Margins:</source>
+        <source>9-Patch Margins:</source>
         <translation type="unfinished"></translation>
     </message>
     <message>

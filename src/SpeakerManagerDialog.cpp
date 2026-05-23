@@ -140,7 +140,7 @@ void SpeakerManagerDialog::setupUi() {
     labelField->setStyleSheet("color: rgba(255, 255, 255, 0.6);");
     spinField = new QSpinBox(topSettingsFrame);
     spinField->setRange(0, 200);
-    spinField->setFixedWidth(60);
+    spinField->setFixedWidth(80);
     layout->addWidget(labelField);
     layout->addWidget(spinField);
     return layout;
@@ -262,9 +262,9 @@ void SpeakerManagerDialog::setupUi() {
 }
 
 void SpeakerManagerDialog::retranslateUi() {
-  setWindowTitle(tr("Speaker & Subtitle Background Management"));
+  setWindowTitle(tr("Speaker Management"));
   if (titleLabel)
-    titleLabel->setText(tr("Speaker & Subtitle Background Management"));
+    titleLabel->setText(tr("Speaker Management"));
   if (folderLabel_)
     folderLabel_->setText(tr("Background Folder:"));
   if (bgFolderEdit_)
@@ -272,7 +272,7 @@ void SpeakerManagerDialog::retranslateUi() {
   if (browseFolderBtn_)
     browseFolderBtn_->setText(tr("Browse..."));
   if (marginLabel_)
-    marginLabel_->setText(tr("Unified 9-Patch Margins:"));
+    marginLabel_->setText(tr("9-Patch Margins:"));
   if (marginLeftLabel_)
     marginLeftLabel_->setText(tr("Left"));
   if (marginRightLabel_)

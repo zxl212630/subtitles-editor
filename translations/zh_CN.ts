@@ -506,8 +506,8 @@
     <message>
         <location filename="../src/SpeakerManagerDialog.cpp" line="265"/>
         <location filename="../src/SpeakerManagerDialog.cpp" line="267"/>
-        <source>Speaker &amp; Subtitle Background Management</source>
-        <translation>说话人与字幕背景管理</translation>
+        <source>Speaker Management</source>
+        <translation>说话人管理</translation>
     </message>
     <message>
         <location filename="../src/SpeakerManagerDialog.cpp" line="269"/>
@@ -526,8 +526,8 @@
     </message>
     <message>
         <location filename="../src/SpeakerManagerDialog.cpp" line="275"/>
-        <source>Unified 9-Patch Margins:</source>
-        <translation>九宫格统一边距:</translation>
+        <source>9-Patch Margins:</source>
+        <translation>九宫格间距:</translation>
     </message>
     <message>
         <location filename="../src/SpeakerManagerDialog.cpp" line="277"/>
