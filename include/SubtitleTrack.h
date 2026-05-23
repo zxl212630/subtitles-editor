@@ -5,6 +5,7 @@
 #include <QMap>
 #include <QMargins>
 #include <QObject>
+#include <QSet>
 #include <QString>
 
 struct SpeakerInfo {
@@ -24,7 +25,10 @@ public:
   void addItem(const SubtitleItem &item);
   void removeItem(const QString &id);
   void updateItem(const QString &id, const SubtitleItem &newItem);
+  void updateItems(const QList<SubtitleItem> &newItems);
   void selectItem(const QString &id);
+  void setSelectedItems(const QSet<QString> &selectedIds);
+  void clearSelection();
 
   const QList<SubtitleItem> &items() const;
   const SubtitleItem *selectedItem() const;

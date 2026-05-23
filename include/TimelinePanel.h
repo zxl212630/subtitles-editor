@@ -2,6 +2,8 @@
 
 #include <QPixmap>
 #include <QWidget>
+#include <QSet>
+#include <QPoint>
 
 class QResizeEvent;
 class QScrollBar;
@@ -19,7 +21,8 @@ public:
     Idle,
     ClipMove,
     ClipResizeLeft,
-    ClipResizeRight
+    ClipResizeRight,
+    RubberBandSelect
   };
 
   explicit TimelinePanel(QWidget *parent = nullptr);
@@ -55,6 +58,7 @@ protected:
   void mousePressEvent(QMouseEvent *event) override;
   void mouseMoveEvent(QMouseEvent *event) override;
   void mouseReleaseEvent(QMouseEvent *event) override;
+  void keyPressEvent(QKeyEvent *event) override;
   void dragEnterEvent(QDragEnterEvent *event) override;
   void dropEvent(QDropEvent *event) override;
   void wheelEvent(QWheelEvent *event) override;
@@ -120,6 +124,19 @@ private:
   qint64 dragTempStartMs_ = 0; // current temp startMs during drag
   qint64 dragTempEndMs_ = 0;   // current temp endMs during drag
   static constexpr int DRAG_EDGE_THRESHOLD_PX = 6;
+
+  struct DraggedClipInfo {
+    QString id;
+    qint64 origStartMs;
+    qint64 origEndMs;
+    qint64 tempStartMs;
+    qint64 tempEndMs;
+  };
+  QList<DraggedClipInfo> dragClips_;
+
+  QPoint rubberBandStart_;
+  QPoint rubberBandEnd_;
+  QSet<QString> prevSelectedIds_;
 
   bool asrCancelledByUser_ = false;
   QPixmap subIconPixmap_;

@@ -19,6 +19,7 @@
 #include <QIcon>
 #include <QMenu>
 #include <QMimeData>
+#include <QKeyEvent>
 #include <QMouseEvent>
 #include <QPainter>
 #include <QPainterPath>
@@ -66,6 +67,7 @@ TimelinePanel::TimelinePanel(QWidget *parent) : QWidget(parent) {
   setAttribute(Qt::WA_StyledBackground);
   setAcceptDrops(true);
   setMouseTracking(true);
+  setFocusPolicy(Qt::StrongFocus);
 
   canvas_ = new TimelineCanvas(this, this);
 
@@ -371,6 +373,26 @@ void TimelinePanel::drawOnCanvas(QPainter &painter) {
     drawSubtitleTrack(painter, RULER_HEIGHT);
     drawVideoTrack(painter, RULER_HEIGHT + SUBTITLE_TRACK_HEIGHT);
     drawPlayhead(painter);
+
+    // Draw rubber band selection box if in RubberBandSelect mode and dragging
+    if (clipMode_ == ClipInteractionMode::RubberBandSelect && isDragging_) {
+      painter.save();
+      QRect selectionRect = QRect(rubberBandStart_, rubberBandEnd_).normalized();
+      int subTrackY = RULER_HEIGHT;
+      int subTrackH = SUBTITLE_TRACK_HEIGHT;
+      int top = qMax(subTrackY, selectionRect.top());
+      int bottom = qMin(subTrackY + subTrackH, selectionRect.bottom());
+      QRect drawRect(selectionRect.left(), top, selectionRect.width(), qMax(0, bottom - top));
+      if (drawRect.isValid() && drawRect.width() > 0 && drawRect.height() > 0) {
+        QColor primaryColor = ThemeManager::instance().getPrimaryColor();
+        QColor fillColor = QColor(primaryColor.red(), primaryColor.green(), primaryColor.blue(), 40);
+        QColor strokeColor = QColor(primaryColor.red(), primaryColor.green(), primaryColor.blue(), 180);
+        painter.setBrush(fillColor);
+        painter.setPen(QPen(strokeColor, 1.5, Qt::DashLine));
+        painter.drawRect(drawRect);
+      }
+      painter.restore();
+    }
   }
 }
 
@@ -531,9 +553,14 @@ void TimelinePanel::drawSubtitleTrack(QPainter &painter, int y) {
     qint64 startMs = item.startMs;
     qint64 endMs = item.endMs;
     // Use temp values if this clip is being dragged
-    if (isDragging_ && item.id == dragTargetId_) {
-      startMs = dragTempStartMs_;
-      endMs = dragTempEndMs_;
+    if (isDragging_) {
+      for (const auto &dc : dragClips_) {
+        if (dc.id == item.id) {
+          startMs = dc.tempStartMs;
+          endMs = dc.tempEndMs;
+          break;
+        }
+      }
     }
 
     int x = timeToX(startMs);
@@ -546,9 +573,17 @@ void TimelinePanel::drawSubtitleTrack(QPainter &painter, int y) {
       continue;
 
     QColor barColor = item.selected ? primaryHover : primaryColor;
-    painter.setPen(Qt::NoPen);
-    painter.setBrush(barColor);
-    painter.drawRoundedRect(x, y + 2, w, SUBTITLE_TRACK_HEIGHT - 4, 4, 4);
+    if (item.selected) {
+      QColor borderColor = ThemeManager::instance().getTextNormalColor();
+      painter.setPen(QPen(borderColor, 2.0));
+      painter.setBrush(barColor);
+      painter.drawRoundedRect(x + 1, y + 3, w - 2, SUBTITLE_TRACK_HEIGHT - 6, 3, 3);
+    } else {
+      QColor borderColor = primaryColor.darker(120);
+      painter.setPen(QPen(borderColor, 1.0));
+      painter.setBrush(barColor);
+      painter.drawRoundedRect(x, y + 2, w, SUBTITLE_TRACK_HEIGHT - 4, 4, 4);
+    }
 
     painter.setPen(Qt::white);
     QFont barFont = painter.font();
@@ -721,14 +756,20 @@ void TimelinePanel::mousePressEvent(QMouseEvent *event) {
 
   // Reset clip mode; will be set below if clicking on a clip
   clipMode_ = ClipInteractionMode::Idle;
+  dragClips_.clear();
 
   // Determine interaction mode based on click position
   QString hitId;
   ClipInteractionMode mode = hitTestClip(event->x(), event->y(), &hitId);
 
+  bool hasModifier = (event->modifiers() & Qt::ShiftModifier) ||
+                     (event->modifiers() & Qt::ControlModifier) ||
+                     (event->modifiers() & Qt::MetaModifier);
+
   if (mode == ClipInteractionMode::ClipMove ||
       mode == ClipInteractionMode::ClipResizeLeft ||
       mode == ClipInteractionMode::ClipResizeRight) {
+    setFocus();
     // Start clip drag/resize
     clipMode_ = mode;
     dragTargetId_ = hitId;
@@ -737,6 +778,48 @@ void TimelinePanel::mousePressEvent(QMouseEvent *event) {
       clipMode_ = ClipInteractionMode::Idle;
       return;
     }
+
+    if (clipMode_ == ClipInteractionMode::ClipMove) {
+      if (!item->selected) {
+        if (hasModifier) {
+          // Add to current selection
+          QSet<QString> selected;
+          for (const auto &it : track_->items()) {
+            if (it.selected) {
+              selected.insert(it.id);
+            }
+          }
+          selected.insert(hitId);
+          track_->setSelectedItems(selected);
+        } else {
+          // Select only this clip
+          track_->selectItem(hitId);
+        }
+      }
+
+      // Populate dragClips_ with all selected clips
+      for (const auto &it : track_->items()) {
+        if (it.selected) {
+          DraggedClipInfo info;
+          info.id = it.id;
+          info.origStartMs = it.startMs;
+          info.origEndMs = it.endMs;
+          info.tempStartMs = it.startMs;
+          info.tempEndMs = it.endMs;
+          dragClips_.append(info);
+        }
+      }
+    } else {
+      // Resize modes are single-clip
+      DraggedClipInfo info;
+      info.id = item->id;
+      info.origStartMs = item->startMs;
+      info.origEndMs = item->endMs;
+      info.tempStartMs = item->startMs;
+      info.tempEndMs = item->endMs;
+      dragClips_.append(info);
+    }
+
     dragOrigStartMs_ = item->startMs;
     dragOrigEndMs_ = item->endMs;
     dragTempStartMs_ = item->startMs;
@@ -759,9 +842,35 @@ void TimelinePanel::mousePressEvent(QMouseEvent *event) {
     currentTimeMs_ = ms;
     lastPreviewSystemTime_ = QDateTime::currentMSecsSinceEpoch();
     canvas_->update();
-  } else {
-    // Click on empty track area: no-op
-    return;
+  } else if (event->y() >= RULER_HEIGHT) {
+    // Click on empty track area: clear selection if no modifiers
+    if (!hasModifier && track_) {
+      track_->clearSelection();
+    }
+    setFocus();
+
+    if (event->y() < RULER_HEIGHT + SUBTITLE_TRACK_HEIGHT) {
+      // Subtitle track empty space: start rubber band selection
+      clipMode_ = ClipInteractionMode::RubberBandSelect;
+      rubberBandStart_ = event->pos();
+      rubberBandEnd_ = event->pos();
+
+      prevSelectedIds_.clear();
+      if (track_) {
+        for (const auto &it : track_->items()) {
+          if (it.selected) {
+            prevSelectedIds_.insert(it.id);
+          }
+        }
+      }
+
+      mousePressed_ = true;
+      isDragging_ = false;
+      dragStartX_ = event->x();
+    } else {
+      // Video track empty area: just clear selection (done above) and redraw
+      canvas_->update();
+    }
   }
 }
 
@@ -783,65 +892,106 @@ void TimelinePanel::mouseMoveEvent(QMouseEvent *event) {
     lastPreviewSystemTime_ = QDateTime::currentMSecsSinceEpoch();
   }
 
-  if (clipMode_ == ClipInteractionMode::ClipMove ||
-      clipMode_ == ClipInteractionMode::ClipResizeLeft ||
-      clipMode_ == ClipInteractionMode::ClipResizeRight) {
+  if (clipMode_ == ClipInteractionMode::RubberBandSelect) {
+    rubberBandEnd_ = event->pos();
+    QRect selectionRect = QRect(rubberBandStart_, rubberBandEnd_).normalized();
+
+    QSet<QString> newlySelected;
+    for (const auto &item : track_->items()) {
+      int x = timeToX(item.startMs);
+      int w = timeToX(item.endMs) - x;
+      int y = RULER_HEIGHT + 2;
+      int h = SUBTITLE_TRACK_HEIGHT - 4;
+      QRect clipRect(x, y, w, h);
+      if (clipRect.intersects(selectionRect)) {
+        newlySelected.insert(item.id);
+      }
+    }
+
+    bool hasModifier = (event->modifiers() & Qt::ShiftModifier) ||
+                       (event->modifiers() & Qt::ControlModifier) ||
+                       (event->modifiers() & Qt::MetaModifier);
+    if (hasModifier) {
+      newlySelected.unite(prevSelectedIds_);
+    }
+
+    track_->setSelectedItems(newlySelected);
+    canvas_->update();
+  } else if (clipMode_ == ClipInteractionMode::ClipMove ||
+             clipMode_ == ClipInteractionMode::ClipResizeLeft ||
+             clipMode_ == ClipInteractionMode::ClipResizeRight) {
     // --- Clip drag/resize ---
     qint64 mouseMs = xToTime(event->x());
-    qint64 origDuration = dragOrigEndMs_ - dragOrigStartMs_;
 
     if (clipMode_ == ClipInteractionMode::ClipMove) {
       qint64 deltaMs = mouseMs - xToTime(dragStartX_);
-      qint64 newStart = dragOrigStartMs_ + deltaMs;
-      qint64 newEnd = dragOrigEndMs_ + deltaMs;
 
-      // Find adjacent clips
-      qint64 prevEnd = -1;   // endMs of previous clip, or -1 if none
-      qint64 nextStart = -1; // startMs of next clip, or -1 if none
+      qint64 minDelta = -10000000000LL;
+      qint64 maxDelta = 10000000000LL;
+      for (const auto &dc : dragClips_) {
+        qint64 clipMin = -dc.origStartMs;
+        qint64 clipMax = totalDurationMs_ - dc.origEndMs;
+        if (clipMin > minDelta) minDelta = clipMin;
+        if (clipMax < maxDelta) maxDelta = clipMax;
+      }
+
+      QList<SubtitleItem> unselectedItems;
       for (const auto &item : track_->items()) {
-        if (item.id == dragTargetId_)
-          continue;
-        if (item.endMs <= dragOrigStartMs_) {
-          if (prevEnd < 0 || item.endMs > prevEnd)
-            prevEnd = item.endMs;
+        bool isSelected = false;
+        for (const auto &dc : dragClips_) {
+          if (dc.id == item.id) {
+            isSelected = true;
+            break;
+          }
         }
-        if (item.startMs >= dragOrigEndMs_) {
-          if (nextStart < 0 || item.startMs < nextStart)
-            nextStart = item.startMs;
+        if (!isSelected) {
+          unselectedItems.append(item);
         }
       }
 
-      // Left collision: allow touching
-      if (prevEnd >= 0 && newStart < prevEnd)
-        newStart = prevEnd;
+      for (const auto &dc : dragClips_) {
+        qint64 leftLimit = 0;
+        for (const auto &u : unselectedItems) {
+          if (u.endMs <= dc.origStartMs) {
+            if (u.endMs > leftLimit) {
+              leftLimit = u.endMs;
+            }
+          }
+        }
+        qint64 clipMin = leftLimit - dc.origStartMs;
+        if (clipMin > minDelta) minDelta = clipMin;
 
-      // Re-derive the other end to preserve duration
-      newEnd = newStart + origDuration;
-      // Right collision: allow touching
-      if (nextStart >= 0 && newEnd > nextStart) {
-        newEnd = nextStart;
-        newStart = newEnd - origDuration;
+        qint64 rightLimit = totalDurationMs_;
+        for (const auto &u : unselectedItems) {
+          if (u.startMs >= dc.origEndMs) {
+            if (u.startMs < rightLimit) {
+              rightLimit = u.startMs;
+            }
+          }
+        }
+        qint64 clipMax = rightLimit - dc.origEndMs;
+        if (clipMax < maxDelta) maxDelta = clipMax;
       }
 
-      // Boundary
-      if (newStart < 0) {
-        newStart = 0;
-        newEnd = origDuration;
-      }
-      if (newEnd > totalDurationMs_) {
-        newEnd = totalDurationMs_;
-        newStart = newEnd - origDuration;
-      }
-      if (newStart < 0)
-        newStart = 0;
+      if (deltaMs < minDelta) deltaMs = minDelta;
+      if (deltaMs > maxDelta) deltaMs = maxDelta;
 
-      dragTempStartMs_ = newStart;
-      dragTempEndMs_ = newEnd;
+      for (auto &dc : dragClips_) {
+        dc.tempStartMs = dc.origStartMs + deltaMs;
+        dc.tempEndMs = dc.origEndMs + deltaMs;
+      }
+
+      for (const auto &dc : dragClips_) {
+        if (dc.id == dragTargetId_) {
+          dragTempStartMs_ = dc.tempStartMs;
+          dragTempEndMs_ = dc.tempEndMs;
+          break;
+        }
+      }
 
     } else if (clipMode_ == ClipInteractionMode::ClipResizeLeft) {
       qint64 newStart = xToTime(event->x());
 
-      // Find previous clip
       qint64 prevEnd = -1;
       for (const auto &item : track_->items()) {
         if (item.id == dragTargetId_)
@@ -852,25 +1002,28 @@ void TimelinePanel::mouseMoveEvent(QMouseEvent *event) {
         }
       }
 
-      // Collision: allow touching
       if (prevEnd >= 0 && newStart < prevEnd)
         newStart = prevEnd;
 
-      // Minimum duration
       if (dragOrigEndMs_ - newStart < 100)
         newStart = dragOrigEndMs_ - 100;
 
-      // Boundary
       if (newStart < 0)
         newStart = 0;
 
+      for (auto &dc : dragClips_) {
+        if (dc.id == dragTargetId_) {
+          dc.tempStartMs = newStart;
+          dc.tempEndMs = dragOrigEndMs_;
+          break;
+        }
+      }
       dragTempStartMs_ = newStart;
       dragTempEndMs_ = dragOrigEndMs_;
 
     } else if (clipMode_ == ClipInteractionMode::ClipResizeRight) {
       qint64 newEnd = xToTime(event->x());
 
-      // Find next clip
       qint64 nextStart = -1;
       for (const auto &item : track_->items()) {
         if (item.id == dragTargetId_)
@@ -881,18 +1034,22 @@ void TimelinePanel::mouseMoveEvent(QMouseEvent *event) {
         }
       }
 
-      // Collision: allow touching
       if (nextStart >= 0 && newEnd > nextStart)
         newEnd = nextStart;
 
-      // Minimum duration
       if (newEnd - dragOrigStartMs_ < 100)
         newEnd = dragOrigStartMs_ + 100;
 
-      // Boundary
       if (newEnd > totalDurationMs_)
         newEnd = totalDurationMs_;
 
+      for (auto &dc : dragClips_) {
+        if (dc.id == dragTargetId_) {
+          dc.tempStartMs = dragOrigStartMs_;
+          dc.tempEndMs = newEnd;
+          break;
+        }
+      }
       dragTempStartMs_ = dragOrigStartMs_;
       dragTempEndMs_ = newEnd;
     }
@@ -911,8 +1068,7 @@ void TimelinePanel::mouseMoveEvent(QMouseEvent *event) {
     canvas_->update();
 
     qint64 now = QDateTime::currentMSecsSinceEpoch();
-    constexpr qint64 MIN_PREVIEW_INTERVAL_MS =
-        50; // 限制发射频率在 50ms (20 FPS)
+    constexpr qint64 MIN_PREVIEW_INTERVAL_MS = 50;
     if (now - lastPreviewSystemTime_ >= MIN_PREVIEW_INTERVAL_MS) {
       lastPreviewSystemTime_ = now;
       emit previewSeekRequested(ms);
@@ -927,22 +1083,23 @@ void TimelinePanel::mouseReleaseEvent(QMouseEvent *event) {
   if (isDragging_ && (clipMode_ == ClipInteractionMode::ClipMove ||
                       clipMode_ == ClipInteractionMode::ClipResizeLeft ||
                       clipMode_ == ClipInteractionMode::ClipResizeRight)) {
-    // Commit clip position: apply temp values to the track
-    if (track_ && !dragTargetId_.isEmpty()) {
-      const SubtitleItem *original = track_->findItem(dragTargetId_);
-      if (original) {
-        SubtitleItem item;
-        item.id = dragTargetId_;
-        item.text = original->text;
-        item.startMs = dragTempStartMs_;
-        item.endMs = dragTempEndMs_;
-        item.selected = true;
-        item.speakerId = original->speakerId;
-        track_->updateItem(dragTargetId_, item);
+    // Commit clip positions: apply temp values to the track
+    if (track_ && !dragClips_.isEmpty()) {
+      QList<SubtitleItem> itemsToUpdate;
+      for (const auto &dc : dragClips_) {
+        const SubtitleItem *original = track_->findItem(dc.id);
+        if (original) {
+          SubtitleItem item = *original;
+          item.startMs = dc.tempStartMs;
+          item.endMs = dc.tempEndMs;
+          item.selected = true;
+          itemsToUpdate.append(item);
+        }
       }
+      track_->updateItems(itemsToUpdate);
     }
 
-  } else if (isDragging_) {
+  } else if (isDragging_ && clipMode_ == ClipInteractionMode::Idle) {
     // Drag seek ended
     emit dragSeekFinished(currentTimeMs_);
   } else if (mousePressed_ && clipMode_ == ClipInteractionMode::Idle) {
@@ -960,9 +1117,23 @@ void TimelinePanel::mouseReleaseEvent(QMouseEvent *event) {
   // Always reset clip interaction state on release
   clipMode_ = ClipInteractionMode::Idle;
   dragTargetId_.clear();
+  dragClips_.clear();
+  prevSelectedIds_.clear();
 
   mousePressed_ = false;
   isDragging_ = false;
+  canvas_->update();
+}
+
+void TimelinePanel::keyPressEvent(QKeyEvent *event) {
+  if (event->key() == Qt::Key_Escape) {
+    if (track_) {
+      track_->clearSelection();
+    }
+    event->accept();
+  } else {
+    QWidget::keyPressEvent(event);
+  }
 }
 
 void TimelinePanel::dragEnterEvent(QDragEnterEvent *event) {

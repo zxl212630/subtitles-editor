@@ -45,6 +45,23 @@ void SubtitleTrack::updateItem(const QString &id, const SubtitleItem &newItem) {
   }
 }
 
+void SubtitleTrack::updateItems(const QList<SubtitleItem> &newItems) {
+  bool changed = false;
+  for (const auto &newItem : newItems) {
+    for (int i = 0; i < items_.size(); ++i) {
+      if (items_[i].id == newItem.id) {
+        items_[i] = newItem;
+        emit itemUpdated(newItem.id);
+        changed = true;
+        break;
+      }
+    }
+  }
+  if (changed) {
+    emit dataChanged();
+  }
+}
+
 void SubtitleTrack::selectItem(const QString &id) {
   bool found = false;
   for (const auto &item : items_) {
@@ -57,7 +74,44 @@ void SubtitleTrack::selectItem(const QString &id) {
     return;
 
   selectedId_ = id;
+  for (int i = 0; i < items_.size(); ++i) {
+    items_[i].selected = (items_[i].id == id);
+  }
   emit itemSelected(id);
+  emit dataChanged();
+}
+
+void SubtitleTrack::setSelectedItems(const QSet<QString> &selectedIds) {
+  bool changed = false;
+  for (int i = 0; i < items_.size(); ++i) {
+    bool shouldSelect = selectedIds.contains(items_[i].id);
+    if (items_[i].selected != shouldSelect) {
+      items_[i].selected = shouldSelect;
+      changed = true;
+    }
+  }
+  if (changed) {
+    if (selectedIds.isEmpty()) {
+      selectedId_.clear();
+    } else if (!selectedIds.contains(selectedId_)) {
+      selectedId_ = *selectedIds.begin();
+    }
+    emit dataChanged();
+  }
+}
+
+void SubtitleTrack::clearSelection() {
+  selectedId_.clear();
+  bool changed = false;
+  for (int i = 0; i < items_.size(); ++i) {
+    if (items_[i].selected) {
+      items_[i].selected = false;
+      changed = true;
+    }
+  }
+  if (changed) {
+    emit dataChanged();
+  }
 }
 
 const QList<SubtitleItem> &SubtitleTrack::items() const { return items_; }
