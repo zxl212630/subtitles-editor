@@ -1,5 +1,6 @@
 #include "SpeakerManagerDialog.h"
 #include "ThemeManager.h"
+#include "TranslationManager.h"
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QGridLayout>
@@ -18,7 +19,6 @@
 
 SpeakerManagerDialog::SpeakerManagerDialog(SubtitleTrack *track, QWidget *parent)
     : QDialog(parent), track_(track) {
-  setWindowTitle(tr("说话人与字幕背景管理"));
   setMinimumSize(720, 520);
   setObjectName("SpeakerManagerDialog");
 
@@ -27,6 +27,7 @@ SpeakerManagerDialog::SpeakerManagerDialog(SubtitleTrack *track, QWidget *parent
 
   setupTitleBar();
   setupUi();
+  retranslateUi();
   loadSettings();
 
   // Connect actions
@@ -46,8 +47,11 @@ SpeakerManagerDialog::SpeakerManagerDialog(SubtitleTrack *track, QWidget *parent
     connect(spin, &QSpinBox::valueChanged, this, &SpeakerManagerDialog::onMarginChanged);
   }
 
-  // Connect theme change
+  // Connect theme and language change
   connect(&ThemeManager::instance(), &ThemeManager::themeChanged, this, &SpeakerManagerDialog::updateTheme);
+  connect(&TranslationManager::instance(), &TranslationManager::languageChanged, this, [this]() {
+    retranslateUi();
+  });
 
   windowAgent->setTitleBar(titleBar);
 }
@@ -63,7 +67,7 @@ void SpeakerManagerDialog::setupTitleBar() {
   layout->setContentsMargins(80, 0, 12, 0); // 留出 macOS 三色球位置
   layout->setSpacing(0);
 
-  titleLabel = new QLabel(tr("说话人与字幕背景管理"), titleBar);
+  titleLabel = new QLabel(titleBar);
   titleLabel->setObjectName("ConfigTitleLeftLabel");
   layout->addWidget(titleLabel);
   layout->addStretch();
@@ -99,59 +103,54 @@ void SpeakerManagerDialog::setupUi() {
 
   // 1.1 背景文件夹
   auto *folderRow = new QHBoxLayout();
-  auto *folderLabel = new QLabel(tr("背景图文件夹:"), topSettingsFrame);
-  folderLabel->setObjectName("ConfigFieldLabel");
-  folderLabel->setFixedWidth(100);
+  folderLabel_ = new QLabel(topSettingsFrame);
+  folderLabel_->setObjectName("ConfigFieldLabel");
+  folderLabel_->setFixedWidth(100);
   
   bgFolderEdit_ = new QLineEdit(topSettingsFrame);
-  bgFolderEdit_->setPlaceholderText(tr("选择包含背景图片的文件夹..."));
   bgFolderEdit_->setReadOnly(true);
   
-  browseFolderBtn_ = new QPushButton(tr("浏览..."), topSettingsFrame);
+  browseFolderBtn_ = new QPushButton(topSettingsFrame);
   browseFolderBtn_->setFixedWidth(80);
   
-  folderRow->addWidget(folderLabel);
+  folderRow->addWidget(folderLabel_);
   folderRow->addWidget(bgFolderEdit_, 1);
   folderRow->addWidget(browseFolderBtn_);
   topLayout->addLayout(folderRow);
 
   // 1.2 九宫格四向边距
   auto *marginRow = new QHBoxLayout();
-  auto *marginLabel = new QLabel(tr("九宫格统一边距:"), topSettingsFrame);
-  marginLabel->setObjectName("ConfigFieldLabel");
-  marginLabel->setFixedWidth(100);
+  marginLabel_ = new QLabel(topSettingsFrame);
+  marginLabel_->setObjectName("ConfigFieldLabel");
+  marginLabel_->setFixedWidth(100);
   marginRow->addWidget(marginLabel);
 
-  auto createMarginSpin = [this, topSettingsFrame](const QString &text) {
+  auto createMarginSpin = [this, topSettingsFrame](QLabel *&labelField, QSpinBox *&spinField) {
     auto *layout = new QHBoxLayout();
-    auto *lbl = new QLabel(text, topSettingsFrame);
-    lbl->setStyleSheet("color: rgba(255, 255, 255, 0.6);");
-    auto *spin = new QSpinBox(topSettingsFrame);
-    spin->setRange(0, 200);
-    spin->setFixedWidth(60);
-    layout->addWidget(lbl);
-    layout->addWidget(spin);
-    return std::make_pair(layout, spin);
+    labelField = new QLabel(topSettingsFrame);
+    labelField->setStyleSheet("color: rgba(255, 255, 255, 0.6);");
+    spinField = new QSpinBox(topSettingsFrame);
+    spinField->setRange(0, 200);
+    spinField->setFixedWidth(60);
+    layout->addWidget(labelField);
+    layout->addWidget(spinField);
+    return layout;
   };
 
-  auto leftSpin = createMarginSpin(tr("左"));
-  marginLeftSpin_ = leftSpin.second;
-  marginRow->addLayout(leftSpin.first);
+  auto *leftLayout = createMarginSpin(marginLeftLabel_, marginLeftSpin_);
+  marginRow->addLayout(leftLayout);
   marginRow->addSpacing(10);
 
-  auto rightSpin = createMarginSpin(tr("右"));
-  marginRightSpin_ = rightSpin.second;
-  marginRow->addLayout(rightSpin.first);
+  auto *rightLayout = createMarginSpin(marginRightLabel_, marginRightSpin_);
+  marginRow->addLayout(rightLayout);
   marginRow->addSpacing(10);
 
-  auto topSpin = createMarginSpin(tr("上"));
-  marginTopSpin_ = topSpin.second;
-  marginRow->addLayout(topSpin.first);
+  auto *topLayout2 = createMarginSpin(marginTopLabel_, marginTopSpin_);
+  marginRow->addLayout(topLayout2);
   marginRow->addSpacing(10);
 
-  auto bottomSpin = createMarginSpin(tr("下"));
-  marginBottomSpin_ = bottomSpin.second;
-  marginRow->addLayout(bottomSpin.first);
+  auto *bottomLayout = createMarginSpin(marginBottomLabel_, marginBottomSpin_);
+  marginRow->addLayout(bottomLayout);
   
   marginRow->addStretch();
   topLayout->addLayout(marginRow);
@@ -169,17 +168,17 @@ void SpeakerManagerDialog::setupUi() {
   leftLayout->setContentsMargins(0, 0, 0, 0);
   leftLayout->setSpacing(8);
 
-  auto *listLabel = new QLabel(tr("说话人列表"), leftWidget);
-  listLabel->setObjectName("ConfigFieldLabel");
-  leftLayout->addWidget(listLabel);
+  listLabel_ = new QLabel(leftWidget);
+  listLabel_->setObjectName("ConfigFieldLabel");
+  leftLayout->addWidget(listLabel_);
 
   speakerList_ = new QListWidget(leftWidget);
   speakerList_->setObjectName("ConfigSidebar"); // 复用 ConfigSidebar 的好看样式
   leftLayout->addWidget(speakerList_, 1);
 
   auto *btnRow = new QHBoxLayout();
-  addBtn_ = new QPushButton(tr("+ 添加"), leftWidget);
-  removeBtn_ = new QPushButton(tr("- 删除"), leftWidget);
+  addBtn_ = new QPushButton(leftWidget);
+  removeBtn_ = new QPushButton(leftWidget);
   btnRow->addWidget(addBtn_);
   btnRow->addWidget(removeBtn_);
   leftLayout->addLayout(btnRow);
@@ -188,37 +187,37 @@ void SpeakerManagerDialog::setupUi() {
 
   // 2.2 右侧属性区
   propertiesWidget_ = new QWidget(contentWidget);
-  auto *rightLayout = new QVBoxLayout(propertiesWidget_);
-  rightLayout->setContentsMargins(0, 0, 0, 0);
-  rightLayout->setSpacing(10);
+  auto *rightLayoutProperties = new QVBoxLayout(propertiesWidget_);
+  rightLayoutProperties->setContentsMargins(0, 0, 0, 0);
+  rightLayoutProperties->setSpacing(10);
 
   // 说话人名称
-  auto *nameLabel = new QLabel(tr("说话人名称:"), propertiesWidget_);
-  nameLabel->setObjectName("ConfigFieldLabel");
-  rightLayout->addWidget(nameLabel);
+  nameLabel_ = new QLabel(propertiesWidget_);
+  nameLabel_->setObjectName("ConfigFieldLabel");
+  rightLayoutProperties->addWidget(nameLabel_);
   nameEdit_ = new QLineEdit(propertiesWidget_);
-  rightLayout->addWidget(nameEdit_);
+  rightLayoutProperties->addWidget(nameEdit_);
 
   // 背景图片选择
-  auto *imgLabel = new QLabel(tr("背景图片:"), propertiesWidget_);
-  imgLabel->setObjectName("ConfigFieldLabel");
-  rightLayout->addWidget(imgLabel);
+  imgLabel_ = new QLabel(propertiesWidget_);
+  imgLabel_->setObjectName("ConfigFieldLabel");
+  rightLayoutProperties->addWidget(imgLabel_);
   imageCombo_ = new QComboBox(propertiesWidget_);
-  rightLayout->addWidget(imageCombo_);
+  rightLayoutProperties->addWidget(imageCombo_);
 
   // 拉伸模式
-  auto *modeLabel = new QLabel(tr("拉伸模式:"), propertiesWidget_);
-  modeLabel->setObjectName("ConfigFieldLabel");
-  rightLayout->addWidget(modeLabel);
+  modeLabel_ = new QLabel(propertiesWidget_);
+  modeLabel_->setObjectName("ConfigFieldLabel");
+  rightLayoutProperties->addWidget(modeLabel_);
   drawModeCombo_ = new QComboBox(propertiesWidget_);
-  drawModeCombo_->addItem(tr("九宫格拉伸"), 0);
-  drawModeCombo_->addItem(tr("固定尺寸"), 1);
-  rightLayout->addWidget(drawModeCombo_);
+  drawModeCombo_->addItem("", 0);
+  drawModeCombo_->addItem("", 1);
+  rightLayoutProperties->addWidget(drawModeCombo_);
 
   // 背景预览
-  auto *prevLabelTitle = new QLabel(tr("背景预览:"), propertiesWidget_);
-  prevLabelTitle->setObjectName("ConfigFieldLabel");
-  rightLayout->addWidget(prevLabelTitle);
+  prevLabelTitle_ = new QLabel(propertiesWidget_);
+  prevLabelTitle_->setObjectName("ConfigFieldLabel");
+  rightLayoutProperties->addWidget(prevLabelTitle_);
   
   previewLabel_ = new QLabel(propertiesWidget_);
   previewLabel_->setFixedHeight(100);
@@ -229,7 +228,7 @@ void SpeakerManagerDialog::setupUi() {
       "  border-radius: 6px;"
       "  background-color: rgba(0, 0, 0, 0.2);"
       "}");
-  rightLayout->addWidget(previewLabel_, 1);
+  rightLayoutProperties->addWidget(previewLabel_, 1);
 
   splitLayout->addWidget(propertiesWidget_, 1);
   contentLayout->addLayout(splitLayout, 1);
@@ -243,14 +242,70 @@ void SpeakerManagerDialog::setupUi() {
   footerLayout->setContentsMargins(20, 0, 20, 0);
   footerLayout->addStretch();
 
-  cancelBtn_ = new QPushButton(tr("取消"), footer);
+  cancelBtn_ = new QPushButton(footer);
   cancelBtn_->setObjectName("ConfigCancelButton");
-  saveBtn_ = new QPushButton(tr("保存并应用"), footer);
+  saveBtn_ = new QPushButton(footer);
   saveBtn_->setObjectName("ConfigOkButton");
 
   footerLayout->addWidget(cancelBtn_);
   footerLayout->addWidget(saveBtn_);
   mainLayout->addWidget(footer);
+}
+
+void SpeakerManagerDialog::retranslateUi() {
+  setWindowTitle(tr("Speaker & Subtitle Background Management"));
+  if (titleLabel)
+    titleLabel->setText(tr("Speaker & Subtitle Background Management"));
+  if (folderLabel_)
+    folderLabel_->setText(tr("Background Folder:"));
+  if (bgFolderEdit_)
+    bgFolderEdit_->setPlaceholderText(tr("Select folder containing background images..."));
+  if (browseFolderBtn_)
+    browseFolderBtn_->setText(tr("Browse..."));
+  if (marginLabel_)
+    marginLabel_->setText(tr("Unified 9-Patch Margins:"));
+  if (marginLeftLabel_)
+    marginLeftLabel_->setText(tr("Left"));
+  if (marginRightLabel_)
+    marginRightLabel_->setText(tr("Right"));
+  if (marginTopLabel_)
+    marginTopLabel_->setText(tr("Top"));
+  if (marginBottomLabel_)
+    marginBottomLabel_->setText(tr("Bottom"));
+  if (listLabel_)
+    listLabel_->setText(tr("Speaker List"));
+  if (addBtn_)
+    addBtn_->setText(tr("+ Add"));
+  if (removeBtn_)
+    removeBtn_->setText(tr("- Delete"));
+  if (nameLabel_)
+    nameLabel_->setText(tr("Speaker Name:"));
+  if (imgLabel_)
+    imgLabel_->setText(tr("Background Image:"));
+  if (modeLabel_)
+    modeLabel_->setText(tr("Draw Mode:"));
+  if (prevLabelTitle_)
+    prevLabelTitle_->setText(tr("Background Preview:"));
+  if (drawModeCombo_) {
+    drawModeCombo_->setItemText(0, tr("9-Patch Stretch"));
+    drawModeCombo_->setItemText(1, tr("Fixed Size"));
+  }
+  if (cancelBtn_)
+    cancelBtn_->setText(tr("Cancel"));
+  if (saveBtn_)
+    saveBtn_->setText(tr("Save & Apply"));
+
+  // 刷新 ComboBox 的 "None" 选项
+  if (imageCombo_ && imageCombo_->count() > 0) {
+    imageCombo_->setItemText(0, tr("None"));
+  }
+
+  // 刷新右侧预览文本（在未选中状态下）
+  if (speakerList_ && !speakerList_->currentItem() && previewLabel_) {
+    previewLabel_->setText(tr("Select a speaker to edit properties"));
+  } else {
+    updatePreviewImage();
+  }
 }
 
 void SpeakerManagerDialog::loadSettings() {
@@ -296,7 +351,7 @@ void SpeakerManagerDialog::populateImageCombo() {
   bool prevLoading = loading_;
   loading_ = true;
   imageCombo_->clear();
-  imageCombo_->addItem(tr("无"), "");
+  imageCombo_->addItem(tr("None"), "");
   for (const auto &img : availableImages_) {
     imageCombo_->addItem(img, img);
   }
@@ -328,7 +383,7 @@ void SpeakerManagerDialog::onSpeakerSelectionChanged() {
     imageCombo_->setCurrentIndex(0);
     drawModeCombo_->setCurrentIndex(0);
     previewLabel_->setPixmap(QPixmap());
-    previewLabel_->setText(tr("选择一个说话人以编辑属性"));
+    previewLabel_->setText(tr("Select a speaker to edit properties"));
     return;
   }
 
@@ -397,7 +452,7 @@ void SpeakerManagerDialog::onRemoveSpeaker() {
 
 void SpeakerManagerDialog::onBrowseFolder() {
   QString dir = QFileDialog::getExistingDirectory(
-      this, tr("选择背景图文件夹"), bgFolderEdit_->text(),
+      this, tr("Select Background Folder"), bgFolderEdit_->text(),
       QFileDialog::ShowDirsOnly | QFileDialog::DontResolveSymlinks);
   if (!dir.isEmpty()) {
     bgFolderEdit_->setText(dir);
@@ -496,7 +551,7 @@ void SpeakerManagerDialog::updatePreviewImage() {
   QString imgName = imageCombo_->currentData().toString();
   if (imgName.isEmpty()) {
     previewLabel_->setPixmap(QPixmap());
-    previewLabel_->setText(tr("无背景图片"));
+    previewLabel_->setText(tr("No background image"));
     return;
   }
 
@@ -505,7 +560,7 @@ void SpeakerManagerDialog::updatePreviewImage() {
   QImage img(fullPath);
   if (img.isNull()) {
     previewLabel_->setPixmap(QPixmap());
-    previewLabel_->setText(tr("背景图片加载失败"));
+    previewLabel_->setText(tr("Failed to load background image"));
     return;
   }
 
@@ -545,7 +600,7 @@ void SpeakerManagerDialog::updatePreviewImage() {
   font.setPointSize(10);
   font.setBold(true);
   painter.setFont(font);
-  painter.drawText(textRect, Qt::AlignCenter, tr("示例字幕背景预览"));
+  painter.drawText(textRect, Qt::AlignCenter, tr("Sample Subtitle Background Preview"));
 
   // 绘制九宫格边距虚线（浅红）
   if (is9Patch) {

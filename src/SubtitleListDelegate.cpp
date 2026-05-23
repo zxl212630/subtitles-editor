@@ -59,7 +59,7 @@ void SubtitleListDelegate::paint(QPainter *painter,
                          ? QString("Speaker %1").arg(speakerId)
                          : info.name;
     } else {
-      speakerLabel = tr("未分配");
+      speakerLabel = tr("Unassigned");
     }
 
     QFont spkFont = painter->font();

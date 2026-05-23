@@ -576,7 +576,7 @@ void SubtitleListPanel::showSpeakerMenu(const QModelIndex &index,
   if (!track_) return;
 
   QMenu menu(this);
-  QAction *unassignAction = menu.addAction(tr("未分配"));
+  QAction *unassignAction = menu.addAction(tr("Unassigned"));
   unassignAction->setData(-1);
 
   menu.addSeparator();
@@ -590,8 +590,8 @@ void SubtitleListPanel::showSpeakerMenu(const QModelIndex &index,
   }
 
   menu.addSeparator();
-  QAction *newAction = menu.addAction(tr("+ 新建说话人..."));
-  QAction *manageAction = menu.addAction(tr("⚙️ 管理说话人..."));
+  QAction *newAction = menu.addAction(tr("+ New Speaker..."));
+  QAction *manageAction = menu.addAction(tr("⚙️ Manage Speakers..."));
 
   QAction *chosen = menu.exec(globalPos);
   if (!chosen) return;

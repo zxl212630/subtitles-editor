@@ -47,6 +47,7 @@ private:
   void updatePreviewImage();
   void loadSettings();
   void scanImageFiles();
+  void retranslateUi();
 
   SubtitleTrack *track_ = nullptr;
   
@@ -59,6 +60,17 @@ private:
   QWK::WidgetWindowAgent *windowAgent = nullptr;
   QFrame *titleBar = nullptr;
   QLabel *titleLabel = nullptr;
+  QLabel *folderLabel_ = nullptr;
+  QLabel *marginLabel_ = nullptr;
+  QLabel *marginLeftLabel_ = nullptr;
+  QLabel *marginRightLabel_ = nullptr;
+  QLabel *marginTopLabel_ = nullptr;
+  QLabel *marginBottomLabel_ = nullptr;
+  QLabel *listLabel_ = nullptr;
+  QLabel *nameLabel_ = nullptr;
+  QLabel *imgLabel_ = nullptr;
+  QLabel *modeLabel_ = nullptr;
+  QLabel *prevLabelTitle_ = nullptr;
 
   // 统一设置区组件（顶部）
   QLineEdit *bgFolderEdit_ = nullptr;
