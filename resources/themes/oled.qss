@@ -133,7 +133,7 @@ QCheckBox::indicator:disabled {
 }
 
 /* Inputs */
-QLineEdit, QComboBox {
+QLineEdit, QComboBox, QSpinBox {
     background-color: @bg_panel;
     border: 1px solid @border_color;
     border-radius: 6px;
@@ -143,7 +143,7 @@ QLineEdit, QComboBox {
     selection-background-color: @border_color;
 }
 
-QLineEdit:focus, QComboBox:focus, QComboBox:on {
+QLineEdit:focus, QComboBox:focus, QComboBox:on, QSpinBox:focus {
     border: 1px solid @primary_color;
 }
 

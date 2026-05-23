@@ -509,44 +509,96 @@ Make sure to include the necessary settings for FFmpeg, Tencent Cloud ASR, and A
         <translation>Mandarin Chinese (General)</translation>
     </message>
     <message>
-        <source>音视频领域模型</source>
-        <translation>Mandarin (Video/Audio)</translation>
+        <source>中英粤+9种方言大模型</source>
+        <translation>Mandarin/English/Cantonese &amp; Dialects Large Model</translation>
     </message>
     <message>
-        <source>英语通用</source>
-        <translation>English (General)</translation>
+        <source>普方英大模型</source>
+        <translation>Mandarin/Dialects/English Large Model</translation>
     </message>
     <message>
-        <source>粤语通用</source>
-        <translation>Cantonese (General)</translation>
-    </message>
-    <message>
-        <source>日语通用</source>
-        <translation>Japanese (General)</translation>
-    </message>
-    <message>
-        <source>韩语通用</source>
-        <translation>Korean (General)</translation>
-    </message>
-    <message>
-        <source>多语言大模型</source>
+        <source>多语种大模型</source>
         <translation>Multi-language Large Model</translation>
     </message>
     <message>
-        <source>多方言模型</source>
-        <translation>Mandarin Dialects</translation>
-    </message>
-    <message>
-        <source>中英粤混合模型</source>
-        <translation>Mandarin/English/Cantonese Mix</translation>
-    </message>
-    <message>
-        <source>普通话大模型</source>
-        <translation>Mandarin Large Model</translation>
+        <source>英语</source>
+        <translation>English</translation>
     </message>
     <message>
         <source>英语大模型</source>
         <translation>English Large Model</translation>
+    </message>
+    <message>
+        <source>粤语</source>
+        <translation>Cantonese</translation>
+    </message>
+    <message>
+        <source>中英粤混合</source>
+        <translation>Mandarin/English/Cantonese Mix</translation>
+    </message>
+    <message>
+        <source>中文繁体</source>
+        <translation>Traditional Chinese</translation>
+    </message>
+    <message>
+        <source>日语</source>
+        <translation>Japanese</translation>
+    </message>
+    <message>
+        <source>韩语</source>
+        <translation>Korean</translation>
+    </message>
+    <message>
+        <source>越南语</source>
+        <translation>Vietnamese</translation>
+    </message>
+    <message>
+        <source>马来语</source>
+        <translation>Malay</translation>
+    </message>
+    <message>
+        <source>印度尼西亚语</source>
+        <translation>Indonesian</translation>
+    </message>
+    <message>
+        <source>菲律宾语</source>
+        <translation>Filipino</translation>
+    </message>
+    <message>
+        <source>泰语</source>
+        <translation>Thai</translation>
+    </message>
+    <message>
+        <source>葡萄牙语</source>
+        <translation>Portuguese</translation>
+    </message>
+    <message>
+        <source>土耳其语</source>
+        <translation>Turkish</translation>
+    </message>
+    <message>
+        <source>阿拉伯语</source>
+        <translation>Arabic</translation>
+    </message>
+    <message>
+        <source>西班牙语</source>
+        <translation>Spanish</translation>
+    </message>
+    <message>
+        <source>印地语</source>
+        <translation>Hindi</translation>
+    </message>
+    <message>
+        <source>法语</source>
+        <translation>French</translation>
+    </message>
+    <message>
+        <source>德语</source>
+        <translation>German</translation>
+    </message>
+    <message>
+        <source>中文医疗</source>
+        <translation>Chinese Medical</translation>
     </message>
 </context>
 <context>
