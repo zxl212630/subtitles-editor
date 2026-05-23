@@ -1327,14 +1327,16 @@ void TimelinePanel::resizeEvent(QResizeEvent * /*event*/) {
 }
 
 void TimelinePanel::contextMenuEvent(QContextMenuEvent *event) {
-  if (totalDurationMs_ <= 0 || mediaFilePath_.isEmpty())
+  int x = event->pos().x();
+  if (x < TRACK_HEAD_WIDTH)
     return;
 
-  int x = event->pos().x();
-  int trackX = timeToX(0);
-  int trackEndX = timeToX(totalDurationMs_);
-  if (x < trackX || x > trackEndX)
-    return;
+  // If there is video total duration, prevent clicking beyond the active video timeline
+  if (totalDurationMs_ > 0) {
+    if (x > timeToX(totalDurationMs_)) {
+      return;
+    }
+  }
 
   int y = event->pos().y();
   int subtitleTrackY = RULER_HEIGHT;
@@ -1342,7 +1344,7 @@ void TimelinePanel::contextMenuEvent(QContextMenuEvent *event) {
 
   if (y >= subtitleTrackY && y < videoTrackY) {
     // 右键点击在字幕轨道上
-    if (!track_)
+    if (!track_ || track_->items().isEmpty())
       return;
 
     QMenu menu(this);
@@ -1366,6 +1368,9 @@ void TimelinePanel::contextMenuEvent(QContextMenuEvent *event) {
 
   if (y >= videoTrackY && y < videoTrackY + VIDEO_TRACK_HEIGHT) {
     // 右键点击在视频轨道上
+    if (totalDurationMs_ <= 0 || mediaFilePath_.isEmpty())
+      return;
+
     QMenu menu(this);
     QAction *propAction = menu.addAction(tr("属性"));
     QAction *openLocAction = menu.addAction(tr("打开文件所在位置"));

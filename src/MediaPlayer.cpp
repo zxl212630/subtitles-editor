@@ -139,16 +139,24 @@ void MediaPlayer::pause() {
 void MediaPlayer::stop() {
   playbackTimer_->stop();
   playbackTimerRunning_ = false;
-  decoder_->stop();
-  decoder_->wait(5000);
-  seekDecoder_->close();
-  audioOutput_->close();
-  if (videoRenderer_) {
-    videoRenderer_->clear();
+
+  if (decoder_ && decoder_->hasVideo()) {
+    decoder_->setPlaying(false);
+    decoder_->requestSeek(0);
+    decoder_->clearAllQueues();
   }
+
+  audioOutput_->suspend();
+
   state_ = Stopped;
   currentTimeMs_ = 0;
   pendingVideoFrame_ = std::nullopt;
+
+  if (seekDecoder_ && seekDecoder_->isRunning()) {
+    seekPreviewMode_ = true;
+    seekDecoder_->requestSeek(0);
+  }
+
   emit timeChanged(0);
   emit stateChanged(Stopped);
   LOG_MP(info, "stop() state=Stopped");
@@ -243,7 +251,8 @@ void MediaPlayer::stopPreviewDragging() {
   seekPreviewMode_ = false;
 
   decoder_->requestSeek(currentTimeMs_);
-  decoder_->clearAudioQueue();
+  decoder_->clearAllQueues();
+  pendingVideoFrame_ = std::nullopt;
 
   if (playbackTimerRunning_) {
     playbackTimer_->stop();
