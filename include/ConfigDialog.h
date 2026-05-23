@@ -8,6 +8,8 @@ class QComboBox;
 class QLabel;
 class QPushButton;
 class QLineEdit;
+class QCheckBox;
+class QSpinBox;
 class ThemeSelectorWidget;
 class ColorSelectorWidget;
 
@@ -22,13 +24,17 @@ public:
   explicit ConfigDialog(QWidget *parent = nullptr);
   ~ConfigDialog() override = default;
 
-private slots:
+signals:
+  void configApplied();
+
+protected:
+  void changeEvent(QEvent *event) override;
+
+private:
   void onApply();
   void onOk();
   void onCancel();
   void checkDirtyState();
-
-private:
   void setupUi();
   void setupTitleBar();
   void loadConfig();
@@ -73,6 +79,12 @@ private:
   QLabel *appIdLabel_;
   QLabel *sidLabel_;
   QLabel *skeyLabel_;
+  QCheckBox *speakerDiarizationCheck_;
+  QSpinBox *sentenceMaxLengthSpin_;
+  QComboBox *engineModelTypeCombo_;
+  QLabel *speakerDiarizationLabel_;
+  QLabel *maxLenLabel_;
+  QLabel *engineLabel_;
 
   // Footer
   QLabel *dirtyLabel_;

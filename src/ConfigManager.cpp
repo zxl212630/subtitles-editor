@@ -73,6 +73,44 @@ QString ConfigManager::tencentAppId() const {
   return getString("tencent_asr", "app_id");
 }
 
+bool ConfigManager::speakerDiarization() const {
+  QString val = getString("tencent_asr", "speaker_diarization");
+  return val == "true";
+}
+
+void ConfigManager::setSpeakerDiarization(bool enabled) {
+  setValue("tencent_asr", "speaker_diarization", enabled ? "true" : "false");
+}
+
+int ConfigManager::sentenceMaxLength() const {
+  QString val = getString("tencent_asr", "sentence_max_length");
+  if (val.isEmpty()) {
+    return 16;
+  }
+  bool ok;
+  int len = val.toInt(&ok);
+  if (!ok || len < 6 || len > 40) {
+    return 16;
+  }
+  return len;
+}
+
+void ConfigManager::setSentenceMaxLength(int length) {
+  setValue("tencent_asr", "sentence_max_length", QString::number(length));
+}
+
+QString ConfigManager::engineModelType() const {
+  QString val = getString("tencent_asr", "engine_model_type");
+  if (val.isEmpty()) {
+    return "16k_zh";
+  }
+  return val;
+}
+
+void ConfigManager::setEngineModelType(const QString &model) {
+  setValue("tencent_asr", "engine_model_type", model);
+}
+
 QString ConfigManager::ossAccessKeyId() const {
   return getString("aliyun_oss", "access_key_id");
 }

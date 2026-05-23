@@ -20,6 +20,7 @@ public:
   void setTrack(SubtitleTrack *track);
   void setVideoFps(double fps);
   void setTotalDuration(qint64 ms);
+  void updateSpeakerColumnVisibility();
 
 signals:
   void itemSelected(const QString &id);

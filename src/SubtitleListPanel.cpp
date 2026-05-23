@@ -5,6 +5,7 @@
 #include "ThemeManager.h"
 #include "TranslationManager.h"
 #include "SpeakerManagerDialog.h"
+#include "ConfigManager.h"
 #include <QMenu>
 
 #include <QCoreApplication>
@@ -116,6 +117,16 @@ void SubtitleListPanel::setVideoFps(double fps) {
 }
 
 void SubtitleListPanel::setTotalDuration(qint64 ms) { totalDurationMs_ = ms; }
+
+void SubtitleListPanel::updateSpeakerColumnVisibility() {
+  bool enabled = ConfigManager::instance().speakerDiarization();
+  if (headerSpeaker_) {
+    headerSpeaker_->setVisible(enabled);
+  }
+  if (listView_ && listView_->viewport()) {
+    listView_->viewport()->update();
+  }
+}
 
 void SubtitleListPanel::retranslateUi() {
   if (actionOverlay_)
@@ -364,6 +375,8 @@ void SubtitleListPanel::setupUi() {
   lcLayout->addSpacing(12); // Extra space at bottom
   pcLayout->addWidget(listContainer);
   layout->addWidget(panelContent);
+
+  updateSpeakerColumnVisibility();
 }
 
 void SubtitleListPanel::onItemClicked(const QModelIndex &index) {

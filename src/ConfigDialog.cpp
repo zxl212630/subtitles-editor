@@ -14,6 +14,9 @@
 #include <QPushButton>
 #include <QStackedWidget>
 #include <QStandardPaths>
+#include <QCheckBox>
+#include <QSpinBox>
+#include <QComboBox>
 #include <QWindowKit/QWKWidgets/widgetwindowagent.h>
 
 ConfigDialog::ConfigDialog(QWidget *parent) : QDialog(parent) {
@@ -53,6 +56,10 @@ ConfigDialog::ConfigDialog(QWidget *parent) : QDialog(parent) {
   for (auto *le : lineEdits) {
     connect(le, &QLineEdit::textChanged, this, &ConfigDialog::checkDirtyState);
   }
+
+  connect(speakerDiarizationCheck_, &QCheckBox::stateChanged, this, &ConfigDialog::checkDirtyState);
+  connect(sentenceMaxLengthSpin_, qOverload<int>(&QSpinBox::valueChanged), this, &ConfigDialog::checkDirtyState);
+  connect(engineModelTypeCombo_, &QComboBox::currentTextChanged, this, &ConfigDialog::checkDirtyState);
 
   windowAgent->setTitleBar(titleBar);
 }
@@ -118,6 +125,9 @@ void ConfigDialog::loadConfig() {
   initialConfig_["tc_appid"] = cfg.getString("tencent_asr", "app_id");
   initialConfig_["tc_sid"] = cfg.getString("tencent_asr", "secret_id");
   initialConfig_["tc_skey"] = cfg.getString("tencent_asr", "secret_key");
+  initialConfig_["tc_speaker_diarization"] = cfg.speakerDiarization();
+  initialConfig_["tc_sentence_max_length"] = cfg.sentenceMaxLength();
+  initialConfig_["tc_engine_model_type"] = cfg.engineModelType();
 
   ossBucketEdit_->setText(initialConfig_["oss_bucket"].toString());
   ossRegionEdit_->setText(initialConfig_["oss_region"].toString());
@@ -126,6 +136,10 @@ void ConfigDialog::loadConfig() {
   tencentAppIdEdit_->setText(initialConfig_["tc_appid"].toString());
   tencentSecretIdEdit_->setText(initialConfig_["tc_sid"].toString());
   tencentSecretKeyEdit_->setText(initialConfig_["tc_skey"].toString());
+
+  speakerDiarizationCheck_->setChecked(initialConfig_["tc_speaker_diarization"].toBool());
+  sentenceMaxLengthSpin_->setValue(initialConfig_["tc_sentence_max_length"].toInt());
+  engineModelTypeCombo_->setCurrentIndex(engineModelTypeCombo_->findData(initialConfig_["tc_engine_model_type"].toString()));
 
   // Sync title
   if (sidebarList_->currentItem()) {
@@ -150,7 +164,13 @@ bool ConfigDialog::isDirty() const {
          (tencentSecretIdEdit_->text() !=
           initialConfig_["tc_sid"].toString()) ||
          (tencentSecretKeyEdit_->text() !=
-          initialConfig_["tc_skey"].toString());
+          initialConfig_["tc_skey"].toString()) ||
+         (speakerDiarizationCheck_->isChecked() !=
+          initialConfig_["tc_speaker_diarization"].toBool()) ||
+         (sentenceMaxLengthSpin_->value() !=
+          initialConfig_["tc_sentence_max_length"].toInt()) ||
+         (engineModelTypeCombo_->currentData().toString() !=
+          initialConfig_["tc_engine_model_type"].toString());
 }
 
 void ConfigDialog::checkDirtyState() {
@@ -173,6 +193,9 @@ void ConfigDialog::saveConfig() {
   cfg.setValue("tencent_asr", "app_id", tencentAppIdEdit_->text());
   cfg.setValue("tencent_asr", "secret_id", tencentSecretIdEdit_->text());
   cfg.setValue("tencent_asr", "secret_key", tencentSecretKeyEdit_->text());
+  cfg.setSpeakerDiarization(speakerDiarizationCheck_->isChecked());
+  cfg.setSentenceMaxLength(sentenceMaxLengthSpin_->value());
+  cfg.setEngineModelType(engineModelTypeCombo_->currentData().toString());
 
   cfg.sync();
 
@@ -187,6 +210,9 @@ void ConfigDialog::saveConfig() {
   initialConfig_["tc_appid"] = tencentAppIdEdit_->text();
   initialConfig_["tc_sid"] = tencentSecretIdEdit_->text();
   initialConfig_["tc_skey"] = tencentSecretKeyEdit_->text();
+  initialConfig_["tc_speaker_diarization"] = speakerDiarizationCheck_->isChecked();
+  initialConfig_["tc_sentence_max_length"] = sentenceMaxLengthSpin_->value();
+  initialConfig_["tc_engine_model_type"] = engineModelTypeCombo_->currentData().toString();
 
   checkDirtyState();
 }
@@ -197,6 +223,7 @@ void ConfigDialog::onApply() {
       langCombo_->currentData().toString());
   retranslateUi();
   ThemeManager::instance().applyTheme();
+  emit configApplied();
 }
 
 void ConfigDialog::onOk() {
@@ -204,6 +231,7 @@ void ConfigDialog::onOk() {
   TranslationManager::instance().loadLanguage(
       langCombo_->currentData().toString());
   ThemeManager::instance().applyTheme();
+  emit configApplied();
   accept();
 }
 
@@ -225,6 +253,13 @@ void ConfigDialog::onCancel() {
         initialConfig_["language"].toString());
   }
   reject();
+}
+
+void ConfigDialog::changeEvent(QEvent *event) {
+  if (event->type() == QEvent::LanguageChange) {
+    retranslateUi();
+  }
+  QDialog::changeEvent(event);
 }
 
 void ConfigDialog::retranslateUi() {
@@ -259,6 +294,19 @@ void ConfigDialog::retranslateUi() {
   sidLabel_->setText(tr("密钥 ID (Secret ID)"));
   skeyLabel_->setText(tr("密钥 (Secret Key)"));
   asrProviderCombo_->setItemText(0, tr("腾讯云 ASR"));
+
+  speakerDiarizationLabel_->setText(tr("说话人识别"));
+  speakerDiarizationCheck_->setText(tr("开启说话人识别"));
+  maxLenLabel_->setText(tr("单行字幕最大字数"));
+  engineLabel_->setText(tr("引擎模型类型"));
+
+  engineModelTypeCombo_->setItemText(0, tr("中文普通话通用"));
+  engineModelTypeCombo_->setItemText(1, tr("音视频领域模型"));
+  engineModelTypeCombo_->setItemText(2, tr("英语通用"));
+  engineModelTypeCombo_->setItemText(3, tr("粤语通用"));
+  engineModelTypeCombo_->setItemText(4, tr("日语通用"));
+  engineModelTypeCombo_->setItemText(5, tr("韩语通用"));
+  engineModelTypeCombo_->setItemText(6, tr("多语言大模型"));
 
   // Footer
   dirtyLabel_->setText(tr("有未保存的更改"));
@@ -438,6 +486,39 @@ void ConfigDialog::setupUi() {
   tencentSecretKeyEdit_->setFixedHeight(32);
   tencentSecretKeyEdit_->setEchoMode(QLineEdit::Password);
   asrLayout->addWidget(tencentSecretKeyEdit_);
+
+  speakerDiarizationLabel_ = new QLabel(tr("说话人识别"), asrPage);
+  speakerDiarizationLabel_->setObjectName("ConfigFieldLabel");
+  asrLayout->addWidget(speakerDiarizationLabel_);
+  speakerDiarizationCheck_ = new QCheckBox(tr("开启说话人识别"), asrPage);
+  speakerDiarizationCheck_->setFixedHeight(32);
+  speakerDiarizationCheck_->setObjectName("ConfigCheckBox");
+  asrLayout->addWidget(speakerDiarizationCheck_);
+
+  maxLenLabel_ = new QLabel(tr("单行字幕最大字数"), asrPage);
+  maxLenLabel_->setObjectName("ConfigFieldLabel");
+  asrLayout->addWidget(maxLenLabel_);
+  sentenceMaxLengthSpin_ = new QSpinBox(asrPage);
+  sentenceMaxLengthSpin_->setFixedHeight(32);
+  sentenceMaxLengthSpin_->setRange(6, 40);
+  sentenceMaxLengthSpin_->setValue(16);
+  sentenceMaxLengthSpin_->setObjectName("ConfigSpinBox");
+  asrLayout->addWidget(sentenceMaxLengthSpin_);
+
+  engineLabel_ = new QLabel(tr("引擎模型类型"), asrPage);
+  engineLabel_->setObjectName("ConfigFieldLabel");
+  asrLayout->addWidget(engineLabel_);
+  engineModelTypeCombo_ = new QComboBox(asrPage);
+  engineModelTypeCombo_->setFixedHeight(32);
+  engineModelTypeCombo_->addItem(tr("中文普通话通用"), "16k_zh");
+  engineModelTypeCombo_->addItem(tr("音视频领域模型"), "16k_zh_video");
+  engineModelTypeCombo_->addItem(tr("英语通用"), "16k_en");
+  engineModelTypeCombo_->addItem(tr("粤语通用"), "16k_ca");
+  engineModelTypeCombo_->addItem(tr("日语通用"), "16k_ja");
+  engineModelTypeCombo_->addItem(tr("韩语通用"), "16k_ko");
+  engineModelTypeCombo_->addItem(tr("多语言大模型"), "16k_multi_lang");
+  engineModelTypeCombo_->setObjectName("ConfigComboBox");
+  asrLayout->addWidget(engineModelTypeCombo_);
 
   asrLayout->addStretch();
   stackedWidget_->addWidget(asrPage);

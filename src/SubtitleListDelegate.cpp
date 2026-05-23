@@ -2,6 +2,7 @@
 #include "SubtitleListModel.h"
 #include "SubtitleTrack.h"
 #include "ThemeManager.h"
+#include "ConfigManager.h"
 
 #include <QKeyEvent>
 #include <QMouseEvent>
@@ -49,48 +50,52 @@ void SubtitleListDelegate::paint(QPainter *painter,
   painter->drawText(timeRect.left(), timeRect.top() + 26, endTime);
 
   // Speaker pill label (middle-left)
-  QRect spkRect(timeRect.right() + 12, rect.top(), 80, rect.height());
-  {
-    int speakerId = index.data(SubtitleListModel::SpeakerIdRole).toInt();
-    QString speakerLabel;
-    if (speakerId >= 0 && track_) {
-      SpeakerInfo info = track_->speakerInfo(speakerId);
-      speakerLabel = info.name.isEmpty()
-                         ? QString("Speaker %1").arg(speakerId)
-                         : info.name;
-    } else {
-      speakerLabel = tr("Unassigned");
+  bool showSpeaker = ConfigManager::instance().speakerDiarization();
+  int textLeft = timeRect.right() + 12;
+  if (showSpeaker) {
+    QRect spkRect(timeRect.right() + 12, rect.top(), 80, rect.height());
+    {
+      int speakerId = index.data(SubtitleListModel::SpeakerIdRole).toInt();
+      QString speakerLabel;
+      if (speakerId >= 0 && track_) {
+        SpeakerInfo info = track_->speakerInfo(speakerId);
+        speakerLabel = info.name.isEmpty()
+                           ? QString("Speaker %1").arg(speakerId)
+                           : info.name;
+      } else {
+        speakerLabel = tr("Unassigned");
+      }
+
+      QFont spkFont = painter->font();
+      spkFont.setFamily("Inter");
+      spkFont.setPointSize(9);
+      painter->setFont(spkFont);
+      QFontMetrics fm(spkFont);
+      
+      int textW = fm.horizontalAdvance(speakerLabel) + 12;
+      int pillW = qMin(textW, 76);
+      int pillH = 20;
+      int pillX = spkRect.left() + (spkRect.width() - pillW) / 2;
+      int pillY = spkRect.top() + (spkRect.height() - pillH) / 2;
+      QRect pillRect(pillX, pillY, pillW, pillH);
+
+      QColor pillBg(255, 255, 255, 20);
+      if (speakerId < 0) {
+        pillBg = QColor(255, 255, 255, 10);
+      }
+      painter->setPen(Qt::NoPen);
+      painter->setBrush(pillBg);
+      painter->setRenderHint(QPainter::Antialiasing);
+      painter->drawRoundedRect(pillRect, pillH / 2, pillH / 2);
+
+      QColor pillTextColor = speakerId >= 0 ? QColor("#858e9f") : QColor("#6b7280");
+      painter->setPen(pillTextColor);
+      painter->drawText(pillRect, Qt::AlignCenter, speakerLabel);
     }
-
-    QFont spkFont = painter->font();
-    spkFont.setFamily("Inter");
-    spkFont.setPointSize(9);
-    painter->setFont(spkFont);
-    QFontMetrics fm(spkFont);
-    
-    int textW = fm.horizontalAdvance(speakerLabel) + 12;
-    int pillW = qMin(textW, 76);
-    int pillH = 20;
-    int pillX = spkRect.left() + (spkRect.width() - pillW) / 2;
-    int pillY = spkRect.top() + (spkRect.height() - pillH) / 2;
-    QRect pillRect(pillX, pillY, pillW, pillH);
-
-    QColor pillBg(255, 255, 255, 20);
-    if (speakerId < 0) {
-      pillBg = QColor(255, 255, 255, 10);
-    }
-    painter->setPen(Qt::NoPen);
-    painter->setBrush(pillBg);
-    painter->setRenderHint(QPainter::Antialiasing);
-    painter->drawRoundedRect(pillRect, pillH / 2, pillH / 2);
-
-    QColor pillTextColor = speakerId >= 0 ? QColor("#858e9f") : QColor("#6b7280");
-    painter->setPen(pillTextColor);
-    painter->drawText(pillRect, Qt::AlignCenter, speakerLabel);
+    textLeft = spkRect.right() + 12;
   }
 
   // Text area (middle)
-  int textLeft = spkRect.right() + 12;
   int textRight = rect.right() - 12 - 36 - 12; // right padding - buttons - gap
   QRect textRect(textLeft, rect.top(), qMax(50, textRight - textLeft),
                  rect.height());
@@ -318,8 +323,12 @@ void SubtitleListDelegate::updateEditorGeometry(
     const QModelIndex & /*index*/) const {
   const QRect rect = option.rect;
   QRect timeRect(rect.left() + 12, rect.top() + 10, 100, 36);
-  QRect spkRect(timeRect.right() + 12, rect.top(), 80, rect.height());
-  int textLeft = spkRect.right() + 12;
+  bool showSpeaker = ConfigManager::instance().speakerDiarization();
+  int textLeft = timeRect.right() + 12;
+  if (showSpeaker) {
+    QRect spkRect(timeRect.right() + 12, rect.top(), 80, rect.height());
+    textLeft = spkRect.right() + 12;
+  }
   int textRight = rect.right() - 12 - 36 - 12;
   int textWidth = qMax(50, textRight - textLeft);
   QRect editRect(textLeft, rect.top() + 8, textWidth, rect.height() - 16);
@@ -331,6 +340,9 @@ void SubtitleListDelegate::setTrack(SubtitleTrack *track) {
 }
 
 QRect SubtitleListDelegate::speakerRect(const QStyleOptionViewItem &option) const {
+  if (!ConfigManager::instance().speakerDiarization()) {
+    return QRect();
+  }
   const QRect rect = option.rect;
   QRect timeRect(rect.left() + 12, rect.top() + 10, 100, 36);
   return QRect(timeRect.right() + 12, rect.top(), 80, rect.height());

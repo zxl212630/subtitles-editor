@@ -488,6 +488,50 @@ Make sure to include the necessary settings for FFmpeg, Tencent Cloud ASR, and A
         <source>确定</source>
         <translation>OK</translation>
     </message>
+    <message>
+        <source>说话人识别</source>
+        <translation>Speaker Diarization</translation>
+    </message>
+    <message>
+        <source>开启说话人识别</source>
+        <translation>Enable Speaker Diarization</translation>
+    </message>
+    <message>
+        <source>单行字幕最大字数</source>
+        <translation>Max Characters Per Line</translation>
+    </message>
+    <message>
+        <source>引擎模型类型</source>
+        <translation>Engine Model Type</translation>
+    </message>
+    <message>
+        <source>中文普通话通用</source>
+        <translation>Mandarin Chinese (General)</translation>
+    </message>
+    <message>
+        <source>音视频领域模型</source>
+        <translation>Mandarin (Video/Audio)</translation>
+    </message>
+    <message>
+        <source>英语通用</source>
+        <translation>English (General)</translation>
+    </message>
+    <message>
+        <source>粤语通用</source>
+        <translation>Cantonese (General)</translation>
+    </message>
+    <message>
+        <source>日语通用</source>
+        <translation>Japanese (General)</translation>
+    </message>
+    <message>
+        <source>韩语通用</source>
+        <translation>Korean (General)</translation>
+    </message>
+    <message>
+        <source>多语言大模型</source>
+        <translation>Multi-language Large Model</translation>
+    </message>
 </context>
 <context>
     <name>OssUploader</name>

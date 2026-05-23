@@ -603,6 +603,11 @@ void AppWindow::onExportRequested() {
 
 void AppWindow::onSettingsRequested() {
   ConfigDialog dialog(this);
+  connect(&dialog, &ConfigDialog::configApplied, this, [this]() {
+    if (d->subtitleListPanel) {
+      d->subtitleListPanel->updateSpeakerColumnVisibility();
+    }
+  });
   dialog.exec();
 }
 

@@ -168,11 +168,18 @@ void TencentAsrService::createRecTask(const QString &audioUrl) {
 QJsonObject TencentAsrService::payload(const QString &audioUrl) {
   QJsonObject obj;
   obj["ChannelNum"] = 1;
-  obj["EngineModelType"] = "16k_zh";
+  obj["EngineModelType"] = ConfigManager::instance().engineModelType();
   obj["ResTextFormat"] = 3;
   obj["Url"] = audioUrl;
   obj["SourceType"] = 0; // 0=URL
-  obj["SpeakerDiarization"] = 1; // 开启说话人分离
+  
+  bool enableDiarization = ConfigManager::instance().speakerDiarization();
+  obj["SpeakerDiarization"] = enableDiarization ? 1 : 0;
+  if (enableDiarization) {
+    obj["SpeakerNumber"] = 0;
+  }
+  
+  obj["SentenceMaxLength"] = ConfigManager::instance().sentenceMaxLength();
   obj["FilterPunc"] = 1; // 过滤句末标点（去掉末尾标点符号）
   return obj;
 }

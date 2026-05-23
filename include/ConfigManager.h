@@ -18,6 +18,12 @@ public:
   QString tencentSecretId() const;
   QString tencentSecretKey() const;
   QString tencentAppId() const;
+  bool speakerDiarization() const;
+  void setSpeakerDiarization(bool enabled);
+  int sentenceMaxLength() const;
+  void setSentenceMaxLength(int length);
+  QString engineModelType() const;
+  void setEngineModelType(const QString &model);
 
   // Aliyun OSS
   QString ossAccessKeyId() const;
