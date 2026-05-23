@@ -173,6 +173,7 @@ QJsonObject TencentAsrService::payload(const QString &audioUrl) {
   obj["Url"] = audioUrl;
   obj["SourceType"] = 0; // 0=URL
   obj["SpeakerDiarization"] = 1; // 开启说话人分离
+  obj["FilterPunc"] = 1; // 过滤句末标点（去掉末尾标点符号）
   return obj;
 }
 

@@ -937,6 +937,7 @@ void TimelinePanel::mouseReleaseEvent(QMouseEvent *event) {
         item.startMs = dragTempStartMs_;
         item.endMs = dragTempEndMs_;
         item.selected = true;
+        item.speakerId = original->speakerId;
         track_->updateItem(dragTargetId_, item);
       }
     }

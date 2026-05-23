@@ -75,16 +75,16 @@ void SubtitleListDelegate::paint(QPainter *painter,
     int pillY = spkRect.top() + (spkRect.height() - pillH) / 2;
     QRect pillRect(pillX, pillY, pillW, pillH);
 
-    QColor primary = ThemeManager::instance().getPrimaryColor();
-    primary.setAlpha(speakerId >= 0 ? 50 : 25);
+    QColor pillBg(255, 255, 255, 20);
+    if (speakerId < 0) {
+      pillBg = QColor(255, 255, 255, 10);
+    }
     painter->setPen(Qt::NoPen);
-    painter->setBrush(primary);
+    painter->setBrush(pillBg);
     painter->setRenderHint(QPainter::Antialiasing);
     painter->drawRoundedRect(pillRect, pillH / 2, pillH / 2);
 
-    QColor pillTextColor = speakerId >= 0
-                               ? ThemeManager::instance().getPrimaryColor()
-                               : QColor("#6b7280");
+    QColor pillTextColor = speakerId >= 0 ? QColor("#858e9f") : QColor("#6b7280");
     painter->setPen(pillTextColor);
     painter->drawText(pillRect, Qt::AlignCenter, speakerLabel);
   }
