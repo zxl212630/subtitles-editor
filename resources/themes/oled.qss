@@ -606,3 +606,69 @@ QPushButton#AsrCancelButton {
 QPushButton#AsrCancelButton:hover {
     background-color: @text_muted;
 }
+
+/* Speaker Management Dialog Styles */
+QLineEdit#SpeakerFolderEdit {
+    border-top-right-radius: 0px;
+    border-bottom-right-radius: 0px;
+    border-right: none;
+    min-height: 20px;
+    max-height: 20px;
+}
+
+QPushButton#SpeakerBrowseButton {
+    background-color: @bg_panel;
+    border: 1px solid @border_color;
+    border-top-left-radius: 0px;
+    border-bottom-left-radius: 0px;
+    border-top-right-radius: 6px;
+    border-bottom-right-radius: 6px;
+    color: @text_normal;
+    padding: 4px 12px;
+    font-size: 13px;
+    min-height: 20px;
+    max-height: 20px;
+}
+
+QPushButton#SpeakerBrowseButton:hover {
+    background-color: rgba(255, 255, 255, 0.05);
+    border-color: @text_muted;
+}
+
+QPushButton#SpeakerBrowseButton:pressed {
+    background-color: rgba(255, 255, 255, 0.01);
+}
+
+QPushButton#SpeakerAddButton, QPushButton#SpeakerRemoveButton {
+    background-color: rgba(255, 255, 255, 0.04);
+    border: 1px solid @border_color;
+    border-radius: 6px;
+    color: @text_normal;
+    padding: 6px 12px;
+    font-size: 13px;
+    font-weight: 500;
+}
+
+QPushButton#SpeakerAddButton:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+    border-color: @primary_color;
+}
+
+QPushButton#SpeakerAddButton:pressed {
+    background-color: @primary_color;
+    border-color: @primary_color;
+    color: #ffffff;
+}
+
+QPushButton#SpeakerRemoveButton:hover {
+    background-color: rgba(239, 68, 68, 0.1);
+    border-color: #ef4444;
+    color: #f87171;
+}
+
+QPushButton#SpeakerRemoveButton:pressed {
+    background-color: #ef4444;
+    border-color: #ef4444;
+    color: #ffffff;
+}
+

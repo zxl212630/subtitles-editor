@@ -668,12 +668,12 @@ Make sure to include the necessary settings for FFmpeg, Tencent Cloud ASR, and A
     </message>
     <message>
         <location filename="../src/SpeakerManagerDialog.cpp" line="287"/>
-        <source>+ Add</source>
+        <source>Add</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../src/SpeakerManagerDialog.cpp" line="289"/>
-        <source>- Delete</source>
+        <source>Delete</source>
         <translation type="unfinished"></translation>
     </message>
     <message>

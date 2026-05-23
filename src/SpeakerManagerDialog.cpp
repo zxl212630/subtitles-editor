@@ -11,6 +11,7 @@
 #include <QComboBox>
 #include <QLabel>
 #include <QFileDialog>
+#include <QIcon>
 #include <QDir>
 #include <QPainter>
 #include <QStyleOptionViewItem>
@@ -116,15 +117,23 @@ void SpeakerManagerDialog::setupUi() {
   folderLabel_->setObjectName("ConfigFieldLabel");
   folderLabel_->setFixedWidth(100);
   
+  auto *editBtnRow = new QHBoxLayout();
+  editBtnRow->setContentsMargins(0, 0, 0, 0);
+  editBtnRow->setSpacing(0);
+  
   bgFolderEdit_ = new QLineEdit(topSettingsFrame);
+  bgFolderEdit_->setObjectName("SpeakerFolderEdit");
   bgFolderEdit_->setReadOnly(true);
   
   browseFolderBtn_ = new QPushButton(topSettingsFrame);
+  browseFolderBtn_->setObjectName("SpeakerBrowseButton");
   browseFolderBtn_->setFixedWidth(80);
   
+  editBtnRow->addWidget(bgFolderEdit_, 1);
+  editBtnRow->addWidget(browseFolderBtn_);
+  
   folderRow->addWidget(folderLabel_);
-  folderRow->addWidget(bgFolderEdit_, 1);
-  folderRow->addWidget(browseFolderBtn_);
+  folderRow->addLayout(editBtnRow, 1);
   topLayout->addLayout(folderRow);
 
   // 1.2 九宫格四向边距
@@ -186,8 +195,11 @@ void SpeakerManagerDialog::setupUi() {
   leftListLayout->addWidget(speakerList_, 1);
 
   auto *btnRow = new QHBoxLayout();
+  btnRow->setSpacing(8);
   addBtn_ = new QPushButton(leftWidget);
+  addBtn_->setObjectName("SpeakerAddButton");
   removeBtn_ = new QPushButton(leftWidget);
+  removeBtn_->setObjectName("SpeakerRemoveButton");
   btnRow->addWidget(addBtn_);
   btnRow->addWidget(removeBtn_);
   leftListLayout->addLayout(btnRow);
@@ -284,9 +296,9 @@ void SpeakerManagerDialog::retranslateUi() {
   if (listLabel_)
     listLabel_->setText(tr("Speaker List"));
   if (addBtn_)
-    addBtn_->setText(tr("+ Add"));
+    addBtn_->setText(tr("Add"));
   if (removeBtn_)
-    removeBtn_->setText(tr("- Delete"));
+    removeBtn_->setText(tr("Delete"));
   if (nameLabel_)
     nameLabel_->setText(tr("Speaker Name:"));
   if (imgLabel_)

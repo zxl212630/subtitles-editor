@@ -556,13 +556,13 @@
     </message>
     <message>
         <location filename="../src/SpeakerManagerDialog.cpp" line="287"/>
-        <source>+ Add</source>
-        <translation>+ 添加</translation>
+        <source>Add</source>
+        <translation>添加</translation>
     </message>
     <message>
         <location filename="../src/SpeakerManagerDialog.cpp" line="289"/>
-        <source>- Delete</source>
-        <translation>- 删除</translation>
+        <source>Delete</source>
+        <translation>删除</translation>
     </message>
     <message>
         <location filename="../src/SpeakerManagerDialog.cpp" line="291"/>
