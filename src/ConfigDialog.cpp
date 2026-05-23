@@ -300,13 +300,17 @@ void ConfigDialog::retranslateUi() {
   maxLenLabel_->setText(tr("单行字幕最大字数"));
   engineLabel_->setText(tr("引擎模型类型"));
 
-  engineModelTypeCombo_->setItemText(0, tr("中文普通话通用"));
-  engineModelTypeCombo_->setItemText(1, tr("音视频领域模型"));
-  engineModelTypeCombo_->setItemText(2, tr("英语通用"));
-  engineModelTypeCombo_->setItemText(3, tr("粤语通用"));
-  engineModelTypeCombo_->setItemText(4, tr("日语通用"));
-  engineModelTypeCombo_->setItemText(5, tr("韩语通用"));
-  engineModelTypeCombo_->setItemText(6, tr("多语言大模型"));
+  engineModelTypeCombo_->setItemText(0, QString("16k_zh(%1)").arg(tr("中文普通话通用")));
+  engineModelTypeCombo_->setItemText(1, QString("16k_zh_video(%1)").arg(tr("音视频领域模型")));
+  engineModelTypeCombo_->setItemText(2, QString("16k_zh_dialect(%1)").arg(tr("多方言模型")));
+  engineModelTypeCombo_->setItemText(3, QString("16k_zh-PY(%1)").arg(tr("中英粤混合模型")));
+  engineModelTypeCombo_->setItemText(4, QString("16k_zh_large(%1)").arg(tr("普通话大模型")));
+  engineModelTypeCombo_->setItemText(5, QString("16k_en(%1)").arg(tr("英语通用")));
+  engineModelTypeCombo_->setItemText(6, QString("16k_en_large(%1)").arg(tr("英语大模型")));
+  engineModelTypeCombo_->setItemText(7, QString("16k_ca(%1)").arg(tr("粤语通用")));
+  engineModelTypeCombo_->setItemText(8, QString("16k_ja(%1)").arg(tr("日语通用")));
+  engineModelTypeCombo_->setItemText(9, QString("16k_ko(%1)").arg(tr("韩语通用")));
+  engineModelTypeCombo_->setItemText(10, QString("16k_multi_lang(%1)").arg(tr("多语言大模型")));
 
   // Footer
   dirtyLabel_->setText(tr("有未保存的更改"));
@@ -510,13 +514,17 @@ void ConfigDialog::setupUi() {
   asrLayout->addWidget(engineLabel_);
   engineModelTypeCombo_ = new QComboBox(asrPage);
   engineModelTypeCombo_->setFixedHeight(32);
-  engineModelTypeCombo_->addItem(tr("中文普通话通用"), "16k_zh");
-  engineModelTypeCombo_->addItem(tr("音视频领域模型"), "16k_zh_video");
-  engineModelTypeCombo_->addItem(tr("英语通用"), "16k_en");
-  engineModelTypeCombo_->addItem(tr("粤语通用"), "16k_ca");
-  engineModelTypeCombo_->addItem(tr("日语通用"), "16k_ja");
-  engineModelTypeCombo_->addItem(tr("韩语通用"), "16k_ko");
-  engineModelTypeCombo_->addItem(tr("多语言大模型"), "16k_multi_lang");
+  engineModelTypeCombo_->addItem("16k_zh(中文普通话通用)", "16k_zh");
+  engineModelTypeCombo_->addItem("16k_zh_video(音视频领域模型)", "16k_zh_video");
+  engineModelTypeCombo_->addItem("16k_zh_dialect(多方言模型)", "16k_zh_dialect");
+  engineModelTypeCombo_->addItem("16k_zh-PY(中英粤混合模型)", "16k_zh-PY");
+  engineModelTypeCombo_->addItem("16k_zh_large(普通话大模型)", "16k_zh_large");
+  engineModelTypeCombo_->addItem("16k_en(英语通用)", "16k_en");
+  engineModelTypeCombo_->addItem("16k_en_large(英语大模型)", "16k_en_large");
+  engineModelTypeCombo_->addItem("16k_ca(粤语通用)", "16k_ca");
+  engineModelTypeCombo_->addItem("16k_ja(日语通用)", "16k_ja");
+  engineModelTypeCombo_->addItem("16k_ko(韩语通用)", "16k_ko");
+  engineModelTypeCombo_->addItem("16k_multi_lang(多语言大模型)", "16k_multi_lang");
   engineModelTypeCombo_->setObjectName("ConfigComboBox");
   asrLayout->addWidget(engineModelTypeCombo_);
 

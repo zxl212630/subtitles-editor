@@ -103,6 +103,35 @@ QLabel#ConfigFieldLabel {
     font-size: 13px;
 }
 
+QCheckBox {
+    spacing: 8px;
+    color: @text_normal;
+    font-size: 13px;
+}
+
+QCheckBox::indicator {
+    width: 16px;
+    height: 16px;
+    border: 1px solid @border_color;
+    border-radius: 4px;
+    background-color: @bg_panel;
+}
+
+QCheckBox::indicator:hover {
+    border: 1px solid @primary_color;
+}
+
+QCheckBox::indicator:checked {
+    background-color: @primary_color;
+    border: 1px solid @primary_color;
+    image: url(:/icons/check.svg);
+}
+
+QCheckBox::indicator:disabled {
+    border: 1px solid @border_color;
+    background-color: @bg_lighter;
+}
+
 /* Inputs */
 QLineEdit, QComboBox {
     background-color: @bg_panel;

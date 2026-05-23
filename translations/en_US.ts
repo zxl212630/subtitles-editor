@@ -532,6 +532,22 @@ Make sure to include the necessary settings for FFmpeg, Tencent Cloud ASR, and A
         <source>多语言大模型</source>
         <translation>Multi-language Large Model</translation>
     </message>
+    <message>
+        <source>多方言模型</source>
+        <translation>Mandarin Dialects</translation>
+    </message>
+    <message>
+        <source>中英粤混合模型</source>
+        <translation>Mandarin/English/Cantonese Mix</translation>
+    </message>
+    <message>
+        <source>普通话大模型</source>
+        <translation>Mandarin Large Model</translation>
+    </message>
+    <message>
+        <source>英语大模型</source>
+        <translation>English Large Model</translation>
+    </message>
 </context>
 <context>
     <name>OssUploader</name>
