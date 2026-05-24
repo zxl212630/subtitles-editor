@@ -205,6 +205,10 @@ void SubtitleListPanel::setupUi() {
   tabCustom_->setAttribute(Qt::WA_TransparentForMouseEvents, true);
   tabAnimation_->setAttribute(Qt::WA_TransparentForMouseEvents, true);
 
+  tabPreset_->hide();
+  tabCustom_->hide();
+  tabAnimation_->hide();
+
   phLayout->addStretch();
   layout->addWidget(panelHeader);
 
