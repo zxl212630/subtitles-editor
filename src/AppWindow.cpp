@@ -17,20 +17,22 @@
 #include <QApplication>
 #include <QDateTime>
 #include <QDesktopServices>
+#include <QEvent>
 #include <QFile>
 #include <QFileDialog>
 #include <QFileInfo>
 #include <QFrame>
 #include <QHBoxLayout>
 #include <QLabel>
+#include <QMouseEvent>
 #include <QProcess>
 #include <QPushButton>
+#include <QScrollBar>
 #include <QSplitter>
 #include <QTime>
 #include <QUrl>
 #include <QUuid>
 #include <QVBoxLayout>
-#include <QWidget>
 #include <QWindowKit/QWKWidgets/widgetwindowagent.h>
 
 struct AppWindow::Private {
@@ -102,6 +104,11 @@ bool AppWindow::eventFilter(QObject *obj, QEvent *event) {
   if (event->type() == QEvent::MouseButtonPress) {
     auto *me = static_cast<QMouseEvent *>(event);
     emit windowClicked(me->globalPosition().toPoint());
+  }
+  if (event->type() == QEvent::ContextMenu) {
+    if (qobject_cast<QScrollBar *>(obj)) {
+      return true; // Block scroll bar's context menu
+    }
   }
   return QMainWindow::eventFilter(obj, event);
 }
