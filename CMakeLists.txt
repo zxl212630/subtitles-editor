@@ -57,6 +57,7 @@ set(SOURCES
     src/ConfigManager.cpp src/ThemeManager.cpp src/TranslationManager.cpp src/PaletteSelectors.cpp
     src/AudioTranscoder.cpp
     src/OssUploader.cpp
+    src/CosUploader.cpp
     src/FFmpegDecoder.cpp
     src/SeekDecoder.cpp
     src/QtAudioOutput.cpp
@@ -85,6 +86,7 @@ set(HEADERS
     include/ConfigManager.h include/ThemeManager.h include/TranslationManager.h include/PaletteSelectors.h
     include/AudioTranscoder.h
     include/OssUploader.h
+    include/CosUploader.h
     include/FFmpegDecoder.h
     include/SeekDecoder.h
     include/QtAudioOutput.h
@@ -173,6 +175,8 @@ qt_add_translations(${PROJECT_NAME}
         translations/en_US.ts
     RESOURCE_PREFIX "/translations"
 )
+
+
 
 
 

@@ -44,12 +44,25 @@ bool ConfigManager::isValid() const {
            !val.contains("FFMPEG_PATH");
   };
 
+  bool storageValid = false;
+  QString provider = storageProvider();
+  if (provider == "tencent_cos") {
+    storageValid = check("tencent_cos", "secret_id") &&
+                   check("tencent_cos", "secret_key") &&
+                   check("tencent_cos", "bucket") &&
+                   check("tencent_cos", "region");
+  } else {
+    // Default is aliyun_oss
+    storageValid = check("aliyun_oss", "access_key_id") &&
+                   check("aliyun_oss", "access_key_secret") &&
+                   check("aliyun_oss", "bucket") &&
+                   check("aliyun_oss", "region");
+  }
+
   bool valid = check("ffmpeg", "path") && check("tencent_asr", "secret_id") &&
                check("tencent_asr", "secret_key") &&
                check("tencent_asr", "app_id") &&
-               check("aliyun_oss", "access_key_id") &&
-               check("aliyun_oss", "access_key_secret") &&
-               check("aliyun_oss", "bucket") && check("aliyun_oss", "region");
+               storageValid;
 
   qDebug() << "[ConfigManager] Configuration is valid:" << valid;
   return valid;
@@ -125,6 +138,26 @@ QString ConfigManager::ossBucket() const {
 
 QString ConfigManager::ossRegion() const {
   return getString("aliyun_oss", "region");
+}
+
+QString ConfigManager::storageProvider() const {
+  return getString("storage", "provider");
+}
+
+QString ConfigManager::cosSecretId() const {
+  return getString("tencent_cos", "secret_id");
+}
+
+QString ConfigManager::cosSecretKey() const {
+  return getString("tencent_cos", "secret_key");
+}
+
+QString ConfigManager::cosBucket() const {
+  return getString("tencent_cos", "bucket");
+}
+
+QString ConfigManager::cosRegion() const {
+  return getString("tencent_cos", "region");
 }
 
 QString ConfigManager::getString(const QString &group,

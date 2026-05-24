@@ -45,17 +45,36 @@ ConfigDialog::ConfigDialog(QWidget *parent) : QDialog(parent) {
   connect(langCombo_, &QComboBox::currentTextChanged, this,
           &ConfigDialog::checkDirtyState);
   connect(storageProviderCombo_, &QComboBox::currentTextChanged, this,
-          &ConfigDialog::checkDirtyState);
+          &ConfigDialog::onStorageProviderChanged);
   connect(asrProviderCombo_, &QComboBox::currentTextChanged, this,
           &ConfigDialog::checkDirtyState);
 
-  auto lineEdits = {ossBucketEdit_,       ossRegionEdit_,
-                    ossAccessKeyEdit_,    ossSecretKeyEdit_,
-                    tencentAppIdEdit_,    tencentSecretIdEdit_,
+  auto lineEdits = {tencentAppIdEdit_,    tencentSecretIdEdit_,
                     tencentSecretKeyEdit_};
   for (auto *le : lineEdits) {
     connect(le, &QLineEdit::textChanged, this, &ConfigDialog::checkDirtyState);
   }
+
+  connect(ossBucketEdit_, &QLineEdit::textChanged, this, [this](const QString &text) {
+    if (currentProvider_ == "aliyun_oss") tempAliBucket_ = text;
+    else if (currentProvider_ == "tencent_cos") tempCosBucket_ = text;
+    checkDirtyState();
+  });
+  connect(ossRegionEdit_, &QLineEdit::textChanged, this, [this](const QString &text) {
+    if (currentProvider_ == "aliyun_oss") tempAliRegion_ = text;
+    else if (currentProvider_ == "tencent_cos") tempCosRegion_ = text;
+    checkDirtyState();
+  });
+  connect(ossAccessKeyEdit_, &QLineEdit::textChanged, this, [this](const QString &text) {
+    if (currentProvider_ == "aliyun_oss") tempAliAk_ = text;
+    else if (currentProvider_ == "tencent_cos") tempCosAk_ = text;
+    checkDirtyState();
+  });
+  connect(ossSecretKeyEdit_, &QLineEdit::textChanged, this, [this](const QString &text) {
+    if (currentProvider_ == "aliyun_oss") tempAliSk_ = text;
+    else if (currentProvider_ == "tencent_cos") tempCosSk_ = text;
+    checkDirtyState();
+  });
 
   connect(speakerDiarizationCheck_, &QCheckBox::stateChanged, this, &ConfigDialog::checkDirtyState);
   connect(sentenceMaxLengthSpin_, qOverload<int>(&QSpinBox::valueChanged), this, &ConfigDialog::checkDirtyState);
@@ -117,10 +136,41 @@ void ConfigDialog::loadConfig() {
   themeSelector_->setCurrentTheme(initialConfig_["theme"].toString());
   colorSelector_->setCurrentColor(initialConfig_["primary_color"].toString());
 
+  initialConfig_["storage_provider"] = cfg.storageProvider();
+  if (initialConfig_["storage_provider"].toString().isEmpty()) {
+    initialConfig_["storage_provider"] = "aliyun_oss";
+  }
+  currentProvider_ = initialConfig_["storage_provider"].toString();
+
   initialConfig_["oss_bucket"] = cfg.getString("aliyun_oss", "bucket");
   initialConfig_["oss_region"] = cfg.getString("aliyun_oss", "region");
   initialConfig_["oss_ak"] = cfg.getString("aliyun_oss", "access_key_id");
   initialConfig_["oss_sk"] = cfg.getString("aliyun_oss", "access_key_secret");
+
+  initialConfig_["cos_bucket"] = cfg.getString("tencent_cos", "bucket");
+  initialConfig_["cos_region"] = cfg.getString("tencent_cos", "region");
+  initialConfig_["cos_ak"] = cfg.getString("tencent_cos", "secret_id");
+  initialConfig_["cos_sk"] = cfg.getString("tencent_cos", "secret_key");
+
+  tempAliBucket_ = initialConfig_["oss_bucket"].toString();
+  tempAliRegion_ = initialConfig_["oss_region"].toString();
+  tempAliAk_ = initialConfig_["oss_ak"].toString();
+  tempAliSk_ = initialConfig_["oss_sk"].toString();
+
+  tempCosBucket_ = initialConfig_["cos_bucket"].toString();
+  tempCosRegion_ = initialConfig_["cos_region"].toString();
+  tempCosAk_ = initialConfig_["cos_ak"].toString();
+  tempCosSk_ = initialConfig_["cos_sk"].toString();
+
+  int providerIndex = storageProviderCombo_->findData(currentProvider_);
+  if (providerIndex >= 0) {
+    storageProviderCombo_->setCurrentIndex(providerIndex);
+  } else {
+    storageProviderCombo_->setCurrentIndex(0);
+  }
+
+  updateStorageFields(currentProvider_);
+  updateStorageLabels(currentProvider_);
 
   initialConfig_["tc_appid"] = cfg.getString("tencent_asr", "app_id");
   initialConfig_["tc_sid"] = cfg.getString("tencent_asr", "secret_id");
@@ -129,10 +179,6 @@ void ConfigDialog::loadConfig() {
   initialConfig_["tc_sentence_max_length"] = cfg.sentenceMaxLength();
   initialConfig_["tc_engine_model_type"] = cfg.engineModelType();
 
-  ossBucketEdit_->setText(initialConfig_["oss_bucket"].toString());
-  ossRegionEdit_->setText(initialConfig_["oss_region"].toString());
-  ossAccessKeyEdit_->setText(initialConfig_["oss_ak"].toString());
-  ossSecretKeyEdit_->setText(initialConfig_["oss_sk"].toString());
   tencentAppIdEdit_->setText(initialConfig_["tc_appid"].toString());
   tencentSecretIdEdit_->setText(initialConfig_["tc_sid"].toString());
   tencentSecretKeyEdit_->setText(initialConfig_["tc_skey"].toString());
@@ -156,10 +202,16 @@ bool ConfigDialog::isDirty() const {
           initialConfig_["theme"].toString()) ||
          (colorSelector_->currentColor() !=
           initialConfig_["primary_color"].toString()) ||
-         (ossBucketEdit_->text() != initialConfig_["oss_bucket"].toString()) ||
-         (ossRegionEdit_->text() != initialConfig_["oss_region"].toString()) ||
-         (ossAccessKeyEdit_->text() != initialConfig_["oss_ak"].toString()) ||
-         (ossSecretKeyEdit_->text() != initialConfig_["oss_sk"].toString()) ||
+         (storageProviderCombo_->currentData().toString() !=
+          initialConfig_["storage_provider"].toString()) ||
+         (tempAliBucket_ != initialConfig_["oss_bucket"].toString()) ||
+         (tempAliRegion_ != initialConfig_["oss_region"].toString()) ||
+         (tempAliAk_ != initialConfig_["oss_ak"].toString()) ||
+         (tempAliSk_ != initialConfig_["oss_sk"].toString()) ||
+         (tempCosBucket_ != initialConfig_["cos_bucket"].toString()) ||
+         (tempCosRegion_ != initialConfig_["cos_region"].toString()) ||
+         (tempCosAk_ != initialConfig_["cos_ak"].toString()) ||
+         (tempCosSk_ != initialConfig_["cos_sk"].toString()) ||
          (tencentAppIdEdit_->text() != initialConfig_["tc_appid"].toString()) ||
          (tencentSecretIdEdit_->text() !=
           initialConfig_["tc_sid"].toString()) ||
@@ -185,10 +237,17 @@ void ConfigDialog::saveConfig() {
   cfg.setValue("", "theme", themeSelector_->currentTheme());
   cfg.setValue("", "primary_color", colorSelector_->currentColor());
 
-  cfg.setValue("aliyun_oss", "bucket", ossBucketEdit_->text());
-  cfg.setValue("aliyun_oss", "region", ossRegionEdit_->text());
-  cfg.setValue("aliyun_oss", "access_key_id", ossAccessKeyEdit_->text());
-  cfg.setValue("aliyun_oss", "access_key_secret", ossSecretKeyEdit_->text());
+  cfg.setValue("storage", "provider", storageProviderCombo_->currentData().toString());
+
+  cfg.setValue("aliyun_oss", "bucket", tempAliBucket_);
+  cfg.setValue("aliyun_oss", "region", tempAliRegion_);
+  cfg.setValue("aliyun_oss", "access_key_id", tempAliAk_);
+  cfg.setValue("aliyun_oss", "access_key_secret", tempAliSk_);
+
+  cfg.setValue("tencent_cos", "bucket", tempCosBucket_);
+  cfg.setValue("tencent_cos", "region", tempCosRegion_);
+  cfg.setValue("tencent_cos", "secret_id", tempCosAk_);
+  cfg.setValue("tencent_cos", "secret_key", tempCosSk_);
 
   cfg.setValue("tencent_asr", "app_id", tencentAppIdEdit_->text());
   cfg.setValue("tencent_asr", "secret_id", tencentSecretIdEdit_->text());
@@ -203,10 +262,15 @@ void ConfigDialog::saveConfig() {
   initialConfig_["language"] = langCombo_->currentData().toString();
   initialConfig_["theme"] = themeSelector_->currentTheme();
   initialConfig_["primary_color"] = colorSelector_->currentColor();
-  initialConfig_["oss_bucket"] = ossBucketEdit_->text();
-  initialConfig_["oss_region"] = ossRegionEdit_->text();
-  initialConfig_["oss_ak"] = ossAccessKeyEdit_->text();
-  initialConfig_["oss_sk"] = ossSecretKeyEdit_->text();
+  initialConfig_["storage_provider"] = storageProviderCombo_->currentData().toString();
+  initialConfig_["oss_bucket"] = tempAliBucket_;
+  initialConfig_["oss_region"] = tempAliRegion_;
+  initialConfig_["oss_ak"] = tempAliAk_;
+  initialConfig_["oss_sk"] = tempAliSk_;
+  initialConfig_["cos_bucket"] = tempCosBucket_;
+  initialConfig_["cos_region"] = tempCosRegion_;
+  initialConfig_["cos_ak"] = tempCosAk_;
+  initialConfig_["cos_sk"] = tempCosSk_;
   initialConfig_["tc_appid"] = tencentAppIdEdit_->text();
   initialConfig_["tc_sid"] = tencentSecretIdEdit_->text();
   initialConfig_["tc_skey"] = tencentSecretKeyEdit_->text();
@@ -284,9 +348,9 @@ void ConfigDialog::retranslateUi() {
   stProvLabel_->setText(tr("存储提供商"));
   bucketLabel_->setText(tr("存储桶 (Bucket)"));
   regionLabel_->setText(tr("地域 (Region)"));
-  akLabel_->setText(tr("访问密钥 ID (Access Key ID)"));
-  skLabel_->setText(tr("访问密钥 (Access Key Secret)"));
   storageProviderCombo_->setItemText(0, tr("阿里云 OSS"));
+  storageProviderCombo_->setItemText(1, tr("腾讯云 COS"));
+  updateStorageLabels(storageProviderCombo_->currentData().toString());
 
   // ASR page
   asrProvLabel_->setText(tr("识别提供商"));
@@ -424,6 +488,7 @@ void ConfigDialog::setupUi() {
   storageProviderCombo_ = new QComboBox(storagePage);
   storageProviderCombo_->setFixedHeight(32);
   storageProviderCombo_->addItem(tr("阿里云 OSS"), "aliyun_oss");
+  storageProviderCombo_->addItem(tr("腾讯云 COS"), "tencent_cos");
   stLayout->addWidget(storageProviderCombo_);
 
   auto *bucketLabel = new QLabel(tr("存储桶 (Bucket)"), storagePage);
@@ -595,4 +660,39 @@ void ConfigDialog::setupUi() {
     }
   });
   sidebarList_->setCurrentRow(0);
+}
+
+void ConfigDialog::updateStorageFields(const QString &provider) {
+  if (provider == "aliyun_oss") {
+    ossBucketEdit_->setText(tempAliBucket_);
+    ossRegionEdit_->setText(tempAliRegion_);
+    ossAccessKeyEdit_->setText(tempAliAk_);
+    ossSecretKeyEdit_->setText(tempAliSk_);
+  } else if (provider == "tencent_cos") {
+    ossBucketEdit_->setText(tempCosBucket_);
+    ossRegionEdit_->setText(tempCosRegion_);
+    ossAccessKeyEdit_->setText(tempCosAk_);
+    ossSecretKeyEdit_->setText(tempCosSk_);
+  }
+}
+
+void ConfigDialog::updateStorageLabels(const QString &provider) {
+  if (provider == "aliyun_oss") {
+    akLabel_->setText(tr("访问密钥 ID (Access Key ID)"));
+    skLabel_->setText(tr("访问密钥 (Access Key Secret)"));
+  } else if (provider == "tencent_cos") {
+    akLabel_->setText(tr("密钥 ID (Secret ID)"));
+    skLabel_->setText(tr("密钥 (Secret Key)"));
+  }
+}
+
+void ConfigDialog::onStorageProviderChanged(const QString &) {
+  QString newProvider = storageProviderCombo_->currentData().toString();
+  if (newProvider == currentProvider_) {
+    return;
+  }
+  currentProvider_ = newProvider;
+  updateStorageFields(currentProvider_);
+  updateStorageLabels(currentProvider_);
+  checkDirtyState();
 }

@@ -31,6 +31,15 @@ public:
   QString ossBucket() const;
   QString ossRegion() const;
 
+  // Storage Provider
+  QString storageProvider() const;
+
+  // Tencent COS
+  QString cosSecretId() const;
+  QString cosSecretKey() const;
+  QString cosBucket() const;
+  QString cosRegion() const;
+
   QString getString(const QString &group, const QString &key) const;
   void setValue(const QString &group, const QString &key,
                 const QVariant &value);

@@ -41,6 +41,9 @@ private:
   void saveConfig();
   void retranslateUi();
   bool isDirty() const;
+  void updateStorageFields(const QString &provider);
+  void updateStorageLabels(const QString &provider);
+  void onStorageProviderChanged(const QString &provider);
 
   QWK::WidgetWindowAgent *windowAgent = nullptr;
   QFrame *titleBar = nullptr;
@@ -93,4 +96,15 @@ private:
   QPushButton *btnCancel_;
 
   QVariantMap initialConfig_;
+
+  QString currentProvider_;
+  QString tempAliBucket_;
+  QString tempAliRegion_;
+  QString tempAliAk_;
+  QString tempAliSk_;
+
+  QString tempCosBucket_;
+  QString tempCosRegion_;
+  QString tempCosAk_;
+  QString tempCosSk_;
 };
