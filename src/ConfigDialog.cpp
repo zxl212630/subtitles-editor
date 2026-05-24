@@ -3,6 +3,7 @@
 #include "PaletteSelectors.h"
 #include "ThemeManager.h"
 #include "TranslationManager.h"
+#include <QAction>
 #include <QBoxLayout>
 #include <QComboBox>
 #include <QDebug>
@@ -18,6 +19,21 @@
 #include <QSpinBox>
 #include <QComboBox>
 #include <QWindowKit/QWKWidgets/widgetwindowagent.h>
+#include <QToolButton>
+
+namespace {
+QIcon createEyeIcon(bool open) {
+  QIcon icon;
+  if (open) {
+    icon.addFile(":/icons/eye-open.svg", QSize(), QIcon::Normal);
+    icon.addFile(":/icons/eye-open-hover.svg", QSize(), QIcon::Active);
+  } else {
+    icon.addFile(":/icons/eye-close.svg", QSize(), QIcon::Normal);
+    icon.addFile(":/icons/eye-close-hover.svg", QSize(), QIcon::Active);
+  }
+  return icon;
+}
+} // namespace
 
 ConfigDialog::ConfigDialog(QWidget *parent) : QDialog(parent) {
   setWindowTitle(tr("设置"));
@@ -190,6 +206,16 @@ void ConfigDialog::loadConfig() {
   // Sync title
   if (sidebarList_->currentItem()) {
     titleRightLabel->setText(sidebarList_->currentItem()->text());
+  }
+
+  // 重置密钥框为密文显示，小眼睛为闭眼
+  ossSecretKeyEdit_->setEchoMode(QLineEdit::Password);
+  if (ossEyeAction_) {
+    ossEyeAction_->setIcon(createEyeIcon(false));
+  }
+  tencentSecretKeyEdit_->setEchoMode(QLineEdit::Password);
+  if (asrEyeAction_) {
+    asrEyeAction_->setIcon(createEyeIcon(false));
   }
 
   checkDirtyState();
@@ -524,6 +550,20 @@ void ConfigDialog::setupUi() {
   ossSecretKeyEdit_->setEchoMode(QLineEdit::Password);
   stLayout->addWidget(ossSecretKeyEdit_);
 
+  ossEyeAction_ = ossSecretKeyEdit_->addAction(createEyeIcon(false), QLineEdit::TrailingPosition);
+  connect(ossEyeAction_, &QAction::triggered, this, [this]() {
+    if (ossSecretKeyEdit_->echoMode() == QLineEdit::Password) {
+      ossSecretKeyEdit_->setEchoMode(QLineEdit::Normal);
+      ossEyeAction_->setIcon(createEyeIcon(true));
+    } else {
+      ossSecretKeyEdit_->setEchoMode(QLineEdit::Password);
+      ossEyeAction_->setIcon(createEyeIcon(false));
+    }
+  });
+  for (auto *btn : ossSecretKeyEdit_->findChildren<QToolButton *>()) {
+    btn->setCursor(Qt::PointingHandCursor);
+  }
+
   stLayout->addStretch();
   stackedWidget_->addWidget(storagePage);
 
@@ -568,6 +608,20 @@ void ConfigDialog::setupUi() {
   tencentSecretKeyEdit_->setFixedHeight(32);
   tencentSecretKeyEdit_->setEchoMode(QLineEdit::Password);
   asrLayout->addWidget(tencentSecretKeyEdit_);
+
+  asrEyeAction_ = tencentSecretKeyEdit_->addAction(createEyeIcon(false), QLineEdit::TrailingPosition);
+  connect(asrEyeAction_, &QAction::triggered, this, [this]() {
+    if (tencentSecretKeyEdit_->echoMode() == QLineEdit::Password) {
+      tencentSecretKeyEdit_->setEchoMode(QLineEdit::Normal);
+      asrEyeAction_->setIcon(createEyeIcon(true));
+    } else {
+      tencentSecretKeyEdit_->setEchoMode(QLineEdit::Password);
+      asrEyeAction_->setIcon(createEyeIcon(false));
+    }
+  });
+  for (auto *btn : tencentSecretKeyEdit_->findChildren<QToolButton *>()) {
+    btn->setCursor(Qt::PointingHandCursor);
+  }
 
   speakerDiarizationLabel_ = new QLabel(tr("说话人识别"), asrPage);
   speakerDiarizationLabel_->setObjectName("ConfigFieldLabel");
@@ -692,6 +746,13 @@ void ConfigDialog::onStorageProviderChanged(const QString &) {
     return;
   }
   currentProvider_ = newProvider;
+
+  // 切换存储提供商时，重置密钥框为密文显示，小眼睛为闭眼
+  ossSecretKeyEdit_->setEchoMode(QLineEdit::Password);
+  if (ossEyeAction_) {
+    ossEyeAction_->setIcon(createEyeIcon(false));
+  }
+
   updateStorageFields(currentProvider_);
   updateStorageLabels(currentProvider_);
   checkDirtyState();

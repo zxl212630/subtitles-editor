@@ -16,6 +16,10 @@
         <file>icons/resize-left.svg</file>
         <file>icons/resize-right.svg</file>
         <file>icons/settings.svg</file>
+        <file>icons/eye-open.svg</file>
+        <file>icons/eye-close.svg</file>
+        <file>icons/eye-open-hover.svg</file>
+        <file>icons/eye-close-hover.svg</file>
         <file>icons/export.svg</file>
         <file>icons/asr_video_base.svg</file>
         <file>icons/asr_cloud.svg</file>

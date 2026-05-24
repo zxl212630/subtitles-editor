@@ -147,6 +147,21 @@ QLineEdit:focus, QComboBox:focus, QComboBox:on, QSpinBox:focus {
     border: 1px solid @primary_color;
 }
 
+QLineEdit QToolButton {
+    background-color: transparent;
+    border: none;
+    margin-right: 4px;
+}
+
+QLineEdit QToolButton:hover {
+    background-color: rgba(255, 255, 255, 0.08);
+    border-radius: 4px;
+}
+
+QLineEdit QToolButton:pressed {
+    background-color: rgba(255, 255, 255, 0.15);
+}
+
 /* QSpinBox Buttons Styling */
 QSpinBox::up-button {
     subcontrol-origin: border;

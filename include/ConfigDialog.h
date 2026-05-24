@@ -12,6 +12,7 @@ class QCheckBox;
 class QSpinBox;
 class ThemeSelectorWidget;
 class ColorSelectorWidget;
+class QAction;
 
 namespace QWK {
 class WidgetWindowAgent;
@@ -107,4 +108,7 @@ private:
   QString tempCosRegion_;
   QString tempCosAk_;
   QString tempCosSk_;
+
+  QAction *ossEyeAction_ = nullptr;
+  QAction *asrEyeAction_ = nullptr;
 };
