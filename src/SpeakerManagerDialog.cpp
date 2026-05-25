@@ -1,25 +1,26 @@
 #include "SpeakerManagerDialog.h"
 #include "ThemeManager.h"
 #include "TranslationManager.h"
-#include <QVBoxLayout>
-#include <QHBoxLayout>
+#include <QComboBox>
+#include <QDir>
+#include <QFileDialog>
+#include <QFrame>
 #include <QGridLayout>
-#include <QListWidget>
+#include <QHBoxLayout>
+#include <QIcon>
+#include <QLabel>
 #include <QLineEdit>
+#include <QListWidget>
+#include <QPainter>
 #include <QPushButton>
 #include <QSpinBox>
-#include <QComboBox>
-#include <QLabel>
-#include <QFileDialog>
-#include <QIcon>
-#include <QDir>
-#include <QPainter>
 #include <QStyleOptionViewItem>
+#include <QVBoxLayout>
 #include <QWindowKit/QWKWidgets/widgetwindowagent.h>
-#include <QFrame>
 #include <algorithm>
 
-SpeakerManagerDialog::SpeakerManagerDialog(SubtitleTrack *track, QWidget *parent)
+SpeakerManagerDialog::SpeakerManagerDialog(SubtitleTrack *track,
+                                           QWidget *parent)
     : QDialog(parent), track_(track) {
   setMinimumSize(720, 520);
   setObjectName("SpeakerManagerDialog");
@@ -33,35 +34,38 @@ SpeakerManagerDialog::SpeakerManagerDialog(SubtitleTrack *track, QWidget *parent
   loadSettings();
 
   // Connect actions
-  connect(browseFolderBtn_, &QPushButton::clicked, this, &SpeakerManagerDialog::onBrowseFolder);
-  connect(addBtn_, &QPushButton::clicked, this, &SpeakerManagerDialog::onAddSpeaker);
-  connect(removeBtn_, &QPushButton::clicked, this, &SpeakerManagerDialog::onRemoveSpeaker);
-  connect(saveBtn_, &QPushButton::clicked, this, &SpeakerManagerDialog::onSaveAndApply);
-  connect(cancelBtn_, &QPushButton::clicked, this, &SpeakerManagerDialog::onCancel);
+  connect(browseFolderBtn_, &QPushButton::clicked, this,
+          &SpeakerManagerDialog::onBrowseFolder);
+  connect(addBtn_, &QPushButton::clicked, this,
+          &SpeakerManagerDialog::onAddSpeaker);
+  connect(removeBtn_, &QPushButton::clicked, this,
+          &SpeakerManagerDialog::onRemoveSpeaker);
+  connect(saveBtn_, &QPushButton::clicked, this,
+          &SpeakerManagerDialog::onSaveAndApply);
+  connect(cancelBtn_, &QPushButton::clicked, this,
+          &SpeakerManagerDialog::onCancel);
 
-  connect(speakerList_, &QListWidget::itemSelectionChanged, this, &SpeakerManagerDialog::onSpeakerSelectionChanged);
-  connect(nameEdit_, &QLineEdit::textChanged, this, [this](const QString &text) {
-    onNameChanged(text);
-  });
-  connect(imageCombo_, &QComboBox::currentTextChanged, this, [this](const QString &text) {
-    onImageFileChanged(text);
-  });
-  connect(drawModeCombo_, &QComboBox::currentIndexChanged, this, [this](int index) {
-    onDrawModeChanged(index);
-  });
+  connect(speakerList_, &QListWidget::itemSelectionChanged, this,
+          &SpeakerManagerDialog::onSpeakerSelectionChanged);
+  connect(nameEdit_, &QLineEdit::textChanged, this,
+          [this](const QString &text) { onNameChanged(text); });
+  connect(imageCombo_, &QComboBox::currentTextChanged, this,
+          [this](const QString &text) { onImageFileChanged(text); });
+  connect(drawModeCombo_, &QComboBox::currentIndexChanged, this,
+          [this](int index) { onDrawModeChanged(index); });
 
-  auto marginSpins = {marginLeftSpin_, marginRightSpin_, marginTopSpin_, marginBottomSpin_};
+  auto marginSpins = {marginLeftSpin_, marginRightSpin_, marginTopSpin_,
+                      marginBottomSpin_};
   for (auto *spin : marginSpins) {
-    connect(spin, &QSpinBox::valueChanged, this, [this](int value) {
-      onMarginChanged(value);
-    });
+    connect(spin, &QSpinBox::valueChanged, this,
+            [this](int value) { onMarginChanged(value); });
   }
 
   // Connect theme and language change
-  connect(&ThemeManager::instance(), &ThemeManager::themeChanged, this, &SpeakerManagerDialog::updateTheme);
-  connect(&TranslationManager::instance(), &TranslationManager::languageChanged, this, [this]() {
-    retranslateUi();
-  });
+  connect(&ThemeManager::instance(), &ThemeManager::themeChanged, this,
+          &SpeakerManagerDialog::updateTheme);
+  connect(&TranslationManager::instance(), &TranslationManager::languageChanged,
+          this, [this]() { retranslateUi(); });
 
   windowAgent->setTitleBar(titleBar);
 }
@@ -116,22 +120,22 @@ void SpeakerManagerDialog::setupUi() {
   folderLabel_ = new QLabel(topSettingsFrame);
   folderLabel_->setObjectName("ConfigFieldLabel");
   folderLabel_->setFixedWidth(100);
-  
+
   auto *editBtnRow = new QHBoxLayout();
   editBtnRow->setContentsMargins(0, 0, 0, 0);
   editBtnRow->setSpacing(0);
-  
+
   bgFolderEdit_ = new QLineEdit(topSettingsFrame);
   bgFolderEdit_->setObjectName("SpeakerFolderEdit");
   bgFolderEdit_->setReadOnly(true);
-  
+
   browseFolderBtn_ = new QPushButton(topSettingsFrame);
   browseFolderBtn_->setObjectName("SpeakerBrowseButton");
   browseFolderBtn_->setFixedWidth(80);
-  
+
   editBtnRow->addWidget(bgFolderEdit_, 1);
   editBtnRow->addWidget(browseFolderBtn_);
-  
+
   folderRow->addWidget(folderLabel_);
   folderRow->addLayout(editBtnRow, 1);
   topLayout->addLayout(folderRow);
@@ -143,7 +147,8 @@ void SpeakerManagerDialog::setupUi() {
   marginLabel_->setFixedWidth(100);
   marginRow->addWidget(marginLabel_);
 
-  auto createMarginSpin = [this, topSettingsFrame](QLabel *&labelField, QSpinBox *&spinField) {
+  auto createMarginSpin = [this, topSettingsFrame](QLabel *&labelField,
+                                                   QSpinBox *&spinField) {
     auto *layout = new QHBoxLayout();
     labelField = new QLabel(topSettingsFrame);
     labelField->setStyleSheet("color: rgba(255, 255, 255, 0.6);");
@@ -169,7 +174,7 @@ void SpeakerManagerDialog::setupUi() {
 
   auto *bottomLayout = createMarginSpin(marginBottomLabel_, marginBottomSpin_);
   marginRow->addLayout(bottomLayout);
-  
+
   marginRow->addStretch();
   topLayout->addLayout(marginRow);
 
@@ -239,16 +244,15 @@ void SpeakerManagerDialog::setupUi() {
   prevLabelTitle_ = new QLabel(propertiesWidget_);
   prevLabelTitle_->setObjectName("ConfigFieldLabel");
   rightLayoutProperties->addWidget(prevLabelTitle_);
-  
+
   previewLabel_ = new QLabel(propertiesWidget_);
   previewLabel_->setFixedHeight(100);
   previewLabel_->setAlignment(Qt::AlignCenter);
-  previewLabel_->setStyleSheet(
-      "QLabel {"
-      "  border: 1px solid rgba(255, 255, 255, 0.1);"
-      "  border-radius: 6px;"
-      "  background-color: rgba(0, 0, 0, 0.2);"
-      "}");
+  previewLabel_->setStyleSheet("QLabel {"
+                               "  border: 1px solid rgba(255, 255, 255, 0.1);"
+                               "  border-radius: 6px;"
+                               "  background-color: rgba(0, 0, 0, 0.2);"
+                               "}");
   rightLayoutProperties->addWidget(previewLabel_, 1);
 
   splitLayout->addWidget(propertiesWidget_, 1);
@@ -280,7 +284,8 @@ void SpeakerManagerDialog::retranslateUi() {
   if (folderLabel_)
     folderLabel_->setText(tr("Background Folder:"));
   if (bgFolderEdit_)
-    bgFolderEdit_->setPlaceholderText(tr("Select folder containing background images..."));
+    bgFolderEdit_->setPlaceholderText(
+        tr("Select folder containing background images..."));
   if (browseFolderBtn_)
     browseFolderBtn_->setText(tr("Browse..."));
   if (marginLabel_)
@@ -363,7 +368,8 @@ void SpeakerManagerDialog::scanImageFiles() {
   QString folder = bgFolderEdit_->text();
   if (!folder.isEmpty() && QDir(folder).exists()) {
     QDir dir(folder);
-    availableImages_ = dir.entryList({"*.png", "*.jpg", "*.jpeg", "*.bmp"}, QDir::Files);
+    availableImages_ =
+        dir.entryList({"*.png", "*.jpg", "*.jpeg", "*.bmp"}, QDir::Files);
   }
   populateImageCombo();
 }
@@ -387,9 +393,9 @@ void SpeakerManagerDialog::populateSpeakerList() {
 
   for (int id : ids) {
     const auto &spk = tempSpeakers_[id];
-    QString text = spk.name.isEmpty() 
-                   ? QString("Speaker %1").arg(id)
-                   : QString("%1 (%2)").arg(spk.name).arg(id);
+    QString text = spk.name.isEmpty()
+                       ? QString("Speaker %1").arg(id)
+                       : QString("%1 (%2)").arg(spk.name).arg(id);
     auto *item = new QListWidgetItem(text, speakerList_);
     item->setData(Qt::UserRole, id);
     speakerList_->addItem(item);
@@ -456,7 +462,8 @@ void SpeakerManagerDialog::onAddSpeaker() {
 
 void SpeakerManagerDialog::onRemoveSpeaker() {
   QListWidgetItem *curItem = speakerList_->currentItem();
-  if (!curItem) return;
+  if (!curItem)
+    return;
 
   int id = curItem->data(Qt::UserRole).toInt();
   tempSpeakers_.remove(id);
@@ -483,9 +490,11 @@ void SpeakerManagerDialog::onBrowseFolder() {
 }
 
 void SpeakerManagerDialog::onImageFileChanged(const QString &fileName) {
-  if (loading_) return;
+  if (loading_)
+    return;
   QListWidgetItem *curItem = speakerList_->currentItem();
-  if (!curItem) return;
+  if (!curItem)
+    return;
 
   int id = curItem->data(Qt::UserRole).toInt();
   tempSpeakers_[id].bgImageFile = imageCombo_->currentData().toString();
@@ -493,9 +502,11 @@ void SpeakerManagerDialog::onImageFileChanged(const QString &fileName) {
 }
 
 void SpeakerManagerDialog::onDrawModeChanged(int index) {
-  if (loading_) return;
+  if (loading_)
+    return;
   QListWidgetItem *curItem = speakerList_->currentItem();
-  if (!curItem) return;
+  if (!curItem)
+    return;
 
   int id = curItem->data(Qt::UserRole).toInt();
   tempSpeakers_[id].is9Patch = (drawModeCombo_->currentData().toInt() == 0);
@@ -503,9 +514,11 @@ void SpeakerManagerDialog::onDrawModeChanged(int index) {
 }
 
 void SpeakerManagerDialog::onNameChanged(const QString &name) {
-  if (loading_) return;
+  if (loading_)
+    return;
   QListWidgetItem *curItem = speakerList_->currentItem();
-  if (!curItem) return;
+  if (!curItem)
+    return;
 
   int id = curItem->data(Qt::UserRole).toInt();
   tempSpeakers_[id].name = name;
@@ -513,14 +526,17 @@ void SpeakerManagerDialog::onNameChanged(const QString &name) {
 }
 
 void SpeakerManagerDialog::onMarginChanged(int /*value*/) {
-  if (loading_) return;
-  tempMargins_ = QMargins(marginLeftSpin_->value(), marginTopSpin_->value(),
-                          marginRightSpin_->value(), marginBottomSpin_->value());
+  if (loading_)
+    return;
+  tempMargins_ =
+      QMargins(marginLeftSpin_->value(), marginTopSpin_->value(),
+               marginRightSpin_->value(), marginBottomSpin_->value());
   updatePreviewImage();
 }
 
 // 辅助方法：模拟九宫格拉伸绘制预览
-static void drawNinePatchPreviewHelper(QPainter &painter, const QImage &src, const QRect &target, const QMargins &m) {
+static void drawNinePatchPreviewHelper(QPainter &painter, const QImage &src,
+                                       const QRect &target, const QMargins &m) {
   int sw = src.width();
   int sh = src.height();
   int tw = target.width();
@@ -567,7 +583,8 @@ static void drawNinePatchPreviewHelper(QPainter &painter, const QImage &src, con
 }
 
 void SpeakerManagerDialog::updatePreviewImage() {
-  if (loading_) return;
+  if (loading_)
+    return;
 
   QString imgName = imageCombo_->currentData().toString();
   if (imgName.isEmpty()) {
@@ -599,7 +616,7 @@ void SpeakerManagerDialog::updatePreviewImage() {
   painter.fillRect(0, 0, pw, ph, QColor(0, 0, 0, 100));
 
   bool is9Patch = (drawModeCombo_->currentData().toInt() == 0);
-  
+
   // 模拟的文字边框大小为 180 x 36
   QRect textRect((pw - 180) / 2, (ph - 36) / 2, 180, 36);
   // 向外扩展的背景大小
@@ -621,7 +638,8 @@ void SpeakerManagerDialog::updatePreviewImage() {
   font.setPointSize(10);
   font.setBold(true);
   painter.setFont(font);
-  painter.drawText(textRect, Qt::AlignCenter, tr("Sample Subtitle Background Preview"));
+  painter.drawText(textRect, Qt::AlignCenter,
+                   tr("Sample Subtitle Background Preview"));
 
   // 绘制九宫格边距虚线（浅红）
   if (is9Patch) {
@@ -656,9 +674,7 @@ void SpeakerManagerDialog::onSaveAndApply() {
   accept();
 }
 
-void SpeakerManagerDialog::onCancel() {
-  reject();
-}
+void SpeakerManagerDialog::onCancel() { reject(); }
 
 void SpeakerManagerDialog::updateTheme() {
   // 当主题变更时更新预览

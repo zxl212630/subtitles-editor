@@ -601,7 +601,9 @@ void AppWindow::onExportRequested() {
     return;
   }
 
-  QString filter = tr("SRT 字幕 (*.srt);;纯文本 (*.txt)");
+  QString filter =
+      tr("SRT 字幕 (*.srt);;纯文本 (*.txt);;ASS 样式字幕 (*.ass);;Premiere XML "
+         "(*.xml);;Final Cut Pro XML (*.fcpxml)");
   QString selectedFilter;
   QString filePath = QFileDialog::getSaveFileName(
       this, tr("导出字幕"), QString(), filter, &selectedFilter);
@@ -611,16 +613,50 @@ void AppWindow::onExportRequested() {
 
   // Ensure correct extension based on selected filter
   QString ext = QFileInfo(filePath).suffix().toLower();
-  bool isSrt = selectedFilter.contains("*.srt", Qt::CaseInsensitive);
   if (ext.isEmpty()) {
-    filePath += isSrt ? ".srt" : ".txt";
+    if (selectedFilter.contains("*.srt", Qt::CaseInsensitive)) {
+      filePath += ".srt";
+      ext = "srt";
+    } else if (selectedFilter.contains("*.txt", Qt::CaseInsensitive)) {
+      filePath += ".txt";
+      ext = "txt";
+    } else if (selectedFilter.contains("*.ass", Qt::CaseInsensitive)) {
+      filePath += ".ass";
+      ext = "ass";
+    } else if (selectedFilter.contains("*.xml", Qt::CaseInsensitive)) {
+      filePath += ".xml";
+      ext = "xml";
+    } else if (selectedFilter.contains("*.fcpxml", Qt::CaseInsensitive)) {
+      filePath += ".fcpxml";
+      ext = "fcpxml";
+    }
+  }
+
+  // 提取视频的属性
+  QSize videoSize;
+  double fps = 25.0;
+  if (d->mediaPlayer) {
+    videoSize = d->mediaPlayer->videoSize();
+    double mediaFps = d->mediaPlayer->decoderFps();
+    if (mediaFps > 0.0) {
+      fps = mediaFps;
+    }
   }
 
   bool success = false;
-  if (isSrt) {
+  if (ext == "srt") {
     success = SubtitleExporter::exportToSRT(*d->subtitleTrack, filePath);
-  } else {
+  } else if (ext == "txt") {
     success = SubtitleExporter::exportToTXT(*d->subtitleTrack, filePath);
+  } else if (ext == "ass") {
+    success =
+        SubtitleExporter::exportToASS(*d->subtitleTrack, filePath, videoSize);
+  } else if (ext == "xml") {
+    success = SubtitleExporter::exportToPremiereXML(*d->subtitleTrack, filePath,
+                                                    fps, videoSize);
+  } else if (ext == "fcpxml") {
+    success = SubtitleExporter::exportToFCPXML(*d->subtitleTrack, filePath, fps,
+                                               videoSize);
   }
 
   if (!success) {

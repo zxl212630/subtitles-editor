@@ -5,6 +5,7 @@
 #include "TranslationManager.h"
 #include <QAction>
 #include <QBoxLayout>
+#include <QCheckBox>
 #include <QComboBox>
 #include <QDebug>
 #include <QFileDialog>
@@ -13,13 +14,11 @@
 #include <QLineEdit>
 #include <QListWidget>
 #include <QPushButton>
+#include <QSpinBox>
 #include <QStackedWidget>
 #include <QStandardPaths>
-#include <QCheckBox>
-#include <QSpinBox>
-#include <QComboBox>
-#include <QWindowKit/QWKWidgets/widgetwindowagent.h>
 #include <QToolButton>
+#include <QWindowKit/QWKWidgets/widgetwindowagent.h>
 
 namespace {
 QIcon createEyeIcon(bool open) {
@@ -65,36 +64,51 @@ ConfigDialog::ConfigDialog(QWidget *parent) : QDialog(parent) {
   connect(asrProviderCombo_, &QComboBox::currentTextChanged, this,
           &ConfigDialog::checkDirtyState);
 
-  auto lineEdits = {tencentAppIdEdit_,    tencentSecretIdEdit_,
+  auto lineEdits = {tencentAppIdEdit_, tencentSecretIdEdit_,
                     tencentSecretKeyEdit_};
   for (auto *le : lineEdits) {
     connect(le, &QLineEdit::textChanged, this, &ConfigDialog::checkDirtyState);
   }
 
-  connect(ossBucketEdit_, &QLineEdit::textChanged, this, [this](const QString &text) {
-    if (currentProvider_ == "aliyun_oss") tempAliBucket_ = text;
-    else if (currentProvider_ == "tencent_cos") tempCosBucket_ = text;
-    checkDirtyState();
-  });
-  connect(ossRegionEdit_, &QLineEdit::textChanged, this, [this](const QString &text) {
-    if (currentProvider_ == "aliyun_oss") tempAliRegion_ = text;
-    else if (currentProvider_ == "tencent_cos") tempCosRegion_ = text;
-    checkDirtyState();
-  });
-  connect(ossAccessKeyEdit_, &QLineEdit::textChanged, this, [this](const QString &text) {
-    if (currentProvider_ == "aliyun_oss") tempAliAk_ = text;
-    else if (currentProvider_ == "tencent_cos") tempCosAk_ = text;
-    checkDirtyState();
-  });
-  connect(ossSecretKeyEdit_, &QLineEdit::textChanged, this, [this](const QString &text) {
-    if (currentProvider_ == "aliyun_oss") tempAliSk_ = text;
-    else if (currentProvider_ == "tencent_cos") tempCosSk_ = text;
-    checkDirtyState();
-  });
+  connect(ossBucketEdit_, &QLineEdit::textChanged, this,
+          [this](const QString &text) {
+            if (currentProvider_ == "aliyun_oss")
+              tempAliBucket_ = text;
+            else if (currentProvider_ == "tencent_cos")
+              tempCosBucket_ = text;
+            checkDirtyState();
+          });
+  connect(ossRegionEdit_, &QLineEdit::textChanged, this,
+          [this](const QString &text) {
+            if (currentProvider_ == "aliyun_oss")
+              tempAliRegion_ = text;
+            else if (currentProvider_ == "tencent_cos")
+              tempCosRegion_ = text;
+            checkDirtyState();
+          });
+  connect(ossAccessKeyEdit_, &QLineEdit::textChanged, this,
+          [this](const QString &text) {
+            if (currentProvider_ == "aliyun_oss")
+              tempAliAk_ = text;
+            else if (currentProvider_ == "tencent_cos")
+              tempCosAk_ = text;
+            checkDirtyState();
+          });
+  connect(ossSecretKeyEdit_, &QLineEdit::textChanged, this,
+          [this](const QString &text) {
+            if (currentProvider_ == "aliyun_oss")
+              tempAliSk_ = text;
+            else if (currentProvider_ == "tencent_cos")
+              tempCosSk_ = text;
+            checkDirtyState();
+          });
 
-  connect(speakerDiarizationCheck_, &QCheckBox::stateChanged, this, &ConfigDialog::checkDirtyState);
-  connect(sentenceMaxLengthSpin_, qOverload<int>(&QSpinBox::valueChanged), this, &ConfigDialog::checkDirtyState);
-  connect(engineModelTypeCombo_, &QComboBox::currentTextChanged, this, &ConfigDialog::checkDirtyState);
+  connect(speakerDiarizationCheck_, &QCheckBox::stateChanged, this,
+          &ConfigDialog::checkDirtyState);
+  connect(sentenceMaxLengthSpin_, qOverload<int>(&QSpinBox::valueChanged), this,
+          &ConfigDialog::checkDirtyState);
+  connect(engineModelTypeCombo_, &QComboBox::currentTextChanged, this,
+          &ConfigDialog::checkDirtyState);
 
   windowAgent->setTitleBar(titleBar);
 }
@@ -199,9 +213,12 @@ void ConfigDialog::loadConfig() {
   tencentSecretIdEdit_->setText(initialConfig_["tc_sid"].toString());
   tencentSecretKeyEdit_->setText(initialConfig_["tc_skey"].toString());
 
-  speakerDiarizationCheck_->setChecked(initialConfig_["tc_speaker_diarization"].toBool());
-  sentenceMaxLengthSpin_->setValue(initialConfig_["tc_sentence_max_length"].toInt());
-  engineModelTypeCombo_->setCurrentIndex(engineModelTypeCombo_->findData(initialConfig_["tc_engine_model_type"].toString()));
+  speakerDiarizationCheck_->setChecked(
+      initialConfig_["tc_speaker_diarization"].toBool());
+  sentenceMaxLengthSpin_->setValue(
+      initialConfig_["tc_sentence_max_length"].toInt());
+  engineModelTypeCombo_->setCurrentIndex(engineModelTypeCombo_->findData(
+      initialConfig_["tc_engine_model_type"].toString()));
 
   // Sync title
   if (sidebarList_->currentItem()) {
@@ -263,7 +280,8 @@ void ConfigDialog::saveConfig() {
   cfg.setValue("", "theme", themeSelector_->currentTheme());
   cfg.setValue("", "primary_color", colorSelector_->currentColor());
 
-  cfg.setValue("storage", "provider", storageProviderCombo_->currentData().toString());
+  cfg.setValue("storage", "provider",
+               storageProviderCombo_->currentData().toString());
 
   cfg.setValue("aliyun_oss", "bucket", tempAliBucket_);
   cfg.setValue("aliyun_oss", "region", tempAliRegion_);
@@ -288,7 +306,8 @@ void ConfigDialog::saveConfig() {
   initialConfig_["language"] = langCombo_->currentData().toString();
   initialConfig_["theme"] = themeSelector_->currentTheme();
   initialConfig_["primary_color"] = colorSelector_->currentColor();
-  initialConfig_["storage_provider"] = storageProviderCombo_->currentData().toString();
+  initialConfig_["storage_provider"] =
+      storageProviderCombo_->currentData().toString();
   initialConfig_["oss_bucket"] = tempAliBucket_;
   initialConfig_["oss_region"] = tempAliRegion_;
   initialConfig_["oss_ak"] = tempAliAk_;
@@ -300,9 +319,11 @@ void ConfigDialog::saveConfig() {
   initialConfig_["tc_appid"] = tencentAppIdEdit_->text();
   initialConfig_["tc_sid"] = tencentSecretIdEdit_->text();
   initialConfig_["tc_skey"] = tencentSecretKeyEdit_->text();
-  initialConfig_["tc_speaker_diarization"] = speakerDiarizationCheck_->isChecked();
+  initialConfig_["tc_speaker_diarization"] =
+      speakerDiarizationCheck_->isChecked();
   initialConfig_["tc_sentence_max_length"] = sentenceMaxLengthSpin_->value();
-  initialConfig_["tc_engine_model_type"] = engineModelTypeCombo_->currentData().toString();
+  initialConfig_["tc_engine_model_type"] =
+      engineModelTypeCombo_->currentData().toString();
 
   checkDirtyState();
 }
@@ -390,30 +411,47 @@ void ConfigDialog::retranslateUi() {
   maxLenLabel_->setText(tr("单行字幕最大字数"));
   engineLabel_->setText(tr("引擎模型类型"));
 
-  engineModelTypeCombo_->setItemText(0, QString("16k_zh_en(%1)").arg(tr("中英粤+9种方言大模型")));
-  engineModelTypeCombo_->setItemText(1, QString("16k_zh_large(%1)").arg(tr("普方英大模型")));
-  engineModelTypeCombo_->setItemText(2, QString("16k_multi_lang(%1)").arg(tr("多语种大模型")));
-  engineModelTypeCombo_->setItemText(3, QString("16k_zh(%1)").arg(tr("中文普通话通用")));
+  engineModelTypeCombo_->setItemText(
+      0, QString("16k_zh_en(%1)").arg(tr("中英粤+9种方言大模型")));
+  engineModelTypeCombo_->setItemText(
+      1, QString("16k_zh_large(%1)").arg(tr("普方英大模型")));
+  engineModelTypeCombo_->setItemText(
+      2, QString("16k_multi_lang(%1)").arg(tr("多语种大模型")));
+  engineModelTypeCombo_->setItemText(
+      3, QString("16k_zh(%1)").arg(tr("中文普通话通用")));
   engineModelTypeCombo_->setItemText(4, QString("16k_en(%1)").arg(tr("英语")));
-  engineModelTypeCombo_->setItemText(5, QString("16k_en_large(%1)").arg(tr("英语大模型")));
+  engineModelTypeCombo_->setItemText(
+      5, QString("16k_en_large(%1)").arg(tr("英语大模型")));
   engineModelTypeCombo_->setItemText(6, QString("16k_yue(%1)").arg(tr("粤语")));
-  engineModelTypeCombo_->setItemText(7, QString("16k_zh-PY(%1)").arg(tr("中英粤混合")));
-  engineModelTypeCombo_->setItemText(8, QString("16k_zh-TW(%1)").arg(tr("中文繁体")));
+  engineModelTypeCombo_->setItemText(
+      7, QString("16k_zh-PY(%1)").arg(tr("中英粤混合")));
+  engineModelTypeCombo_->setItemText(
+      8, QString("16k_zh-TW(%1)").arg(tr("中文繁体")));
   engineModelTypeCombo_->setItemText(9, QString("16k_ja(%1)").arg(tr("日语")));
   engineModelTypeCombo_->setItemText(10, QString("16k_ko(%1)").arg(tr("韩语")));
-  engineModelTypeCombo_->setItemText(11, QString("16k_vi(%1)").arg(tr("越南语")));
-  engineModelTypeCombo_->setItemText(12, QString("16k_ms(%1)").arg(tr("马来语")));
-  engineModelTypeCombo_->setItemText(13, QString("16k_id(%1)").arg(tr("印度尼西亚语")));
-  engineModelTypeCombo_->setItemText(14, QString("16k_fil(%1)").arg(tr("菲律宾语")));
+  engineModelTypeCombo_->setItemText(11,
+                                     QString("16k_vi(%1)").arg(tr("越南语")));
+  engineModelTypeCombo_->setItemText(12,
+                                     QString("16k_ms(%1)").arg(tr("马来语")));
+  engineModelTypeCombo_->setItemText(
+      13, QString("16k_id(%1)").arg(tr("印度尼西亚语")));
+  engineModelTypeCombo_->setItemText(
+      14, QString("16k_fil(%1)").arg(tr("菲律宾语")));
   engineModelTypeCombo_->setItemText(15, QString("16k_th(%1)").arg(tr("泰语")));
-  engineModelTypeCombo_->setItemText(16, QString("16k_pt(%1)").arg(tr("葡萄牙语")));
-  engineModelTypeCombo_->setItemText(17, QString("16k_tr(%1)").arg(tr("土耳其语")));
-  engineModelTypeCombo_->setItemText(18, QString("16k_ar(%1)").arg(tr("阿拉伯语")));
-  engineModelTypeCombo_->setItemText(19, QString("16k_es(%1)").arg(tr("西班牙语")));
-  engineModelTypeCombo_->setItemText(20, QString("16k_hi(%1)").arg(tr("印地语")));
+  engineModelTypeCombo_->setItemText(16,
+                                     QString("16k_pt(%1)").arg(tr("葡萄牙语")));
+  engineModelTypeCombo_->setItemText(17,
+                                     QString("16k_tr(%1)").arg(tr("土耳其语")));
+  engineModelTypeCombo_->setItemText(18,
+                                     QString("16k_ar(%1)").arg(tr("阿拉伯语")));
+  engineModelTypeCombo_->setItemText(19,
+                                     QString("16k_es(%1)").arg(tr("西班牙语")));
+  engineModelTypeCombo_->setItemText(20,
+                                     QString("16k_hi(%1)").arg(tr("印地语")));
   engineModelTypeCombo_->setItemText(21, QString("16k_fr(%1)").arg(tr("法语")));
   engineModelTypeCombo_->setItemText(22, QString("16k_de(%1)").arg(tr("德语")));
-  engineModelTypeCombo_->setItemText(23, QString("16k_zh_medical(%1)").arg(tr("中文医疗")));
+  engineModelTypeCombo_->setItemText(
+      23, QString("16k_zh_medical(%1)").arg(tr("中文医疗")));
 
   // Footer
   dirtyLabel_->setText(tr("有未保存的更改"));
@@ -550,7 +588,8 @@ void ConfigDialog::setupUi() {
   ossSecretKeyEdit_->setEchoMode(QLineEdit::Password);
   stLayout->addWidget(ossSecretKeyEdit_);
 
-  ossEyeAction_ = ossSecretKeyEdit_->addAction(createEyeIcon(false), QLineEdit::TrailingPosition);
+  ossEyeAction_ = ossSecretKeyEdit_->addAction(createEyeIcon(false),
+                                               QLineEdit::TrailingPosition);
   connect(ossEyeAction_, &QAction::triggered, this, [this]() {
     if (ossSecretKeyEdit_->echoMode() == QLineEdit::Password) {
       ossSecretKeyEdit_->setEchoMode(QLineEdit::Normal);
@@ -609,7 +648,8 @@ void ConfigDialog::setupUi() {
   tencentSecretKeyEdit_->setEchoMode(QLineEdit::Password);
   asrLayout->addWidget(tencentSecretKeyEdit_);
 
-  asrEyeAction_ = tencentSecretKeyEdit_->addAction(createEyeIcon(false), QLineEdit::TrailingPosition);
+  asrEyeAction_ = tencentSecretKeyEdit_->addAction(createEyeIcon(false),
+                                                   QLineEdit::TrailingPosition);
   connect(asrEyeAction_, &QAction::triggered, this, [this]() {
     if (tencentSecretKeyEdit_->echoMode() == QLineEdit::Password) {
       tencentSecretKeyEdit_->setEchoMode(QLineEdit::Normal);
@@ -646,9 +686,11 @@ void ConfigDialog::setupUi() {
   asrLayout->addWidget(engineLabel_);
   engineModelTypeCombo_ = new QComboBox(asrPage);
   engineModelTypeCombo_->setFixedHeight(32);
-  engineModelTypeCombo_->addItem("16k_zh_en(中英粤+9种方言大模型)", "16k_zh_en");
+  engineModelTypeCombo_->addItem("16k_zh_en(中英粤+9种方言大模型)",
+                                 "16k_zh_en");
   engineModelTypeCombo_->addItem("16k_zh_large(普方英大模型)", "16k_zh_large");
-  engineModelTypeCombo_->addItem("16k_multi_lang(多语种大模型)", "16k_multi_lang");
+  engineModelTypeCombo_->addItem("16k_multi_lang(多语种大模型)",
+                                 "16k_multi_lang");
   engineModelTypeCombo_->addItem("16k_zh(中文普通话通用)", "16k_zh");
   engineModelTypeCombo_->addItem("16k_en(英语)", "16k_en");
   engineModelTypeCombo_->addItem("16k_en_large(英语大模型)", "16k_en_large");

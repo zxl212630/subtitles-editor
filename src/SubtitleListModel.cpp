@@ -158,8 +158,8 @@ void SubtitleListModel::onDataChanged() {
     for (int i = 0; i < oldIndices.size(); ++i) {
       int oldIdx = oldIndices[i];
       int newIdx = newIndices[i];
-      if (oldIdx != newIdx || oldIdx >= items.size() || newIdx >= items.size() ||
-          items[oldIdx].id != items[newIdx].id) {
+      if (oldIdx != newIdx || oldIdx >= items.size() ||
+          newIdx >= items.size() || items[oldIdx].id != items[newIdx].id) {
         structureChanged = true;
         break;
       }

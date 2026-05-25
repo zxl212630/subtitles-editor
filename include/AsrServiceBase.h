@@ -12,7 +12,7 @@ public:
     QString text;
     qint64 startMs = 0;
     qint64 endMs = 0;
-    int speakerId = -1;  // 说话人 ID (来自 ASR 的 SpeakerDiarization)
+    int speakerId = -1; // 说话人 ID (来自 ASR 的 SpeakerDiarization)
   };
 
   struct TranscriptResult {

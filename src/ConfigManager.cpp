@@ -61,8 +61,7 @@ bool ConfigManager::isValid() const {
 
   bool valid = check("ffmpeg", "path") && check("tencent_asr", "secret_id") &&
                check("tencent_asr", "secret_key") &&
-               check("tencent_asr", "app_id") &&
-               storageValid;
+               check("tencent_asr", "app_id") && storageValid;
 
   qDebug() << "[ConfigManager] Configuration is valid:" << valid;
   return valid;

@@ -181,20 +181,26 @@ QJsonObject TencentAsrService::payload(const QString &audioUrl) {
   QJsonObject obj;
   obj["ChannelNum"] = 1;
 
-  QString model = engineModelType_.isEmpty() ? ConfigManager::instance().engineModelType() : engineModelType_;
+  QString model = engineModelType_.isEmpty()
+                      ? ConfigManager::instance().engineModelType()
+                      : engineModelType_;
   obj["EngineModelType"] = model;
 
   obj["ResTextFormat"] = 3;
   obj["Url"] = audioUrl;
   obj["SourceType"] = 0; // 0=URL
-  
-  bool enableDiarization = (speakerDiarization_ == -1) ? ConfigManager::instance().speakerDiarization() : (speakerDiarization_ == 1);
+
+  bool enableDiarization = (speakerDiarization_ == -1)
+                               ? ConfigManager::instance().speakerDiarization()
+                               : (speakerDiarization_ == 1);
   obj["SpeakerDiarization"] = enableDiarization ? 1 : 0;
   if (enableDiarization) {
     obj["SpeakerNumber"] = 0;
   }
-  
-  int maxLen = (sentenceMaxLength_ <= 0) ? ConfigManager::instance().sentenceMaxLength() : sentenceMaxLength_;
+
+  int maxLen = (sentenceMaxLength_ <= 0)
+                   ? ConfigManager::instance().sentenceMaxLength()
+                   : sentenceMaxLength_;
   obj["SentenceMaxLength"] = maxLen;
   obj["FilterPunc"] = 1; // 过滤句末标点（去掉末尾标点符号）
   return obj;

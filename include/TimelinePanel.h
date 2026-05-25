@@ -1,9 +1,9 @@
 #pragma once
 
 #include <QPixmap>
-#include <QWidget>
-#include <QSet>
 #include <QPoint>
+#include <QSet>
+#include <QWidget>
 
 class QResizeEvent;
 class QScrollBar;
@@ -38,7 +38,9 @@ public:
   qint64 totalDuration() const { return totalDurationMs_; }
   QString mediaFilePath() const { return mediaFilePath_; }
 
-  void startAsrPipeline(const QString &localPath, const QString &engineModelType, int sentenceMaxLength, bool speakerDiarization);
+  void startAsrPipeline(const QString &localPath,
+                        const QString &engineModelType, int sentenceMaxLength,
+                        bool speakerDiarization);
 
 signals:
   void timeClicked(qint64 ms);

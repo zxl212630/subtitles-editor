@@ -1,11 +1,11 @@
 #include "SubtitleListPanel.h"
+#include "ConfigManager.h"
+#include "SpeakerManagerDialog.h"
 #include "SubtitleListDelegate.h"
 #include "SubtitleListModel.h"
 #include "SubtitleTrack.h"
 #include "ThemeManager.h"
 #include "TranslationManager.h"
-#include "SpeakerManagerDialog.h"
-#include "ConfigManager.h"
 #include <QMenu>
 
 #include <QCoreApplication>
@@ -417,7 +417,8 @@ void SubtitleListPanel::onItemDoubleClicked(const QModelIndex &index) {
 }
 
 void SubtitleListPanel::onTrackItemSelected(const QString &id) {
-  if (!model_ || !listView_) return;
+  if (!model_ || !listView_)
+    return;
   QModelIndex index = model_->indexForId(id);
   if (index.isValid()) {
     if (listView_->currentIndex() != index) {
@@ -468,7 +469,8 @@ bool SubtitleListPanel::eventFilter(QObject *watched, QEvent *event) {
 
         // Determine Edit Zone
         int timecodeWidth = 115;
-        QRect timeRect(option.rect.left() + 12, option.rect.top() + 6, timecodeWidth, option.rect.height() - 12);
+        QRect timeRect(option.rect.left() + 12, option.rect.top() + 6,
+                       timecodeWidth, option.rect.height() - 12);
         if (timeRect.contains(me->pos())) {
           int midY = option.rect.top() + option.rect.height() / 2;
           if (me->pos().y() < midY) {
@@ -638,7 +640,8 @@ void SubtitleListPanel::leaveEvent(QEvent *event) {
 
 void SubtitleListPanel::showSpeakerMenu(const QModelIndex &index,
                                         const QPoint &globalPos) {
-  if (!track_) return;
+  if (!track_)
+    return;
 
   QMenu menu(this);
   QAction *unassignAction = menu.addAction(tr("Unassigned"));
@@ -659,7 +662,8 @@ void SubtitleListPanel::showSpeakerMenu(const QModelIndex &index,
   QAction *manageAction = menu.addAction(tr("⚙️ Manage Speakers..."));
 
   QAction *chosen = menu.exec(globalPos);
-  if (!chosen) return;
+  if (!chosen)
+    return;
 
   if (chosen == manageAction) {
     SpeakerManagerDialog dlg(track_, this);
@@ -669,7 +673,8 @@ void SubtitleListPanel::showSpeakerMenu(const QModelIndex &index,
   if (chosen == newAction) {
     int nextId = 0;
     for (const auto &spk : track_->allSpeakers()) {
-      if (spk.id >= nextId) nextId = spk.id + 1;
+      if (spk.id >= nextId)
+        nextId = spk.id + 1;
     }
     track_->autoRegisterSpeaker(nextId);
     model_->setData(index, nextId, SubtitleListModel::SpeakerIdRole);

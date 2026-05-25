@@ -1,15 +1,15 @@
 #include "SubtitleListDelegate.h"
+#include "ConfigManager.h"
 #include "SubtitleListModel.h"
 #include "SubtitleTrack.h"
 #include "ThemeManager.h"
-#include "ConfigManager.h"
 
 #include <QKeyEvent>
+#include <QLineEdit>
 #include <QMouseEvent>
 #include <QPainter>
 #include <QStyleOptionViewItem>
 #include <QTextEdit>
-#include <QLineEdit>
 
 SubtitleListDelegate::SubtitleListDelegate(QObject *parent)
     : QStyledItemDelegate(parent) {}
@@ -72,7 +72,7 @@ void SubtitleListDelegate::paint(QPainter *painter,
       spkFont.setPointSize(9);
       painter->setFont(spkFont);
       QFontMetrics fm(spkFont);
-      
+
       int textW = fm.horizontalAdvance(speakerLabel) + 12;
       int pillW = qMin(textW, 76);
       int pillH = 20;
@@ -89,7 +89,8 @@ void SubtitleListDelegate::paint(QPainter *painter,
       painter->setRenderHint(QPainter::Antialiasing);
       painter->drawRoundedRect(pillRect, pillH / 2, pillH / 2);
 
-      QColor pillTextColor = speakerId >= 0 ? QColor("#858e9f") : QColor("#6b7280");
+      QColor pillTextColor =
+          speakerId >= 0 ? QColor("#858e9f") : QColor("#6b7280");
       painter->setPen(pillTextColor);
       painter->drawText(pillRect, Qt::AlignCenter, speakerLabel);
     }
@@ -245,7 +246,8 @@ QWidget *
 SubtitleListDelegate::createEditor(QWidget *parent,
                                    const QStyleOptionViewItem & /*option*/,
                                    const QModelIndex &index) const {
-  if (currentEditZone_ == EditZone::StartTime || currentEditZone_ == EditZone::EndTime) {
+  if (currentEditZone_ == EditZone::StartTime ||
+      currentEditZone_ == EditZone::EndTime) {
     auto *editor = new QLineEdit(parent);
     currentEditor_ = editor;
     currentEditingId_ = getIdAtIndex(index);
@@ -342,7 +344,8 @@ void SubtitleListDelegate::setEditorData(QWidget *editor,
     // Logic: Only reset cursor position to end if we don't already have a valid
     // middle-text position for THIS specific item. This protects against
     // re-initialization during click events.
-    if (currentEditingId_ != id || lastCursorPos_ <= 0 || lastCursorPos_ >= len) {
+    if (currentEditingId_ != id || lastCursorPos_ <= 0 ||
+        lastCursorPos_ >= len) {
       QTextCursor cursor = textEdit->textCursor();
       cursor.movePosition(QTextCursor::End);
       textEdit->setTextCursor(cursor);
@@ -359,14 +362,16 @@ void SubtitleListDelegate::setModelData(QWidget *editor,
     bool ok = false;
     qint64 ms = parseTime(lineEdit->text(), ok);
     if (ok) {
-      model->setData(index, QVariant::fromValue(ms), SubtitleListModel::StartMsRole);
+      model->setData(index, QVariant::fromValue(ms),
+                     SubtitleListModel::StartMsRole);
     }
   } else if (currentEditZone_ == EditZone::EndTime) {
     auto *lineEdit = static_cast<QLineEdit *>(editor);
     bool ok = false;
     qint64 ms = parseTime(lineEdit->text(), ok);
     if (ok) {
-      model->setData(index, QVariant::fromValue(ms), SubtitleListModel::EndMsRole);
+      model->setData(index, QVariant::fromValue(ms),
+                     SubtitleListModel::EndMsRole);
     }
   } else {
     auto *textEdit = static_cast<SubtitleTextEdit *>(editor);
@@ -395,15 +400,15 @@ void SubtitleListDelegate::updateEditorGeometry(
     }
     int textRight = rect.right() - 12 - 36 - 12;
     int textWidth = qMax(50, textRight - textLeft);
-    // Adjusted textLeft by -4px and width by +8px to align exactly with text drawing and prevent jumping
-    QRect editRect(textLeft - 4, rect.top() + 8, textWidth + 8, rect.height() - 16);
+    // Adjusted textLeft by -4px and width by +8px to align exactly with text
+    // drawing and prevent jumping
+    QRect editRect(textLeft - 4, rect.top() + 8, textWidth + 8,
+                   rect.height() - 16);
     editor->setGeometry(editRect);
   }
 }
 
-void SubtitleListDelegate::setTrack(SubtitleTrack *track) {
-  track_ = track;
-}
+void SubtitleListDelegate::setTrack(SubtitleTrack *track) { track_ = track; }
 
 void SubtitleListDelegate::setEditZone(EditZone zone) {
   currentEditZone_ = zone;
@@ -424,14 +429,16 @@ qint64 SubtitleListDelegate::parseTime(const QString &str, bool &ok) {
   int m = parts[1].toInt(&mOk);
   int s = parts[2].toInt(&sOk);
   int f = parts[3].toInt(&fOk);
-  if (!hOk || !mOk || !sOk || !fOk || h < 0 || m < 0 || m >= 60 || s < 0 || s >= 60 || f < 0 || f >= 100) {
+  if (!hOk || !mOk || !sOk || !fOk || h < 0 || m < 0 || m >= 60 || s < 0 ||
+      s >= 60 || f < 0 || f >= 100) {
     return 0;
   }
   ok = true;
   return (h * 3600000LL) + (m * 60000LL) + (s * 1000LL) + (f * 10LL);
 }
 
-QRect SubtitleListDelegate::speakerRect(const QStyleOptionViewItem &option) const {
+QRect SubtitleListDelegate::speakerRect(
+    const QStyleOptionViewItem &option) const {
   if (!ConfigManager::instance().speakerDiarization()) {
     return QRect();
   }

@@ -34,7 +34,8 @@ QString CosUploader::generateCosPath(const QString &localPath) {
   return "asr/" + timestamp + "_audio.wav";
 }
 
-QByteArray CosUploader::hmacSha1(const QByteArray &key, const QByteArray &data) const {
+QByteArray CosUploader::hmacSha1(const QByteArray &key,
+                                 const QByteArray &data) const {
   const int blockSize = 64;
   QByteArray keyData = key;
   if (keyData.length() > blockSize) {
@@ -50,7 +51,8 @@ QByteArray CosUploader::hmacSha1(const QByteArray &key, const QByteArray &data) 
     opad[i] = keyData[i] ^ 0x5c;
   }
   QByteArray innerData = ipad + data;
-  QByteArray innerHash = QCryptographicHash::hash(innerData, QCryptographicHash::Sha1);
+  QByteArray innerHash =
+      QCryptographicHash::hash(innerData, QCryptographicHash::Sha1);
   QByteArray outerData = opad + innerHash;
   return QCryptographicHash::hash(outerData, QCryptographicHash::Sha1);
 }
@@ -61,10 +63,8 @@ QString CosUploader::calculateSignature(const QString &method,
                                         const QString &host) const {
   QString lowerMethod = method.toLower();
   QString httpHeaders = QString("host=%1\n").arg(host);
-  QString formatString = QString("%1\n/%2\n\n%3")
-                             .arg(lowerMethod)
-                             .arg(cosPath)
-                             .arg(httpHeaders);
+  QString formatString =
+      QString("%1\n/%2\n\n%3").arg(lowerMethod).arg(cosPath).arg(httpHeaders);
 
   QString formatStringSha1 = QString(
       QCryptographicHash::hash(formatString.toUtf8(), QCryptographicHash::Sha1)
@@ -74,10 +74,13 @@ QString CosUploader::calculateSignature(const QString &method,
   QString stringToSign =
       QString("sha1\n%1\n%2\n").arg(keyTime).arg(formatStringSha1);
 
-  // 第一步：SignKey 是以 SecretKey 为密钥，KeyTime 为数据进行 HMAC-SHA1 哈希，所得结果的十六进制小写字符串
-  QByteArray signKey = hmacSha1(cosSecretKey_.toUtf8(), keyTime.toUtf8()).toHex();
+  // 第一步：SignKey 是以 SecretKey 为密钥，KeyTime 为数据进行 HMAC-SHA1
+  // 哈希，所得结果的十六进制小写字符串
+  QByteArray signKey =
+      hmacSha1(cosSecretKey_.toUtf8(), keyTime.toUtf8()).toHex();
 
-  // 第二步：使用十六进制的 signKey 作为密钥，对 stringToSign 进行 HMAC-SHA1 哈希
+  // 第二步：使用十六进制的 signKey 作为密钥，对 stringToSign 进行 HMAC-SHA1
+  // 哈希
   QByteArray signatureBytes = hmacSha1(signKey, stringToSign.toUtf8());
   return QString(signatureBytes.toHex());
 }
@@ -113,9 +116,8 @@ void CosUploader::upload(const QString &localFilePath) {
 
   if (cosSecretId_.isEmpty() || cosSecretKey_.isEmpty() ||
       cosBucket_.isEmpty() || cosRegion_.isEmpty()) {
-    QString error =
-        tr("未配置腾讯云 COS 密钥。请检查 config.ini 配置文件：") +
-        ConfigManager::instance().configFilePath();
+    QString error = tr("未配置腾讯云 COS 密钥。请检查 config.ini 配置文件：") +
+                    ConfigManager::instance().configFilePath();
     qDebug() << "ERROR:" << error;
     emit uploadFailed(error);
     return;
@@ -189,8 +191,7 @@ void CosUploader::upload(const QString &localFilePath) {
       QString presignedUrl = generatePresignedUrl(cosPath);
       emit uploadFinished(urlStr, presignedUrl);
     } else {
-      QString errorMsg =
-          QString(tr("上传失败：%1")).arg(reply_->errorString());
+      QString errorMsg = QString(tr("上传失败：%1")).arg(reply_->errorString());
       if (!response.isEmpty()) {
         errorMsg += QString(" | Response: %1").arg(QString::fromUtf8(response));
       }

@@ -11,11 +11,7 @@ class SubtitleListDelegate : public QStyledItemDelegate {
   Q_OBJECT
 
 public:
-  enum class EditZone {
-    Text,
-    StartTime,
-    EndTime
-  };
+  enum class EditZone { Text, StartTime, EndTime };
 
   explicit SubtitleListDelegate(QObject *parent = nullptr);
 
