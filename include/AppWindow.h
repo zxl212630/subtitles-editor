@@ -27,6 +27,7 @@ signals:
   void windowClicked(QPoint globalPos);
 
 protected:
+  void changeEvent(QEvent *event) override;
   bool eventFilter(QObject *obj, QEvent *event) override;
 
 private:

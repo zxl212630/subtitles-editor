@@ -130,6 +130,13 @@ bool AppWindow::eventFilter(QObject *obj, QEvent *event) {
   return QMainWindow::eventFilter(obj, event);
 }
 
+void AppWindow::changeEvent(QEvent *event) {
+  if (event->type() == QEvent::LanguageChange) {
+    retranslateUi();
+  }
+  QMainWindow::changeEvent(event);
+}
+
 void AppWindow::setupTitleBar() {
   d->titleBar = new QFrame(this);
   d->titleBar->setFixedHeight(36);
