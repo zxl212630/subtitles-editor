@@ -71,6 +71,8 @@ QString ProjectManager::currentProjectName() const {
   return QFileInfo(currentFilePath_).completeBaseName();
 }
 
+QString ProjectManager::videoPath() const { return project_.videoPath(); }
+
 bool ProjectManager::hasProject() const { return hasProject_; }
 
 bool ProjectManager::isDirty() const { return project_.isDirty(); }

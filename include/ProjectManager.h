@@ -20,6 +20,7 @@ public:
   // 状态查询
   QString currentFilePath() const;
   QString currentProjectName() const;
+  QString videoPath() const;
   bool hasProject() const;
   bool isDirty() const;
 

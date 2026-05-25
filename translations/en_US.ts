@@ -91,7 +91,7 @@ Make sure to include the necessary settings for FFmpeg, Tencent Cloud ASR, and A
     <message>
         <location filename="../src/AppWindow.cpp" line="400"/>
         <source>工程已自动保存</source>
-        <translation type="unfinished"></translation>
+        <translation>Project auto-saved</translation>
     </message>
     <message>
         <location filename="../src/AppWindow.cpp" line="417"/>
@@ -210,213 +210,214 @@ Make sure to include the necessary settings for FFmpeg, Tencent Cloud ASR, and A
     <message>
         <location filename="../src/AppWindow.cpp" line="653"/>
         <source>SRT 字幕 (*.srt);;纯文本 (*.txt);;Premiere XML [实验] (*.xml);;Final Cut Pro XML [实验] (*.fcpxml)</source>
-        <translation type="unfinished"></translation>
+        <translation>SRT Subtitles (*.srt);;Plain Text (*.txt);;Premiere XML [Experimental] (*.xml);;Final Cut Pro XML [Experimental] (*.fcpxml)</translation>
     </message>
     <message>
         <location filename="../src/AppWindow.cpp" line="737"/>
         <source>文件</source>
-        <translation type="unfinished"></translation>
+        <translation>File</translation>
     </message>
     <message>
         <location filename="../src/AppWindow.cpp" line="739"/>
         <source>新建工程</source>
-        <translation type="unfinished"></translation>
+        <translation>New Project</translation>
     </message>
     <message>
         <location filename="../src/AppWindow.cpp" line="743"/>
         <source>打开工程...</source>
-        <translation type="unfinished"></translation>
+        <translation>Open Project...</translation>
     </message>
     <message>
         <location filename="../src/AppWindow.cpp" line="747"/>
         <source>保存工程</source>
-        <translation type="unfinished"></translation>
+        <translation>Save Project</translation>
     </message>
     <message>
         <location filename="../src/AppWindow.cpp" line="751"/>
         <source>另存为...</source>
-        <translation type="unfinished"></translation>
+        <translation>Save As...</translation>
     </message>
     <message>
         <location filename="../src/AppWindow.cpp" line="758"/>
         <source>最近打开</source>
-        <translation type="unfinished"></translation>
+        <translation>Recent Files</translation>
     </message>
     <message>
         <location filename="../src/AppWindow.cpp" line="763"/>
         <source>无最近文件</source>
-        <translation type="unfinished"></translation>
+        <translation>No Recent Files</translation>
     </message>
     <message>
         <location filename="../src/AppWindow.cpp" line="774"/>
         <source>清除最近</source>
-        <translation type="unfinished"></translation>
+        <translation>Clear Recent</translation>
     </message>
     <message>
         <location filename="../src/AppWindow.cpp" line="791"/>
         <source>退出</source>
-        <translation type="unfinished"></translation>
+        <translation>Exit</translation>
     </message>
     <message>
         <location filename="../src/AppWindow.cpp" line="795"/>
         <source>编辑</source>
-        <translation type="unfinished"></translation>
+        <translation>Edit</translation>
     </message>
     <message>
         <location filename="../src/AppWindow.cpp" line="797"/>
         <source>撤销</source>
-        <translation type="unfinished"></translation>
+        <translation>Undo</translation>
     </message>
     <message>
         <location filename="../src/AppWindow.cpp" line="801"/>
         <source>重做</source>
-        <translation type="unfinished"></translation>
+        <translation>Redo</translation>
     </message>
     <message>
         <location filename="../src/AppWindow.cpp" line="807"/>
         <source>剪切</source>
-        <translation type="unfinished"></translation>
+        <translation>Cut</translation>
     </message>
     <message>
         <location filename="../src/AppWindow.cpp" line="811"/>
         <source>复制</source>
-        <translation type="unfinished"></translation>
+        <translation>Copy</translation>
     </message>
     <message>
         <location filename="../src/AppWindow.cpp" line="815"/>
         <source>粘贴</source>
-        <translation type="unfinished"></translation>
+        <translation>Paste</translation>
     </message>
     <message>
         <location filename="../src/AppWindow.cpp" line="821"/>
         <source>全选</source>
+        <translation>Select All</translation>
         <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../src/AppWindow.cpp" line="825"/>
         <source>删除选中</source>
-        <translation type="unfinished"></translation>
+        <translation>Delete Selected</translation>
     </message>
     <message>
         <location filename="../src/AppWindow.cpp" line="833"/>
         <source>配置...</source>
-        <translation type="unfinished"></translation>
+        <translation>Configure...</translation>
     </message>
     <message>
         <location filename="../src/AppWindow.cpp" line="841"/>
         <source>语言</source>
-        <translation type="unfinished"></translation>
+        <translation>Language</translation>
     </message>
     <message>
         <location filename="../src/AppWindow.cpp" line="842"/>
         <source>中文</source>
-        <translation type="unfinished"></translation>
+        <translation>Chinese</translation>
     </message>
     <message>
         <location filename="../src/AppWindow.cpp" line="850"/>
         <source>帮助</source>
-        <translation type="unfinished"></translation>
+        <translation>Help</translation>
     </message>
     <message>
         <location filename="../src/AppWindow.cpp" line="852"/>
         <location filename="../src/AppWindow.cpp" line="989"/>
         <source>关于</source>
-        <translation type="unfinished"></translation>
+        <translation>About</translation>
     </message>
     <message>
         <location filename="../src/AppWindow.cpp" line="859"/>
         <source>确认新建</source>
-        <translation type="unfinished"></translation>
+        <translation>Confirm New</translation>
     </message>
     <message>
         <location filename="../src/AppWindow.cpp" line="859"/>
         <source>当前工程有未保存的更改，是否继续新建？</source>
-        <translation type="unfinished"></translation>
+        <translation>The current project has unsaved changes. Continue anyway?</translation>
     </message>
     <message>
         <location filename="../src/AppWindow.cpp" line="871"/>
         <source>打开工程</source>
-        <translation type="unfinished"></translation>
+        <translation>Open Project</translation>
     </message>
     <message>
         <location filename="../src/AppWindow.cpp" line="872"/>
         <source>字幕编辑工程 (*.sedit);;所有文件 (*)</source>
-        <translation type="unfinished"></translation>
+        <translation>Subtitle Editor Project (*.sedit);;All Files (*)</translation>
     </message>
     <message>
         <location filename="../src/AppWindow.cpp" line="879"/>
         <location filename="../src/AppWindow.cpp" line="909"/>
         <location filename="../src/AppWindow.cpp" line="919"/>
         <source>字幕编辑 - %1</source>
-        <translation type="unfinished"></translation>
+        <translation>Subtitle Editor - %1</translation>
     </message>
     <message>
         <location filename="../src/AppWindow.cpp" line="881"/>
         <source>打开失败</source>
-        <translation type="unfinished"></translation>
+        <translation>Open Failed</translation>
     </message>
     <message>
         <location filename="../src/AppWindow.cpp" line="882"/>
         <source>无法打开工程文件，请检查文件格式。</source>
-        <translation type="unfinished"></translation>
+        <translation>Cannot open the project file. Please check the file format.</translation>
     </message>
     <message>
         <location filename="../src/AppWindow.cpp" line="897"/>
         <source>另存为</source>
-        <translation type="unfinished"></translation>
+        <translation>Save As</translation>
     </message>
     <message>
         <location filename="../src/AppWindow.cpp" line="898"/>
         <source>字幕编辑工程 (*.sedit)</source>
-        <translation type="unfinished"></translation>
+        <translation>Subtitle Editor Project (*.sedit)</translation>
     </message>
     <message>
         <location filename="../src/AppWindow.cpp" line="911"/>
         <source>保存失败</source>
-        <translation type="unfinished"></translation>
+        <translation>Save Failed</translation>
     </message>
     <message>
         <location filename="../src/AppWindow.cpp" line="912"/>
         <source>无法保存工程文件，请检查磁盘空间。</source>
-        <translation type="unfinished"></translation>
+        <translation>Cannot save the project file. Please check disk space.</translation>
     </message>
     <message>
         <location filename="../src/AppWindow.cpp" line="930"/>
         <source>导出 SRT</source>
-        <translation type="unfinished"></translation>
+        <translation>Export SRT</translation>
     </message>
     <message>
         <location filename="../src/AppWindow.cpp" line="930"/>
         <source>SRT 字幕 (*.srt)</source>
-        <translation type="unfinished"></translation>
+        <translation>SRT Subtitles (*.srt)</translation>
     </message>
     <message>
         <location filename="../src/AppWindow.cpp" line="936"/>
         <location filename="../src/AppWindow.cpp" line="954"/>
         <source>导出成功</source>
-        <translation type="unfinished"></translation>
+        <translation>Export Successful</translation>
     </message>
     <message>
         <location filename="../src/AppWindow.cpp" line="937"/>
         <location filename="../src/AppWindow.cpp" line="955"/>
         <source>字幕已导出到：%1</source>
-        <translation type="unfinished"></translation>
+        <translation>Subtitles exported to: %1</translation>
     </message>
     <message>
         <location filename="../src/AppWindow.cpp" line="939"/>
         <location filename="../src/AppWindow.cpp" line="957"/>
         <source>无法导出字幕文件。</source>
-        <translation type="unfinished"></translation>
+        <translation>Cannot export subtitle file.</translation>
     </message>
     <message>
         <location filename="../src/AppWindow.cpp" line="948"/>
         <source>导出 TXT</source>
-        <translation type="unfinished"></translation>
+        <translation>Export TXT</translation>
     </message>
     <message>
         <location filename="../src/AppWindow.cpp" line="948"/>
         <source>TXT 文本 (*.txt)</source>
-        <translation type="unfinished"></translation>
+        <translation>TXT Text (*.txt)</translation>
     </message>
     <message>
         <location filename="../src/AppWindow.cpp" line="990"/>
@@ -1557,6 +1558,7 @@ Make sure to include the necessary settings for FFmpeg, Tencent Cloud ASR, and A
     <message>
         <location filename="../src/TimelinePanel.cpp" line="1398"/>
         <source>全选</source>
+        <translation>Select All</translation>
         <translation type="unfinished"></translation>
     </message>
     <message>
