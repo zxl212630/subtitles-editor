@@ -601,7 +601,8 @@ void AppWindow::onExportRequested() {
     return;
   }
 
-  QString filter = tr("SRT 字幕 (*.srt);;纯文本 (*.txt);;ASS 样式字幕 (*.ass)");
+  QString filter = tr("SRT 字幕 (*.srt);;纯文本 (*.txt);;Premiere XML [实验] "
+                      "(*.xml);;Final Cut Pro XML [实验] (*.fcpxml)");
   QString selectedFilter;
   QString filePath = QFileDialog::getSaveFileName(
       this, tr("导出字幕"), QString(), filter, &selectedFilter);
@@ -618,9 +619,6 @@ void AppWindow::onExportRequested() {
     } else if (selectedFilter.contains("*.txt", Qt::CaseInsensitive)) {
       filePath += ".txt";
       ext = "txt";
-    } else if (selectedFilter.contains("*.ass", Qt::CaseInsensitive)) {
-      filePath += ".ass";
-      ext = "ass";
     } else if (selectedFilter.contains("*.xml", Qt::CaseInsensitive)) {
       filePath += ".xml";
       ext = "xml";
@@ -646,9 +644,6 @@ void AppWindow::onExportRequested() {
     success = SubtitleExporter::exportToSRT(*d->subtitleTrack, filePath);
   } else if (ext == "txt") {
     success = SubtitleExporter::exportToTXT(*d->subtitleTrack, filePath);
-  } else if (ext == "ass") {
-    success =
-        SubtitleExporter::exportToASS(*d->subtitleTrack, filePath, videoSize);
   } else if (ext == "xml") {
     success = SubtitleExporter::exportToPremiereXML(*d->subtitleTrack, filePath,
                                                     fps, videoSize);
