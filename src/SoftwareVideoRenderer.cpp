@@ -293,7 +293,12 @@ void SoftwareVideoRenderer::paintEvent(QPaintEvent *event) {
 
       if (!bgImage.isNull()) {
         QFontMetrics fm(font);
-        QRect textBounding = fm.boundingRect(textRect, alignFlags, text);
+        int layoutFlags = alignFlags;
+        if (layoutFlags & Qt::AlignJustify) {
+          layoutFlags = (layoutFlags & ~Qt::AlignJustify) | Qt::AlignLeft;
+        }
+        QRect textBounding =
+            fm.boundingRect(textRect, layoutFlags | Qt::TextWordWrap, text);
 
         // Expand with padding margins
         QRect bgRect =
@@ -312,11 +317,15 @@ void SoftwareVideoRenderer::paintEvent(QPaintEvent *event) {
     }
 
     // 描边效果绘制字幕
+    QTextOption option;
+    option.setAlignment(static_cast<Qt::Alignment>(alignFlags));
+    option.setWrapMode(QTextOption::WrapAtWordBoundaryOrAnywhere);
+
     painter.setPen(
         QPen(Qt::black, 3, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin));
-    painter.drawText(textRect, alignFlags, text);
+    painter.drawText(textRect, text, option);
     painter.setPen(Qt::white);
-    painter.drawText(textRect, alignFlags, text);
+    painter.drawText(textRect, text, option);
   }
 
   // 绘制字幕的可拖拽编辑虚线框和 8 个控制点手柄
