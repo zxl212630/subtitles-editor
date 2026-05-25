@@ -27,11 +27,15 @@ public:
   // === 字幕对齐与排版包围框设置 ===
   void setSubtitleAlignment(int alignment);
   void setSubtitleNormalizedRect(const QRectF &rect);
+  void setSubtitleRotation(double rotation);
   void setShowEditFrame(bool show);
   QRectF subtitleNormalizedRect() const { return subtitleNormalizedRect_; }
+  double subtitleRotation() const { return subtitleRotation_; }
+  QTransform getSubtitleTransform() const;
 
 signals:
   void subtitleRectChanged(const QRectF &rect);
+  void subtitleRotationChanged(double rotation);
 
 protected:
   void paintEvent(QPaintEvent *event) override;
@@ -64,6 +68,7 @@ private:
   // 字幕排版与拖拽状态变量
   int subtitleAlignment_ = 0x84; // Qt::AlignHCenter | Qt::AlignVCenter
   QRectF subtitleNormalizedRect_{0.1, 0.75, 0.8, 0.2};
+  double subtitleRotation_ = 0.0;
   bool showEditFrame_ = true;
 
   enum DragMode {
@@ -76,11 +81,13 @@ private:
     DragResizeMR,
     DragResizeBL,
     DragResizeBM,
-    DragResizeBR
+    DragResizeBR,
+    DragRotate
   };
   DragMode dragMode_ = DragNone;
   QPoint dragStartPos_;
   QRectF dragStartNormalizedRect_;
+  QTransform dragStartTransform_;
 
   QRect getTargetRect() const;
   QRect getSubtitlePixelRect() const;

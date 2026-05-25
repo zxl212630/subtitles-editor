@@ -23,4 +23,5 @@ struct SubtitleItem {
   double rectY = 0.75;
   double rectW = 0.8;
   double rectH = 0.2;
+  double rotation = 0.0; // Rotation angle in degrees
 };

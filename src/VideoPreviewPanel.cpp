@@ -367,6 +367,13 @@ VideoPreviewPanel::VideoPreviewPanel(QWidget *parent) : QWidget(parent) {
             });
           });
 
+  // 绑定视频渲染器旋转变更信号，实时写入字幕项
+  connect(videoRenderer_, &SoftwareVideoRenderer::subtitleRotationChanged, this,
+          [this](double rotation) {
+            updateCurrentItemStyle(
+                [rotation](SubtitleItem &item) { item.rotation = rotation; });
+          });
+
   if (auto *aw = qobject_cast<AppWindow *>(window())) {
     connect(aw, &AppWindow::windowClicked, this, [this](QPoint globalPos) {
       QWidget *w = QApplication::widgetAt(globalPos);
@@ -861,6 +868,7 @@ void VideoPreviewPanel::updateCurrentItemStyle(
     dummy.italic = subtitleTrack_->defaultItalic();
     dummy.underline = subtitleTrack_->defaultUnderline();
     dummy.alignment = subtitleTrack_->defaultAlignment();
+    dummy.rotation = subtitleTrack_->defaultRotation();
 
     QRectF defRect = subtitleTrack_->defaultSubtitleRect();
     dummy.rectX = defRect.x();
@@ -878,6 +886,7 @@ void VideoPreviewPanel::updateCurrentItemStyle(
     subtitleTrack_->setDefaultAlignment(dummy.alignment);
     subtitleTrack_->setDefaultSubtitleRect(
         QRectF(dummy.rectX, dummy.rectY, dummy.rectW, dummy.rectH));
+    subtitleTrack_->setDefaultRotation(dummy.rotation);
     subtitleTrack_->saveGlobalSettings();
   }
 }
@@ -946,6 +955,7 @@ void VideoPreviewPanel::updateSubtitleOverlay() {
   if (!activeItem || activeItem->text.isEmpty()) {
     videoRenderer_->setSubtitleText(QString());
     videoRenderer_->clearSubtitleBg();
+    videoRenderer_->setSubtitleRotation(0.0);
     return;
   }
 
@@ -961,6 +971,7 @@ void VideoPreviewPanel::updateSubtitleOverlay() {
       QRectF(activeItem->rectX, activeItem->rectY, activeItem->rectW,
              activeItem->rectH));
   videoRenderer_->setSubtitleText(activeItem->text);
+  videoRenderer_->setSubtitleRotation(activeItem->rotation);
 
   // 加载说话人背景
   if (activeItem->speakerId >= 0) {

@@ -35,6 +35,7 @@
         <file>icons/align-center.svg</file>
         <file>icons/align-right.svg</file>
         <file>icons/align-justify.svg</file>
+        <file>icons/rotate.svg</file>
         <file>themes/dark.qss</file>
         <file>themes/midnight.qss</file>
         <file>themes/oled.qss</file>

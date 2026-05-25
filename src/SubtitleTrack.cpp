@@ -186,6 +186,7 @@ void SubtitleTrack::splitItem(const QString &id, int cursorPosition,
       newItem.rectY = original.rectY;
       newItem.rectW = original.rectW;
       newItem.rectH = original.rectH;
+      newItem.rotation = original.rotation;
 
       items_.insert(i + 1, newItem);
 
@@ -243,6 +244,7 @@ void SubtitleTrack::addGapItem(qint64 startMs, qint64 endMs) {
   newItem.rectY = defaultSubtitleRect_.y();
   newItem.rectW = defaultSubtitleRect_.width();
   newItem.rectH = defaultSubtitleRect_.height();
+  newItem.rotation = defaultRotation_;
 
   // Insert maintaining time order
   int insertIdx = items_.size();
@@ -323,6 +325,7 @@ void SubtitleTrack::applyStyleToAll(const QString &sourceId) {
       items_[i].rectY = source->rectY;
       items_[i].rectW = source->rectW;
       items_[i].rectH = source->rectH;
+      items_[i].rotation = source->rotation;
       emit itemUpdated(items_[i].id);
       changed = true;
     }
@@ -337,6 +340,7 @@ void SubtitleTrack::applyStyleToAll(const QString &sourceId) {
   defaultAlignment_ = source->alignment;
   defaultSubtitleRect_ =
       QRectF(source->rectX, source->rectY, source->rectW, source->rectH);
+  defaultRotation_ = source->rotation;
 
   saveGlobalSettings();
 
@@ -368,6 +372,7 @@ void SubtitleTrack::loadGlobalSettings() {
   double rw = settings.value("defaultStyle/rectW", 0.8).toDouble();
   double rh = settings.value("defaultStyle/rectH", 0.2).toDouble();
   defaultSubtitleRect_ = QRectF(rx, ry, rw, rh);
+  defaultRotation_ = settings.value("defaultStyle/rotation", 0.0).toDouble();
 }
 
 void SubtitleTrack::saveGlobalSettings() {
@@ -390,4 +395,5 @@ void SubtitleTrack::saveGlobalSettings() {
   settings.setValue("defaultStyle/rectY", defaultSubtitleRect_.y());
   settings.setValue("defaultStyle/rectW", defaultSubtitleRect_.width());
   settings.setValue("defaultStyle/rectH", defaultSubtitleRect_.height());
+  settings.setValue("defaultStyle/rotation", defaultRotation_);
 }

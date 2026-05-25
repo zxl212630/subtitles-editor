@@ -79,6 +79,9 @@ public:
     defaultSubtitleRect_ = rect;
   }
 
+  double defaultRotation() const { return defaultRotation_; }
+  void setDefaultRotation(double rotation) { defaultRotation_ = rotation; }
+
   // 一键应用样式到全部字幕
   void applyStyleToAll(const QString &sourceId);
 
@@ -109,4 +112,5 @@ private:
   bool defaultUnderline_ = false;
   int defaultAlignment_ = 0x84;
   QRectF defaultSubtitleRect_{0.1, 0.75, 0.8, 0.2};
+  double defaultRotation_ = 0.0;
 };

@@ -1,10 +1,30 @@
 #include "SoftwareVideoRenderer.h"
 #include "ThemeManager.h"
 
+#include <QCursor>
 #include <QElapsedTimer>
 #include <QMouseEvent>
 #include <QPainter>
+#include <cmath>
 
+static QCursor getRotateCursor() {
+  static bool initialized = false;
+  static QCursor rotateCursor;
+  if (!initialized) {
+    QPixmap pixmap(":/icons/rotate.svg");
+    if (!pixmap.isNull()) {
+      QSize cursorSize(18, 18);
+      QPixmap scaledPixmap = pixmap.scaled(cursorSize, Qt::KeepAspectRatio,
+                                           Qt::SmoothTransformation);
+      rotateCursor = QCursor(scaledPixmap, cursorSize.width() / 2,
+                             cursorSize.height() / 2);
+    } else {
+      rotateCursor = QCursor(Qt::PointingHandCursor);
+    }
+    initialized = true;
+  }
+  return rotateCursor;
+}
 #define PROFILE_TIMING 1
 
 #define LOG_RENDER_info(msg) qInfo() << "[VideoRenderer]" << msg
@@ -271,10 +291,18 @@ void SoftwareVideoRenderer::paintEvent(QPaintEvent *event) {
   int alignFlags = subtitleAlignment_ | Qt::AlignVCenter;
 
   if (!text.isEmpty()) {
+    painter.save();
+    painter.setRenderHint(QPainter::Antialiasing, true);
+    painter.setClipRect(targetRect);
+
+    // 应用中心旋转平移变换
+    QTransform trans = getSubtitleTransform();
+    painter.setTransform(trans, true);
+
     painter.setFont(font);
 
-    // 获取字幕像素渲染包围框，并限制在视频画面范围内
-    QRect textRect = getSubtitlePixelRect().intersected(targetRect);
+    // 获取字幕像素渲染包围框，用作未旋转状态下的相对定位
+    QRect textRect = getSubtitlePixelRect();
 
     // Draw background image if configured
     if (!bgPath.isEmpty()) {
@@ -388,39 +416,46 @@ void SoftwareVideoRenderer::paintEvent(QPaintEvent *event) {
 
     drawSubtitleText(painter, Qt::black, 3);
     drawSubtitleText(painter, Qt::white, 0);
-  }
 
-  // 绘制字幕的可拖拽编辑虚线框和 8 个控制点手柄
-  if (showEditFrame_ && !text.isEmpty()) {
-    QRect pixelRect = getSubtitlePixelRect();
+    // 绘制字幕的可拖拽编辑虚线框和 8 个控制点手柄，以及旋转手柄
+    if (showEditFrame_) {
+      QColor primaryColor = ThemeManager::instance().getPrimaryColor();
 
-    painter.save();
-    painter.setRenderHint(QPainter::Antialiasing, false);
+      // 1. 绘制主色虚线框
+      painter.setPen(QPen(primaryColor, 1, Qt::DashLine));
+      painter.setBrush(Qt::NoBrush);
+      painter.drawRect(textRect);
 
-    QColor primaryColor = ThemeManager::instance().getPrimaryColor();
+      // 2. 绘制旋转小圆点与连接线
+      QPoint tmPt =
+          QPoint(textRect.left() + textRect.width() / 2, textRect.top());
+      QPoint rotPt(tmPt.x(), tmPt.y() - 25);
 
-    // 1. 绘制主色虚线框
-    painter.setPen(QPen(primaryColor, 1, Qt::DashLine));
-    painter.setBrush(Qt::NoBrush);
-    painter.drawRect(pixelRect);
+      painter.setPen(QPen(primaryColor, 1, Qt::DashLine));
+      painter.drawLine(tmPt, rotPt);
 
-    // 2. 计算 8 个控制手柄的中心位置
-    QList<QPoint> handlePoints = {
-        pixelRect.topLeft(),
-        QPoint(pixelRect.left() + pixelRect.width() / 2, pixelRect.top()),
-        pixelRect.topRight(),
-        QPoint(pixelRect.left(), pixelRect.top() + pixelRect.height() / 2),
-        QPoint(pixelRect.right(), pixelRect.top() + pixelRect.height() / 2),
-        pixelRect.bottomLeft(),
-        QPoint(pixelRect.left() + pixelRect.width() / 2, pixelRect.bottom()),
-        pixelRect.bottomRight()};
+      painter.setPen(QPen(Qt::white, 1));
+      painter.setBrush(primaryColor);
+      painter.drawEllipse(rotPt, 5, 5); // 直径 10 的圆
 
-    // 3. 绘制 8 个手柄小方块，主色填充，细白色边框
-    painter.setPen(QPen(Qt::white, 1));
-    painter.setBrush(primaryColor);
-    int hs = 6; // 手柄边长
-    for (const QPoint &pt : handlePoints) {
-      painter.drawRect(pt.x() - hs / 2, pt.y() - hs / 2, hs, hs);
+      // 3. 计算 8 个控制手柄的中心位置
+      QList<QPoint> handlePoints = {
+          textRect.topLeft(),
+          tmPt,
+          textRect.topRight(),
+          QPoint(textRect.left(), textRect.top() + textRect.height() / 2),
+          QPoint(textRect.right(), textRect.top() + textRect.height() / 2),
+          textRect.bottomLeft(),
+          QPoint(textRect.left() + textRect.width() / 2, textRect.bottom()),
+          textRect.bottomRight()};
+
+      // 4. 绘制 8 个手柄小方块，主色填充，细白色边框
+      painter.setPen(QPen(Qt::white, 1));
+      painter.setBrush(primaryColor);
+      int hs = 6; // 手柄边长
+      for (const QPoint &pt : handlePoints) {
+        painter.drawRect(pt.x() - hs / 2, pt.y() - hs / 2, hs, hs);
+      }
     }
     painter.restore();
   }
@@ -443,14 +478,25 @@ SoftwareVideoRenderer::hitTest(const QPoint &pos) const {
   QRect pixelRect = getSubtitlePixelRect();
   int hs = 8; // 点击检测命中大小，设为 8x8 像素保证容错率
 
-  auto inHandle = [pos, hs](const QPoint &hPt) {
-    return QRect(hPt.x() - hs, hPt.y() - hs, hs * 2, hs * 2).contains(pos);
+  // 将屏幕坐标映射回未旋转的局部坐标系
+  QTransform inv = getSubtitleTransform().inverted();
+  QPoint localPos = inv.map(pos);
+
+  // 1. 优先判定是否命中旋转手柄（位于边界框顶部中点正上方 25px 处）
+  QPoint tmPt(pixelRect.left() + pixelRect.width() / 2, pixelRect.top());
+  QPoint rotPt(tmPt.x(), tmPt.y() - 25);
+  if (QRect(rotPt.x() - hs, rotPt.y() - hs, hs * 2, hs * 2)
+          .contains(localPos)) {
+    return DragRotate;
+  }
+
+  auto inHandle = [localPos, hs](const QPoint &hPt) {
+    return QRect(hPt.x() - hs, hPt.y() - hs, hs * 2, hs * 2).contains(localPos);
   };
 
   if (inHandle(pixelRect.topLeft()))
     return DragResizeTL;
-  if (inHandle(
-          QPoint(pixelRect.left() + pixelRect.width() / 2, pixelRect.top())))
+  if (inHandle(tmPt))
     return DragResizeTM;
   if (inHandle(pixelRect.topRight()))
     return DragResizeTR;
@@ -468,11 +514,28 @@ SoftwareVideoRenderer::hitTest(const QPoint &pos) const {
   if (inHandle(pixelRect.bottomRight()))
     return DragResizeBR;
 
-  if (pixelRect.contains(pos)) {
+  if (pixelRect.contains(localPos)) {
     return DragMove;
   }
 
   return DragNone;
+}
+
+void SoftwareVideoRenderer::setSubtitleRotation(double rotation) {
+  {
+    QMutexLocker lock(&subtitleMutex_);
+    subtitleRotation_ = rotation;
+  }
+  update();
+}
+
+QTransform SoftwareVideoRenderer::getSubtitleTransform() const {
+  QRect pixelRect = getSubtitlePixelRect();
+  QTransform trans;
+  trans.translate(pixelRect.center().x(), pixelRect.center().y());
+  trans.rotate(subtitleRotation_);
+  trans.translate(-pixelRect.center().x(), -pixelRect.center().y());
+  return trans;
 }
 
 void SoftwareVideoRenderer::mousePressEvent(QMouseEvent *event) {
@@ -481,6 +544,7 @@ void SoftwareVideoRenderer::mousePressEvent(QMouseEvent *event) {
     if (dragMode_ != DragNone) {
       dragStartPos_ = event->pos();
       dragStartNormalizedRect_ = subtitleNormalizedRect_;
+      dragStartTransform_ = getSubtitleTransform();
       event->accept();
       return;
     }
@@ -494,6 +558,9 @@ void SoftwareVideoRenderer::mouseMoveEvent(QMouseEvent *event) {
     switch (hit) {
     case DragMove:
       setCursor(Qt::SizeAllCursor);
+      break;
+    case DragRotate:
+      setCursor(getRotateCursor());
       break;
     case DragResizeTL:
     case DragResizeBR:
@@ -516,13 +583,60 @@ void SoftwareVideoRenderer::mouseMoveEvent(QMouseEvent *event) {
       break;
     }
   } else {
-    QPoint delta = event->pos() - dragStartPos_;
     QRect targetRect = getTargetRect();
     if (targetRect.width() <= 0 || targetRect.height() <= 0)
       return;
 
-    double dx = static_cast<double>(delta.x()) / targetRect.width();
-    double dy = static_cast<double>(delta.y()) / targetRect.height();
+    if (dragMode_ == DragRotate) {
+      QRect pixelRect = getSubtitlePixelRect();
+      QPointF center = pixelRect.center();
+      QPointF diff = event->pos() - center;
+      double angleRad = std::atan2(diff.y(), diff.x());
+      double angleDeg = angleRad * 180.0 / M_PI;
+
+      double newAngle = angleDeg + 90.0;
+      while (newAngle < 0.0)
+        newAngle += 360.0;
+      while (newAngle >= 360.0)
+        newAngle -= 360.0;
+
+      double snapThreshold = 3.0; // 3 degrees magnetic snap threshold
+      if (std::abs(newAngle - 0.0) < snapThreshold ||
+          std::abs(newAngle - 360.0) < snapThreshold) {
+        newAngle = 0.0;
+      } else if (std::abs(newAngle - 90.0) < snapThreshold) {
+        newAngle = 90.0;
+      } else if (std::abs(newAngle - 180.0) < snapThreshold) {
+        newAngle = 180.0;
+      } else if (std::abs(newAngle - 270.0) < snapThreshold) {
+        newAngle = 270.0;
+      }
+
+      {
+        QMutexLocker lock(&subtitleMutex_);
+        subtitleRotation_ = newAngle;
+      }
+      update();
+      event->accept();
+      return;
+    }
+
+    double dx = 0.0;
+    double dy = 0.0;
+
+    if (dragMode_ == DragMove) {
+      QPoint delta = event->pos() - dragStartPos_;
+      dx = static_cast<double>(delta.x()) / targetRect.width();
+      dy = static_cast<double>(delta.y()) / targetRect.height();
+    } else {
+      QTransform invStart = dragStartTransform_.inverted();
+      QPointF localStart = invStart.map(dragStartPos_);
+      QPointF localCurrent = invStart.map(event->pos());
+      QPointF localDelta = localCurrent - localStart;
+
+      dx = localDelta.x() / targetRect.width();
+      dy = localDelta.y() / targetRect.height();
+    }
 
     QRectF newRect = dragStartNormalizedRect_;
 
@@ -619,9 +733,45 @@ void SoftwareVideoRenderer::mouseMoveEvent(QMouseEvent *event) {
 
 void SoftwareVideoRenderer::mouseReleaseEvent(QMouseEvent *event) {
   if (event->button() == Qt::LeftButton && dragMode_ != DragNone) {
+    DragMode prevMode = dragMode_;
     dragMode_ = DragNone;
-    unsetCursor();
-    emit subtitleRectChanged(subtitleNormalizedRect_);
+
+    // 重新计算并根据当前释放点更新 Hover
+    // 状态下的光标样式，避免松开鼠标时光标卡死在普通箭头
+    DragMode hit = hitTest(event->pos());
+    switch (hit) {
+    case DragMove:
+      setCursor(Qt::SizeAllCursor);
+      break;
+    case DragRotate:
+      setCursor(getRotateCursor());
+      break;
+    case DragResizeTL:
+    case DragResizeBR:
+      setCursor(Qt::SizeFDiagCursor);
+      break;
+    case DragResizeTR:
+    case DragResizeBL:
+      setCursor(Qt::SizeBDiagCursor);
+      break;
+    case DragResizeTM:
+    case DragResizeBM:
+      setCursor(Qt::SizeVerCursor);
+      break;
+    case DragResizeML:
+    case DragResizeMR:
+      setCursor(Qt::SizeHorCursor);
+      break;
+    default:
+      unsetCursor();
+      break;
+    }
+
+    if (prevMode == DragRotate) {
+      emit subtitleRotationChanged(subtitleRotation_);
+    } else {
+      emit subtitleRectChanged(subtitleNormalizedRect_);
+    }
     event->accept();
     return;
   }
