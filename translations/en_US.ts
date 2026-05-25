@@ -941,32 +941,32 @@ Make sure to include the necessary settings for FFmpeg, Tencent Cloud ASR, and A
     <message>
         <location filename="../src/ConfigDialog.cpp" line="628"/>
         <location filename="../src/ConfigDialog.cpp" line="1022"/>
-        <source>X:</source>
-        <translation>X:</translation>
+        <source>X (%):</source>
+        <translation>X (%):</translation>
     </message>
     <message>
         <location filename="../src/ConfigDialog.cpp" line="629"/>
         <location filename="../src/ConfigDialog.cpp" line="1032"/>
-        <source>Y:</source>
-        <translation>Y:</translation>
+        <source>Y (%):</source>
+        <translation>Y (%):</translation>
     </message>
     <message>
         <location filename="../src/ConfigDialog.cpp" line="630"/>
         <location filename="../src/ConfigDialog.cpp" line="1042"/>
-        <source>宽度:</source>
-        <translation>Width:</translation>
+        <source>宽度 (%):</source>
+        <translation>Width (%):</translation>
     </message>
     <message>
         <location filename="../src/ConfigDialog.cpp" line="631"/>
         <location filename="../src/ConfigDialog.cpp" line="1052"/>
-        <source>高度:</source>
-        <translation>Height:</translation>
+        <source>高度 (%):</source>
+        <translation>Height (%):</translation>
     </message>
     <message>
         <location filename="../src/ConfigDialog.cpp" line="632"/>
         <location filename="../src/ConfigDialog.cpp" line="1062"/>
-        <source>旋转:</source>
-        <translation>Rotation:</translation>
+        <source>旋转 (°):</source>
+        <translation>Rotation (°):</translation>
     </message>
     <message>
         <location filename="../src/ConfigDialog.cpp" line="633"/>

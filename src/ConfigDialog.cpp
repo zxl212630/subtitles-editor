@@ -128,16 +128,16 @@ ConfigDialog::ConfigDialog(QWidget *parent) : QDialog(parent) {
   connect(subtitleAlignmentCombo_,
           qOverload<int>(&QComboBox::currentIndexChanged), this,
           &ConfigDialog::checkDirtyState);
-  connect(subtitleRectXSpin_, qOverload<double>(&QDoubleSpinBox::valueChanged),
+  connect(subtitleRectXSpin_, qOverload<int>(&QSpinBox::valueChanged),
           this, &ConfigDialog::checkDirtyState);
-  connect(subtitleRectYSpin_, qOverload<double>(&QDoubleSpinBox::valueChanged),
+  connect(subtitleRectYSpin_, qOverload<int>(&QSpinBox::valueChanged),
           this, &ConfigDialog::checkDirtyState);
-  connect(subtitleRectWSpin_, qOverload<double>(&QDoubleSpinBox::valueChanged),
+  connect(subtitleRectWSpin_, qOverload<int>(&QSpinBox::valueChanged),
           this, &ConfigDialog::checkDirtyState);
-  connect(subtitleRectHSpin_, qOverload<double>(&QDoubleSpinBox::valueChanged),
+  connect(subtitleRectHSpin_, qOverload<int>(&QSpinBox::valueChanged),
           this, &ConfigDialog::checkDirtyState);
   connect(subtitleRotationSpin_,
-          qOverload<double>(&QDoubleSpinBox::valueChanged), this,
+          qOverload<int>(&QSpinBox::valueChanged), this,
           &ConfigDialog::checkDirtyState);
   connect(speakerBgFolderEdit_, &QLineEdit::textChanged, this,
           &ConfigDialog::checkDirtyState);
@@ -285,11 +285,11 @@ void ConfigDialog::loadConfig() {
       cfg.getBool("subtitle", "underline", false));
   subtitleAlignmentCombo_->setCurrentIndex(subtitleAlignmentCombo_->findData(
       cfg.getInt("subtitle", "alignment", 0x84)));
-  subtitleRectXSpin_->setValue(cfg.getDouble("subtitle", "rectX", 0.1));
-  subtitleRectYSpin_->setValue(cfg.getDouble("subtitle", "rectY", 0.75));
-  subtitleRectWSpin_->setValue(cfg.getDouble("subtitle", "rectW", 0.8));
-  subtitleRectHSpin_->setValue(cfg.getDouble("subtitle", "rectH", 0.2));
-  subtitleRotationSpin_->setValue(cfg.getDouble("subtitle", "rotation", 0.0));
+  subtitleRectXSpin_->setValue(qRound(cfg.getDouble("subtitle", "rectX", 0.1) * 100));
+  subtitleRectYSpin_->setValue(qRound(cfg.getDouble("subtitle", "rectY", 0.75) * 100));
+  subtitleRectWSpin_->setValue(qRound(cfg.getDouble("subtitle", "rectW", 0.8) * 100));
+  subtitleRectHSpin_->setValue(qRound(cfg.getDouble("subtitle", "rectH", 0.2) * 100));
+  subtitleRotationSpin_->setValue(qRound(cfg.getDouble("subtitle", "rotation", 0.0)));
   speakerBgFolderEdit_->setText(cfg.getString("speaker", "bgFolder"));
   speakerMarginLeftSpin_->setValue(cfg.getInt("speaker", "marginLeft", 15));
   speakerMarginTopSpin_->setValue(cfg.getInt("speaker", "marginTop", 15));
@@ -304,11 +304,11 @@ void ConfigDialog::loadConfig() {
   initialConfig_["sub_italic"] = cfg.getBool("subtitle", "italic", false);
   initialConfig_["sub_underline"] = cfg.getBool("subtitle", "underline", false);
   initialConfig_["sub_alignment"] = cfg.getInt("subtitle", "alignment", 0x84);
-  initialConfig_["sub_rectX"] = cfg.getDouble("subtitle", "rectX", 0.1);
-  initialConfig_["sub_rectY"] = cfg.getDouble("subtitle", "rectY", 0.75);
-  initialConfig_["sub_rectW"] = cfg.getDouble("subtitle", "rectW", 0.8);
-  initialConfig_["sub_rectH"] = cfg.getDouble("subtitle", "rectH", 0.2);
-  initialConfig_["sub_rotation"] = cfg.getDouble("subtitle", "rotation", 0.0);
+  initialConfig_["sub_rectX"] = qRound(cfg.getDouble("subtitle", "rectX", 0.1) * 100);
+  initialConfig_["sub_rectY"] = qRound(cfg.getDouble("subtitle", "rectY", 0.75) * 100);
+  initialConfig_["sub_rectW"] = qRound(cfg.getDouble("subtitle", "rectW", 0.8) * 100);
+  initialConfig_["sub_rectH"] = qRound(cfg.getDouble("subtitle", "rectH", 0.2) * 100);
+  initialConfig_["sub_rotation"] = qRound(cfg.getDouble("subtitle", "rotation", 0.0));
   initialConfig_["spk_bgFolder"] = cfg.getString("speaker", "bgFolder");
   initialConfig_["spk_marginLeft"] = cfg.getInt("speaker", "marginLeft", 15);
   initialConfig_["spk_marginTop"] = cfg.getInt("speaker", "marginTop", 15);
@@ -422,11 +422,11 @@ void ConfigDialog::saveConfig() {
   cfg.setValue("subtitle", "underline", subtitleUnderlineCheck_->isChecked());
   cfg.setValue("subtitle", "alignment",
                subtitleAlignmentCombo_->currentData().toInt());
-  cfg.setValue("subtitle", "rectX", subtitleRectXSpin_->value());
-  cfg.setValue("subtitle", "rectY", subtitleRectYSpin_->value());
-  cfg.setValue("subtitle", "rectW", subtitleRectWSpin_->value());
-  cfg.setValue("subtitle", "rectH", subtitleRectHSpin_->value());
-  cfg.setValue("subtitle", "rotation", subtitleRotationSpin_->value());
+  cfg.setValue("subtitle", "rectX", subtitleRectXSpin_->value() / 100.0);
+  cfg.setValue("subtitle", "rectY", subtitleRectYSpin_->value() / 100.0);
+  cfg.setValue("subtitle", "rectW", subtitleRectWSpin_->value() / 100.0);
+  cfg.setValue("subtitle", "rectH", subtitleRectHSpin_->value() / 100.0);
+  cfg.setValue("subtitle", "rotation", static_cast<double>(subtitleRotationSpin_->value()));
   cfg.setValue("speaker", "bgFolder", speakerBgFolderEdit_->text());
   cfg.setValue("speaker", "marginLeft", speakerMarginLeftSpin_->value());
   cfg.setValue("speaker", "marginTop", speakerMarginTopSpin_->value());
@@ -627,11 +627,11 @@ void ConfigDialog::retranslateUi() {
   subtitleAlignmentCombo_->setItemText(0, tr("左对齐"));
   subtitleAlignmentCombo_->setItemText(1, tr("居中"));
   subtitleAlignmentCombo_->setItemText(2, tr("右对齐"));
-  subtitleRectXLabel_->setText(tr("X:"));
-  subtitleRectYLabel_->setText(tr("Y:"));
-  subtitleRectWLabel_->setText(tr("宽度:"));
-  subtitleRectHLabel_->setText(tr("高度:"));
-  subtitleRotationLabel_->setText(tr("旋转:"));
+  subtitleRectXLabel_->setText(tr("X (%):"));
+  subtitleRectYLabel_->setText(tr("Y (%):"));
+  subtitleRectWLabel_->setText(tr("宽度 (%):"));
+  subtitleRectHLabel_->setText(tr("高度 (%):"));
+  subtitleRotationLabel_->setText(tr("旋转 (°):"));
   speakerBgFolderLabel_->setText(tr("背景图文件夹"));
   speakerBgFolderBtn_->setText(tr("浏览..."));
   speakerMarginLeftLabel_->setText(tr("左:"));
@@ -1024,55 +1024,49 @@ void ConfigDialog::setupUi() {
   rectLayout->setColumnStretch(4, 1);
   rectLayout->setColumnMinimumWidth(2, 40);
 
-  subtitleRectXLabel_ = new QLabel(tr("X:"), subtitlePage);
+  subtitleRectXLabel_ = new QLabel(tr("X (%):"), subtitlePage);
   subtitleRectXLabel_->setAlignment(Qt::AlignRight | Qt::AlignVCenter);
   rectLayout->addWidget(subtitleRectXLabel_, 0, 0);
-  subtitleRectXSpin_ = new QDoubleSpinBox(subtitlePage);
+  subtitleRectXSpin_ = new QSpinBox(subtitlePage);
   subtitleRectXSpin_->setFixedHeight(32);
-  subtitleRectXSpin_->setRange(0.0, 1.0);
-  subtitleRectXSpin_->setSingleStep(0.05);
-  subtitleRectXSpin_->setValue(0.1);
+  subtitleRectXSpin_->setRange(0, 100);
+  subtitleRectXSpin_->setValue(10);
   rectLayout->addWidget(subtitleRectXSpin_, 0, 1);
 
-  subtitleRectYLabel_ = new QLabel(tr("Y:"), subtitlePage);
+  subtitleRectYLabel_ = new QLabel(tr("Y (%):"), subtitlePage);
   subtitleRectYLabel_->setAlignment(Qt::AlignRight | Qt::AlignVCenter);
   rectLayout->addWidget(subtitleRectYLabel_, 0, 3);
-  subtitleRectYSpin_ = new QDoubleSpinBox(subtitlePage);
+  subtitleRectYSpin_ = new QSpinBox(subtitlePage);
   subtitleRectYSpin_->setFixedHeight(32);
-  subtitleRectYSpin_->setRange(0.0, 1.0);
-  subtitleRectYSpin_->setSingleStep(0.05);
-  subtitleRectYSpin_->setValue(0.75);
+  subtitleRectYSpin_->setRange(0, 100);
+  subtitleRectYSpin_->setValue(75);
   rectLayout->addWidget(subtitleRectYSpin_, 0, 4);
 
-  subtitleRectWLabel_ = new QLabel(tr("宽度:"), subtitlePage);
+  subtitleRectWLabel_ = new QLabel(tr("宽度 (%):"), subtitlePage);
   subtitleRectWLabel_->setAlignment(Qt::AlignRight | Qt::AlignVCenter);
   rectLayout->addWidget(subtitleRectWLabel_, 1, 0);
-  subtitleRectWSpin_ = new QDoubleSpinBox(subtitlePage);
+  subtitleRectWSpin_ = new QSpinBox(subtitlePage);
   subtitleRectWSpin_->setFixedHeight(32);
-  subtitleRectWSpin_->setRange(0.0, 1.0);
-  subtitleRectWSpin_->setSingleStep(0.05);
-  subtitleRectWSpin_->setValue(0.8);
+  subtitleRectWSpin_->setRange(0, 100);
+  subtitleRectWSpin_->setValue(80);
   rectLayout->addWidget(subtitleRectWSpin_, 1, 1);
 
-  subtitleRectHLabel_ = new QLabel(tr("高度:"), subtitlePage);
+  subtitleRectHLabel_ = new QLabel(tr("高度 (%):"), subtitlePage);
   subtitleRectHLabel_->setAlignment(Qt::AlignRight | Qt::AlignVCenter);
   rectLayout->addWidget(subtitleRectHLabel_, 1, 3);
-  subtitleRectHSpin_ = new QDoubleSpinBox(subtitlePage);
+  subtitleRectHSpin_ = new QSpinBox(subtitlePage);
   subtitleRectHSpin_->setFixedHeight(32);
-  subtitleRectHSpin_->setRange(0.0, 1.0);
-  subtitleRectHSpin_->setSingleStep(0.05);
-  subtitleRectHSpin_->setValue(0.2);
+  subtitleRectHSpin_->setRange(0, 100);
+  subtitleRectHSpin_->setValue(20);
   rectLayout->addWidget(subtitleRectHSpin_, 1, 4);
 
-  subtitleRotationLabel_ = new QLabel(tr("旋转:"), subtitlePage);
+  subtitleRotationLabel_ = new QLabel(tr("旋转 (°):"), subtitlePage);
   subtitleRotationLabel_->setAlignment(Qt::AlignRight | Qt::AlignVCenter);
   rectLayout->addWidget(subtitleRotationLabel_, 2, 0);
-  subtitleRotationSpin_ = new QDoubleSpinBox(subtitlePage);
+  subtitleRotationSpin_ = new QSpinBox(subtitlePage);
   subtitleRotationSpin_->setFixedHeight(32);
-  subtitleRotationSpin_->setRange(-180.0, 180.0);
-  subtitleRotationSpin_->setSingleStep(1.0);
-  subtitleRotationSpin_->setValue(0.0);
-  subtitleRotationSpin_->setSuffix("°");
+  subtitleRotationSpin_->setRange(-180, 180);
+  subtitleRotationSpin_->setValue(0);
   rectLayout->addWidget(subtitleRotationSpin_, 2, 1);
 
   positionLayout->addLayout(rectLayout);

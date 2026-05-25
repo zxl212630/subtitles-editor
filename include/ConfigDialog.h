@@ -100,11 +100,11 @@ private:
   QCheckBox *subtitleItalicCheck_;
   QCheckBox *subtitleUnderlineCheck_;
   QComboBox *subtitleAlignmentCombo_;
-  QDoubleSpinBox *subtitleRectXSpin_;
-  QDoubleSpinBox *subtitleRectYSpin_;
-  QDoubleSpinBox *subtitleRectWSpin_;
-  QDoubleSpinBox *subtitleRectHSpin_;
-  QDoubleSpinBox *subtitleRotationSpin_;
+  QSpinBox *subtitleRectXSpin_;
+  QSpinBox *subtitleRectYSpin_;
+  QSpinBox *subtitleRectWSpin_;
+  QSpinBox *subtitleRectHSpin_;
+  QSpinBox *subtitleRotationSpin_;
   QLineEdit *speakerBgFolderEdit_;
   QPushButton *speakerBgFolderBtn_;
   QSpinBox *speakerMarginLeftSpin_;
