@@ -25,6 +25,7 @@ build/
 
 # Generated
 compile_commands.json
+translations/*.qm
 .worktrees/
 doc/plan_verify*.png
 .superpowers/
