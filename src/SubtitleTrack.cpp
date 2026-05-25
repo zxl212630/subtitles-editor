@@ -1,4 +1,5 @@
 #include "SubtitleTrack.h"
+#include "ConfigManager.h"
 #include <QDebug>
 #include <QJsonArray>
 #include <QJsonDocument>
@@ -352,53 +353,69 @@ void SubtitleTrack::applyStyleToAll(const QString &sourceId) {
   }
 }
 
+void SubtitleTrack::reloadGlobalSettings() { loadGlobalSettings(); }
+
+void SubtitleTrack::applyDefaultStyle(SubtitleItem &item) const {
+  item.fontFamily = defaultFontFamily_;
+  item.fontSize = defaultFontSize_;
+  item.bold = defaultBold_;
+  item.italic = defaultItalic_;
+  item.underline = defaultUnderline_;
+  item.alignment = defaultAlignment_;
+  item.rectX = defaultSubtitleRect_.x();
+  item.rectY = defaultSubtitleRect_.y();
+  item.rectW = defaultSubtitleRect_.width();
+  item.rectH = defaultSubtitleRect_.height();
+  item.rotation = defaultRotation_;
+}
+
 void SubtitleTrack::loadGlobalSettings() {
-  QSettings settings;
-  globalBgFolder_ = settings.value("speaker/bgFolder").toString();
-  int left = settings.value("speaker/marginLeft", 15).toInt();
-  int top = settings.value("speaker/marginTop", 15).toInt();
-  int right = settings.value("speaker/marginRight", 15).toInt();
-  int bottom = settings.value("speaker/marginBottom", 15).toInt();
+  auto &cfg = ConfigManager::instance();
+  globalBgFolder_ = cfg.getString("speaker", "bgFolder");
+  int left = cfg.getInt("speaker", "marginLeft", 15);
+  int top = cfg.getInt("speaker", "marginTop", 15);
+  int right = cfg.getInt("speaker", "marginRight", 15);
+  int bottom = cfg.getInt("speaker", "marginBottom", 15);
   unifiedBorderMargins_ = QMargins(left, top, right, bottom);
 
   // 加载全局默认模板样式
-  defaultFontFamily_ =
-      settings.value("defaultStyle/fontFamily", "Arial").toString();
-  defaultFontSize_ = settings.value("defaultStyle/fontSize", 24).toInt();
-  defaultBold_ = settings.value("defaultStyle/bold", false).toBool();
-  defaultItalic_ = settings.value("defaultStyle/italic", false).toBool();
-  defaultUnderline_ = settings.value("defaultStyle/underline", false).toBool();
-  defaultAlignment_ = settings.value("defaultStyle/alignment", 0x84).toInt();
+  defaultFontFamily_ = cfg.getString("subtitle", "fontFamily", "Arial");
+  defaultFontSize_ = cfg.getInt("subtitle", "fontSize", 24);
+  defaultBold_ = cfg.getBool("subtitle", "bold", false);
+  defaultItalic_ = cfg.getBool("subtitle", "italic", false);
+  defaultUnderline_ = cfg.getBool("subtitle", "underline", false);
+  defaultAlignment_ = cfg.getInt("subtitle", "alignment", 0x84);
 
-  double rx = settings.value("defaultStyle/rectX", 0.1).toDouble();
-  double ry = settings.value("defaultStyle/rectY", 0.75).toDouble();
-  double rw = settings.value("defaultStyle/rectW", 0.8).toDouble();
-  double rh = settings.value("defaultStyle/rectH", 0.2).toDouble();
+  double rx = cfg.getDouble("subtitle", "rectX", 0.1);
+  double ry = cfg.getDouble("subtitle", "rectY", 0.75);
+  double rw = cfg.getDouble("subtitle", "rectW", 0.8);
+  double rh = cfg.getDouble("subtitle", "rectH", 0.2);
   defaultSubtitleRect_ = QRectF(rx, ry, rw, rh);
-  defaultRotation_ = settings.value("defaultStyle/rotation", 0.0).toDouble();
+  defaultRotation_ = cfg.getDouble("subtitle", "rotation", 0.0);
 }
 
 void SubtitleTrack::saveGlobalSettings() {
-  QSettings settings;
-  settings.setValue("speaker/bgFolder", globalBgFolder_);
-  settings.setValue("speaker/marginLeft", unifiedBorderMargins_.left());
-  settings.setValue("speaker/marginTop", unifiedBorderMargins_.top());
-  settings.setValue("speaker/marginRight", unifiedBorderMargins_.right());
-  settings.setValue("speaker/marginBottom", unifiedBorderMargins_.bottom());
+  auto &cfg = ConfigManager::instance();
+  cfg.setValue("speaker", "bgFolder", globalBgFolder_);
+  cfg.setValue("speaker", "marginLeft", unifiedBorderMargins_.left());
+  cfg.setValue("speaker", "marginTop", unifiedBorderMargins_.top());
+  cfg.setValue("speaker", "marginRight", unifiedBorderMargins_.right());
+  cfg.setValue("speaker", "marginBottom", unifiedBorderMargins_.bottom());
 
   // 保存全局默认模板样式
-  settings.setValue("defaultStyle/fontFamily", defaultFontFamily_);
-  settings.setValue("defaultStyle/fontSize", defaultFontSize_);
-  settings.setValue("defaultStyle/bold", defaultBold_);
-  settings.setValue("defaultStyle/italic", defaultItalic_);
-  settings.setValue("defaultStyle/underline", defaultUnderline_);
-  settings.setValue("defaultStyle/alignment", defaultAlignment_);
+  cfg.setValue("subtitle", "fontFamily", defaultFontFamily_);
+  cfg.setValue("subtitle", "fontSize", defaultFontSize_);
+  cfg.setValue("subtitle", "bold", defaultBold_);
+  cfg.setValue("subtitle", "italic", defaultItalic_);
+  cfg.setValue("subtitle", "underline", defaultUnderline_);
+  cfg.setValue("subtitle", "alignment", defaultAlignment_);
 
-  settings.setValue("defaultStyle/rectX", defaultSubtitleRect_.x());
-  settings.setValue("defaultStyle/rectY", defaultSubtitleRect_.y());
-  settings.setValue("defaultStyle/rectW", defaultSubtitleRect_.width());
-  settings.setValue("defaultStyle/rectH", defaultSubtitleRect_.height());
-  settings.setValue("defaultStyle/rotation", defaultRotation_);
+  cfg.setValue("subtitle", "rectX", defaultSubtitleRect_.x());
+  cfg.setValue("subtitle", "rectY", defaultSubtitleRect_.y());
+  cfg.setValue("subtitle", "rectW", defaultSubtitleRect_.width());
+  cfg.setValue("subtitle", "rectH", defaultSubtitleRect_.height());
+  cfg.setValue("subtitle", "rotation", defaultRotation_);
+  cfg.sync();
 }
 
 QJsonObject SubtitleTrack::toJsonObject() const {

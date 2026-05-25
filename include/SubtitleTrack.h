@@ -87,6 +87,10 @@ public:
   // 一键应用样式到全部字幕
   void applyStyleToAll(const QString &sourceId);
 
+  // 刷新和默认样式应用方法
+  void reloadGlobalSettings();
+  void applyDefaultStyle(SubtitleItem &item) const;
+
   // --- 持久化（仅保存全局统一设置到 config.ini）---
   void loadGlobalSettings();
   void saveGlobalSettings();

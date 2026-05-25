@@ -113,6 +113,42 @@ ConfigDialog::ConfigDialog(QWidget *parent) : QDialog(parent) {
   connect(engineModelTypeCombo_, &QComboBox::currentTextChanged, this,
           &ConfigDialog::checkDirtyState);
 
+  // 字幕设置和说话人设置控件变化连接
+  connect(subtitleFontFamilyCombo_, &QComboBox::currentTextChanged, this,
+          &ConfigDialog::checkDirtyState);
+  connect(subtitleFontSizeSpin_, qOverload<int>(&QSpinBox::valueChanged), this,
+          &ConfigDialog::checkDirtyState);
+  connect(subtitleBoldCheck_, &QCheckBox::stateChanged, this,
+          &ConfigDialog::checkDirtyState);
+  connect(subtitleItalicCheck_, &QCheckBox::stateChanged, this,
+          &ConfigDialog::checkDirtyState);
+  connect(subtitleUnderlineCheck_, &QCheckBox::stateChanged, this,
+          &ConfigDialog::checkDirtyState);
+  connect(subtitleAlignmentCombo_,
+          qOverload<int>(&QComboBox::currentIndexChanged), this,
+          &ConfigDialog::checkDirtyState);
+  connect(subtitleRectXSpin_, qOverload<double>(&QDoubleSpinBox::valueChanged),
+          this, &ConfigDialog::checkDirtyState);
+  connect(subtitleRectYSpin_, qOverload<double>(&QDoubleSpinBox::valueChanged),
+          this, &ConfigDialog::checkDirtyState);
+  connect(subtitleRectWSpin_, qOverload<double>(&QDoubleSpinBox::valueChanged),
+          this, &ConfigDialog::checkDirtyState);
+  connect(subtitleRectHSpin_, qOverload<double>(&QDoubleSpinBox::valueChanged),
+          this, &ConfigDialog::checkDirtyState);
+  connect(subtitleRotationSpin_,
+          qOverload<double>(&QDoubleSpinBox::valueChanged), this,
+          &ConfigDialog::checkDirtyState);
+  connect(speakerBgFolderEdit_, &QLineEdit::textChanged, this,
+          &ConfigDialog::checkDirtyState);
+  connect(speakerMarginLeftSpin_, qOverload<int>(&QSpinBox::valueChanged), this,
+          &ConfigDialog::checkDirtyState);
+  connect(speakerMarginTopSpin_, qOverload<int>(&QSpinBox::valueChanged), this,
+          &ConfigDialog::checkDirtyState);
+  connect(speakerMarginRightSpin_, qOverload<int>(&QSpinBox::valueChanged),
+          this, &ConfigDialog::checkDirtyState);
+  connect(speakerMarginBottomSpin_, qOverload<int>(&QSpinBox::valueChanged),
+          this, &ConfigDialog::checkDirtyState);
+
   windowAgent->setTitleBar(titleBar);
 }
 
@@ -259,6 +295,26 @@ void ConfigDialog::loadConfig() {
   speakerMarginRightSpin_->setValue(cfg.getInt("speaker", "marginRight", 15));
   speakerMarginBottomSpin_->setValue(cfg.getInt("speaker", "marginBottom", 15));
 
+  // 缓存字幕和说话人初始配置
+  initialConfig_["sub_fontFamily"] =
+      cfg.getString("subtitle", "fontFamily", "Arial");
+  initialConfig_["sub_fontSize"] = cfg.getInt("subtitle", "fontSize", 24);
+  initialConfig_["sub_bold"] = cfg.getBool("subtitle", "bold", false);
+  initialConfig_["sub_italic"] = cfg.getBool("subtitle", "italic", false);
+  initialConfig_["sub_underline"] = cfg.getBool("subtitle", "underline", false);
+  initialConfig_["sub_alignment"] = cfg.getInt("subtitle", "alignment", 0x84);
+  initialConfig_["sub_rectX"] = cfg.getDouble("subtitle", "rectX", 0.1);
+  initialConfig_["sub_rectY"] = cfg.getDouble("subtitle", "rectY", 0.75);
+  initialConfig_["sub_rectW"] = cfg.getDouble("subtitle", "rectW", 0.8);
+  initialConfig_["sub_rectH"] = cfg.getDouble("subtitle", "rectH", 0.2);
+  initialConfig_["sub_rotation"] = cfg.getDouble("subtitle", "rotation", 0.0);
+  initialConfig_["spk_bgFolder"] = cfg.getString("speaker", "bgFolder");
+  initialConfig_["spk_marginLeft"] = cfg.getInt("speaker", "marginLeft", 15);
+  initialConfig_["spk_marginTop"] = cfg.getInt("speaker", "marginTop", 15);
+  initialConfig_["spk_marginRight"] = cfg.getInt("speaker", "marginRight", 15);
+  initialConfig_["spk_marginBottom"] =
+      cfg.getInt("speaker", "marginBottom", 15);
+
   checkDirtyState();
 }
 
@@ -289,7 +345,39 @@ bool ConfigDialog::isDirty() const {
          (sentenceMaxLengthSpin_->value() !=
           initialConfig_["tc_sentence_max_length"].toInt()) ||
          (engineModelTypeCombo_->currentData().toString() !=
-          initialConfig_["tc_engine_model_type"].toString());
+          initialConfig_["tc_engine_model_type"].toString()) ||
+         (subtitleFontFamilyCombo_->currentText() !=
+          initialConfig_["sub_fontFamily"].toString()) ||
+         (subtitleFontSizeSpin_->value() !=
+          initialConfig_["sub_fontSize"].toInt()) ||
+         (subtitleBoldCheck_->isChecked() !=
+          initialConfig_["sub_bold"].toBool()) ||
+         (subtitleItalicCheck_->isChecked() !=
+          initialConfig_["sub_italic"].toBool()) ||
+         (subtitleUnderlineCheck_->isChecked() !=
+          initialConfig_["sub_underline"].toBool()) ||
+         (subtitleAlignmentCombo_->currentData().toInt() !=
+          initialConfig_["sub_alignment"].toInt()) ||
+         (qAbs(subtitleRectXSpin_->value() -
+               initialConfig_["sub_rectX"].toDouble()) > 1e-5) ||
+         (qAbs(subtitleRectYSpin_->value() -
+               initialConfig_["sub_rectY"].toDouble()) > 1e-5) ||
+         (qAbs(subtitleRectWSpin_->value() -
+               initialConfig_["sub_rectW"].toDouble()) > 1e-5) ||
+         (qAbs(subtitleRectHSpin_->value() -
+               initialConfig_["sub_rectH"].toDouble()) > 1e-5) ||
+         (qAbs(subtitleRotationSpin_->value() -
+               initialConfig_["sub_rotation"].toDouble()) > 1e-5) ||
+         (speakerBgFolderEdit_->text() !=
+          initialConfig_["spk_bgFolder"].toString()) ||
+         (speakerMarginLeftSpin_->value() !=
+          initialConfig_["spk_marginLeft"].toInt()) ||
+         (speakerMarginTopSpin_->value() !=
+          initialConfig_["spk_marginTop"].toInt()) ||
+         (speakerMarginRightSpin_->value() !=
+          initialConfig_["spk_marginRight"].toInt()) ||
+         (speakerMarginBottomSpin_->value() !=
+          initialConfig_["spk_marginBottom"].toInt());
 }
 
 void ConfigDialog::checkDirtyState() {
@@ -368,6 +456,25 @@ void ConfigDialog::saveConfig() {
   initialConfig_["tc_sentence_max_length"] = sentenceMaxLengthSpin_->value();
   initialConfig_["tc_engine_model_type"] =
       engineModelTypeCombo_->currentData().toString();
+
+  // 更新暂存的字幕和说话人参数
+  initialConfig_["sub_fontFamily"] = subtitleFontFamilyCombo_->currentText();
+  initialConfig_["sub_fontSize"] = subtitleFontSizeSpin_->value();
+  initialConfig_["sub_bold"] = subtitleBoldCheck_->isChecked();
+  initialConfig_["sub_italic"] = subtitleItalicCheck_->isChecked();
+  initialConfig_["sub_underline"] = subtitleUnderlineCheck_->isChecked();
+  initialConfig_["sub_alignment"] =
+      subtitleAlignmentCombo_->currentData().toInt();
+  initialConfig_["sub_rectX"] = subtitleRectXSpin_->value();
+  initialConfig_["sub_rectY"] = subtitleRectYSpin_->value();
+  initialConfig_["sub_rectW"] = subtitleRectWSpin_->value();
+  initialConfig_["sub_rectH"] = subtitleRectHSpin_->value();
+  initialConfig_["sub_rotation"] = subtitleRotationSpin_->value();
+  initialConfig_["spk_bgFolder"] = speakerBgFolderEdit_->text();
+  initialConfig_["spk_marginLeft"] = speakerMarginLeftSpin_->value();
+  initialConfig_["spk_marginTop"] = speakerMarginTopSpin_->value();
+  initialConfig_["spk_marginRight"] = speakerMarginRightSpin_->value();
+  initialConfig_["spk_marginBottom"] = speakerMarginBottomSpin_->value();
 
   checkDirtyState();
 }

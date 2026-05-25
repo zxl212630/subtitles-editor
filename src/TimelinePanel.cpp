@@ -1289,6 +1289,9 @@ void TimelinePanel::startAsrPipeline(const QString &localPath,
                 item.startMs = seg.startMs;
                 item.endMs = seg.endMs;
                 item.speakerId = seg.speakerId;
+                if (track_) {
+                  track_->applyDefaultStyle(item);
+                }
                 track_->addItem(item);
                 track_->autoRegisterSpeaker(seg.speakerId);
               }

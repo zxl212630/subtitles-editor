@@ -438,6 +438,10 @@ void AppWindow::onSubtitleFileDropped(const QString &path) {
       item.startMs = static_cast<qint64>(sub->getStartTime());
       item.endMs = static_cast<qint64>(sub->getEndTime());
 
+      if (d->subtitleTrack) {
+        d->subtitleTrack->applyDefaultStyle(item);
+      }
+
       // Overlap check
       if (item.startMs < previousEndMs) {
         qWarning() << "Illegal overlapping subtitle ignored: " << item.text
@@ -708,6 +712,9 @@ void AppWindow::onSettingsRequested() {
   connect(&dialog, &ConfigDialog::configApplied, this, [this]() {
     if (d->subtitleListPanel) {
       d->subtitleListPanel->updateSpeakerColumnVisibility();
+    }
+    if (d->subtitleTrack) {
+      d->subtitleTrack->reloadGlobalSettings();
     }
   });
   dialog.exec();
