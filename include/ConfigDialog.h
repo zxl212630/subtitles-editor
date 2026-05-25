@@ -10,6 +10,8 @@ class QPushButton;
 class QLineEdit;
 class QCheckBox;
 class QSpinBox;
+class QDoubleSpinBox;
+class QGridLayout;
 class ThemeSelectorWidget;
 class ColorSelectorWidget;
 class QAction;
@@ -89,6 +91,42 @@ private:
   QLabel *speakerDiarizationLabel_;
   QLabel *maxLenLabel_;
   QLabel *engineLabel_;
+
+  // Subtitle Settings Page
+  QComboBox *subtitleFontFamilyCombo_;
+  QSpinBox *subtitleFontSizeSpin_;
+  QCheckBox *subtitleBoldCheck_;
+  QCheckBox *subtitleItalicCheck_;
+  QCheckBox *subtitleUnderlineCheck_;
+  QComboBox *subtitleAlignmentCombo_;
+  QDoubleSpinBox *subtitleRectXSpin_;
+  QDoubleSpinBox *subtitleRectYSpin_;
+  QDoubleSpinBox *subtitleRectWSpin_;
+  QDoubleSpinBox *subtitleRectHSpin_;
+  QDoubleSpinBox *subtitleRotationSpin_;
+  QLineEdit *speakerBgFolderEdit_;
+  QPushButton *speakerBgFolderBtn_;
+  QSpinBox *speakerMarginLeftSpin_;
+  QSpinBox *speakerMarginTopSpin_;
+  QSpinBox *speakerMarginRightSpin_;
+  QSpinBox *speakerMarginBottomSpin_;
+
+  QLabel *subtitleFontFamilyLabel_;
+  QLabel *subtitleFontSizeLabel_;
+  QLabel *subtitleBoldLabel_;
+  QLabel *subtitleItalicLabel_;
+  QLabel *subtitleUnderlineLabel_;
+  QLabel *subtitleAlignmentLabel_;
+  QLabel *subtitleRectXLabel_;
+  QLabel *subtitleRectYLabel_;
+  QLabel *subtitleRectWLabel_;
+  QLabel *subtitleRectHLabel_;
+  QLabel *subtitleRotationLabel_;
+  QLabel *speakerBgFolderLabel_;
+  QLabel *speakerMarginLeftLabel_;
+  QLabel *speakerMarginTopLabel_;
+  QLabel *speakerMarginRightLabel_;
+  QLabel *speakerMarginBottomLabel_;
 
   // Footer
   QLabel *dirtyLabel_;

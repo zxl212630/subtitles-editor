@@ -8,7 +8,9 @@
 #include <QCheckBox>
 #include <QComboBox>
 #include <QDebug>
+#include <QDoubleSpinBox>
 #include <QFileDialog>
+#include <QFontDatabase>
 #include <QHeaderView>
 #include <QLabel>
 #include <QLineEdit>
@@ -235,6 +237,31 @@ void ConfigDialog::loadConfig() {
     asrEyeAction_->setIcon(createEyeIcon(false));
   }
 
+  // 字幕设置
+  subtitleFontFamilyCombo_->setCurrentText(
+      cfg.getString("subtitle", "fontFamily", "Arial"));
+  subtitleFontSizeSpin_->setValue(cfg.getInt("subtitle", "fontSize", 24));
+  subtitleBoldCheck_->setChecked(cfg.getBool("subtitle", "bold", false));
+  subtitleItalicCheck_->setChecked(cfg.getBool("subtitle", "italic", false));
+  subtitleUnderlineCheck_->setChecked(
+      cfg.getBool("subtitle", "underline", false));
+  subtitleAlignmentCombo_->setCurrentIndex(
+      subtitleAlignmentCombo_->findData(
+          cfg.getInt("subtitle", "alignment", 0x84)));
+  subtitleRectXSpin_->setValue(cfg.getDouble("subtitle", "rectX", 0.1));
+  subtitleRectYSpin_->setValue(cfg.getDouble("subtitle", "rectY", 0.75));
+  subtitleRectWSpin_->setValue(cfg.getDouble("subtitle", "rectW", 0.8));
+  subtitleRectHSpin_->setValue(cfg.getDouble("subtitle", "rectH", 0.2));
+  subtitleRotationSpin_->setValue(cfg.getDouble("subtitle", "rotation", 0.0));
+  speakerBgFolderEdit_->setText(cfg.getString("speaker", "bgFolder"));
+  speakerMarginLeftSpin_->setValue(
+      cfg.getInt("speaker", "marginLeft", 15));
+  speakerMarginTopSpin_->setValue(cfg.getInt("speaker", "marginTop", 15));
+  speakerMarginRightSpin_->setValue(
+      cfg.getInt("speaker", "marginRight", 15));
+  speakerMarginBottomSpin_->setValue(
+      cfg.getInt("speaker", "marginBottom", 15));
+
   checkDirtyState();
 }
 
@@ -299,6 +326,26 @@ void ConfigDialog::saveConfig() {
   cfg.setSpeakerDiarization(speakerDiarizationCheck_->isChecked());
   cfg.setSentenceMaxLength(sentenceMaxLengthSpin_->value());
   cfg.setEngineModelType(engineModelTypeCombo_->currentData().toString());
+
+  // 字幕设置
+  cfg.setValue("subtitle", "fontFamily",
+               subtitleFontFamilyCombo_->currentText());
+  cfg.setValue("subtitle", "fontSize", subtitleFontSizeSpin_->value());
+  cfg.setValue("subtitle", "bold", subtitleBoldCheck_->isChecked());
+  cfg.setValue("subtitle", "italic", subtitleItalicCheck_->isChecked());
+  cfg.setValue("subtitle", "underline", subtitleUnderlineCheck_->isChecked());
+  cfg.setValue("subtitle", "alignment",
+               subtitleAlignmentCombo_->currentData().toInt());
+  cfg.setValue("subtitle", "rectX", subtitleRectXSpin_->value());
+  cfg.setValue("subtitle", "rectY", subtitleRectYSpin_->value());
+  cfg.setValue("subtitle", "rectW", subtitleRectWSpin_->value());
+  cfg.setValue("subtitle", "rectH", subtitleRectHSpin_->value());
+  cfg.setValue("subtitle", "rotation", subtitleRotationSpin_->value());
+  cfg.setValue("speaker", "bgFolder", speakerBgFolderEdit_->text());
+  cfg.setValue("speaker", "marginLeft", speakerMarginLeftSpin_->value());
+  cfg.setValue("speaker", "marginTop", speakerMarginTopSpin_->value());
+  cfg.setValue("speaker", "marginRight", speakerMarginRightSpin_->value());
+  cfg.setValue("speaker", "marginBottom", speakerMarginBottomSpin_->value());
 
   cfg.sync();
 
@@ -453,6 +500,31 @@ void ConfigDialog::retranslateUi() {
   engineModelTypeCombo_->setItemText(
       23, QString("16k_zh_medical(%1)").arg(tr("中文医疗")));
 
+  // Subtitle settings page
+  if (auto *item = sidebarList_->item(3))
+    item->setText(tr("字幕设置"));
+
+  subtitleFontFamilyLabel_->setText(tr("字体族"));
+  subtitleFontSizeLabel_->setText(tr("字号"));
+  subtitleBoldLabel_->setText(tr("粗体"));
+  subtitleItalicLabel_->setText(tr("斜体"));
+  subtitleUnderlineLabel_->setText(tr("下划线"));
+  subtitleAlignmentLabel_->setText(tr("对齐方式"));
+  subtitleAlignmentCombo_->setItemText(0, tr("左对齐"));
+  subtitleAlignmentCombo_->setItemText(1, tr("居中"));
+  subtitleAlignmentCombo_->setItemText(2, tr("右对齐"));
+  subtitleRectXLabel_->setText(tr("X:"));
+  subtitleRectYLabel_->setText(tr("Y:"));
+  subtitleRectWLabel_->setText(tr("宽度:"));
+  subtitleRectHLabel_->setText(tr("高度:"));
+  subtitleRotationLabel_->setText(tr("旋转:"));
+  speakerBgFolderLabel_->setText(tr("背景图文件夹"));
+  speakerBgFolderBtn_->setText(tr("浏览..."));
+  speakerMarginLeftLabel_->setText(tr("左:"));
+  speakerMarginTopLabel_->setText(tr("上:"));
+  speakerMarginRightLabel_->setText(tr("右:"));
+  speakerMarginBottomLabel_->setText(tr("下:"));
+
   // Footer
   dirtyLabel_->setText(tr("有未保存的更改"));
   btnCancel_->setText(tr("取消"));
@@ -484,6 +556,7 @@ void ConfigDialog::setupUi() {
   sidebarList_->addItem(tr("常规配置"));
   sidebarList_->addItem(tr("对象存储"));
   sidebarList_->addItem(tr("语音识别"));
+  sidebarList_->addItem(tr("字幕设置"));
   contentLayout->addWidget(sidebarList_);
 
   stackedWidget_ = new QStackedWidget(contentWidget);
@@ -717,6 +790,183 @@ void ConfigDialog::setupUi() {
 
   asrLayout->addStretch();
   stackedWidget_->addWidget(asrPage);
+
+  // ------------------------------------------------------------------------
+  // Subtitle Settings Page
+  // ------------------------------------------------------------------------
+  auto *subtitlePage = new QWidget();
+  auto *subLayout = new QVBoxLayout(subtitlePage);
+  subLayout->setContentsMargins(30, 25, 30, 30);
+  subLayout->setSpacing(15);
+
+  // Default font style
+  auto *fontStyleLabel = new QLabel(tr("默认字体样式"), subtitlePage);
+  fontStyleLabel->setObjectName("ConfigSectionLabel");
+  subLayout->addWidget(fontStyleLabel);
+
+  auto *fontFamilyLabel = new QLabel(tr("字体族"), subtitlePage);
+  subtitleFontFamilyLabel_ = fontFamilyLabel;
+  fontFamilyLabel->setObjectName("ConfigFieldLabel");
+  subLayout->addWidget(fontFamilyLabel);
+
+  subtitleFontFamilyCombo_ = new QComboBox(subtitlePage);
+  subtitleFontFamilyCombo_->setFixedHeight(32);
+  for (const auto &family : QFontDatabase::families()) {
+    subtitleFontFamilyCombo_->addItem(family);
+  }
+  subLayout->addWidget(subtitleFontFamilyCombo_);
+
+  auto *fontSizeLabel = new QLabel(tr("字号"), subtitlePage);
+  subtitleFontSizeLabel_ = fontSizeLabel;
+  fontSizeLabel->setObjectName("ConfigFieldLabel");
+  subLayout->addWidget(fontSizeLabel);
+
+  subtitleFontSizeSpin_ = new QSpinBox(subtitlePage);
+  subtitleFontSizeSpin_->setRange(8, 72);
+  subtitleFontSizeSpin_->setValue(24);
+  subLayout->addWidget(subtitleFontSizeSpin_);
+
+  auto *styleLayout = new QHBoxLayout();
+  subtitleBoldLabel_ = new QLabel(tr("粗体"), subtitlePage);
+  styleLayout->addWidget(subtitleBoldLabel_);
+  subtitleBoldCheck_ = new QCheckBox(subtitlePage);
+  styleLayout->addWidget(subtitleBoldCheck_);
+
+  subtitleItalicLabel_ = new QLabel(tr("斜体"), subtitlePage);
+  styleLayout->addWidget(subtitleItalicLabel_);
+  subtitleItalicCheck_ = new QCheckBox(subtitlePage);
+  styleLayout->addWidget(subtitleItalicCheck_);
+
+  subtitleUnderlineLabel_ = new QLabel(tr("下划线"), subtitlePage);
+  styleLayout->addWidget(subtitleUnderlineLabel_);
+  subtitleUnderlineCheck_ = new QCheckBox(subtitlePage);
+  styleLayout->addWidget(subtitleUnderlineCheck_);
+  styleLayout->addStretch();
+  subLayout->addLayout(styleLayout);
+
+  auto *alignmentLabel = new QLabel(tr("对齐方式"), subtitlePage);
+  subtitleAlignmentLabel_ = alignmentLabel;
+  alignmentLabel->setObjectName("ConfigFieldLabel");
+  subLayout->addWidget(alignmentLabel);
+
+  subtitleAlignmentCombo_ = new QComboBox(subtitlePage);
+  subtitleAlignmentCombo_->setFixedHeight(32);
+  subtitleAlignmentCombo_->addItem(tr("左对齐"), 0x81);
+  subtitleAlignmentCombo_->addItem(tr("居中"), 0x84);
+  subtitleAlignmentCombo_->addItem(tr("右对齐"), 0x82);
+  subLayout->addWidget(subtitleAlignmentCombo_);
+
+  // Default layout position
+  auto *positionLabel = new QLabel(tr("默认排版位置"), subtitlePage);
+  positionLabel->setObjectName("ConfigSectionLabel");
+  subLayout->addWidget(positionLabel);
+
+  auto *rectLayout = new QGridLayout();
+  subtitleRectXLabel_ = new QLabel(tr("X:"), subtitlePage);
+  rectLayout->addWidget(subtitleRectXLabel_, 0, 0);
+  subtitleRectXSpin_ = new QDoubleSpinBox(subtitlePage);
+  subtitleRectXSpin_->setRange(0.0, 1.0);
+  subtitleRectXSpin_->setSingleStep(0.05);
+  subtitleRectXSpin_->setValue(0.1);
+  rectLayout->addWidget(subtitleRectXSpin_, 0, 1);
+
+  subtitleRectYLabel_ = new QLabel(tr("Y:"), subtitlePage);
+  rectLayout->addWidget(subtitleRectYLabel_, 0, 2);
+  subtitleRectYSpin_ = new QDoubleSpinBox(subtitlePage);
+  subtitleRectYSpin_->setRange(0.0, 1.0);
+  subtitleRectYSpin_->setSingleStep(0.05);
+  subtitleRectYSpin_->setValue(0.75);
+  rectLayout->addWidget(subtitleRectYSpin_, 0, 3);
+
+  subtitleRectWLabel_ = new QLabel(tr("宽度:"), subtitlePage);
+  rectLayout->addWidget(subtitleRectWLabel_, 1, 0);
+  subtitleRectWSpin_ = new QDoubleSpinBox(subtitlePage);
+  subtitleRectWSpin_->setRange(0.0, 1.0);
+  subtitleRectWSpin_->setSingleStep(0.05);
+  subtitleRectWSpin_->setValue(0.8);
+  rectLayout->addWidget(subtitleRectWSpin_, 1, 1);
+
+  subtitleRectHLabel_ = new QLabel(tr("高度:"), subtitlePage);
+  rectLayout->addWidget(subtitleRectHLabel_, 1, 2);
+  subtitleRectHSpin_ = new QDoubleSpinBox(subtitlePage);
+  subtitleRectHSpin_->setRange(0.0, 1.0);
+  subtitleRectHSpin_->setSingleStep(0.05);
+  subtitleRectHSpin_->setValue(0.2);
+  rectLayout->addWidget(subtitleRectHSpin_, 1, 3);
+  subLayout->addLayout(rectLayout);
+
+  auto *rotationLayout = new QHBoxLayout();
+  subtitleRotationLabel_ = new QLabel(tr("旋转:"), subtitlePage);
+  rotationLayout->addWidget(subtitleRotationLabel_);
+  subtitleRotationSpin_ = new QDoubleSpinBox(subtitlePage);
+  subtitleRotationSpin_->setRange(-180.0, 180.0);
+  subtitleRotationSpin_->setSingleStep(1.0);
+  subtitleRotationSpin_->setValue(0.0);
+  subtitleRotationSpin_->setSuffix("°");
+  rotationLayout->addWidget(subtitleRotationSpin_);
+  rotationLayout->addStretch();
+  subLayout->addLayout(rotationLayout);
+
+  // Speaker settings
+  auto *speakerLabel = new QLabel(tr("说话人设置"), subtitlePage);
+  speakerLabel->setObjectName("ConfigSectionLabel");
+  subLayout->addWidget(speakerLabel);
+
+  speakerBgFolderLabel_ = new QLabel(tr("背景图文件夹"), subtitlePage);
+  speakerBgFolderLabel_->setObjectName("ConfigFieldLabel");
+  subLayout->addWidget(speakerBgFolderLabel_);
+
+  auto *folderLayout = new QHBoxLayout();
+  speakerBgFolderEdit_ = new QLineEdit(subtitlePage);
+  folderLayout->addWidget(speakerBgFolderEdit_);
+  speakerBgFolderBtn_ = new QPushButton(tr("浏览..."), subtitlePage);
+  connect(speakerBgFolderBtn_, &QPushButton::clicked, this, [this]() {
+    QString dir = QFileDialog::getExistingDirectory(
+        this, tr("选择背景图文件夹"), speakerBgFolderEdit_->text());
+    if (!dir.isEmpty()) {
+      speakerBgFolderEdit_->setText(dir);
+      checkDirtyState();
+    }
+  });
+  folderLayout->addWidget(speakerBgFolderBtn_);
+  subLayout->addLayout(folderLayout);
+
+  auto *marginLabel = new QLabel(tr("九宫格边距"), subtitlePage);
+  marginLabel->setObjectName("ConfigFieldLabel");
+  subLayout->addWidget(marginLabel);
+
+  auto *marginLayout = new QGridLayout();
+  speakerMarginLeftLabel_ = new QLabel(tr("左:"), subtitlePage);
+  marginLayout->addWidget(speakerMarginLeftLabel_, 0, 0);
+  speakerMarginLeftSpin_ = new QSpinBox(subtitlePage);
+  speakerMarginLeftSpin_->setRange(0, 100);
+  speakerMarginLeftSpin_->setValue(15);
+  marginLayout->addWidget(speakerMarginLeftSpin_, 0, 1);
+
+  speakerMarginTopLabel_ = new QLabel(tr("上:"), subtitlePage);
+  marginLayout->addWidget(speakerMarginTopLabel_, 0, 2);
+  speakerMarginTopSpin_ = new QSpinBox(subtitlePage);
+  speakerMarginTopSpin_->setRange(0, 100);
+  speakerMarginTopSpin_->setValue(15);
+  marginLayout->addWidget(speakerMarginTopSpin_, 0, 3);
+
+  speakerMarginRightLabel_ = new QLabel(tr("右:"), subtitlePage);
+  marginLayout->addWidget(speakerMarginRightLabel_, 1, 0);
+  speakerMarginRightSpin_ = new QSpinBox(subtitlePage);
+  speakerMarginRightSpin_->setRange(0, 100);
+  speakerMarginRightSpin_->setValue(15);
+  marginLayout->addWidget(speakerMarginRightSpin_, 1, 1);
+
+  speakerMarginBottomLabel_ = new QLabel(tr("下:"), subtitlePage);
+  marginLayout->addWidget(speakerMarginBottomLabel_, 1, 2);
+  speakerMarginBottomSpin_ = new QSpinBox(subtitlePage);
+  speakerMarginBottomSpin_->setRange(0, 100);
+  speakerMarginBottomSpin_->setValue(15);
+  marginLayout->addWidget(speakerMarginBottomSpin_, 1, 3);
+  subLayout->addLayout(marginLayout);
+
+  subLayout->addStretch();
+  stackedWidget_->addWidget(subtitlePage);
 
   contentLayout->addWidget(stackedWidget_);
 

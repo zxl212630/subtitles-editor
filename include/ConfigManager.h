@@ -41,6 +41,13 @@ public:
   QString cosRegion() const;
 
   QString getString(const QString &group, const QString &key) const;
+  QString getString(const QString &group, const QString &key,
+                    const QString &defaultValue) const;
+  int getInt(const QString &group, const QString &key, int defaultValue) const;
+  bool getBool(const QString &group, const QString &key,
+               bool defaultValue) const;
+  double getDouble(const QString &group, const QString &key,
+                   double defaultValue) const;
   void setValue(const QString &group, const QString &key,
                 const QVariant &value);
   void sync();

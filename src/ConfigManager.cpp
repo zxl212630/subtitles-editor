@@ -170,6 +170,40 @@ QString ConfigManager::getString(const QString &group,
   return value;
 }
 
+QString ConfigManager::getString(const QString &group, const QString &key,
+                                 const QString &defaultValue) const {
+  QString val = getString(group, key);
+  return val.isEmpty() ? defaultValue : val;
+}
+
+int ConfigManager::getInt(const QString &group, const QString &key,
+                          int defaultValue) const {
+  QString val = getString(group, key);
+  if (val.isEmpty())
+    return defaultValue;
+  bool ok;
+  int result = val.toInt(&ok);
+  return ok ? result : defaultValue;
+}
+
+bool ConfigManager::getBool(const QString &group, const QString &key,
+                            bool defaultValue) const {
+  QString val = getString(group, key);
+  if (val.isEmpty())
+    return defaultValue;
+  return val == "true" || val == "1";
+}
+
+double ConfigManager::getDouble(const QString &group, const QString &key,
+                                double defaultValue) const {
+  QString val = getString(group, key);
+  if (val.isEmpty())
+    return defaultValue;
+  bool ok;
+  double result = val.toDouble(&ok);
+  return ok ? result : defaultValue;
+}
+
 void ConfigManager::setValue(const QString &group, const QString &key,
                              const QVariant &value) {
   QString fullKey = group + "/" + key;
