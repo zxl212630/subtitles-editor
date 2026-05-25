@@ -253,9 +253,20 @@ void AppWindow::setupSplitterLayout() {
   // 6. SubtitleList -> MediaPlayer seek
   //    Timeline time is updated via MediaPlayer::timeChanged signal, no
   //    direct connection needed.
-  connect(d->subtitleListPanel, &SubtitleListPanel::itemSeekRequested,
-          d->mediaPlayer,
-          [this](const QString &, qint64 ms) { d->mediaPlayer->seek(ms); });
+  connect(
+      d->subtitleListPanel, &SubtitleListPanel::itemSeekRequested,
+      d->mediaPlayer, [this](const QString &id, qint64 ms) {
+        if (d->subtitleTrack && d->mediaPlayer) {
+          const SubtitleItem *item = d->subtitleTrack->findItem(id);
+          if (item) {
+            qint64 current = d->mediaPlayer->currentTimeMs();
+            if (current >= item->startMs && current < item->endMs) {
+              return; // Playhead already within the clip range, no need to seek
+            }
+          }
+        }
+        d->mediaPlayer->seek(ms);
+      });
 
   // 8. VideoPreview play/pause/stop -> MediaPlayer
   connect(d->videoPreviewPanel, &VideoPreviewPanel::playRequested,

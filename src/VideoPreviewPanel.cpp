@@ -949,8 +949,23 @@ void VideoPreviewPanel::updateSubtitleOverlay() {
     }
   }
 
-  // 播放时隐藏字幕包围框虚线和控制手柄，暂停时显示
-  videoRenderer_->setShowEditFrame(!isPlaying_);
+  // 播放时隐藏字幕包围框虚线和控制手柄，暂停且当前显示的字幕为唯一选中项（单选）时显示
+  bool showEdit = false;
+  if (!isPlaying_ && subtitleTrack_ && activeItem && activeItem->selected) {
+    int selectedCount = 0;
+    for (const auto &item : subtitleTrack_->items()) {
+      if (item.selected) {
+        selectedCount++;
+        if (selectedCount > 1) {
+          break;
+        }
+      }
+    }
+    if (selectedCount == 1) {
+      showEdit = true;
+    }
+  }
+  videoRenderer_->setShowEditFrame(showEdit);
 
   if (!activeItem || activeItem->text.isEmpty()) {
     videoRenderer_->setSubtitleText(QString());
@@ -1001,7 +1016,7 @@ void VideoPreviewPanel::onPlaybackStateChanged(MediaPlayer::State state) {
 
   // 播放状态变更时，控制编辑虚线框隐藏/显示并更新画面
   if (videoRenderer_) {
-    videoRenderer_->setShowEditFrame(!isPlaying_);
+    updateSubtitleOverlay();
   }
 }
 

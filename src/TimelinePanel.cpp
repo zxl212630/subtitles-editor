@@ -1,9 +1,9 @@
 #include "TimelinePanel.h"
 #include "AsrProgressDialog.h"
 #include "AudioTranscoder.h"
-#include "OssUploader.h"
-#include "CosUploader.h"
 #include "ConfigManager.h"
+#include "CosUploader.h"
+#include "OssUploader.h"
 #include "QUuid"
 #include "SubtitleItem.h"
 #include "SubtitleTrack.h"
@@ -19,9 +19,9 @@
 #include <QFileInfo>
 #include <QFontDatabase>
 #include <QIcon>
+#include <QKeyEvent>
 #include <QMenu>
 #include <QMimeData>
-#include <QKeyEvent>
 #include <QMouseEvent>
 #include <QPainter>
 #include <QPainterPath>
@@ -379,16 +379,20 @@ void TimelinePanel::drawOnCanvas(QPainter &painter) {
     // Draw rubber band selection box if in RubberBandSelect mode and dragging
     if (clipMode_ == ClipInteractionMode::RubberBandSelect && isDragging_) {
       painter.save();
-      QRect selectionRect = QRect(rubberBandStart_, rubberBandEnd_).normalized();
+      QRect selectionRect =
+          QRect(rubberBandStart_, rubberBandEnd_).normalized();
       int subTrackY = RULER_HEIGHT;
       int subTrackH = SUBTITLE_TRACK_HEIGHT;
       int top = qMax(subTrackY, selectionRect.top());
       int bottom = qMin(subTrackY + subTrackH, selectionRect.bottom());
-      QRect drawRect(selectionRect.left(), top, selectionRect.width(), qMax(0, bottom - top));
+      QRect drawRect(selectionRect.left(), top, selectionRect.width(),
+                     qMax(0, bottom - top));
       if (drawRect.isValid() && drawRect.width() > 0 && drawRect.height() > 0) {
         QColor primaryColor = ThemeManager::instance().getPrimaryColor();
-        QColor fillColor = QColor(primaryColor.red(), primaryColor.green(), primaryColor.blue(), 40);
-        QColor strokeColor = QColor(primaryColor.red(), primaryColor.green(), primaryColor.blue(), 180);
+        QColor fillColor = QColor(primaryColor.red(), primaryColor.green(),
+                                  primaryColor.blue(), 40);
+        QColor strokeColor = QColor(primaryColor.red(), primaryColor.green(),
+                                    primaryColor.blue(), 180);
         painter.setBrush(fillColor);
         painter.setPen(QPen(strokeColor, 1.5, Qt::DashLine));
         painter.drawRect(drawRect);
@@ -579,7 +583,8 @@ void TimelinePanel::drawSubtitleTrack(QPainter &painter, int y) {
       QColor borderColor = ThemeManager::instance().getTextNormalColor();
       painter.setPen(QPen(borderColor, 2.0));
       painter.setBrush(barColor);
-      painter.drawRoundedRect(x + 1, y + 3, w - 2, SUBTITLE_TRACK_HEIGHT - 6, 3, 3);
+      painter.drawRoundedRect(x + 1, y + 3, w - 2, SUBTITLE_TRACK_HEIGHT - 6, 3,
+                              3);
     } else {
       QColor borderColor = primaryColor.darker(120);
       painter.setPen(QPen(borderColor, 1.0));
@@ -799,10 +804,13 @@ void TimelinePanel::mousePressEvent(QMouseEvent *event) {
         }
       }
 
-      // Jump playhead pointer to the start of the clicked subtitle clip
-      currentTimeMs_ = item->startMs;
-      emit timeClicked(item->startMs);
-      canvas_->update();
+      // Jump playhead pointer to the start of the clicked subtitle clip if not
+      // already inside the clip range
+      if (currentTimeMs_ < item->startMs || currentTimeMs_ >= item->endMs) {
+        currentTimeMs_ = item->startMs;
+        emit timeClicked(item->startMs);
+        canvas_->update();
+      }
 
       // Populate dragClips_ with all selected clips
       for (const auto &it : track_->items()) {
@@ -938,8 +946,10 @@ void TimelinePanel::mouseMoveEvent(QMouseEvent *event) {
       for (const auto &dc : dragClips_) {
         qint64 clipMin = -dc.origStartMs;
         qint64 clipMax = totalDurationMs_ - dc.origEndMs;
-        if (clipMin > minDelta) minDelta = clipMin;
-        if (clipMax < maxDelta) maxDelta = clipMax;
+        if (clipMin > minDelta)
+          minDelta = clipMin;
+        if (clipMax < maxDelta)
+          maxDelta = clipMax;
       }
 
       QList<SubtitleItem> unselectedItems;
@@ -966,7 +976,8 @@ void TimelinePanel::mouseMoveEvent(QMouseEvent *event) {
           }
         }
         qint64 clipMin = leftLimit - dc.origStartMs;
-        if (clipMin > minDelta) minDelta = clipMin;
+        if (clipMin > minDelta)
+          minDelta = clipMin;
 
         qint64 rightLimit = totalDurationMs_;
         for (const auto &u : unselectedItems) {
@@ -977,11 +988,14 @@ void TimelinePanel::mouseMoveEvent(QMouseEvent *event) {
           }
         }
         qint64 clipMax = rightLimit - dc.origEndMs;
-        if (clipMax < maxDelta) maxDelta = clipMax;
+        if (clipMax < maxDelta)
+          maxDelta = clipMax;
       }
 
-      if (deltaMs < minDelta) deltaMs = minDelta;
-      if (deltaMs > maxDelta) deltaMs = maxDelta;
+      if (deltaMs < minDelta)
+        deltaMs = minDelta;
+      if (deltaMs > maxDelta)
+        deltaMs = maxDelta;
 
       for (auto &dc : dragClips_) {
         dc.tempStartMs = dc.origStartMs + deltaMs;
@@ -1168,7 +1182,10 @@ void TimelinePanel::dropEvent(QDropEvent *event) {
   }
 }
 
-void TimelinePanel::startAsrPipeline(const QString &localPath, const QString &engineModelType, int sentenceMaxLength, bool speakerDiarization) {
+void TimelinePanel::startAsrPipeline(const QString &localPath,
+                                     const QString &engineModelType,
+                                     int sentenceMaxLength,
+                                     bool speakerDiarization) {
   qDebug() << "=== Starting ASR Pipeline ===";
   asrCancelledByUser_ = false;
 
@@ -1215,8 +1232,9 @@ void TimelinePanel::startAsrPipeline(const QString &localPath, const QString &en
 
   // Connect transcoder and uploader events
   if (provider == "tencent_cos") {
-    auto *cos = qobject_cast<CosUploader*>(uploader);
-    connect(transcoder, &AudioTranscoder::transcodingFinished, cos, &CosUploader::upload);
+    auto *cos = qobject_cast<CosUploader *>(uploader);
+    connect(transcoder, &AudioTranscoder::transcodingFinished, cos,
+            &CosUploader::upload);
     connect(cos, &CosUploader::uploadFinished, this,
             [dialog, asrService](const QString &, const QString &presignedUrl) {
               dialog->setStage(AsrProgressDialog::Stage::Recognition);
@@ -1228,8 +1246,9 @@ void TimelinePanel::startAsrPipeline(const QString &localPath, const QString &en
               dialog->setError(tr("Upload failed: %1").arg(error));
             });
   } else {
-    auto *oss = qobject_cast<OssUploader*>(uploader);
-    connect(transcoder, &AudioTranscoder::transcodingFinished, oss, &OssUploader::upload);
+    auto *oss = qobject_cast<OssUploader *>(uploader);
+    connect(transcoder, &AudioTranscoder::transcodingFinished, oss,
+            &OssUploader::upload);
     connect(oss, &OssUploader::uploadFinished, this,
             [dialog, asrService](const QString &, const QString &presignedUrl) {
               dialog->setStage(AsrProgressDialog::Stage::Recognition);
@@ -1355,7 +1374,8 @@ void TimelinePanel::contextMenuEvent(QContextMenuEvent *event) {
   if (x < TRACK_HEAD_WIDTH)
     return;
 
-  // If there is video total duration, prevent clicking beyond the active video timeline
+  // If there is video total duration, prevent clicking beyond the active video
+  // timeline
   if (totalDurationMs_ > 0) {
     if (x > timeToX(totalDurationMs_)) {
       return;
