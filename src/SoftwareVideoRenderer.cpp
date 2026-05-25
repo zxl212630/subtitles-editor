@@ -317,15 +317,77 @@ void SoftwareVideoRenderer::paintEvent(QPaintEvent *event) {
     }
 
     // 描边效果绘制字幕
-    QTextOption option;
-    option.setAlignment(static_cast<Qt::Alignment>(alignFlags));
-    option.setWrapMode(QTextOption::WrapAtWordBoundaryOrAnywhere);
+    auto drawSubtitleText = [&](QPainter &p, const QColor &color,
+                                int strokeWidth) {
+      if (strokeWidth > 0) {
+        p.setPen(QPen(color, strokeWidth, Qt::SolidLine, Qt::RoundCap,
+                      Qt::RoundJoin));
+      } else {
+        p.setPen(color);
+      }
 
-    painter.setPen(
-        QPen(Qt::black, 3, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin));
-    painter.drawText(textRect, text, option);
-    painter.setPen(Qt::white);
-    painter.drawText(textRect, text, option);
+      if (alignFlags & Qt::AlignJustify) {
+        // 自适应混合中英文词/字拆分
+        QList<QString> tokens;
+        QString currentWord;
+        for (int i = 0; i < text.length(); ++i) {
+          QChar ch = text[i];
+          if (ch.isSpace()) {
+            if (!currentWord.isEmpty()) {
+              tokens.append(currentWord);
+              currentWord.clear();
+            }
+            continue;
+          }
+          ushort unicode = ch.unicode();
+          bool isEnglish = (unicode >= 0x0020 && unicode <= 0x007E);
+          if (isEnglish) {
+            currentWord.append(ch);
+          } else {
+            if (!currentWord.isEmpty()) {
+              tokens.append(currentWord);
+              currentWord.clear();
+            }
+            tokens.append(QString(ch));
+          }
+        }
+        if (!currentWord.isEmpty()) {
+          tokens.append(currentWord);
+        }
+
+        QFontMetrics fm(font);
+        int totalW = 0;
+        QList<int> tokenWidths;
+        for (const QString &t : tokens) {
+          int w = fm.horizontalAdvance(t);
+          tokenWidths.append(w);
+          totalW += w;
+        }
+
+        int N = tokens.size();
+        if (N <= 1 || totalW >= textRect.width()) {
+          // 无法分散时安全退回到普通的水平居中对齐方式
+          p.drawText(textRect,
+                     (alignFlags & ~Qt::AlignJustify) | Qt::AlignHCenter, text);
+        } else {
+          double extra = textRect.width() - totalW;
+          double step = extra / (N - 1);
+          double currentX = textRect.left();
+          for (int i = 0; i < N; ++i) {
+            QRectF tokenRect(currentX, textRect.top(), tokenWidths[i],
+                             textRect.height());
+            p.drawText(tokenRect, Qt::AlignVCenter | Qt::AlignLeft, tokens[i]);
+            currentX += tokenWidths[i] + step;
+          }
+        }
+      } else {
+        // 普通的 Qt 对齐方式绘制
+        p.drawText(textRect, alignFlags, text);
+      }
+    };
+
+    drawSubtitleText(painter, Qt::black, 3);
+    drawSubtitleText(painter, Qt::white, 0);
   }
 
   // 绘制字幕的可拖拽编辑虚线框和 8 个控制点手柄
