@@ -701,8 +701,15 @@ QGroupBox {
 QGroupBox::title {
     subcontrol-origin: margin;
     subcontrol-position: top left;
+    subcontrol-margin: 0;
     left: 12px;
+    top: 6px;
     padding: 0 4px;
     background-color: @bg_panel;
+}
+
+QScrollArea {
+    border: none;
+    background-color: transparent;
 }
 

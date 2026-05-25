@@ -725,6 +725,27 @@ void VideoPreviewPanel::updateHandlePositions() {
   handles_[7]->move(right, bottom); // BR
 }
 
+void VideoPreviewPanel::changeEvent(QEvent *event) {
+  if (event->type() == QEvent::LanguageChange) {
+    retranslateUi();
+  }
+  QWidget::changeEvent(event);
+}
+
+void VideoPreviewPanel::retranslateUi() {
+  bBtn_->setToolTip(tr("加粗"));
+  iBtn_->setToolTip(tr("斜体"));
+  uBtn_->setToolTip(tr("下划线"));
+  alBtn_->setToolTip(tr("左对齐"));
+  acBtn_->setToolTip(tr("居中对齐"));
+  arBtn_->setToolTip(tr("右对齐"));
+  ajBtn_->setToolTip(tr("分散对齐"));
+  applyToAllBtn_->setText(tr("全部应用"));
+  applyToAllBtn_->setToolTip(
+      tr("将当前字幕的字体、字号、样式和位置应用到所有字幕项"));
+  volBtn_->setToolTip(tr("音量 / 静音"));
+}
+
 void VideoPreviewPanel::resizeEvent(QResizeEvent *event) {
   QWidget::resizeEvent(event);
   updateHandlePositions();

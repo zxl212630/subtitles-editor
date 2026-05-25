@@ -17,6 +17,7 @@
 #include <QLineEdit>
 #include <QListWidget>
 #include <QPushButton>
+#include <QScrollArea>
 #include <QSpinBox>
 #include <QStackedWidget>
 #include <QStandardPaths>
@@ -621,6 +622,8 @@ void ConfigDialog::retranslateUi() {
   subtitleItalicLabel_->setText(tr("斜体"));
   subtitleUnderlineLabel_->setText(tr("下划线"));
   subtitleAlignmentLabel_->setText(tr("对齐方式"));
+  if (subtitleStyleGroupLabel_)
+    subtitleStyleGroupLabel_->setText(tr("样式属性"));
   subtitleAlignmentCombo_->setItemText(0, tr("左对齐"));
   subtitleAlignmentCombo_->setItemText(1, tr("居中"));
   subtitleAlignmentCombo_->setItemText(2, tr("右对齐"));
@@ -793,6 +796,9 @@ void ConfigDialog::setupUi() {
   // ------------------------------------------------------------------------
   // ASR Page
   // ------------------------------------------------------------------------
+  auto *asrScrollArea = new QScrollArea();
+  asrScrollArea->setWidgetResizable(true);
+  asrScrollArea->setFrameShape(QFrame::NoFrame);
   auto *asrPage = new QWidget();
   auto *asrLayout = new QVBoxLayout(asrPage);
   asrLayout->setContentsMargins(30, 25, 30, 30);
@@ -900,11 +906,15 @@ void ConfigDialog::setupUi() {
   asrLayout->addWidget(engineModelTypeCombo_);
 
   asrLayout->addStretch();
-  stackedWidget_->addWidget(asrPage);
+  asrScrollArea->setWidget(asrPage);
+  stackedWidget_->addWidget(asrScrollArea);
 
   // ------------------------------------------------------------------------
   // Subtitle Settings Page
   // ------------------------------------------------------------------------
+  auto *subtitleScrollArea = new QScrollArea();
+  subtitleScrollArea->setWidgetResizable(true);
+  subtitleScrollArea->setFrameShape(QFrame::NoFrame);
   auto *subtitlePage = new QWidget();
   auto *subLayout = new QVBoxLayout(subtitlePage);
   subLayout->setContentsMargins(24, 16, 24, 24);
@@ -968,6 +978,7 @@ void ConfigDialog::setupUi() {
   auto *styleCol = new QVBoxLayout();
   styleCol->setSpacing(6);
   auto *styleGroupLabel = new QLabel(tr("样式属性"), subtitlePage);
+  subtitleStyleGroupLabel_ = styleGroupLabel;
   styleGroupLabel->setObjectName("ConfigFieldLabel");
   styleCol->addWidget(styleGroupLabel);
 
@@ -1003,10 +1014,18 @@ void ConfigDialog::setupUi() {
   positionLayout->setSpacing(12);
 
   auto *rectLayout = new QGridLayout();
+  rectLayout->setContentsMargins(0, 0, 0, 0);
   rectLayout->setHorizontalSpacing(16);
   rectLayout->setVerticalSpacing(10);
+  rectLayout->setColumnStretch(0, 0);
+  rectLayout->setColumnStretch(1, 1);
+  rectLayout->setColumnStretch(2, 0);
+  rectLayout->setColumnStretch(3, 0);
+  rectLayout->setColumnStretch(4, 1);
+  rectLayout->setColumnMinimumWidth(2, 40);
 
   subtitleRectXLabel_ = new QLabel(tr("X:"), subtitlePage);
+  subtitleRectXLabel_->setAlignment(Qt::AlignRight | Qt::AlignVCenter);
   rectLayout->addWidget(subtitleRectXLabel_, 0, 0);
   subtitleRectXSpin_ = new QDoubleSpinBox(subtitlePage);
   subtitleRectXSpin_->setFixedHeight(32);
@@ -1016,15 +1035,17 @@ void ConfigDialog::setupUi() {
   rectLayout->addWidget(subtitleRectXSpin_, 0, 1);
 
   subtitleRectYLabel_ = new QLabel(tr("Y:"), subtitlePage);
-  rectLayout->addWidget(subtitleRectYLabel_, 0, 2);
+  subtitleRectYLabel_->setAlignment(Qt::AlignRight | Qt::AlignVCenter);
+  rectLayout->addWidget(subtitleRectYLabel_, 0, 3);
   subtitleRectYSpin_ = new QDoubleSpinBox(subtitlePage);
   subtitleRectYSpin_->setFixedHeight(32);
   subtitleRectYSpin_->setRange(0.0, 1.0);
   subtitleRectYSpin_->setSingleStep(0.05);
   subtitleRectYSpin_->setValue(0.75);
-  rectLayout->addWidget(subtitleRectYSpin_, 0, 3);
+  rectLayout->addWidget(subtitleRectYSpin_, 0, 4);
 
   subtitleRectWLabel_ = new QLabel(tr("宽度:"), subtitlePage);
+  subtitleRectWLabel_->setAlignment(Qt::AlignRight | Qt::AlignVCenter);
   rectLayout->addWidget(subtitleRectWLabel_, 1, 0);
   subtitleRectWSpin_ = new QDoubleSpinBox(subtitlePage);
   subtitleRectWSpin_->setFixedHeight(32);
@@ -1034,15 +1055,17 @@ void ConfigDialog::setupUi() {
   rectLayout->addWidget(subtitleRectWSpin_, 1, 1);
 
   subtitleRectHLabel_ = new QLabel(tr("高度:"), subtitlePage);
-  rectLayout->addWidget(subtitleRectHLabel_, 1, 2);
+  subtitleRectHLabel_->setAlignment(Qt::AlignRight | Qt::AlignVCenter);
+  rectLayout->addWidget(subtitleRectHLabel_, 1, 3);
   subtitleRectHSpin_ = new QDoubleSpinBox(subtitlePage);
   subtitleRectHSpin_->setFixedHeight(32);
   subtitleRectHSpin_->setRange(0.0, 1.0);
   subtitleRectHSpin_->setSingleStep(0.05);
   subtitleRectHSpin_->setValue(0.2);
-  rectLayout->addWidget(subtitleRectHSpin_, 1, 3);
+  rectLayout->addWidget(subtitleRectHSpin_, 1, 4);
 
   subtitleRotationLabel_ = new QLabel(tr("旋转:"), subtitlePage);
+  subtitleRotationLabel_->setAlignment(Qt::AlignRight | Qt::AlignVCenter);
   rectLayout->addWidget(subtitleRotationLabel_, 2, 0);
   subtitleRotationSpin_ = new QDoubleSpinBox(subtitlePage);
   subtitleRotationSpin_->setFixedHeight(32);
@@ -1087,10 +1110,18 @@ void ConfigDialog::setupUi() {
   speakerLayout->addWidget(marginLabel);
 
   auto *marginLayout = new QGridLayout();
+  marginLayout->setContentsMargins(0, 0, 0, 0);
   marginLayout->setHorizontalSpacing(16);
   marginLayout->setVerticalSpacing(10);
+  marginLayout->setColumnStretch(0, 0);
+  marginLayout->setColumnStretch(1, 1);
+  marginLayout->setColumnStretch(2, 0);
+  marginLayout->setColumnStretch(3, 0);
+  marginLayout->setColumnStretch(4, 1);
+  marginLayout->setColumnMinimumWidth(2, 40);
 
   speakerMarginLeftLabel_ = new QLabel(tr("左:"), subtitlePage);
+  speakerMarginLeftLabel_->setAlignment(Qt::AlignRight | Qt::AlignVCenter);
   marginLayout->addWidget(speakerMarginLeftLabel_, 0, 0);
   speakerMarginLeftSpin_ = new QSpinBox(subtitlePage);
   speakerMarginLeftSpin_->setFixedHeight(32);
@@ -1099,14 +1130,16 @@ void ConfigDialog::setupUi() {
   marginLayout->addWidget(speakerMarginLeftSpin_, 0, 1);
 
   speakerMarginTopLabel_ = new QLabel(tr("上:"), subtitlePage);
-  marginLayout->addWidget(speakerMarginTopLabel_, 0, 2);
+  speakerMarginTopLabel_->setAlignment(Qt::AlignRight | Qt::AlignVCenter);
+  marginLayout->addWidget(speakerMarginTopLabel_, 0, 3);
   speakerMarginTopSpin_ = new QSpinBox(subtitlePage);
   speakerMarginTopSpin_->setFixedHeight(32);
   speakerMarginTopSpin_->setRange(0, 100);
   speakerMarginTopSpin_->setValue(15);
-  marginLayout->addWidget(speakerMarginTopSpin_, 0, 3);
+  marginLayout->addWidget(speakerMarginTopSpin_, 0, 4);
 
   speakerMarginRightLabel_ = new QLabel(tr("右:"), subtitlePage);
+  speakerMarginRightLabel_->setAlignment(Qt::AlignRight | Qt::AlignVCenter);
   marginLayout->addWidget(speakerMarginRightLabel_, 1, 0);
   speakerMarginRightSpin_ = new QSpinBox(subtitlePage);
   speakerMarginRightSpin_->setFixedHeight(32);
@@ -1115,18 +1148,20 @@ void ConfigDialog::setupUi() {
   marginLayout->addWidget(speakerMarginRightSpin_, 1, 1);
 
   speakerMarginBottomLabel_ = new QLabel(tr("下:"), subtitlePage);
-  marginLayout->addWidget(speakerMarginBottomLabel_, 1, 2);
+  speakerMarginBottomLabel_->setAlignment(Qt::AlignRight | Qt::AlignVCenter);
+  marginLayout->addWidget(speakerMarginBottomLabel_, 1, 3);
   speakerMarginBottomSpin_ = new QSpinBox(subtitlePage);
   speakerMarginBottomSpin_->setFixedHeight(32);
   speakerMarginBottomSpin_->setRange(0, 100);
   speakerMarginBottomSpin_->setValue(15);
-  marginLayout->addWidget(speakerMarginBottomSpin_, 1, 3);
+  marginLayout->addWidget(speakerMarginBottomSpin_, 1, 4);
   speakerLayout->addLayout(marginLayout);
 
   subLayout->addWidget(speakerGroup_);
 
   subLayout->addStretch();
-  stackedWidget_->addWidget(subtitlePage);
+  subtitleScrollArea->setWidget(subtitlePage);
+  stackedWidget_->addWidget(subtitleScrollArea);
 
   contentLayout->addWidget(stackedWidget_);
 

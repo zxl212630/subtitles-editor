@@ -727,6 +727,8 @@ void AppWindow::retranslateUi() {
     d->exportBtn->setToolTip(tr("导出字幕"));
   if (d->settingsBtn)
     d->settingsBtn->setToolTip(tr("设置"));
+  if (d->videoPreviewPanel)
+    d->videoPreviewPanel->retranslateUi();
 }
 
 void AppWindow::setupMenuBar() {

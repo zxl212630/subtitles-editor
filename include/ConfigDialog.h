@@ -122,6 +122,7 @@ private:
   QLabel *subtitleItalicLabel_;
   QLabel *subtitleUnderlineLabel_;
   QLabel *subtitleAlignmentLabel_;
+  QLabel *subtitleStyleGroupLabel_;
   QLabel *subtitleRectXLabel_;
   QLabel *subtitleRectYLabel_;
   QLabel *subtitleRectWLabel_;

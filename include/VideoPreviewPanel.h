@@ -74,6 +74,7 @@ public:
   void seekTo(qint64 ms);
   void updateSubtitleOverlay();
   void setVideoFps(double fps);
+  void retranslateUi();
 
 signals:
   void fontChanged(const QString &family);
@@ -92,6 +93,7 @@ public slots:
 
 protected:
   void resizeEvent(QResizeEvent *event) override;
+  void changeEvent(QEvent *event) override;
 
 private:
   void setupUi();
