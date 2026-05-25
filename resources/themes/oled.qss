@@ -133,7 +133,7 @@ QCheckBox::indicator:disabled {
 }
 
 /* Inputs */
-QLineEdit, QComboBox, QSpinBox {
+QLineEdit, QComboBox, QSpinBox, QDoubleSpinBox {
     background-color: @bg_panel;
     border: 1px solid @border_color;
     border-radius: 6px;
@@ -143,7 +143,7 @@ QLineEdit, QComboBox, QSpinBox {
     selection-background-color: @border_color;
 }
 
-QLineEdit:focus, QComboBox:focus, QComboBox:on, QSpinBox:focus {
+QLineEdit:focus, QComboBox:focus, QComboBox:on, QSpinBox:focus, QDoubleSpinBox:focus {
     border: 1px solid @primary_color;
 }
 
@@ -163,7 +163,7 @@ QLineEdit QToolButton:pressed {
 }
 
 /* QSpinBox Buttons Styling */
-QSpinBox::up-button {
+QSpinBox::up-button, QDoubleSpinBox::up-button {
     subcontrol-origin: border;
     subcontrol-position: top right;
     width: 20px;
@@ -173,21 +173,21 @@ QSpinBox::up-button {
     background-color: transparent;
 }
 
-QSpinBox::up-button:hover {
+QSpinBox::up-button:hover, QDoubleSpinBox::up-button:hover {
     background-color: @border_dark;
 }
 
-QSpinBox::up-button:pressed {
+QSpinBox::up-button:pressed, QDoubleSpinBox::up-button:pressed {
     background-color: @border_color;
 }
 
-QSpinBox::up-arrow {
+QSpinBox::up-arrow, QDoubleSpinBox::up-arrow {
     image: url(:/icons/up-arrow.svg);
     width: 8px;
     height: 8px;
 }
 
-QSpinBox::down-button {
+QSpinBox::down-button, QDoubleSpinBox::down-button {
     subcontrol-origin: border;
     subcontrol-position: bottom right;
     width: 20px;
@@ -196,15 +196,15 @@ QSpinBox::down-button {
     background-color: transparent;
 }
 
-QSpinBox::down-button:hover {
+QSpinBox::down-button:hover, QDoubleSpinBox::down-button:hover {
     background-color: @border_dark;
 }
 
-QSpinBox::down-button:pressed {
+QSpinBox::down-button:pressed, QDoubleSpinBox::down-button:pressed {
     background-color: @border_color;
 }
 
-QSpinBox::down-arrow {
+QSpinBox::down-arrow, QDoubleSpinBox::down-arrow {
     image: url(:/icons/down-arrow.svg);
     width: 8px;
     height: 8px;
@@ -685,5 +685,24 @@ QPushButton#SpeakerRemoveButton:pressed {
     background-color: #ef4444;
     border-color: #ef4444;
     color: #ffffff;
+}
+
+/* QGroupBox Grouping */
+QGroupBox {
+    border: 1px dashed @border_color;
+    border-radius: 8px;
+    margin-top: 16px;
+    padding: 16px 12px 12px 12px;
+    font-size: 13px;
+    font-weight: bold;
+    color: @text_normal;
+}
+
+QGroupBox::title {
+    subcontrol-origin: margin;
+    subcontrol-position: top left;
+    left: 12px;
+    padding: 0 4px;
+    background-color: @bg_panel;
 }
 

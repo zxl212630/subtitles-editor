@@ -15,6 +15,7 @@ class QGridLayout;
 class ThemeSelectorWidget;
 class ColorSelectorWidget;
 class QAction;
+class QGroupBox;
 
 namespace QWK {
 class WidgetWindowAgent;
@@ -110,6 +111,10 @@ private:
   QSpinBox *speakerMarginTopSpin_;
   QSpinBox *speakerMarginRightSpin_;
   QSpinBox *speakerMarginBottomSpin_;
+
+  QGroupBox *fontStyleGroup_ = nullptr;
+  QGroupBox *positionGroup_ = nullptr;
+  QGroupBox *speakerGroup_ = nullptr;
 
   QLabel *subtitleFontFamilyLabel_;
   QLabel *subtitleFontSizeLabel_;
