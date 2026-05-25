@@ -5,11 +5,13 @@
 #include "SoftwareVideoRenderer.h"
 #include "SubtitleTrack.h"
 
-#include <QDir>
+#include "SubtitleItem.h"
 #include <QAbstractItemView>
 #include <QApplication>
+#include <QButtonGroup>
 #include <QComboBox>
 #include <QDateTime>
+#include <QDir>
 #include <QFontDatabase>
 #include <QFrame>
 #include <QHBoxLayout>
@@ -353,6 +355,18 @@ static QPushButton *createIconBtn(QWidget *parent, const QString &iconPath,
 
 VideoPreviewPanel::VideoPreviewPanel(QWidget *parent) : QWidget(parent) {
   setupUi();
+
+  // 绑定视频渲染器包围框拖拽和缩放的坐标变更信号，实时写入字幕项
+  connect(videoRenderer_, &SoftwareVideoRenderer::subtitleRectChanged, this,
+          [this](const QRectF &rect) {
+            updateCurrentItemStyle([rect](SubtitleItem &item) {
+              item.rectX = rect.x();
+              item.rectY = rect.y();
+              item.rectW = rect.width();
+              item.rectH = rect.height();
+            });
+          });
+
   if (auto *aw = qobject_cast<AppWindow *>(window())) {
     connect(aw, &AppWindow::windowClicked, this, [this](QPoint globalPos) {
       QWidget *w = QApplication::widgetAt(globalPos);
@@ -396,7 +410,10 @@ void VideoPreviewPanel::setupUi() {
 
   connect(fontCombo_, QOverload<int>::of(&QComboBox::currentIndexChanged), this,
           [this]() {
-            emit fontChanged(fontCombo_->currentText());
+            QString family = fontCombo_->currentText();
+            emit fontChanged(family);
+            updateCurrentItemStyle(
+                [family](SubtitleItem &item) { item.fontFamily = family; });
             updateSubtitleOverlay();
           });
 
@@ -419,6 +436,8 @@ void VideoPreviewPanel::setupUi() {
     int size = sizeCombo_->currentText().toInt();
     if (size > 0) {
       emit fontSizeChanged(size);
+      updateCurrentItemStyle(
+          [size](SubtitleItem &item) { item.fontSize = size; });
       updateSubtitleOverlay();
     }
   };
@@ -450,32 +469,96 @@ void VideoPreviewPanel::setupUi() {
   auto *btnGroupLayout = new QHBoxLayout(btnGroup);
   btnGroupLayout->setContentsMargins(0, 0, 0, 0);
   btnGroupLayout->setSpacing(6);
-  auto *bBtn = createTextBtn(btnGroup, "B", 28, 28);
-  bBtn->setObjectName("PreviewTextBtn");
-  btnGroupLayout->addWidget(bBtn);
 
-  auto *iBtn = createTextBtn(btnGroup, "I", 28, 28);
-  iBtn->setObjectName("PreviewTextBtn");
-  btnGroupLayout->addWidget(iBtn);
+  bBtn_ = createIconBtn(btnGroup, ":/icons/bold.svg", 28, 28);
+  bBtn_->setObjectName("PreviewIconBtn");
+  bBtn_->setCheckable(true);
+  bBtn_->setToolTip(tr("加粗"));
+  btnGroupLayout->addWidget(bBtn_);
 
-  auto *uBtn = createTextBtn(btnGroup, "U", 28, 28);
-  uBtn->setObjectName("PreviewTextBtn");
-  btnGroupLayout->addWidget(uBtn);
+  iBtn_ = createIconBtn(btnGroup, ":/icons/italic.svg", 28, 28);
+  iBtn_->setObjectName("PreviewIconBtn");
+  iBtn_->setCheckable(true);
+  iBtn_->setToolTip(tr("斜体"));
+  btnGroupLayout->addWidget(iBtn_);
 
-  auto *alBtn = createTextBtn(btnGroup, QString(QChar(0x2261)), 28, 28);
-  alBtn->setObjectName("PreviewTextBtn");
-  btnGroupLayout->addWidget(alBtn);
+  uBtn_ = createIconBtn(btnGroup, ":/icons/underline.svg", 28, 28);
+  uBtn_->setObjectName("PreviewIconBtn");
+  uBtn_->setCheckable(true);
+  uBtn_->setToolTip(tr("下划线"));
+  btnGroupLayout->addWidget(uBtn_);
 
-  auto *acBtn = createTextBtn(btnGroup, QString(QChar(0x2261)), 28, 28);
-  acBtn->setObjectName("PreviewTextBtn");
-  btnGroupLayout->addWidget(acBtn);
+  // 对齐按钮：改用对应的 SVG 图标并分组互斥
+  alBtn_ = createIconBtn(btnGroup, ":/icons/align-left.svg", 28, 28);
+  alBtn_->setObjectName("PreviewIconBtn");
+  alBtn_->setCheckable(true);
+  alBtn_->setToolTip(tr("左对齐"));
+  btnGroupLayout->addWidget(alBtn_);
 
-  auto *arBtn = createTextBtn(btnGroup, QString(QChar(0x2261)), 28, 28);
-  arBtn->setObjectName("PreviewTextBtn");
-  btnGroupLayout->addWidget(arBtn);
+  acBtn_ = createIconBtn(btnGroup, ":/icons/align-center.svg", 28, 28);
+  acBtn_->setObjectName("PreviewIconBtn");
+  acBtn_->setCheckable(true);
+  acBtn_->setToolTip(tr("居中对齐"));
+  btnGroupLayout->addWidget(acBtn_);
+
+  arBtn_ = createIconBtn(btnGroup, ":/icons/align-right.svg", 28, 28);
+  arBtn_->setObjectName("PreviewIconBtn");
+  arBtn_->setCheckable(true);
+  arBtn_->setToolTip(tr("右对齐"));
+  btnGroupLayout->addWidget(arBtn_);
+
+  ajBtn_ = createIconBtn(btnGroup, ":/icons/align-justify.svg", 28, 28);
+  ajBtn_->setObjectName("PreviewIconBtn");
+  ajBtn_->setCheckable(true);
+  ajBtn_->setToolTip(tr("分散对齐"));
+  btnGroupLayout->addWidget(ajBtn_);
+
+  // 对齐按钮互斥组
+  auto *alignGroup = new QButtonGroup(this);
+  alignGroup->setExclusive(true);
+  alignGroup->addButton(alBtn_, Qt::AlignLeft);
+  alignGroup->addButton(acBtn_, Qt::AlignHCenter);
+  alignGroup->addButton(arBtn_, Qt::AlignRight);
+  alignGroup->addButton(ajBtn_, Qt::AlignJustify);
 
   tbLayout->addWidget(btnGroup);
-  btnGroup->hide();
+
+  // 一键应用样式到全部按钮，文案改为“全部应用”，样式改为明显的主色按钮
+  applyToAllBtn_ = createTextBtn(toolbar, tr("全部应用"), 76, 28);
+  applyToAllBtn_->setObjectName("SubtitleActionBtn");
+  applyToAllBtn_->setToolTip(
+      tr("将当前字幕的字体、字号、样式和位置应用到所有字幕项"));
+  tbLayout->addWidget(applyToAllBtn_);
+
+  // 连接样式按钮的槽函数
+  connect(bBtn_, &QPushButton::clicked, this, [this](bool checked) {
+    updateCurrentItemStyle(
+        [checked](SubtitleItem &item) { item.bold = checked; });
+    updateSubtitleOverlay();
+  });
+  connect(iBtn_, &QPushButton::clicked, this, [this](bool checked) {
+    updateCurrentItemStyle(
+        [checked](SubtitleItem &item) { item.italic = checked; });
+    updateSubtitleOverlay();
+  });
+  connect(uBtn_, &QPushButton::clicked, this, [this](bool checked) {
+    updateCurrentItemStyle(
+        [checked](SubtitleItem &item) { item.underline = checked; });
+    updateSubtitleOverlay();
+  });
+  connect(alignGroup, &QButtonGroup::idClicked, this, [this](int id) {
+    updateCurrentItemStyle([id](SubtitleItem &item) { item.alignment = id; });
+    updateSubtitleOverlay();
+  });
+  connect(applyToAllBtn_, &QPushButton::clicked, this, [this]() {
+    if (subtitleTrack_) {
+      const SubtitleItem *sel = subtitleTrack_->selectedItem();
+      if (sel) {
+        subtitleTrack_->applyStyleToAll(sel->id);
+        updateSubtitleOverlay();
+      }
+    }
+  });
 
   layout->addWidget(toolbar);
 
@@ -488,8 +571,6 @@ void VideoPreviewPanel::setupUi() {
 
   videoRenderer_ = new SoftwareVideoRenderer(videoArea_);
   vaLayout->addWidget(videoRenderer_);
-
-  // Drag handles removed / hidden for now
 
   layout->addWidget(videoArea_, 1);
 
@@ -535,8 +616,6 @@ void VideoPreviewPanel::setupUi() {
   progressBar_->setObjectName("PreviewProgressBar");
   cbLayout->addWidget(progressBar_);
 
-  // 额外增加播放进度与时间 label
-  // 的间距，平衡右侧音量按钮的视觉空白，达到对称美观
   cbLayout->addSpacing(4);
 
   currentTimeLabel_ = new QLabel("00:00:00.000 / 00:00:00.000", controlBar);
@@ -675,7 +754,132 @@ void VideoPreviewPanel::setMediaPlayer(MediaPlayer *player) {
 }
 
 void VideoPreviewPanel::setSubtitleTrack(SubtitleTrack *track) {
+  if (subtitleTrack_) {
+    disconnect(subtitleTrack_, nullptr, this, nullptr);
+  }
   subtitleTrack_ = track;
+  if (subtitleTrack_) {
+    // 当切换到另一条字幕时，阻塞工具栏控件信号以更新界面状态
+    connect(subtitleTrack_, &SubtitleTrack::itemSelected, this,
+            [this](const QString &id) {
+              Q_UNUSED(id)
+
+              fontCombo_->blockSignals(true);
+              sizeCombo_->blockSignals(true);
+              bBtn_->blockSignals(true);
+              iBtn_->blockSignals(true);
+              uBtn_->blockSignals(true);
+              alBtn_->blockSignals(true);
+              acBtn_->blockSignals(true);
+              arBtn_->blockSignals(true);
+              ajBtn_->blockSignals(true);
+
+              const SubtitleItem *sel = subtitleTrack_->selectedItem();
+              if (sel) {
+                int fontIdx = fontCombo_->findText(sel->fontFamily);
+                if (fontIdx >= 0)
+                  fontCombo_->setCurrentIndex(fontIdx);
+                sizeCombo_->setCurrentText(QString::number(sel->fontSize));
+                bBtn_->setChecked(sel->bold);
+                iBtn_->setChecked(sel->italic);
+                uBtn_->setChecked(sel->underline);
+
+                if (sel->alignment & Qt::AlignLeft)
+                  alBtn_->setChecked(true);
+                else if (sel->alignment & Qt::AlignRight)
+                  arBtn_->setChecked(true);
+                else if (sel->alignment & Qt::AlignJustify)
+                  ajBtn_->setChecked(true);
+                else
+                  acBtn_->setChecked(true);
+
+                applyToAllBtn_->setEnabled(true);
+              } else {
+                // 使用全局默认模板样式
+                int fontIdx =
+                    fontCombo_->findText(subtitleTrack_->defaultFontFamily());
+                if (fontIdx >= 0)
+                  fontCombo_->setCurrentIndex(fontIdx);
+                sizeCombo_->setCurrentText(
+                    QString::number(subtitleTrack_->defaultFontSize()));
+                bBtn_->setChecked(subtitleTrack_->defaultBold());
+                iBtn_->setChecked(subtitleTrack_->defaultItalic());
+                uBtn_->setChecked(subtitleTrack_->defaultUnderline());
+
+                int align = subtitleTrack_->defaultAlignment();
+                if (align & Qt::AlignLeft)
+                  alBtn_->setChecked(true);
+                else if (align & Qt::AlignRight)
+                  arBtn_->setChecked(true);
+                else if (align & Qt::AlignJustify)
+                  ajBtn_->setChecked(true);
+                else
+                  acBtn_->setChecked(true);
+
+                applyToAllBtn_->setEnabled(false);
+              }
+
+              fontCombo_->blockSignals(false);
+              sizeCombo_->blockSignals(false);
+              bBtn_->blockSignals(false);
+              iBtn_->blockSignals(false);
+              uBtn_->blockSignals(false);
+              alBtn_->blockSignals(false);
+              acBtn_->blockSignals(false);
+              arBtn_->blockSignals(false);
+              ajBtn_->blockSignals(false);
+
+              updateSubtitleOverlay();
+            });
+
+    // 如果当前有选中项，手动发射一次选择信号以更新 UI 状态
+    if (subtitleTrack_->selectedItem()) {
+      emit subtitleTrack_->itemSelected(subtitleTrack_->selectedItem()->id);
+    } else {
+      applyToAllBtn_->setEnabled(false);
+    }
+  }
+}
+
+void VideoPreviewPanel::updateCurrentItemStyle(
+    const std::function<void(SubtitleItem &)> &updateFunc) {
+  if (!subtitleTrack_)
+    return;
+
+  const SubtitleItem *sel = subtitleTrack_->selectedItem();
+  if (sel) {
+    SubtitleItem newItem = *sel;
+    updateFunc(newItem);
+    // 更新选中的特定字幕项样式
+    subtitleTrack_->updateItem(sel->id, newItem);
+  } else {
+    // 未选中时，将新样式记录为全局默认的模板样式，以便新加字幕继承该样式
+    SubtitleItem dummy;
+    dummy.fontFamily = subtitleTrack_->defaultFontFamily();
+    dummy.fontSize = subtitleTrack_->defaultFontSize();
+    dummy.bold = subtitleTrack_->defaultBold();
+    dummy.italic = subtitleTrack_->defaultItalic();
+    dummy.underline = subtitleTrack_->defaultUnderline();
+    dummy.alignment = subtitleTrack_->defaultAlignment();
+
+    QRectF defRect = subtitleTrack_->defaultSubtitleRect();
+    dummy.rectX = defRect.x();
+    dummy.rectY = defRect.y();
+    dummy.rectW = defRect.width();
+    dummy.rectH = defRect.height();
+
+    updateFunc(dummy);
+
+    subtitleTrack_->setDefaultFontFamily(dummy.fontFamily);
+    subtitleTrack_->setDefaultFontSize(dummy.fontSize);
+    subtitleTrack_->setDefaultBold(dummy.bold);
+    subtitleTrack_->setDefaultItalic(dummy.italic);
+    subtitleTrack_->setDefaultUnderline(dummy.underline);
+    subtitleTrack_->setDefaultAlignment(dummy.alignment);
+    subtitleTrack_->setDefaultSubtitleRect(
+        QRectF(dummy.rectX, dummy.rectY, dummy.rectW, dummy.rectH));
+    subtitleTrack_->saveGlobalSettings();
+  }
 }
 
 void VideoPreviewPanel::onMediaLoaded(qint64 durationMs, QSize videoSize) {
@@ -727,8 +931,6 @@ void VideoPreviewPanel::updateSubtitleOverlay() {
     const auto &item = items[i];
     bool isLast = (i == items.size() - 1);
 
-    // Left-closed, right-open: [start, end)
-    // Exception: last item is visible at exactly endMs
     if (currentTimeMs >= item.startMs) {
       if (currentTimeMs < item.endMs ||
           (isLast && currentTimeMs == item.endMs)) {
@@ -738,9 +940,8 @@ void VideoPreviewPanel::updateSubtitleOverlay() {
     }
   }
 
-  int fontSize = qMax(1, sizeCombo_->currentText().toInt());
-  QFont font(fontCombo_->currentText(), fontSize);
-  videoRenderer_->setSubtitleFont(font);
+  // 播放时隐藏字幕包围框虚线和控制手柄，暂停时显示
+  videoRenderer_->setShowEditFrame(!isPlaying_);
 
   if (!activeItem || activeItem->text.isEmpty()) {
     videoRenderer_->setSubtitleText(QString());
@@ -748,11 +949,21 @@ void VideoPreviewPanel::updateSubtitleOverlay() {
     return;
   }
 
-  LOG_SUB(debug,
-          "active id=" << activeItem->id << " text=" << activeItem->text);
+  // 从当前字幕对象加载样式和排版框坐标，传给渲染器
+  QFont font(activeItem->fontFamily, activeItem->fontSize);
+  font.setBold(activeItem->bold);
+  font.setItalic(activeItem->italic);
+  font.setUnderline(activeItem->underline);
+
+  videoRenderer_->setSubtitleFont(font);
+  videoRenderer_->setSubtitleAlignment(activeItem->alignment);
+  videoRenderer_->setSubtitleNormalizedRect(
+      QRectF(activeItem->rectX, activeItem->rectY, activeItem->rectW,
+             activeItem->rectH));
   videoRenderer_->setSubtitleText(activeItem->text);
 
-  if (activeItem->speakerId >= 0 && subtitleTrack_) {
+  // 加载说话人背景
+  if (activeItem->speakerId >= 0) {
     SpeakerInfo info = subtitleTrack_->speakerInfo(activeItem->speakerId);
     QString bgFolder = subtitleTrack_->globalBgFolder();
     if (!bgFolder.isEmpty() && !info.bgImageFile.isEmpty()) {
@@ -775,6 +986,11 @@ void VideoPreviewPanel::onPlaybackStateChanged(MediaPlayer::State state) {
     } else {
       playPauseBtn_->setIcon(QIcon(":/icons/play.svg"));
     }
+  }
+
+  // 播放状态变更时，控制编辑虚线框隐藏/显示并更新画面
+  if (videoRenderer_) {
+    videoRenderer_->setShowEditFrame(!isPlaying_);
   }
 }
 

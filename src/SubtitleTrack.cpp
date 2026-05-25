@@ -175,6 +175,18 @@ void SubtitleTrack::splitItem(const QString &id, int cursorPosition,
       newItem.endMs = original.endMs;
       newItem.speakerId = original.speakerId;
 
+      // 继承原字幕样式
+      newItem.fontFamily = original.fontFamily;
+      newItem.fontSize = original.fontSize;
+      newItem.bold = original.bold;
+      newItem.italic = original.italic;
+      newItem.underline = original.underline;
+      newItem.alignment = original.alignment;
+      newItem.rectX = original.rectX;
+      newItem.rectY = original.rectY;
+      newItem.rectW = original.rectW;
+      newItem.rectH = original.rectH;
+
       items_.insert(i + 1, newItem);
 
       emit itemUpdated(original.id);
@@ -219,6 +231,18 @@ void SubtitleTrack::addGapItem(qint64 startMs, qint64 endMs) {
   newItem.text = "";
   newItem.startMs = startMs;
   newItem.endMs = endMs;
+
+  // 使用全局默认的模板样式
+  newItem.fontFamily = defaultFontFamily_;
+  newItem.fontSize = defaultFontSize_;
+  newItem.bold = defaultBold_;
+  newItem.italic = defaultItalic_;
+  newItem.underline = defaultUnderline_;
+  newItem.alignment = defaultAlignment_;
+  newItem.rectX = defaultSubtitleRect_.x();
+  newItem.rectY = defaultSubtitleRect_.y();
+  newItem.rectW = defaultSubtitleRect_.width();
+  newItem.rectH = defaultSubtitleRect_.height();
 
   // Insert maintaining time order
   int insertIdx = items_.size();
@@ -281,6 +305,46 @@ void SubtitleTrack::setUnifiedBorderMargins(const QMargins &margins) {
   unifiedBorderMargins_ = margins;
 }
 
+void SubtitleTrack::applyStyleToAll(const QString &sourceId) {
+  const SubtitleItem *source = findItem(sourceId);
+  if (!source)
+    return;
+
+  bool changed = false;
+  for (int i = 0; i < items_.size(); ++i) {
+    if (items_[i].id != sourceId) {
+      items_[i].fontFamily = source->fontFamily;
+      items_[i].fontSize = source->fontSize;
+      items_[i].bold = source->bold;
+      items_[i].italic = source->italic;
+      items_[i].underline = source->underline;
+      items_[i].alignment = source->alignment;
+      items_[i].rectX = source->rectX;
+      items_[i].rectY = source->rectY;
+      items_[i].rectW = source->rectW;
+      items_[i].rectH = source->rectH;
+      emit itemUpdated(items_[i].id);
+      changed = true;
+    }
+  }
+
+  // 同步更新全局默认样式配置，使之后创建的字幕项也使用此样式
+  defaultFontFamily_ = source->fontFamily;
+  defaultFontSize_ = source->fontSize;
+  defaultBold_ = source->bold;
+  defaultItalic_ = source->italic;
+  defaultUnderline_ = source->underline;
+  defaultAlignment_ = source->alignment;
+  defaultSubtitleRect_ =
+      QRectF(source->rectX, source->rectY, source->rectW, source->rectH);
+
+  saveGlobalSettings();
+
+  if (changed) {
+    emit dataChanged();
+  }
+}
+
 void SubtitleTrack::loadGlobalSettings() {
   QSettings settings;
   globalBgFolder_ = settings.value("speaker/bgFolder").toString();
@@ -289,6 +353,21 @@ void SubtitleTrack::loadGlobalSettings() {
   int right = settings.value("speaker/marginRight", 15).toInt();
   int bottom = settings.value("speaker/marginBottom", 15).toInt();
   unifiedBorderMargins_ = QMargins(left, top, right, bottom);
+
+  // 加载全局默认模板样式
+  defaultFontFamily_ =
+      settings.value("defaultStyle/fontFamily", "Arial").toString();
+  defaultFontSize_ = settings.value("defaultStyle/fontSize", 24).toInt();
+  defaultBold_ = settings.value("defaultStyle/bold", false).toBool();
+  defaultItalic_ = settings.value("defaultStyle/italic", false).toBool();
+  defaultUnderline_ = settings.value("defaultStyle/underline", false).toBool();
+  defaultAlignment_ = settings.value("defaultStyle/alignment", 0x84).toInt();
+
+  double rx = settings.value("defaultStyle/rectX", 0.1).toDouble();
+  double ry = settings.value("defaultStyle/rectY", 0.75).toDouble();
+  double rw = settings.value("defaultStyle/rectW", 0.8).toDouble();
+  double rh = settings.value("defaultStyle/rectH", 0.2).toDouble();
+  defaultSubtitleRect_ = QRectF(rx, ry, rw, rh);
 }
 
 void SubtitleTrack::saveGlobalSettings() {
@@ -298,4 +377,17 @@ void SubtitleTrack::saveGlobalSettings() {
   settings.setValue("speaker/marginTop", unifiedBorderMargins_.top());
   settings.setValue("speaker/marginRight", unifiedBorderMargins_.right());
   settings.setValue("speaker/marginBottom", unifiedBorderMargins_.bottom());
+
+  // 保存全局默认模板样式
+  settings.setValue("defaultStyle/fontFamily", defaultFontFamily_);
+  settings.setValue("defaultStyle/fontSize", defaultFontSize_);
+  settings.setValue("defaultStyle/bold", defaultBold_);
+  settings.setValue("defaultStyle/italic", defaultItalic_);
+  settings.setValue("defaultStyle/underline", defaultUnderline_);
+  settings.setValue("defaultStyle/alignment", defaultAlignment_);
+
+  settings.setValue("defaultStyle/rectX", defaultSubtitleRect_.x());
+  settings.setValue("defaultStyle/rectY", defaultSubtitleRect_.y());
+  settings.setValue("defaultStyle/rectW", defaultSubtitleRect_.width());
+  settings.setValue("defaultStyle/rectH", defaultSubtitleRect_.height());
 }

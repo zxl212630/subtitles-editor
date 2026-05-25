@@ -2,6 +2,7 @@
 
 #include <QFontDatabase>
 #include <QWidget>
+#include <functional>
 
 #include "MediaPlayer.h"
 
@@ -57,6 +58,7 @@ private:
 
 class SoftwareVideoRenderer;
 class SubtitleTrack;
+struct SubtitleItem;
 
 class VideoPreviewPanel : public QWidget {
   Q_OBJECT
@@ -101,6 +103,9 @@ private:
   void hideVolumeSliderDeferred();
   void toggleMute();
 
+  void
+  updateCurrentItemStyle(const std::function<void(SubtitleItem &)> &updateFunc);
+
   QComboBox *fontCombo_ = nullptr;
   QComboBox *sizeCombo_ = nullptr;
   QFrame *videoArea_ = nullptr;
@@ -117,6 +122,17 @@ private:
   ProgressBarWidget *progressBar_ = nullptr;
   VolumeButton *volBtn_ = nullptr;
   VolumeSliderWidget *sliderWidget_ = nullptr;
+
+  // 格式与样式操作按钮
+  QPushButton *bBtn_ = nullptr;
+  QPushButton *iBtn_ = nullptr;
+  QPushButton *uBtn_ = nullptr;
+  QPushButton *alBtn_ = nullptr;
+  QPushButton *acBtn_ = nullptr;
+  QPushButton *arBtn_ = nullptr;
+  QPushButton *ajBtn_ = nullptr;
+  QPushButton *applyToAllBtn_ = nullptr;
+
   bool isPlaying_ = false;
   qint64 totalDurationMs_ = 0;
 };

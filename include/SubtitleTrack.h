@@ -5,13 +5,14 @@
 #include <QMap>
 #include <QMargins>
 #include <QObject>
+#include <QRectF>
 #include <QSet>
 #include <QString>
 
 struct SpeakerInfo {
   int id = -1;
   QString name;
-  QString bgImageFile;   // 文件名 (如 "alice.png")，配合 globalBgFolder_ 使用
+  QString bgImageFile; // 文件名 (如 "alice.png")，配合 globalBgFolder_ 使用
   bool is9Patch = true;
 };
 
@@ -52,6 +53,35 @@ public:
   QMargins unifiedBorderMargins() const;
   void setUnifiedBorderMargins(const QMargins &margins);
 
+  // --- 全局默认样式设置 ---
+  QString defaultFontFamily() const { return defaultFontFamily_; }
+  void setDefaultFontFamily(const QString &family) {
+    defaultFontFamily_ = family;
+  }
+
+  int defaultFontSize() const { return defaultFontSize_; }
+  void setDefaultFontSize(int size) { defaultFontSize_ = size; }
+
+  bool defaultBold() const { return defaultBold_; }
+  void setDefaultBold(bool bold) { defaultBold_ = bold; }
+
+  bool defaultItalic() const { return defaultItalic_; }
+  void setDefaultItalic(bool italic) { defaultItalic_ = italic; }
+
+  bool defaultUnderline() const { return defaultUnderline_; }
+  void setDefaultUnderline(bool underline) { defaultUnderline_ = underline; }
+
+  int defaultAlignment() const { return defaultAlignment_; }
+  void setDefaultAlignment(int alignment) { defaultAlignment_ = alignment; }
+
+  QRectF defaultSubtitleRect() const { return defaultSubtitleRect_; }
+  void setDefaultSubtitleRect(const QRectF &rect) {
+    defaultSubtitleRect_ = rect;
+  }
+
+  // 一键应用样式到全部字幕
+  void applyStyleToAll(const QString &sourceId);
+
   // --- 持久化（仅保存全局统一设置到 config.ini）---
   void loadGlobalSettings();
   void saveGlobalSettings();
@@ -70,4 +100,13 @@ private:
   QMap<int, SpeakerInfo> speakers_;
   QString globalBgFolder_;
   QMargins unifiedBorderMargins_{15, 15, 15, 15};
+
+  // 全局默认样式私有成员
+  QString defaultFontFamily_ = "Arial";
+  int defaultFontSize_ = 24;
+  bool defaultBold_ = false;
+  bool defaultItalic_ = false;
+  bool defaultUnderline_ = false;
+  int defaultAlignment_ = 0x84;
+  QRectF defaultSubtitleRect_{0.1, 0.75, 0.8, 0.2};
 };

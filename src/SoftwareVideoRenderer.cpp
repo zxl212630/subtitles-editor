@@ -2,6 +2,7 @@
 #include "ThemeManager.h"
 
 #include <QElapsedTimer>
+#include <QMouseEvent>
 #include <QPainter>
 
 #define PROFILE_TIMING 1
@@ -17,6 +18,7 @@ SoftwareVideoRenderer::SoftwareVideoRenderer(QWidget *parent)
   setAttribute(Qt::WA_OpaquePaintEvent);
   setMinimumSize(320, 180);
   setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Preferred);
+  setMouseTracking(true);
 }
 
 void SoftwareVideoRenderer::renderFrame(const DecodedVideoFrame &frame) {
@@ -80,8 +82,8 @@ void SoftwareVideoRenderer::setSubtitleFont(const QFont &font) {
 }
 
 void SoftwareVideoRenderer::setSubtitleBg(const QString &imagePath,
-                                           bool is9Patch,
-                                           const QMargins &margins) {
+                                          bool is9Patch,
+                                          const QMargins &margins) {
   {
     QMutexLocker lock(&bgMutex_);
     bgImagePath_ = imagePath;
@@ -100,8 +102,8 @@ void SoftwareVideoRenderer::clearSubtitleBg() {
 }
 
 void SoftwareVideoRenderer::drawNinePatch(QPainter &painter, const QImage &src,
-                                           const QRect &target,
-                                           const QMargins &m) {
+                                          const QRect &target,
+                                          const QMargins &m) {
   int sw = src.width();
   int sh = src.height();
   int tw = target.width();
@@ -151,6 +153,66 @@ void SoftwareVideoRenderer::drawNinePatch(QPainter &painter, const QImage &src,
   painter.drawImage(dBR, src, sBR);
 }
 
+QRect SoftwareVideoRenderer::getTargetRect() const {
+  QMutexLocker lock(&imageMutex_);
+  if (!hasFrame_ || currentWidth_ <= 0 || currentHeight_ <= 0) {
+    return rect();
+  }
+
+  double widgetRatio =
+      static_cast<double>(width()) / static_cast<double>(height());
+  double imageRatio =
+      static_cast<double>(currentWidth_) / static_cast<double>(currentHeight_);
+
+  int newWidth;
+  int newHeight;
+  if (widgetRatio > imageRatio) {
+    newHeight = height();
+    newWidth = static_cast<int>(height() * imageRatio);
+  } else {
+    newWidth = width();
+    newHeight = static_cast<int>(width() / imageRatio);
+  }
+
+  int x = (width() - newWidth) / 2;
+  int y = (height() - newHeight) / 2;
+  return QRect(x, y, newWidth, newHeight);
+}
+
+QRect SoftwareVideoRenderer::getSubtitlePixelRect() const {
+  QRect targetRect = getTargetRect();
+
+  // 使用当前字幕对应的归一化坐标计算屏幕实际的像素排版框位置
+  int rx =
+      targetRect.x() + qRound(targetRect.width() * subtitleNormalizedRect_.x());
+  int ry = targetRect.y() +
+           qRound(targetRect.height() * subtitleNormalizedRect_.y());
+  int rw = qRound(targetRect.width() * subtitleNormalizedRect_.width());
+  int rh = qRound(targetRect.height() * subtitleNormalizedRect_.height());
+  return QRect(rx, ry, rw, rh);
+}
+
+void SoftwareVideoRenderer::setSubtitleAlignment(int alignment) {
+  {
+    QMutexLocker lock(&subtitleMutex_);
+    subtitleAlignment_ = alignment;
+  }
+  update();
+}
+
+void SoftwareVideoRenderer::setSubtitleNormalizedRect(const QRectF &rect) {
+  {
+    QMutexLocker lock(&subtitleMutex_);
+    subtitleNormalizedRect_ = rect;
+  }
+  update();
+}
+
+void SoftwareVideoRenderer::setShowEditFrame(bool show) {
+  showEditFrame_ = show;
+  update();
+}
+
 void SoftwareVideoRenderer::paintEvent(QPaintEvent *event) {
   Q_UNUSED(event)
   QElapsedTimer timer;
@@ -174,35 +236,15 @@ void SoftwareVideoRenderer::paintEvent(QPaintEvent *event) {
     }
   }
 
-  // Compute video target rect (used for both video and subtitle clipping)
-  QRect targetRect;
+  // Compute video target rect
+  QRect targetRect = getTargetRect();
   if (hasFrame && w > 0 && h > 0) {
     // 构造零拷贝的 QImage，直接使用 rgbaSnapshot 的数据缓冲区
     QImage imageToDraw(
         reinterpret_cast<const uchar *>(rgbaSnapshot.constData()), w, h, w * 4,
         QImage::Format_RGBA8888);
-
-    double widgetRatio =
-        static_cast<double>(width()) / static_cast<double>(height());
-    double imageRatio = static_cast<double>(w) / static_cast<double>(h);
-
-    int newWidth;
-    int newHeight;
-    if (widgetRatio > imageRatio) {
-      newHeight = height();
-      newWidth = static_cast<int>(height() * imageRatio);
-    } else {
-      newWidth = width();
-      newHeight = static_cast<int>(width() / imageRatio);
-    }
-
-    int x = (width() - newWidth) / 2;
-    int y = (height() - newHeight) / 2;
-    targetRect = QRect(x, y, newWidth, newHeight);
-
     painter.drawImage(targetRect, imageToDraw);
   } else {
-    targetRect = rect();
     LOG_RENDER(debug,
                "paintEvent() cost=" << timer.elapsed() << "ms (no frame)");
   }
@@ -225,9 +267,14 @@ void SoftwareVideoRenderer::paintEvent(QPaintEvent *event) {
     bgMargins = bgMargins_;
   }
 
+  // 垂直居中，水平方向应用对齐配置
+  int alignFlags = subtitleAlignment_ | Qt::AlignVCenter;
+
   if (!text.isEmpty()) {
     painter.setFont(font);
-    QRect textRect = targetRect.adjusted(40, 0, -40, -20);
+
+    // 获取字幕像素渲染包围框，并限制在视频画面范围内
+    QRect textRect = getSubtitlePixelRect().intersected(targetRect);
 
     // Draw background image if configured
     if (!bgPath.isEmpty()) {
@@ -246,12 +293,12 @@ void SoftwareVideoRenderer::paintEvent(QPaintEvent *event) {
 
       if (!bgImage.isNull()) {
         QFontMetrics fm(font);
-        QRect textBounding = fm.boundingRect(
-            textRect, Qt::AlignHCenter | Qt::AlignBottom, text);
-        
+        QRect textBounding = fm.boundingRect(textRect, alignFlags, text);
+
         // Expand with padding margins
-        QRect bgRect = textBounding.adjusted(-bgMargins.left(), -bgMargins.top(),
-                                             bgMargins.right(), bgMargins.bottom());
+        QRect bgRect =
+            textBounding.adjusted(-bgMargins.left(), -bgMargins.top(),
+                                  bgMargins.right(), bgMargins.bottom());
 
         if (is9Patch) {
           drawNinePatch(painter, bgImage, bgRect, bgMargins);
@@ -264,11 +311,47 @@ void SoftwareVideoRenderer::paintEvent(QPaintEvent *event) {
       }
     }
 
+    // 描边效果绘制字幕
     painter.setPen(
         QPen(Qt::black, 3, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin));
-    painter.drawText(textRect, Qt::AlignHCenter | Qt::AlignBottom, text);
+    painter.drawText(textRect, alignFlags, text);
     painter.setPen(Qt::white);
-    painter.drawText(textRect, Qt::AlignHCenter | Qt::AlignBottom, text);
+    painter.drawText(textRect, alignFlags, text);
+  }
+
+  // 绘制字幕的可拖拽编辑虚线框和 8 个控制点手柄
+  if (showEditFrame_ && !text.isEmpty()) {
+    QRect pixelRect = getSubtitlePixelRect();
+
+    painter.save();
+    painter.setRenderHint(QPainter::Antialiasing, false);
+
+    QColor primaryColor = ThemeManager::instance().getPrimaryColor();
+
+    // 1. 绘制主色虚线框
+    painter.setPen(QPen(primaryColor, 1, Qt::DashLine));
+    painter.setBrush(Qt::NoBrush);
+    painter.drawRect(pixelRect);
+
+    // 2. 计算 8 个控制手柄的中心位置
+    QList<QPoint> handlePoints = {
+        pixelRect.topLeft(),
+        QPoint(pixelRect.left() + pixelRect.width() / 2, pixelRect.top()),
+        pixelRect.topRight(),
+        QPoint(pixelRect.left(), pixelRect.top() + pixelRect.height() / 2),
+        QPoint(pixelRect.right(), pixelRect.top() + pixelRect.height() / 2),
+        pixelRect.bottomLeft(),
+        QPoint(pixelRect.left() + pixelRect.width() / 2, pixelRect.bottom()),
+        pixelRect.bottomRight()};
+
+    // 3. 绘制 8 个手柄小方块，主色填充，细白色边框
+    painter.setPen(QPen(Qt::white, 1));
+    painter.setBrush(primaryColor);
+    int hs = 6; // 手柄边长
+    for (const QPoint &pt : handlePoints) {
+      painter.drawRect(pt.x() - hs / 2, pt.y() - hs / 2, hs, hs);
+    }
+    painter.restore();
   }
 
 #if PROFILE_TIMING
@@ -279,4 +362,197 @@ void SoftwareVideoRenderer::paintEvent(QPaintEvent *event) {
             << " image=" << w << "x" << h << " paint_us=" << elapsed;
   }
 #endif
+}
+
+SoftwareVideoRenderer::DragMode
+SoftwareVideoRenderer::hitTest(const QPoint &pos) const {
+  if (!showEditFrame_ || subtitleText_.isEmpty())
+    return DragNone;
+
+  QRect pixelRect = getSubtitlePixelRect();
+  int hs = 8; // 点击检测命中大小，设为 8x8 像素保证容错率
+
+  auto inHandle = [pos, hs](const QPoint &hPt) {
+    return QRect(hPt.x() - hs, hPt.y() - hs, hs * 2, hs * 2).contains(pos);
+  };
+
+  if (inHandle(pixelRect.topLeft()))
+    return DragResizeTL;
+  if (inHandle(
+          QPoint(pixelRect.left() + pixelRect.width() / 2, pixelRect.top())))
+    return DragResizeTM;
+  if (inHandle(pixelRect.topRight()))
+    return DragResizeTR;
+  if (inHandle(
+          QPoint(pixelRect.left(), pixelRect.top() + pixelRect.height() / 2)))
+    return DragResizeML;
+  if (inHandle(
+          QPoint(pixelRect.right(), pixelRect.top() + pixelRect.height() / 2)))
+    return DragResizeMR;
+  if (inHandle(pixelRect.bottomLeft()))
+    return DragResizeBL;
+  if (inHandle(
+          QPoint(pixelRect.left() + pixelRect.width() / 2, pixelRect.bottom())))
+    return DragResizeBM;
+  if (inHandle(pixelRect.bottomRight()))
+    return DragResizeBR;
+
+  if (pixelRect.contains(pos)) {
+    return DragMove;
+  }
+
+  return DragNone;
+}
+
+void SoftwareVideoRenderer::mousePressEvent(QMouseEvent *event) {
+  if (event->button() == Qt::LeftButton) {
+    dragMode_ = hitTest(event->pos());
+    if (dragMode_ != DragNone) {
+      dragStartPos_ = event->pos();
+      dragStartNormalizedRect_ = subtitleNormalizedRect_;
+      event->accept();
+      return;
+    }
+  }
+  QWidget::mousePressEvent(event);
+}
+
+void SoftwareVideoRenderer::mouseMoveEvent(QMouseEvent *event) {
+  if (dragMode_ == DragNone) {
+    DragMode hit = hitTest(event->pos());
+    switch (hit) {
+    case DragMove:
+      setCursor(Qt::SizeAllCursor);
+      break;
+    case DragResizeTL:
+    case DragResizeBR:
+      setCursor(Qt::SizeFDiagCursor);
+      break;
+    case DragResizeTR:
+    case DragResizeBL:
+      setCursor(Qt::SizeBDiagCursor);
+      break;
+    case DragResizeTM:
+    case DragResizeBM:
+      setCursor(Qt::SizeVerCursor);
+      break;
+    case DragResizeML:
+    case DragResizeMR:
+      setCursor(Qt::SizeHorCursor);
+      break;
+    default:
+      unsetCursor();
+      break;
+    }
+  } else {
+    QPoint delta = event->pos() - dragStartPos_;
+    QRect targetRect = getTargetRect();
+    if (targetRect.width() <= 0 || targetRect.height() <= 0)
+      return;
+
+    double dx = static_cast<double>(delta.x()) / targetRect.width();
+    double dy = static_cast<double>(delta.y()) / targetRect.height();
+
+    QRectF newRect = dragStartNormalizedRect_;
+
+    if (dragMode_ == DragMove) {
+      newRect.translate(dx, dy);
+      if (newRect.left() < 0)
+        newRect.moveLeft(0);
+      if (newRect.top() < 0)
+        newRect.moveTop(0);
+      if (newRect.right() > 1.0)
+        newRect.moveRight(1.0);
+      if (newRect.bottom() > 1.0)
+        newRect.moveBottom(1.0);
+    } else {
+      double minW = 0.05;
+      double minH = 0.05;
+
+      switch (dragMode_) {
+      case DragResizeTL: {
+        double newLeft = qBound(0.0, dragStartNormalizedRect_.left() + dx,
+                                dragStartNormalizedRect_.right() - minW);
+        double newTop = qBound(0.0, dragStartNormalizedRect_.top() + dy,
+                               dragStartNormalizedRect_.bottom() - minH);
+        newRect.setLeft(newLeft);
+        newRect.setTop(newTop);
+        break;
+      }
+      case DragResizeTM: {
+        double newTop = qBound(0.0, dragStartNormalizedRect_.top() + dy,
+                               dragStartNormalizedRect_.bottom() - minH);
+        newRect.setTop(newTop);
+        break;
+      }
+      case DragResizeTR: {
+        double newRight = qBound(dragStartNormalizedRect_.left() + minW,
+                                 dragStartNormalizedRect_.right() + dx, 1.0);
+        double newTop = qBound(0.0, dragStartNormalizedRect_.top() + dy,
+                               dragStartNormalizedRect_.bottom() - minH);
+        newRect.setRight(newRight);
+        newRect.setTop(newTop);
+        break;
+      }
+      case DragResizeML: {
+        double newLeft = qBound(0.0, dragStartNormalizedRect_.left() + dx,
+                                dragStartNormalizedRect_.right() - minW);
+        newRect.setLeft(newLeft);
+        break;
+      }
+      case DragResizeMR: {
+        double newRight = qBound(dragStartNormalizedRect_.left() + minW,
+                                 dragStartNormalizedRect_.right() + dx, 1.0);
+        newRect.setRight(newRight);
+        break;
+      }
+      case DragResizeBL: {
+        double newLeft = qBound(0.0, dragStartNormalizedRect_.left() + dx,
+                                dragStartNormalizedRect_.right() - minW);
+        double newBottom = qBound(dragStartNormalizedRect_.top() + minH,
+                                  dragStartNormalizedRect_.bottom() + dy, 1.0);
+        newRect.setLeft(newLeft);
+        newRect.setBottom(newBottom);
+        break;
+      }
+      case DragResizeBM: {
+        double newBottom = qBound(dragStartNormalizedRect_.top() + minH,
+                                  dragStartNormalizedRect_.bottom() + dy, 1.0);
+        newRect.setBottom(newBottom);
+        break;
+      }
+      case DragResizeBR: {
+        double newRight = qBound(dragStartNormalizedRect_.left() + minW,
+                                 dragStartNormalizedRect_.right() + dx, 1.0);
+        double newBottom = qBound(dragStartNormalizedRect_.top() + minH,
+                                  dragStartNormalizedRect_.bottom() + dy, 1.0);
+        newRect.setRight(newRight);
+        newRect.setBottom(newBottom);
+        break;
+      }
+      default:
+        break;
+      }
+    }
+
+    {
+      QMutexLocker lock(&subtitleMutex_);
+      subtitleNormalizedRect_ = newRect;
+    }
+    update();
+    event->accept();
+    return;
+  }
+  QWidget::mouseMoveEvent(event);
+}
+
+void SoftwareVideoRenderer::mouseReleaseEvent(QMouseEvent *event) {
+  if (event->button() == Qt::LeftButton && dragMode_ != DragNone) {
+    dragMode_ = DragNone;
+    unsetCursor();
+    emit subtitleRectChanged(subtitleNormalizedRect_);
+    event->accept();
+    return;
+  }
+  QWidget::mouseReleaseEvent(event);
 }
