@@ -239,14 +239,6 @@ bool SubtitleExporter::exportToASS(const SubtitleTrack &track,
   return true;
 }
 
-bool SubtitleExporter::exportToVTT(const SubtitleTrack &track,
-                                   const QString &filePath) {
-  Q_UNUSED(track)
-  Q_UNUSED(filePath)
-  qWarning() << "exportToVTT not implemented";
-  return false;
-}
-
 bool SubtitleExporter::exportToPremiereXML(const SubtitleTrack &track,
                                            const QString &filePath, double fps,
                                            const QSize &videoSize) {

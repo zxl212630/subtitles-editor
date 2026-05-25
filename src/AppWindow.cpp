@@ -601,9 +601,7 @@ void AppWindow::onExportRequested() {
     return;
   }
 
-  QString filter =
-      tr("SRT 字幕 (*.srt);;纯文本 (*.txt);;ASS 样式字幕 (*.ass);;Premiere XML "
-         "(*.xml);;Final Cut Pro XML (*.fcpxml)");
+  QString filter = tr("SRT 字幕 (*.srt);;纯文本 (*.txt);;ASS 样式字幕 (*.ass)");
   QString selectedFilter;
   QString filePath = QFileDialog::getSaveFileName(
       this, tr("导出字幕"), QString(), filter, &selectedFilter);
