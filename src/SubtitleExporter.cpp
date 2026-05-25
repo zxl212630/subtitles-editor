@@ -206,12 +206,23 @@ bool SubtitleExporter::exportToASS(const SubtitleTrack &track,
       }
     }
 
-    double centerX = item.rectX + item.rectW / 2.0;
-    double centerY = item.rectY + item.rectH / 2.0;
-    double absX = playResX * centerX;
-    double absY = playResY * centerY;
+    double absX = 0.0;
+    double absY = playResY * (item.rectY + item.rectH / 2.0);
+    int anVal = 5;
 
-    QString tags = QString("{\\an5\\pos(%1,%2)")
+    if (item.alignment & Qt::AlignLeft) {
+      anVal = 4;
+      absX = playResX * item.rectX;
+    } else if (item.alignment & Qt::AlignRight) {
+      anVal = 6;
+      absX = playResX * (item.rectX + item.rectW);
+    } else {
+      anVal = 5;
+      absX = playResX * (item.rectX + item.rectW / 2.0);
+    }
+
+    QString tags = QString("{\\an%1\\pos(%2,%3)")
+                       .arg(anVal)
                        .arg(QString::number(absX, 'f', 1))
                        .arg(QString::number(absY, 'f', 1));
     if (qAbs(item.rotation) > 0.001) {
