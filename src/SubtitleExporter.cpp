@@ -215,7 +215,7 @@ bool SubtitleExporter::exportToASS(const SubtitleTrack &track,
                        .arg(QString::number(absX, 'f', 1))
                        .arg(QString::number(absY, 'f', 1));
     if (qAbs(item.rotation) > 0.001) {
-      tags += QString("\\frz%1").arg(QString::number(item.rotation, 'f', 1));
+      tags += QString("\\frz%1").arg(QString::number(-item.rotation, 'f', 1));
     }
     tags += QString("\\fn%1\\fs%2").arg(item.fontFamily).arg(item.fontSize);
     tags += item.bold ? "\\b1" : "\\b0";
