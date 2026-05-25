@@ -44,6 +44,7 @@ find_path(SWRESAMPLE_INCLUDE_DIR libswresample/swresample.h PATHS "${FFMPEG_INCL
 # ============================================================
 set(SOURCES
     src/SubtitleProject.cpp
+    src/ProjectManager.cpp
     src/main.cpp
     src/AppWindow.cpp
     src/SubtitleTrack.cpp
@@ -74,6 +75,7 @@ set(SOURCES
 
 set(HEADERS
     include/SubtitleProject.h
+    include/ProjectManager.h
     include/AppWindow.h
     include/SubtitleItem.h
     include/SubtitleTrack.h

@@ -41,6 +41,7 @@ bool SubtitleProject::load(const QString &filePath) {
 
   filePath_ = filePath;
   dirty_ = false;
+  rootObject_ = root;
 
   return true;
 }
@@ -158,6 +159,8 @@ QString SubtitleProject::resolveVideoPath(const QString &projectDir) const {
 bool SubtitleProject::isDirty() const { return dirty_; }
 
 void SubtitleProject::setDirty(bool dirty) { dirty_ = dirty; }
+
+QJsonObject SubtitleProject::rootObject() const { return rootObject_; }
 
 QStringList SubtitleProject::recentFiles() {
   QSettings settings;

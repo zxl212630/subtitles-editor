@@ -31,6 +31,7 @@ public:
   QString resolveVideoPath(const QString &projectDir) const;
   bool isDirty() const;
   void setDirty(bool dirty);
+  QJsonObject rootObject() const;
 
   // 最近文件
   static QStringList recentFiles();
@@ -45,6 +46,7 @@ private:
   QDateTime created_;
   QDateTime modified_;
   bool dirty_ = false;
+  QJsonObject rootObject_;
 
   static const int kMaxRecentFiles = 10;
 };
