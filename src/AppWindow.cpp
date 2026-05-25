@@ -4,9 +4,11 @@
 #include "ConfigDialog.h"
 #include "ConfigManager.h"
 #include "MediaPlayer.h"
+#include "ProjectManager.h"
 #include "SubtitleExporter.h"
 #include "SubtitleItem.h"
 #include "SubtitleListPanel.h"
+#include "SubtitleProject.h"
 #include "SubtitleTrack.h"
 #include "TimelinePanel.h"
 #include "TranslationManager.h"
@@ -23,7 +25,10 @@
 #include <QFileInfo>
 #include <QFrame>
 #include <QHBoxLayout>
+#include <QKeySequence>
 #include <QLabel>
+#include <QMenu>
+#include <QMenuBar>
 #include <QMouseEvent>
 #include <QProcess>
 #include <QPushButton>
@@ -52,6 +57,17 @@ struct AppWindow::Private {
   MediaPlayer *mediaPlayer = nullptr;
 
   QDateTime videoImportTime_;
+
+  // 菜单栏
+  QMenuBar *menuBar = nullptr;
+  QMenu *fileMenu = nullptr;
+  QMenu *editMenu = nullptr;
+  QMenu *settingsMenu = nullptr;
+  QMenu *helpMenu = nullptr;
+  QMenu *recentFilesMenu = nullptr;
+
+  // ProjectManager
+  ProjectManager *projectManager = nullptr;
 };
 
 AppWindow::AppWindow(QWidget *parent)
@@ -353,6 +369,12 @@ void AppWindow::setupSplitterLayout() {
   centralLayout->setSpacing(0);
   centralLayout->addWidget(d->verticalSplitter);
   setCentralWidget(central);
+
+  // 创建菜单栏
+  setupMenuBar();
+
+  // 创建 ProjectManager
+  d->projectManager = new ProjectManager(d->subtitleTrack, this);
 }
 
 void AppWindow::loadFile(const QString &path) {
@@ -675,4 +697,265 @@ void AppWindow::retranslateUi() {
     d->exportBtn->setToolTip(tr("导出字幕"));
   if (d->settingsBtn)
     d->settingsBtn->setToolTip(tr("设置"));
+}
+
+void AppWindow::setupMenuBar() {
+  d->menuBar = new QMenuBar(this);
+  setMenuBar(d->menuBar);
+
+  // 文件菜单
+  d->fileMenu = d->menuBar->addMenu(tr("文件"));
+
+  QAction *newAction = d->fileMenu->addAction(tr("新建工程"));
+  newAction->setShortcut(QKeySequence::New);
+  connect(newAction, &QAction::triggered, this, &AppWindow::onNewProject);
+
+  QAction *openAction = d->fileMenu->addAction(tr("打开工程..."));
+  openAction->setShortcut(QKeySequence::Open);
+  connect(openAction, &QAction::triggered, this, &AppWindow::onOpenProject);
+
+  QAction *saveAction = d->fileMenu->addAction(tr("保存工程"));
+  saveAction->setShortcut(QKeySequence::Save);
+  connect(saveAction, &QAction::triggered, this, &AppWindow::onSaveProject);
+
+  QAction *saveAsAction = d->fileMenu->addAction(tr("另存为..."));
+  saveAsAction->setShortcut(QKeySequence::SaveAs);
+  connect(saveAsAction, &QAction::triggered, this, &AppWindow::onSaveProjectAs);
+
+  d->fileMenu->addSeparator();
+
+  // 最近打开
+  d->recentFilesMenu = d->fileMenu->addMenu(tr("最近打开"));
+  connect(d->recentFilesMenu, &QMenu::aboutToShow, this, [this]() {
+    d->recentFilesMenu->clear();
+    QStringList recentFiles = SubtitleProject::recentFiles();
+    if (recentFiles.isEmpty()) {
+      d->recentFilesMenu->addAction(tr("无最近文件"))->setEnabled(false);
+    } else {
+      for (const auto &file : recentFiles) {
+        QAction *action =
+            d->recentFilesMenu->addAction(QFileInfo(file).fileName());
+        action->setData(file);
+        connect(action, &QAction::triggered, this, [this, action]() {
+          onOpenRecentFile(action->data().toString());
+        });
+      }
+      d->recentFilesMenu->addSeparator();
+      QAction *clearAction = d->recentFilesMenu->addAction(tr("清除最近"));
+      connect(clearAction, &QAction::triggered, this,
+              &AppWindow::onClearRecentFiles);
+    }
+  });
+
+  d->fileMenu->addSeparator();
+
+  // 导出字幕
+  QMenu *exportMenu = d->fileMenu->addMenu(tr("导出字幕"));
+  QAction *srtAction = exportMenu->addAction("SRT");
+  connect(srtAction, &QAction::triggered, this, &AppWindow::onExportSrt);
+  QAction *txtAction = exportMenu->addAction("TXT");
+  connect(txtAction, &QAction::triggered, this, &AppWindow::onExportTxt);
+
+  d->fileMenu->addSeparator();
+
+  QAction *exitAction = d->fileMenu->addAction(tr("退出"));
+  connect(exitAction, &QAction::triggered, this, &QWidget::close);
+
+  // 编辑菜单
+  d->editMenu = d->menuBar->addMenu(tr("编辑"));
+
+  QAction *undoAction = d->editMenu->addAction(tr("撤销"));
+  undoAction->setShortcut(QKeySequence::Undo);
+  undoAction->setEnabled(false); // 预留
+
+  QAction *redoAction = d->editMenu->addAction(tr("重做"));
+  redoAction->setShortcut(QKeySequence::Redo);
+  redoAction->setEnabled(false); // 预留
+
+  d->editMenu->addSeparator();
+
+  QAction *cutAction = d->editMenu->addAction(tr("剪切"));
+  cutAction->setShortcut(QKeySequence::Cut);
+  cutAction->setEnabled(false); // 预留
+
+  QAction *copyAction = d->editMenu->addAction(tr("复制"));
+  copyAction->setShortcut(QKeySequence::Copy);
+  copyAction->setEnabled(false); // 预留
+
+  QAction *pasteAction = d->editMenu->addAction(tr("粘贴"));
+  pasteAction->setShortcut(QKeySequence::Paste);
+  pasteAction->setEnabled(false); // 预留
+
+  d->editMenu->addSeparator();
+
+  QAction *selectAllAction = d->editMenu->addAction(tr("全选"));
+  selectAllAction->setShortcut(QKeySequence::SelectAll);
+  connect(selectAllAction, &QAction::triggered, this, &AppWindow::onSelectAll);
+
+  QAction *deleteAction = d->editMenu->addAction(tr("删除选中"));
+  deleteAction->setShortcut(QKeySequence::Delete);
+  connect(deleteAction, &QAction::triggered, this,
+          &AppWindow::onDeleteSelected);
+
+  // 设置菜单
+  d->settingsMenu = d->menuBar->addMenu(tr("设置"));
+
+  QAction *configAction = d->settingsMenu->addAction(tr("配置..."));
+  connect(configAction, &QAction::triggered, this, [this]() {
+    ConfigDialog dlg(this);
+    connect(&dlg, &ConfigDialog::configApplied, this,
+            &AppWindow::onConfigApplied);
+    dlg.exec();
+  });
+
+  QMenu *langMenu = d->settingsMenu->addMenu(tr("语言"));
+  QAction *zhAction = langMenu->addAction(tr("中文"));
+  connect(zhAction, &QAction::triggered, this,
+          []() { TranslationManager::instance().loadLanguage("zh_CN"); });
+  QAction *enAction = langMenu->addAction("English");
+  connect(enAction, &QAction::triggered, this,
+          []() { TranslationManager::instance().loadLanguage("en_US"); });
+
+  // 帮助菜单
+  d->helpMenu = d->menuBar->addMenu(tr("帮助"));
+
+  QAction *aboutAction = d->helpMenu->addAction(tr("关于"));
+  connect(aboutAction, &QAction::triggered, this, &AppWindow::onAbout);
+}
+
+void AppWindow::onNewProject() {
+  if (d->projectManager && d->projectManager->isDirty()) {
+    int ret = AppMessageBox::question(
+        this, tr("确认新建"), tr("当前工程有未保存的更改，是否继续新建？"));
+    if (ret != AppMessageBox::Yes)
+      return;
+  }
+  if (d->projectManager) {
+    d->projectManager->newProject();
+  }
+  setWindowTitle(tr("字幕编辑"));
+}
+
+void AppWindow::onOpenProject() {
+  QString filePath =
+      QFileDialog::getOpenFileName(this, tr("打开工程"), QString(),
+                                   tr("字幕编辑工程 (*.sedit);;所有文件 (*)"));
+
+  if (filePath.isEmpty())
+    return;
+
+  if (d->projectManager && d->projectManager->openProject(filePath)) {
+    setWindowTitle(
+        tr("字幕编辑 - %1").arg(d->projectManager->currentProjectName()));
+  } else {
+    AppMessageBox::critical(this, tr("打开失败"),
+                            tr("无法打开工程文件，请检查文件格式。"));
+  }
+}
+
+void AppWindow::onSaveProject() {
+  if (d->projectManager && d->projectManager->currentFilePath().isEmpty()) {
+    onSaveProjectAs();
+    return;
+  }
+  if (d->projectManager) {
+    d->projectManager->saveProject();
+  }
+}
+
+void AppWindow::onSaveProjectAs() {
+  QString filePath = QFileDialog::getSaveFileName(this, tr("另存为"), QString(),
+                                                  tr("字幕编辑工程 (*.sedit)"));
+
+  if (filePath.isEmpty())
+    return;
+
+  if (!filePath.endsWith(".sedit")) {
+    filePath += ".sedit";
+  }
+
+  if (d->projectManager && d->projectManager->saveProjectAs(filePath)) {
+    setWindowTitle(
+        tr("字幕编辑 - %1").arg(d->projectManager->currentProjectName()));
+  } else {
+    AppMessageBox::critical(this, tr("保存失败"),
+                            tr("无法保存工程文件，请检查磁盘空间。"));
+  }
+}
+
+void AppWindow::onOpenRecentFile(const QString &filePath) {
+  if (d->projectManager && d->projectManager->openProject(filePath)) {
+    setWindowTitle(
+        tr("字幕编辑 - %1").arg(d->projectManager->currentProjectName()));
+  }
+}
+
+void AppWindow::onClearRecentFiles() { SubtitleProject::clearRecentFiles(); }
+
+void AppWindow::onExportSrt() {
+  if (!d->subtitleTrack)
+    return;
+
+  QString filePath = QFileDialog::getSaveFileName(
+      this, tr("导出 SRT"), QString(), tr("SRT 字幕 (*.srt)"));
+
+  if (filePath.isEmpty())
+    return;
+
+  if (SubtitleExporter::exportToSRT(*d->subtitleTrack, filePath)) {
+    AppMessageBox::information(this, tr("导出成功"),
+                               tr("字幕已导出到：%1").arg(filePath));
+  } else {
+    AppMessageBox::critical(this, tr("导出失败"), tr("无法导出字幕文件。"));
+  }
+}
+
+void AppWindow::onExportTxt() {
+  if (!d->subtitleTrack)
+    return;
+
+  QString filePath = QFileDialog::getSaveFileName(
+      this, tr("导出 TXT"), QString(), tr("TXT 文本 (*.txt)"));
+
+  if (filePath.isEmpty())
+    return;
+
+  if (SubtitleExporter::exportToTXT(*d->subtitleTrack, filePath)) {
+    AppMessageBox::information(this, tr("导出成功"),
+                               tr("字幕已导出到：%1").arg(filePath));
+  } else {
+    AppMessageBox::critical(this, tr("导出失败"), tr("无法导出字幕文件。"));
+  }
+}
+
+void AppWindow::onSelectAll() {
+  if (d->subtitleTrack) {
+    QSet<QString> allIds;
+    for (const auto &item : d->subtitleTrack->items()) {
+      allIds.insert(item.id);
+    }
+    d->subtitleTrack->setSelectedItems(allIds);
+  }
+}
+
+void AppWindow::onDeleteSelected() {
+  if (!d->subtitleTrack)
+    return;
+
+  auto selected = d->subtitleTrack->selectedItem();
+  if (selected) {
+    d->subtitleTrack->removeItem(selected->id);
+  }
+}
+
+void AppWindow::onConfigApplied() {
+  if (d->subtitleListPanel) {
+    d->subtitleListPanel->updateSpeakerColumnVisibility();
+  }
+}
+
+void AppWindow::onAbout() {
+  AppMessageBox::information(
+      this, tr("关于"),
+      tr("字幕编辑器 v1.0\n\n一个简单易用的视频字幕编辑工具。"));
 }
