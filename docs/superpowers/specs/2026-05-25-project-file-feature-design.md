@@ -263,6 +263,19 @@
 
 ## 技术细节
 
+### 动态主题和多语言支持
+
+**所有新增 UI 组件必须支持：**
+- 动态主题切换（Dark/Light/OLED/Midnight）
+- 动态语言切换（中文/English）
+- 响应 `QEvent::LanguageChange` 和 `QEvent::PaletteChange` 事件
+
+**具体要求：**
+1. 菜单栏：所有菜单项和快捷键提示需要使用 `tr()` 包装
+2. 标题栏：文件名显示需要支持动态更新
+3. 配置页面：所有标签和按钮需要支持 `retranslateUi()`
+4. 错误提示：所有对话框文本需要使用 `tr()` 包装
+
 ### 数据结构
 
 **SubtitleProject（新类）：**
