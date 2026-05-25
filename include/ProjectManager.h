@@ -23,6 +23,9 @@ public:
   bool hasProject() const;
   bool isDirty() const;
 
+  // 脏状态管理
+  void setDirty(bool dirty);
+
   // 自动保存
   void enableAutoSave(bool enable);
   void setAutoSaveInterval(int seconds);

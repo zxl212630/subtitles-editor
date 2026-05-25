@@ -95,6 +95,11 @@ void ProjectManager::onAutoSave() {
   }
 }
 
+void ProjectManager::setDirty(bool dirty) {
+  project_.setDirty(dirty);
+  emit dirtyStateChanged(dirty);
+}
+
 void ProjectManager::markDirty() {
   project_.setDirty(true);
   emit dirtyStateChanged(true);

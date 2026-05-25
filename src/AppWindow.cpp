@@ -34,6 +34,7 @@
 #include <QPushButton>
 #include <QScrollBar>
 #include <QSplitter>
+#include <QStatusBar>
 #include <QTime>
 #include <QUrl>
 #include <QUuid>
@@ -375,6 +376,21 @@ void AppWindow::setupSplitterLayout() {
 
   // 创建 ProjectManager
   d->projectManager = new ProjectManager(d->subtitleTrack, this);
+
+  // 启用自动保存
+  d->projectManager->enableAutoSave(true);
+  d->projectManager->setAutoSaveInterval(60); // 1 分钟
+
+  // 连接字幕修改信号到 ProjectManager
+  connect(d->subtitleTrack, &SubtitleTrack::dataChanged, this, [this]() {
+    if (d->projectManager) {
+      d->projectManager->setDirty(true);
+    }
+  });
+
+  // 连接自动保存信号
+  connect(d->projectManager, &ProjectManager::autoSaveTriggered, this,
+          [this]() { statusBar()->showMessage(tr("工程已自动保存"), 2000); });
 }
 
 void AppWindow::loadFile(const QString &path) {
