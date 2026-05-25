@@ -1,5 +1,8 @@
 #include "SubtitleTrack.h"
 #include <QDebug>
+#include <QJsonArray>
+#include <QJsonDocument>
+#include <QJsonObject>
 #include <QSettings>
 #include <QUuid>
 
@@ -396,4 +399,99 @@ void SubtitleTrack::saveGlobalSettings() {
   settings.setValue("defaultStyle/rectW", defaultSubtitleRect_.width());
   settings.setValue("defaultStyle/rectH", defaultSubtitleRect_.height());
   settings.setValue("defaultStyle/rotation", defaultRotation_);
+}
+
+QJsonObject SubtitleTrack::toJsonObject() const {
+  QJsonObject root;
+
+  // 字幕数据
+  QJsonArray subtitlesArray;
+  for (const auto &item : items_) {
+    QJsonObject itemObj;
+    itemObj["id"] = item.id;
+    itemObj["text"] = item.text;
+    itemObj["startMs"] = item.startMs;
+    itemObj["endMs"] = item.endMs;
+    itemObj["speakerId"] = item.speakerId;
+
+    QJsonObject styleObj;
+    styleObj["fontFamily"] = item.fontFamily;
+    styleObj["fontSize"] = item.fontSize;
+    styleObj["bold"] = item.bold;
+    styleObj["italic"] = item.italic;
+    styleObj["underline"] = item.underline;
+    styleObj["alignment"] = item.alignment;
+    itemObj["style"] = styleObj;
+
+    QJsonObject posObj;
+    posObj["x"] = item.rectX;
+    posObj["y"] = item.rectY;
+    posObj["width"] = item.rectW;
+    posObj["height"] = item.rectH;
+    posObj["rotation"] = item.rotation;
+    itemObj["position"] = posObj;
+
+    subtitlesArray.append(itemObj);
+  }
+  root["subtitles"] = subtitlesArray;
+
+  // 说话人数据
+  QJsonArray speakersArray;
+  for (auto it = speakers_.constBegin(); it != speakers_.constEnd(); ++it) {
+    const auto &speaker = it.value();
+    QJsonObject speakerObj;
+    speakerObj["id"] = speaker.id;
+    speakerObj["name"] = speaker.name;
+    speakerObj["bgImageFile"] = speaker.bgImageFile;
+    speakerObj["is9Patch"] = speaker.is9Patch;
+    speakersArray.append(speakerObj);
+  }
+  root["speakers"] = speakersArray;
+
+  return root;
+}
+
+void SubtitleTrack::fromJsonObject(const QJsonObject &obj) {
+  clear();
+
+  // 字幕数据
+  QJsonArray subtitlesArray = obj["subtitles"].toArray();
+  for (const auto &itemVal : subtitlesArray) {
+    QJsonObject itemObj = itemVal.toObject();
+    SubtitleItem item;
+    item.id = itemObj["id"].toString();
+    item.text = itemObj["text"].toString();
+    item.startMs = itemObj["startMs"].toVariant().toLongLong();
+    item.endMs = itemObj["endMs"].toVariant().toLongLong();
+    item.speakerId = itemObj["speakerId"].toInt(-1);
+
+    QJsonObject styleObj = itemObj["style"].toObject();
+    item.fontFamily = styleObj["fontFamily"].toString("Arial");
+    item.fontSize = styleObj["fontSize"].toInt(24);
+    item.bold = styleObj["bold"].toBool(false);
+    item.italic = styleObj["italic"].toBool(false);
+    item.underline = styleObj["underline"].toBool(false);
+    item.alignment = styleObj["alignment"].toInt(0x84);
+
+    QJsonObject posObj = itemObj["position"].toObject();
+    item.rectX = posObj["x"].toDouble(0.1);
+    item.rectY = posObj["y"].toDouble(0.75);
+    item.rectW = posObj["width"].toDouble(0.8);
+    item.rectH = posObj["height"].toDouble(0.2);
+    item.rotation = posObj["rotation"].toDouble(0.0);
+
+    addItem(item);
+  }
+
+  // 说话人数据
+  QJsonArray speakersArray = obj["speakers"].toArray();
+  for (const auto &speakerVal : speakersArray) {
+    QJsonObject speakerObj = speakerVal.toObject();
+    SpeakerInfo speaker;
+    speaker.id = speakerObj["id"].toInt(-1);
+    speaker.name = speakerObj["name"].toString();
+    speaker.bgImageFile = speakerObj["bgImageFile"].toString();
+    speaker.is9Patch = speakerObj["is9Patch"].toBool(true);
+    setSpeakerInfo(speaker.id, speaker);
+  }
 }

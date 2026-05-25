@@ -1,6 +1,8 @@
 #pragma once
 
 #include "SubtitleItem.h"
+#include <QJsonArray>
+#include <QJsonObject>
 #include <QList>
 #include <QMap>
 #include <QMargins>
@@ -88,6 +90,10 @@ public:
   // --- 持久化（仅保存全局统一设置到 config.ini）---
   void loadGlobalSettings();
   void saveGlobalSettings();
+
+  // --- 序列化 ---
+  QJsonObject toJsonObject() const;
+  void fromJsonObject(const QJsonObject &obj);
 
 signals:
   void itemAdded(const SubtitleItem &item);
