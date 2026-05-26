@@ -77,7 +77,7 @@ void ExportDialog::setSubtitleTrack(const SubtitleTrack *track) {
     exportSubtitleChk_->setEnabled(false);
     subtitleSectionHeader_->setEnabled(false);
   } else {
-    exportSubtitleChk_->setChecked(true);
+    exportSubtitleChk_->setChecked(false);
     exportSubtitleChk_->setEnabled(true);
     subtitleSectionHeader_->setEnabled(true);
   }
@@ -514,15 +514,15 @@ void ExportDialog::setupUi() {
   bool hasHevcVt = avcodec_find_encoder_by_name("hevc_videotoolbox") != nullptr;
 
   if (hasH264Vt) {
-    videoCodecCombo_->addItem(tr("H.264 (硬件加速)"), "h264_videotoolbox");
+    videoCodecCombo_->addItem(tr("H.264 (h264_videotoolbox)"), "h264_videotoolbox");
   }
-  videoCodecCombo_->addItem(tr("H.264 (CPU)"), "libx264");
+  videoCodecCombo_->addItem(tr("H.264 (libx264)"), "libx264");
 
   if (hasHevcVt) {
-    videoCodecCombo_->addItem(tr("H.265 / HEVC (硬件加速)"),
+    videoCodecCombo_->addItem(tr("HEVC (hevc_videotoolbox)"),
                               "hevc_videotoolbox");
   }
-  videoCodecCombo_->addItem(tr("H.265 / HEVC (CPU)"), "libx265");
+  videoCodecCombo_->addItem(tr("HEVC (libx265)"), "libx265");
 
   videoCodecLabel_ = new QLabel(tr("视频编码"), videoSectionFrame_);
   videoCodecLabel_->setObjectName("ConfigFieldLabel");
@@ -763,15 +763,15 @@ void ExportDialog::retranslateUi() {
         avcodec_find_encoder_by_name("hevc_videotoolbox") != nullptr;
 
     if (hasH264Vt) {
-      videoCodecCombo_->addItem(tr("H.264 (硬件加速)"), "h264_videotoolbox");
+      videoCodecCombo_->addItem(tr("H.264 (h264_videotoolbox)"), "h264_videotoolbox");
     }
-    videoCodecCombo_->addItem(tr("H.264 (CPU)"), "libx264");
+    videoCodecCombo_->addItem(tr("H.264 (libx264)"), "libx264");
 
     if (hasHevcVt) {
-      videoCodecCombo_->addItem(tr("H.265 / HEVC (硬件加速)"),
+      videoCodecCombo_->addItem(tr("HEVC (hevc_videotoolbox)"),
                                 "hevc_videotoolbox");
     }
-    videoCodecCombo_->addItem(tr("H.265 / HEVC (CPU)"), "libx265");
+    videoCodecCombo_->addItem(tr("HEVC (libx265)"), "libx265");
 
     for (int i = 0; i < videoCodecCombo_->count(); ++i) {
       if (videoCodecCombo_->itemData(i).toString() == selectedCodec) {

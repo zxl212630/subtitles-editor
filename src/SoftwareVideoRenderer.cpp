@@ -294,10 +294,29 @@ void SoftwareVideoRenderer::paintEvent(QPaintEvent *event) {
   if (!text.isEmpty()) {
     QRect textRect = getSubtitlePixelRect();
 
+    // 根据预览画面实际高度与基准高度 1080.0 的比例，缩放预览字体大小，保持与导出比例一致
+    QFont drawFont = font;
+    double refHeight = 1080.0;
+    double scale = (targetRect.height() > 0) ? (static_cast<double>(targetRect.height()) / refHeight) : 1.0;
+
+    int originalSize = font.pointSize();
+    if (originalSize <= 0) {
+      originalSize = font.pixelSize();
+    }
+    if (originalSize <= 0) {
+      originalSize = 24; // 默认备用值
+    }
+
+    int scaledSize = qRound(originalSize * scale);
+    if (scaledSize < 1)
+      scaledSize = 1;
+
+    drawFont.setPixelSize(scaledSize);
+
     // 1. 调用通用的 SubtitleRenderer 渲染字幕及其背景
     painter.save();
     painter.setClipRect(targetRect);
-    SubtitleRenderer::renderSubtitle(painter, text, font, subtitleAlignment_,
+    SubtitleRenderer::renderSubtitle(painter, text, drawFont, subtitleAlignment_,
                                      textRect, subtitleRotation_, bgPath,
                                      is9Patch, bgMargins);
     painter.restore();

@@ -1000,6 +1000,8 @@ void VideoPreviewPanel::updateSubtitleOverlay() {
   font.setBold(activeItem->bold);
   font.setItalic(activeItem->italic);
   font.setUnderline(activeItem->underline);
+  font.setStyleStrategy(QFont::PreferAntialias);
+  font.setHintingPreference(QFont::PreferFullHinting);
 
   videoRenderer_->setSubtitleFont(font);
   videoRenderer_->setSubtitleAlignment(activeItem->alignment);

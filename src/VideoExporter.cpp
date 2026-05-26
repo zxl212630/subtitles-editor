@@ -393,14 +393,14 @@ bool VideoExporter::initVideoEncoder() {
   encVideoFrame_->height = outHeight;
   av_frame_get_buffer(encVideoFrame_, 0);
 
-  // 初始化 Sws 缩放与转换上下文
+  // 初始化 Sws 缩放与转换上下文，使用双三次插值（SWS_BICUBIC）提高缩放后的图像清晰度
   swsToRgb_ =
       sws_getContext(videoDecCtx_->width, videoDecCtx_->height,
                      videoDecCtx_->pix_fmt, outWidth, outHeight,
-                     AV_PIX_FMT_RGBA, SWS_BILINEAR, nullptr, nullptr, nullptr);
+                     AV_PIX_FMT_RGBA, SWS_BICUBIC, nullptr, nullptr, nullptr);
 
   swsFromRgb_ = sws_getContext(outWidth, outHeight, AV_PIX_FMT_RGBA, outWidth,
-                               outHeight, videoEncCtx_->pix_fmt, SWS_BILINEAR,
+                               outHeight, videoEncCtx_->pix_fmt, SWS_BICUBIC,
                                nullptr, nullptr, nullptr);
 
   if (!swsToRgb_ || !swsFromRgb_) {

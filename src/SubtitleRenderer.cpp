@@ -113,6 +113,8 @@ QFont SubtitleRenderer::buildFont(const SubtitleItem &item,
   font.setBold(item.bold);
   font.setItalic(item.italic);
   font.setUnderline(item.underline);
+  font.setStyleStrategy(QFont::PreferAntialias);
+  font.setHintingPreference(QFont::PreferFullHinting);
   return font;
 }
 
@@ -125,6 +127,12 @@ void SubtitleRenderer::renderSubtitle(QPainter &painter, const QString &text,
     return;
 
   painter.save();
+
+  // 开启抗锯齿和文本抗锯齿，确保绘制的文字与背景高清不模糊
+  painter.setRenderHint(QPainter::Antialiasing, true);
+  painter.setRenderHint(QPainter::TextAntialiasing, true);
+  painter.setRenderHint(QPainter::SmoothPixmapTransform, true);
+
   painter.setFont(font);
 
   // 应用旋转变换 (以文本框中心为旋转原点)
@@ -244,8 +252,7 @@ void SubtitleRenderer::renderSubtitle(QPainter &painter, const QString &text,
     }
   };
 
-  // 默认使用 3px 的黑边描边 + 白色填充字
-  drawTextStroke(painter, Qt::black, 3);
+  // 默认使用白色填充字，不添加描边
   drawTextStroke(painter, Qt::white, 0);
 
   painter.restore();
