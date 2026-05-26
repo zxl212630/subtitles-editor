@@ -1133,10 +1133,22 @@ void AppWindow::onDeleteSelected() {
   if (!d->subtitleTrack)
     return;
 
-  auto selected = d->subtitleTrack->selectedItem();
-  if (selected) {
-    d->subtitleTrack->removeItem(selected->id);
+  QList<QString> selectedIds;
+  for (const auto &item : d->subtitleTrack->items()) {
+    if (item.selected) {
+      selectedIds.append(item.id);
+    }
   }
+
+  if (selectedIds.isEmpty())
+    return;
+
+  d->subtitleTrack->executeBatchAction(tr("删除选中字幕"),
+                                       [this, selectedIds]() {
+                                         for (const auto &id : selectedIds) {
+                                           d->subtitleTrack->removeItem(id);
+                                         }
+                                       });
 }
 
 void AppWindow::onConfigApplied() {
