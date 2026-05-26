@@ -291,7 +291,6 @@ Make sure to include the necessary settings for FFmpeg, Tencent Cloud ASR, and A
         <location filename="../src/AppWindow.cpp" line="821"/>
         <source>全选</source>
         <translation>Select All</translation>
-        <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../src/AppWindow.cpp" line="825"/>
@@ -1559,12 +1558,11 @@ Make sure to include the necessary settings for FFmpeg, Tencent Cloud ASR, and A
         <location filename="../src/TimelinePanel.cpp" line="1398"/>
         <source>全选</source>
         <translation>Select All</translation>
-        <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../src/TimelinePanel.cpp" line="1399"/>
         <source>取消全选</source>
-        <translation type="unfinished"></translation>
+        <translation>Deselect All</translation>
     </message>
     <message>
         <location filename="../src/TimelinePanel.cpp" line="1422"/>
