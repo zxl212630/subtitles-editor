@@ -3,6 +3,7 @@
 #include "AsrConfigDialog.h"
 #include "ConfigDialog.h"
 #include "ConfigManager.h"
+#include "ExportDialog.h"
 #include "MediaPlayer.h"
 #include "ProjectManager.h"
 #include "SubtitleExporter.h"
@@ -12,6 +13,8 @@
 #include "SubtitleTrack.h"
 #include "TimelinePanel.h"
 #include "TranslationManager.h"
+#include "VideoExportDialog.h"
+#include "VideoExporter.h"
 #include "VideoPreviewPanel.h"
 #include "VideoPropertyDialog.h"
 #include "srtparser.h"
@@ -67,7 +70,7 @@ struct AppWindow::Private {
   QMenu *settingsMenu = nullptr;
   QMenu *helpMenu = nullptr;
   QMenu *recentFilesMenu = nullptr;
-  QMenu *exportMenu = nullptr;
+  QAction *exportAction = nullptr;
   QMenu *langMenu = nullptr;
 
   // 菜单动作
@@ -719,92 +722,110 @@ void AppWindow::setupDummyData() {
   addItem("PremierePro-supported XML format", 8000, 11170);
 }
 
-void AppWindow::doExport(const QString &format) {
-  if (!d->subtitleTrack || d->subtitleTrack->items().isEmpty()) {
-    AppMessageBox::warning(this, tr("导出字幕"),
-                           tr("当前没有字幕内容，无法导出。"));
-    return;
-  }
-
-  QString filter;
-  QString dialogTitle;
-  if (format == "srt") {
-    filter = tr("SRT 字幕 (*.srt)");
-    dialogTitle = tr("导出 SRT");
-  } else if (format == "txt") {
-    filter = tr("TXT 文本 (*.txt)");
-    dialogTitle = tr("导出 TXT");
-  } else if (format == "xml") {
-    filter = tr("Premiere XML (*.xml)");
-    dialogTitle = tr("导出 Premiere XML");
-  } else if (format == "fcpxml") {
-    filter = tr("Final Cut Pro XML (*.fcpxml)");
-    dialogTitle = tr("导出 Final Cut Pro XML");
-  } else {
-    filter = tr("SRT 字幕 (*.srt);;纯文本 (*.txt);;Premiere XML "
-                "(*.xml);;Final Cut Pro XML (*.fcpxml)");
-    dialogTitle = tr("导出字幕");
-  }
-
-  QString selectedFilter;
-  QString filePath = QFileDialog::getSaveFileName(this, dialogTitle, QString(),
-                                                  filter, &selectedFilter);
-
-  if (filePath.isEmpty())
+void AppWindow::onExportRequested() {
+  if (!d->subtitleTrack)
     return;
 
-  // Ensure correct extension based on selected filter
-  QString ext = QFileInfo(filePath).suffix().toLower();
-  if (ext.isEmpty()) {
-    if (selectedFilter.contains("*.srt", Qt::CaseInsensitive)) {
-      filePath += ".srt";
-      ext = "srt";
-    } else if (selectedFilter.contains("*.txt", Qt::CaseInsensitive)) {
-      filePath += ".txt";
-      ext = "txt";
-    } else if (selectedFilter.contains("*.xml", Qt::CaseInsensitive)) {
-      filePath += ".xml";
-      ext = "xml";
-    } else if (selectedFilter.contains("*.fcpxml", Qt::CaseInsensitive)) {
-      filePath += ".fcpxml";
-      ext = "fcpxml";
-    }
-  }
+  // 1. 打开统一导出对话框
+  ExportDialog dlg(this);
+  dlg.setSubtitleTrack(d->subtitleTrack);
 
-  // 提取视频的属性
+  // 从 mediaPlayer 获取当前源视频的详细属性并注入
+  QString videoPath =
+      d->timelinePanel ? d->timelinePanel->mediaFilePath() : QString();
   QSize videoSize;
-  double fps = 25.0;
-  if (d->mediaPlayer) {
+  double fps = 0.0;
+  bool hasAudio = false;
+  int audioSampleRate = 0;
+  int audioBitrate = 0;
+
+  if (d->mediaPlayer && !videoPath.isEmpty()) {
     videoSize = d->mediaPlayer->videoSize();
-    double mediaFps = d->mediaPlayer->decoderFps();
-    if (mediaFps > 0.0) {
-      fps = mediaFps;
+    fps = d->mediaPlayer->decoderFps();
+    hasAudio = (d->mediaPlayer->audioChannels() > 0);
+    audioSampleRate = d->mediaPlayer->audioSampleRate();
+    audioBitrate = d->mediaPlayer->audioBitRate();
+  }
+  dlg.setSourceVideo(videoPath, videoSize, fps, hasAudio, audioSampleRate,
+                     audioBitrate);
+
+  if (dlg.exec() != QDialog::Accepted) {
+    return;
+  }
+
+  QString mainOutputPath = dlg.outputPath();
+  bool exportVideo = dlg.isVideoSelected();
+  bool exportSubtitle = dlg.isSubtitleSelected();
+
+  // 2. 如果勾选了字幕，首先在主线程快速导出字幕文件
+  if (exportSubtitle) {
+    QString format = dlg.subtitleFormat();
+    QString subtitlePath = mainOutputPath;
+
+    // 如果同时导出了视频，字幕文件自动命名为和视频相同、后缀改变的文件
+    if (exportVideo) {
+      QFileInfo videoInfo(mainOutputPath);
+      subtitlePath = videoInfo.absolutePath() + "/" +
+                     videoInfo.completeBaseName() + "." + format;
+    }
+
+    // 默认使用视频原本的 fps 和大小作为 XML 排版的依据，防崩溃处理
+    double useFps = fps > 0.0 ? fps : 25.0;
+    QSize useSize = videoSize.isValid() ? videoSize : QSize(1920, 1080);
+
+    bool subSuccess = false;
+    if (format == "srt") {
+      subSuccess =
+          SubtitleExporter::exportToSRT(*d->subtitleTrack, subtitlePath);
+    } else if (format == "txt") {
+      subSuccess =
+          SubtitleExporter::exportToTXT(*d->subtitleTrack, subtitlePath);
+    } else if (format == "xml") {
+      subSuccess = SubtitleExporter::exportToPremiereXML(
+          *d->subtitleTrack, subtitlePath, useFps, useSize);
+    } else if (format == "fcpxml") {
+      subSuccess = SubtitleExporter::exportToFCPXML(
+          *d->subtitleTrack, subtitlePath, useFps, useSize);
+    }
+
+    if (!subSuccess) {
+      AppMessageBox::critical(this, tr("导出失败"),
+                              tr("字幕文件导出失败，请检查保存路径和权限。"));
+      return;
+    }
+
+    // 如果仅仅导出字幕，导出成功后直接提示并退出
+    if (!exportVideo) {
+      AppMessageBox::information(
+          this, tr("导出成功"),
+          tr("字幕文件已成功导出到：\n%1").arg(subtitlePath));
+      return;
     }
   }
 
-  bool success = false;
-  if (ext == "srt") {
-    success = SubtitleExporter::exportToSRT(*d->subtitleTrack, filePath);
-  } else if (ext == "txt") {
-    success = SubtitleExporter::exportToTXT(*d->subtitleTrack, filePath);
-  } else if (ext == "xml") {
-    success = SubtitleExporter::exportToPremiereXML(*d->subtitleTrack, filePath,
-                                                    fps, videoSize);
-  } else if (ext == "fcpxml") {
-    success = SubtitleExporter::exportToFCPXML(*d->subtitleTrack, filePath, fps,
-                                               videoSize);
-  }
+  // 3. 如果勾选了视频，启动多线程编码烧录管线并展示进度条
+  if (exportVideo) {
+    VideoExporter *exporter = new VideoExporter(this);
+    exporter->setConfig(dlg.videoConfig());
+    exporter->setSubtitleTrack(d->subtitleTrack);
 
-  if (success) {
-    AppMessageBox::information(this, tr("导出成功"),
-                               tr("字幕已导出到：%1").arg(filePath));
-  } else {
-    AppMessageBox::critical(this, tr("导出失败"),
-                            tr("导出字幕失败，请检查文件路径和权限。"));
+    VideoExportDialog progressDlg(exporter, this);
+    exporter->start();
+
+    int result = progressDlg.exec();
+
+    exporter->wait();
+    delete exporter;
+
+    if (result == QDialog::Accepted) {
+      QString successMsg = tr("视频已成功导出到：\n%1").arg(mainOutputPath);
+      if (exportSubtitle) {
+        successMsg += tr("\n\n关联字幕文件已一并输出。");
+      }
+      AppMessageBox::information(this, tr("导出成功"), successMsg);
+    }
   }
 }
-
-void AppWindow::onExportRequested() { doExport(QString()); }
 
 void AppWindow::onSettingsRequested() {
   ConfigDialog dialog(this);
@@ -840,8 +861,8 @@ void AppWindow::retranslateUi() {
     d->helpMenu->setTitle(tr("帮助"));
   if (d->recentFilesMenu)
     d->recentFilesMenu->setTitle(tr("最近打开"));
-  if (d->exportMenu)
-    d->exportMenu->setTitle(tr("导出字幕"));
+  if (d->exportAction)
+    d->exportAction->setText(tr("导出..."));
   if (d->langMenu)
     d->langMenu->setTitle(tr("语言"));
 
@@ -932,16 +953,11 @@ void AppWindow::setupMenuBar() {
 
   d->fileMenu->addSeparator();
 
-  // 导出字幕
-  d->exportMenu = d->fileMenu->addMenu(tr("导出字幕"));
-  QAction *srtAction = d->exportMenu->addAction("SRT");
-  connect(srtAction, &QAction::triggered, this, &AppWindow::onExportSrt);
-  QAction *txtAction = d->exportMenu->addAction("TXT");
-  connect(txtAction, &QAction::triggered, this, &AppWindow::onExportTxt);
-  QAction *xmlAction = d->exportMenu->addAction("Premiere XML");
-  connect(xmlAction, &QAction::triggered, this, &AppWindow::onExportXml);
-  QAction *fcpxmlAction = d->exportMenu->addAction("Final Cut Pro XML");
-  connect(fcpxmlAction, &QAction::triggered, this, &AppWindow::onExportFcpxml);
+  // 导出...
+  d->exportAction = d->fileMenu->addAction(tr("导出..."));
+  d->exportAction->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_E));
+  connect(d->exportAction, &QAction::triggered, this,
+          &AppWindow::onExportRequested);
 
   d->fileMenu->addSeparator();
 
@@ -1110,14 +1126,6 @@ void AppWindow::onOpenRecentFile(const QString &filePath) {
 }
 
 void AppWindow::onClearRecentFiles() { SubtitleProject::clearRecentFiles(); }
-
-void AppWindow::onExportSrt() { doExport("srt"); }
-
-void AppWindow::onExportTxt() { doExport("txt"); }
-
-void AppWindow::onExportXml() { doExport("xml"); }
-
-void AppWindow::onExportFcpxml() { doExport("fcpxml"); }
 
 void AppWindow::onSelectAll() {
   if (d->subtitleTrack) {

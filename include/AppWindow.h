@@ -46,7 +46,6 @@ private:
   void onOpenFileLocationRequested();
   void onSettingsRequested();
   void onExportRequested();
-  void doExport(const QString &format);
 
 private slots:
   void onNewProject();
@@ -55,10 +54,6 @@ private slots:
   void onSaveProjectAs();
   void onOpenRecentFile(const QString &filePath);
   void onClearRecentFiles();
-  void onExportSrt();
-  void onExportTxt();
-  void onExportXml();
-  void onExportFcpxml();
   void onSelectAll();
   void onDeleteSelected();
   void onConfigApplied();

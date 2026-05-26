@@ -71,6 +71,10 @@ set(SOURCES
     src/AsrConfigDialog.cpp
     src/AppMessageBox.cpp
     src/SpeakerManagerDialog.cpp
+    src/SubtitleRenderer.cpp
+    src/VideoExporter.cpp
+    src/ExportDialog.cpp
+    src/VideoExportDialog.cpp
 )
 
 set(HEADERS
@@ -102,6 +106,10 @@ set(HEADERS
     include/AsrConfigDialog.h
     include/AppMessageBox.h
     include/SpeakerManagerDialog.h
+    include/SubtitleRenderer.h
+    include/VideoExporter.h
+    include/ExportDialog.h
+    include/VideoExportDialog.h
 )
 
 set(RESOURCES
