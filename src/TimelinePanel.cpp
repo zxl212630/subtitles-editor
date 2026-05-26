@@ -881,6 +881,7 @@ void TimelinePanel::mousePressEvent(QMouseEvent *event) {
     currentTimeMs_ = ms;
     lastPreviewSystemTime_ = QDateTime::currentMSecsSinceEpoch();
     canvas_->update();
+    emit previewSeekRequested(ms);
   } else if (event->y() >= RULER_HEIGHT) {
     // Click on empty track area: clear selection if no modifiers
     if (!hasModifier && track_) {

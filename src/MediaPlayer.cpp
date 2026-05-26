@@ -128,6 +128,7 @@ void MediaPlayer::play() {
     playbackStartTimeMs_ = currentTimeMs_;
     playbackElapsedTimer_.restart();
     playbackTimerRunning_ = true;
+    driftStartMs_ = -1;
     playbackTimer_->start(16);
     audioOutput_->resume();
     LOG_MP(info, "play() state=Playing startTime=" << playbackStartTimeMs_);
@@ -142,6 +143,7 @@ void MediaPlayer::pause() {
     audioOutput_->suspend();
 
     state_ = Paused;
+    driftStartMs_ = -1;
     emit stateChanged(Paused);
     LOG_MP(info, "pause() state=Paused time=" << currentTimeMs_);
   }
@@ -162,6 +164,7 @@ void MediaPlayer::stop() {
   state_ = Stopped;
   currentTimeMs_ = 0;
   pendingVideoFrame_ = std::nullopt;
+  driftStartMs_ = -1;
 
   if (seekDecoder_ && seekDecoder_->isRunning()) {
     seekPreviewMode_ = true;
@@ -181,6 +184,7 @@ void MediaPlayer::clear() {
   isPreviewDragging_ = false;
   hasPendingSeek_ = false;
   seekCoalesceTimer_->stop();
+  driftStartMs_ = -1;
 
   if (decoder_) {
     decoder_->close();
@@ -222,6 +226,13 @@ qint64 MediaPlayer::totalDurationLimit() const {
 }
 
 void MediaPlayer::seek(qint64 ms) {
+  if (sender()) {
+    qInfo() << "[DEBUG_SEEK] seek requested by signal sender:"
+            << sender()->metaObject()->className()
+            << " name:" << sender()->objectName();
+  } else {
+    qInfo() << "[DEBUG_SEEK] seek requested by direct function call";
+  }
   LOG_MP(info, "seek() request target=" << ms << "ms");
 
   if (state_ == Playing) {
@@ -232,6 +243,8 @@ void MediaPlayer::seek(qint64 ms) {
   seekTargetMs_ = ms;
   pendingVideoFrame_ = std::nullopt;
   previewFrameRendered_ = false;
+  driftStartMs_ = -1;
+  isPreviewDragging_ = false;
 
   seekPreviewMode_ = true;
   if (seekDecoder_) {
@@ -251,6 +264,7 @@ void MediaPlayer::previewSeek(qint64 ms) {
     return;
 
   currentTimeMs_ = ms;
+  driftStartMs_ = -1;
   emit timeChanged(currentTimeMs_);
 
   if (!decoder_->hasVideo())
@@ -419,7 +433,11 @@ void MediaPlayer::onPlaybackTimer() {
       } else {
         qint64 current = currentTimeMs_;
         if (playbackTimerRunning_) {
-          current = playbackStartTimeMs_ + playbackElapsedTimer_.elapsed();
+          if (driftStartMs_ < 0) {
+            driftStartMs_ = currentTimeMs_;
+            driftTimer_.start();
+          }
+          current = driftStartMs_ + driftTimer_.elapsed();
         }
         if (current >= videoDuration) {
           currentTimeMs_ = videoDuration;

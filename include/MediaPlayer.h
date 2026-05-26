@@ -90,6 +90,8 @@ private:
   QElapsedTimer playbackElapsedTimer_;
   qint64 playbackStartTimeMs_ = 0;
   bool playbackTimerRunning_ = false;
+  qint64 driftStartMs_ = -1;
+  QElapsedTimer driftTimer_;
 
   bool seekPreviewMode_ = false;
   QElapsedTimer seekPreviewTimer_;
