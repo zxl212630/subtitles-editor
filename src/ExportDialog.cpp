@@ -29,8 +29,8 @@ extern "C" {
 
 ExportDialog::ExportDialog(QWidget *parent) : QDialog(parent) {
   setObjectName("ExportDialog");
-  setMinimumSize(480, 560);
-  resize(500, 600);
+  setMinimumSize(580, 560);
+  resize(600, 600);
 
   windowAgent = new QWK::WidgetWindowAgent(this);
   windowAgent->setup(this);
@@ -442,6 +442,7 @@ void ExportDialog::setupUi() {
 
   videoSectionHeader_ = new QPushButton(scrollContent);
   videoSectionHeader_->setFlat(true);
+  videoSectionHeader_->setCursor(Qt::PointingHandCursor);
   videoSectionHeader_->setStyleSheet(
       "QPushButton {"
       "  text-align: left;"
@@ -452,7 +453,6 @@ void ExportDialog::setupUi() {
       "  color: palette(text);"
       "}"
       "QPushButton:hover {"
-      "  background-color: rgba(255, 255, 255, 0.05);"
       "  border-radius: 4px;"
       "}");
   connect(videoSectionHeader_, &QPushButton::clicked, this, [this]() {
@@ -464,6 +464,7 @@ void ExportDialog::setupUi() {
 
   QHBoxLayout *videoHeaderLayout = new QHBoxLayout();
   videoHeaderLayout->setContentsMargins(0, 0, 0, 0);
+  videoHeaderLayout->setSpacing(0);
   videoHeaderLayout->addWidget(exportVideoChk_);
   videoHeaderLayout->addWidget(videoSectionHeader_, 1);
   scrollLayout->addLayout(videoHeaderLayout);
@@ -569,6 +570,7 @@ void ExportDialog::setupUi() {
 
   subtitleSectionHeader_ = new QPushButton(scrollContent);
   subtitleSectionHeader_->setFlat(true);
+  subtitleSectionHeader_->setCursor(Qt::PointingHandCursor);
   subtitleSectionHeader_->setStyleSheet(
       "QPushButton {"
       "  text-align: left;"
@@ -579,7 +581,6 @@ void ExportDialog::setupUi() {
       "  color: palette(text);"
       "}"
       "QPushButton:hover {"
-      "  background-color: rgba(255, 255, 255, 0.05);"
       "  border-radius: 4px;"
       "}");
   connect(subtitleSectionHeader_, &QPushButton::clicked, this, [this]() {
@@ -591,6 +592,7 @@ void ExportDialog::setupUi() {
 
   QHBoxLayout *subHeaderLayout = new QHBoxLayout();
   subHeaderLayout->setContentsMargins(0, 0, 0, 0);
+  subHeaderLayout->setSpacing(0);
   subHeaderLayout->addWidget(exportSubtitleChk_);
   subHeaderLayout->addWidget(subtitleSectionHeader_, 1);
   scrollLayout->addLayout(subHeaderLayout);

@@ -123,11 +123,10 @@ void SpeakerManagerDialog::setupUi() {
 
   auto *editBtnRow = new QHBoxLayout();
   editBtnRow->setContentsMargins(0, 0, 0, 0);
-  editBtnRow->setSpacing(0);
+  editBtnRow->setSpacing(8);
 
   bgFolderEdit_ = new QLineEdit(topSettingsFrame);
   bgFolderEdit_->setObjectName("SpeakerFolderEdit");
-  bgFolderEdit_->setReadOnly(true);
 
   browseFolderBtn_ = new QPushButton(topSettingsFrame);
   browseFolderBtn_->setObjectName("SpeakerBrowseButton");

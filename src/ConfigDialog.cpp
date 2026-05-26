@@ -1093,10 +1093,13 @@ void ConfigDialog::setupUi() {
   speakerLayout->addWidget(speakerBgFolderLabel_);
 
   auto *folderLayout = new QHBoxLayout();
+  folderLayout->setSpacing(8);
   speakerBgFolderEdit_ = new QLineEdit(subtitlePage);
+  speakerBgFolderEdit_->setObjectName("SpeakerFolderEdit");
   speakerBgFolderEdit_->setFixedHeight(32);
   folderLayout->addWidget(speakerBgFolderEdit_);
   speakerBgFolderBtn_ = new QPushButton(tr("浏览..."), subtitlePage);
+  speakerBgFolderBtn_->setObjectName("SpeakerBrowseButton");
   speakerBgFolderBtn_->setFixedHeight(32);
   connect(speakerBgFolderBtn_, &QPushButton::clicked, this, [this]() {
     QString dir = QFileDialog::getExistingDirectory(
