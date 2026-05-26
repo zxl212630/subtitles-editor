@@ -56,10 +56,9 @@ MediaPlayer::~MediaPlayer() {
   if (seekDecoder_) {
     seekDecoder_->close();
   }
-
-  delete audioOutput_;
-  delete decoder_;
-  delete seekDecoder_;
+  if (audioOutput_) {
+    audioOutput_->close();
+  }
 }
 
 void MediaPlayer::setVideoRenderer(SoftwareVideoRenderer *renderer) {
