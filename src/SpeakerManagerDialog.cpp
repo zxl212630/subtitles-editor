@@ -385,6 +385,9 @@ void SpeakerManagerDialog::populateImageCombo() {
 }
 
 void SpeakerManagerDialog::populateSpeakerList() {
+  bool prevLoading = loading_;
+  loading_ = true;
+
   speakerList_->clear();
   // 排序插入
   QList<int> ids = tempSpeakers_.keys();
@@ -399,22 +402,31 @@ void SpeakerManagerDialog::populateSpeakerList() {
     item->setData(Qt::UserRole, id);
     speakerList_->addItem(item);
   }
+
+  loading_ = prevLoading;
 }
 
 void SpeakerManagerDialog::onSpeakerSelectionChanged() {
   QListWidgetItem *curItem = speakerList_->currentItem();
   if (!curItem) {
+    bool prevLoading = loading_;
+    loading_ = true;
     propertiesWidget_->setEnabled(false);
     nameEdit_->clear();
     imageCombo_->setCurrentIndex(0);
     drawModeCombo_->setCurrentIndex(0);
     previewLabel_->setPixmap(QPixmap());
     previewLabel_->setText(tr("Select a speaker to edit properties"));
+    loading_ = prevLoading;
+    return;
+  }
+
+  int id = curItem->data(Qt::UserRole).toInt();
+  if (!tempSpeakers_.contains(id)) {
     return;
   }
 
   propertiesWidget_->setEnabled(true);
-  int id = curItem->data(Qt::UserRole).toInt();
   const auto &info = tempSpeakers_[id];
 
   bool prevLoading = loading_;
@@ -496,6 +508,8 @@ void SpeakerManagerDialog::onImageFileChanged(const QString &fileName) {
     return;
 
   int id = curItem->data(Qt::UserRole).toInt();
+  if (!tempSpeakers_.contains(id))
+    return;
   tempSpeakers_[id].bgImageFile = imageCombo_->currentData().toString();
   updatePreviewImage();
 }
@@ -508,6 +522,8 @@ void SpeakerManagerDialog::onDrawModeChanged(int index) {
     return;
 
   int id = curItem->data(Qt::UserRole).toInt();
+  if (!tempSpeakers_.contains(id))
+    return;
   tempSpeakers_[id].is9Patch = (drawModeCombo_->currentData().toInt() == 0);
   updatePreviewImage();
 }
@@ -520,6 +536,8 @@ void SpeakerManagerDialog::onNameChanged(const QString &name) {
     return;
 
   int id = curItem->data(Qt::UserRole).toInt();
+  if (!tempSpeakers_.contains(id))
+    return;
   tempSpeakers_[id].name = name;
   curItem->setText(QString("%1 (%2)").arg(name).arg(id));
 }
@@ -661,15 +679,47 @@ void SpeakerManagerDialog::updatePreviewImage() {
 }
 
 void SpeakerManagerDialog::onSaveAndApply() {
-  track_->setGlobalBgFolder(bgFolderEdit_->text());
-  track_->setUnifiedBorderMargins(tempMargins_);
+  track_->executeBatchAction(tr("修改说话人"), [this]() {
+    track_->setGlobalBgFolder(bgFolderEdit_->text());
+    track_->setUnifiedBorderMargins(tempMargins_);
 
-  track_->clearSpeakers();
-  for (const auto &spk : tempSpeakers_) {
-    track_->setSpeakerInfo(spk.id, spk);
-  }
+    // 找出所有被删除的说话人 ID
+    QSet<int> currentIds;
+    for (const auto &spk : tempSpeakers_) {
+      currentIds.insert(spk.id);
+    }
 
-  track_->saveGlobalSettings();
+    QList<int> deletedIds;
+    for (const auto &spk : track_->allSpeakers()) {
+      if (!currentIds.contains(spk.id)) {
+        deletedIds.append(spk.id);
+      }
+    }
+
+    // 更新 track 里的说话人信息
+    track_->clearSpeakers();
+    for (const auto &spk : tempSpeakers_) {
+      track_->setSpeakerInfo(spk.id, spk);
+    }
+
+    // 重置所有关联了被删除说话人 ID 的字幕的 speakerId 为 -1
+    if (!deletedIds.isEmpty()) {
+      QList<SubtitleItem> items = track_->items();
+      QList<SubtitleItem> changedItems;
+      for (int i = 0; i < items.size(); ++i) {
+        if (deletedIds.contains(items[i].speakerId)) {
+          items[i].speakerId = -1;
+          changedItems.append(items[i]);
+        }
+      }
+      if (!changedItems.isEmpty()) {
+        track_->updateItems(changedItems);
+      }
+    }
+
+    track_->saveGlobalSettings();
+  });
+
   accept();
 }
 
