@@ -24,6 +24,9 @@ public:
   bool hasProject() const;
   bool isDirty() const;
 
+  // 视频路径设置
+  void setVideoPath(const QString &path);
+
   // 脏状态管理
   void setDirty(bool dirty);
 

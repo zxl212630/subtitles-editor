@@ -73,6 +73,11 @@ QString ProjectManager::currentProjectName() const {
 
 QString ProjectManager::videoPath() const { return project_.videoPath(); }
 
+void ProjectManager::setVideoPath(const QString &path) {
+  project_.setVideoPath(path);
+  emit dirtyStateChanged(true);
+}
+
 bool ProjectManager::hasProject() const { return hasProject_; }
 
 bool ProjectManager::isDirty() const { return project_.isDirty(); }

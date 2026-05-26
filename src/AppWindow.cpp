@@ -238,6 +238,9 @@ void AppWindow::setupSplitterLayout() {
             d->timelinePanel->setMediaFilePath(path);
             d->videoImportTime_ = QDateTime::currentDateTime();
             d->mediaPlayer->load(path);
+            if (d->projectManager) {
+              d->projectManager->setVideoPath(path);
+            }
           });
 
   // 1a. Timeline empty-state import button -> file dialog
@@ -255,6 +258,9 @@ void AppWindow::setupSplitterLayout() {
                 d->timelinePanel->setMediaFilePath(path);
                 d->videoImportTime_ = QDateTime::currentDateTime();
                 d->mediaPlayer->load(path);
+                if (d->projectManager) {
+                  d->projectManager->setVideoPath(path);
+                }
               }
             }
           });
@@ -977,6 +983,16 @@ void AppWindow::onOpenProject() {
       }
       if (d->timelinePanel) {
         d->timelinePanel->setMediaFilePath(videoPath);
+      }
+    } else {
+      // 没有视频文件时，根据字幕最大结束时间设置时间线总时长
+      qint64 maxEndMs = 0;
+      for (const auto &item : d->subtitleTrack->items()) {
+        if (item.endMs > maxEndMs)
+          maxEndMs = item.endMs;
+      }
+      if (maxEndMs > 0 && d->timelinePanel) {
+        d->timelinePanel->setTotalDuration(maxEndMs);
       }
     }
   } else {
