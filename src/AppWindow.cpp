@@ -1173,6 +1173,7 @@ void AppWindow::updateTotalDuration(bool resetPlayback) {
   qint64 totalDuration = qMax(videoDuration, subtitleDuration);
 
   if (d->timelinePanel) {
+    d->timelinePanel->setVideoDuration(videoDuration);
     d->timelinePanel->setTotalDuration(totalDuration);
   }
   if (d->subtitleListPanel) {

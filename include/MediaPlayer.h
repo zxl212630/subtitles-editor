@@ -72,6 +72,7 @@ private slots:
   void onEndOfStream();
   void executePendingSeek();
   void onSeekFrameReady(DecodedVideoFrame frame);
+  void onPlaybackFinished();
 
 private:
   FFmpegDecoder *decoder_ = nullptr;

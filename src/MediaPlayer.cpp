@@ -46,6 +46,17 @@ MediaPlayer::MediaPlayer(QObject *parent)
 
 MediaPlayer::~MediaPlayer() {
   stop();
+  playbackTimer_->stop();
+  playbackTimerRunning_ = false;
+  seekCoalesceTimer_->stop();
+
+  if (decoder_) {
+    decoder_->close();
+  }
+  if (seekDecoder_) {
+    seekDecoder_->close();
+  }
+
   delete audioOutput_;
   delete decoder_;
   delete seekDecoder_;
@@ -165,6 +176,13 @@ void MediaPlayer::stop() {
 
 void MediaPlayer::clear() {
   stop();
+  playbackTimer_->stop();
+  playbackTimerRunning_ = false;
+  seekPreviewMode_ = false;
+  isPreviewDragging_ = false;
+  hasPendingSeek_ = false;
+  seekCoalesceTimer_->stop();
+
   if (decoder_) {
     decoder_->close();
   }
@@ -179,6 +197,21 @@ void MediaPlayer::clear() {
   }
   currentTimeMs_ = 0;
   emit timeChanged(0);
+}
+
+void MediaPlayer::onPlaybackFinished() {
+  playbackTimer_->stop();
+  playbackTimerRunning_ = false;
+
+  if (decoder_ && decoder_->hasVideo()) {
+    decoder_->setPlaying(false);
+  }
+  if (audioOutput_) {
+    audioOutput_->suspend();
+  }
+  state_ = Stopped;
+  emit stateChanged(Stopped);
+  emit playbackFinished();
 }
 
 void MediaPlayer::setTotalDurationLimit(qint64 ms) {
@@ -330,9 +363,8 @@ void MediaPlayer::onPlaybackTimer() {
     qint64 maxLimit = qMax(videoDuration, totalDurationLimitMs_);
     if (currentTimeMs_ >= maxLimit) {
       currentTimeMs_ = maxLimit;
-      stop();
+      onPlaybackFinished();
       emit timeChanged(currentTimeMs_);
-      emit playbackFinished();
       return;
     }
     emit timeChanged(currentTimeMs_);
@@ -383,8 +415,14 @@ void MediaPlayer::onPlaybackTimer() {
     // Check for end of stream
     if (decoder_->videoQueueSize() == 0 && decoder_->audioQueueSize() == 0 &&
         decoder_->isFinished()) {
-      stop();
-      emit playbackFinished();
+      qint64 videoDuration = (decoder_ && decoder_->hasVideo()) ? decoder_->durationMs() : 0;
+      if (totalDurationLimitMs_ > videoDuration) {
+        currentTimeMs_ = videoDuration;
+        playbackStartTimeMs_ = videoDuration;
+        playbackElapsedTimer_.restart();
+      } else {
+        onPlaybackFinished();
+      }
     }
     return;
   }

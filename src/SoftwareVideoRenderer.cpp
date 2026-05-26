@@ -328,6 +328,12 @@ void SoftwareVideoRenderer::paintEvent(QPaintEvent *event) {
 
     drawFont.setPixelSize(scaledSize);
 
+    // 调试输出
+    qDebug() << "[VideoRenderer] Rendering Subtitle text=" << text 
+             << " font=" << drawFont.family() << " size=" << drawFont.pixelSize()
+             << " textRect=" << textRect << " targetRect=" << targetRect
+             << " scale=" << scale << " hasFrame=" << hasFrame;
+
     // 1. 调用通用的 SubtitleRenderer 渲染字幕及其背景
     painter.save();
     painter.setClipRect(targetRect);

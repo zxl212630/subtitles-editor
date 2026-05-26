@@ -248,10 +248,16 @@ void TimelinePanel::setTotalDuration(qint64 ms) {
   canvas_->update();
 }
 
+void TimelinePanel::setVideoDuration(qint64 ms) {
+  videoDurationMs_ = ms;
+  canvas_->update();
+}
+
 void TimelinePanel::clear() {
   mediaFileName_.clear();
   mediaFilePath_.clear();
   totalDurationMs_ = 0;
+  videoDurationMs_ = 0;
   currentTimeMs_ = 0;
   scrollOffsetX_ = 0;
   isPlaying_ = false;
@@ -665,7 +671,7 @@ void TimelinePanel::drawVideoTrack(QPainter &painter, int y) {
         ThemeManager::instance().getPrimaryColor().darker(120);
     painter.setBrush(videoBarColor);
     int videoX = timeToX(0);
-    int videoEndX = timeToX(totalDurationMs_);
+    int videoEndX = timeToX(videoDurationMs_);
     int videoWidth = videoEndX - videoX;
     if (videoWidth < 4)
       videoWidth = 4;

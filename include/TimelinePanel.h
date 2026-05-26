@@ -30,6 +30,7 @@ public:
   void setTrack(SubtitleTrack *track);
   void setCurrentTime(qint64 ms);
   void setTotalDuration(qint64 ms);
+  void setVideoDuration(qint64 ms);
   void setPlayheadAnchor(PlayheadAnchor anchor);
   void setPlaying(bool playing);
   void setVideoFps(double fps);
@@ -91,6 +92,7 @@ protected:
 private:
   SubtitleTrack *track_ = nullptr;
   qint64 totalDurationMs_ = 0;
+  qint64 videoDurationMs_ = 0;
   qint64 currentTimeMs_ = 0;
   static constexpr int RULER_HEIGHT = 36;
   static constexpr int SUBTITLE_TRACK_HEIGHT = 48;
