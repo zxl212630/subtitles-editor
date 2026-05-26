@@ -36,6 +36,7 @@
 #include <QSplitter>
 #include <QStatusBar>
 #include <QTime>
+#include <QUndoStack>
 #include <QUrl>
 #include <QUuid>
 #include <QVBoxLayout>
@@ -416,16 +417,52 @@ void AppWindow::setupSplitterLayout() {
   // 创建 ProjectManager
   d->projectManager = new ProjectManager(d->subtitleTrack, this);
 
+  // 暴露撤销栈给字幕数据模型
+  d->subtitleTrack->setUndoStack(d->projectManager->undoStack());
+
+  // 连接撤销栈与动作启用状态
+  connect(d->projectManager->undoStack(), &QUndoStack::canUndoChanged,
+          d->undoAction, &QAction::setEnabled);
+  connect(d->projectManager->undoStack(), &QUndoStack::canRedoChanged,
+          d->redoAction, &QAction::setEnabled);
+
+  // 动态更新撤销与恢复的菜单动作文本
+  connect(d->projectManager->undoStack(), &QUndoStack::undoTextChanged, this,
+          [this](const QString &text) {
+            d->undoAction->setText(text.isEmpty() ? tr("撤销")
+                                                  : tr("撤销 %1").arg(text));
+          });
+  connect(d->projectManager->undoStack(), &QUndoStack::redoTextChanged, this,
+          [this](const QString &text) {
+            d->redoAction->setText(text.isEmpty() ? tr("重做")
+                                                  : tr("重做 %1").arg(text));
+          });
+
+  // 绑定触发动作
+  connect(d->undoAction, &QAction::triggered, d->projectManager->undoStack(),
+          &QUndoStack::undo);
+  connect(d->redoAction, &QAction::triggered, d->projectManager->undoStack(),
+          &QUndoStack::redo);
+
+  // 监听撤销/重做导致的视频路径变化
+  connect(d->projectManager, &ProjectManager::videoPathChanged, this,
+          [this](const QString &path) {
+            d->timelinePanel->setMediaFilePath(path);
+            d->videoImportTime_ = QDateTime::currentDateTime();
+            if (d->mediaPlayer) {
+              d->mediaPlayer->load(path);
+            }
+          });
+
+  // 绑定标题栏更新
+  connect(d->projectManager, &ProjectManager::dirtyStateChanged, this,
+          &AppWindow::updateWindowTitle);
+  connect(d->projectManager, &ProjectManager::projectChanged, this,
+          &AppWindow::updateWindowTitle);
+
   // 启用自动保存
   d->projectManager->enableAutoSave(true);
   d->projectManager->setAutoSaveInterval(60); // 1 分钟
-
-  // 连接字幕修改信号到 ProjectManager
-  connect(d->subtitleTrack, &SubtitleTrack::dataChanged, this, [this]() {
-    if (d->projectManager) {
-      d->projectManager->setDirty(true);
-    }
-  });
 
   // 连接自动保存信号
   connect(d->projectManager, &ProjectManager::autoSaveTriggered, this,
@@ -450,16 +487,16 @@ void AppWindow::onSubtitleFileDropped(const QString &path) {
         tr("字幕轨道已有内容，继续导入将清空现有字幕，是否继续？"));
     if (ret != AppMessageBox::Yes)
       return;
-    d->subtitleTrack->clear();
   }
 
-  // Parse SRT
+  // 先在外部解析 SRT，避免格式错误将垃圾状态记入撤销栈
+  QList<SubtitleItem> itemsToImport;
+  qint64 maxEndMs = 0;
   try {
     SrtParser::SubtitleParserFactory parserFactory(path.toStdString());
     SrtParser::SubtitleParser *parser = parserFactory.getParser();
     auto subtitles = parser->getSubtitles();
 
-    qint64 maxEndMs = 0;
     qint64 previousEndMs = 0;
     for (auto *sub : subtitles) {
       if (!sub)
@@ -470,9 +507,7 @@ void AppWindow::onSubtitleFileDropped(const QString &path) {
       item.startMs = static_cast<qint64>(sub->getStartTime());
       item.endMs = static_cast<qint64>(sub->getEndTime());
 
-      if (d->subtitleTrack) {
-        d->subtitleTrack->applyDefaultStyle(item);
-      }
+      d->subtitleTrack->applyDefaultStyle(item);
 
       // Overlap check
       if (item.startMs < previousEndMs) {
@@ -481,33 +516,42 @@ void AppWindow::onSubtitleFileDropped(const QString &path) {
         continue;
       }
 
-      d->subtitleTrack->addItem(item);
+      itemsToImport.append(item);
       previousEndMs = item.endMs;
       if (item.endMs > maxEndMs)
         maxEndMs = item.endMs;
     }
-
     delete parser;
-
-    // Extend timeline duration if subtitles exceed video
-    if (maxEndMs > 0) {
-      if (d->timelinePanel) {
-        d->timelinePanel->setTotalDuration(
-            qMax(d->timelinePanel->totalDuration(), maxEndMs));
-      }
-      if (d->videoPreviewPanel) {
-        d->videoPreviewPanel->onMediaLoaded(maxEndMs, QSize());
-      }
-    }
-
-    // Seek to 0
-    if (d->mediaPlayer)
-      d->mediaPlayer->seek(0);
 
   } catch (...) {
     AppMessageBox::critical(this, tr("字幕文件格式错误"),
                             tr("无法解析字幕文件，请检查文件格式。"));
+    return;
   }
+
+  // 使用 executeBatchAction 将数据写入折叠为单一撤销历史，并保证 O(N) 性能
+  d->subtitleTrack->executeBatchAction(
+      tr("导入字幕文件"), [this, itemsToImport]() {
+        d->subtitleTrack->clear();
+        for (const auto &item : itemsToImport) {
+          d->subtitleTrack->addItem(item);
+        }
+      });
+
+  // 刷新时间线和预览面板
+  if (maxEndMs > 0) {
+    if (d->timelinePanel) {
+      d->timelinePanel->setTotalDuration(
+          qMax(d->timelinePanel->totalDuration(), maxEndMs));
+    }
+    if (d->videoPreviewPanel) {
+      d->videoPreviewPanel->onMediaLoaded(maxEndMs, QSize());
+    }
+  }
+
+  // Seek to 0
+  if (d->mediaPlayer)
+    d->mediaPlayer->seek(0);
 }
 
 void AppWindow::onVideoAsrRequested() {
@@ -1105,4 +1149,16 @@ void AppWindow::onAbout() {
   AppMessageBox::information(
       this, tr("关于"),
       tr("字幕编辑器 v1.0\n\n一个简单易用的视频字幕编辑工具。"));
+}
+
+void AppWindow::updateWindowTitle() {
+  if (!d->projectManager)
+    return;
+  QString name = d->projectManager->currentProjectName();
+  bool dirty = d->projectManager->isDirty();
+  if (name.isEmpty()) {
+    setWindowTitle(tr("字幕编辑") + (dirty ? " *" : ""));
+  } else {
+    setWindowTitle(tr("字幕编辑 - %1").arg(name) + (dirty ? " *" : ""));
+  }
 }

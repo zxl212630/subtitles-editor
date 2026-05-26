@@ -38,6 +38,7 @@ private:
   void checkConfig();
   void retranslateUi();
   void setupMenuBar();
+  void updateWindowTitle();
 
   void onSubtitleFileDropped(const QString &path);
   void onVideoAsrRequested();

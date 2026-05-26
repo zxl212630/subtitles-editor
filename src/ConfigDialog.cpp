@@ -128,16 +128,15 @@ ConfigDialog::ConfigDialog(QWidget *parent) : QDialog(parent) {
   connect(subtitleAlignmentCombo_,
           qOverload<int>(&QComboBox::currentIndexChanged), this,
           &ConfigDialog::checkDirtyState);
-  connect(subtitleRectXSpin_, qOverload<int>(&QSpinBox::valueChanged),
-          this, &ConfigDialog::checkDirtyState);
-  connect(subtitleRectYSpin_, qOverload<int>(&QSpinBox::valueChanged),
-          this, &ConfigDialog::checkDirtyState);
-  connect(subtitleRectWSpin_, qOverload<int>(&QSpinBox::valueChanged),
-          this, &ConfigDialog::checkDirtyState);
-  connect(subtitleRectHSpin_, qOverload<int>(&QSpinBox::valueChanged),
-          this, &ConfigDialog::checkDirtyState);
-  connect(subtitleRotationSpin_,
-          qOverload<int>(&QSpinBox::valueChanged), this,
+  connect(subtitleRectXSpin_, qOverload<int>(&QSpinBox::valueChanged), this,
+          &ConfigDialog::checkDirtyState);
+  connect(subtitleRectYSpin_, qOverload<int>(&QSpinBox::valueChanged), this,
+          &ConfigDialog::checkDirtyState);
+  connect(subtitleRectWSpin_, qOverload<int>(&QSpinBox::valueChanged), this,
+          &ConfigDialog::checkDirtyState);
+  connect(subtitleRectHSpin_, qOverload<int>(&QSpinBox::valueChanged), this,
+          &ConfigDialog::checkDirtyState);
+  connect(subtitleRotationSpin_, qOverload<int>(&QSpinBox::valueChanged), this,
           &ConfigDialog::checkDirtyState);
   connect(speakerBgFolderEdit_, &QLineEdit::textChanged, this,
           &ConfigDialog::checkDirtyState);
@@ -285,11 +284,16 @@ void ConfigDialog::loadConfig() {
       cfg.getBool("subtitle", "underline", false));
   subtitleAlignmentCombo_->setCurrentIndex(subtitleAlignmentCombo_->findData(
       cfg.getInt("subtitle", "alignment", 0x84)));
-  subtitleRectXSpin_->setValue(qRound(cfg.getDouble("subtitle", "rectX", 0.1) * 100));
-  subtitleRectYSpin_->setValue(qRound(cfg.getDouble("subtitle", "rectY", 0.75) * 100));
-  subtitleRectWSpin_->setValue(qRound(cfg.getDouble("subtitle", "rectW", 0.8) * 100));
-  subtitleRectHSpin_->setValue(qRound(cfg.getDouble("subtitle", "rectH", 0.2) * 100));
-  subtitleRotationSpin_->setValue(qRound(cfg.getDouble("subtitle", "rotation", 0.0)));
+  subtitleRectXSpin_->setValue(
+      qRound(cfg.getDouble("subtitle", "rectX", 0.1) * 100));
+  subtitleRectYSpin_->setValue(
+      qRound(cfg.getDouble("subtitle", "rectY", 0.75) * 100));
+  subtitleRectWSpin_->setValue(
+      qRound(cfg.getDouble("subtitle", "rectW", 0.8) * 100));
+  subtitleRectHSpin_->setValue(
+      qRound(cfg.getDouble("subtitle", "rectH", 0.2) * 100));
+  subtitleRotationSpin_->setValue(
+      qRound(cfg.getDouble("subtitle", "rotation", 0.0)));
   speakerBgFolderEdit_->setText(cfg.getString("speaker", "bgFolder"));
   speakerMarginLeftSpin_->setValue(cfg.getInt("speaker", "marginLeft", 15));
   speakerMarginTopSpin_->setValue(cfg.getInt("speaker", "marginTop", 15));
@@ -304,11 +308,16 @@ void ConfigDialog::loadConfig() {
   initialConfig_["sub_italic"] = cfg.getBool("subtitle", "italic", false);
   initialConfig_["sub_underline"] = cfg.getBool("subtitle", "underline", false);
   initialConfig_["sub_alignment"] = cfg.getInt("subtitle", "alignment", 0x84);
-  initialConfig_["sub_rectX"] = qRound(cfg.getDouble("subtitle", "rectX", 0.1) * 100);
-  initialConfig_["sub_rectY"] = qRound(cfg.getDouble("subtitle", "rectY", 0.75) * 100);
-  initialConfig_["sub_rectW"] = qRound(cfg.getDouble("subtitle", "rectW", 0.8) * 100);
-  initialConfig_["sub_rectH"] = qRound(cfg.getDouble("subtitle", "rectH", 0.2) * 100);
-  initialConfig_["sub_rotation"] = qRound(cfg.getDouble("subtitle", "rotation", 0.0));
+  initialConfig_["sub_rectX"] =
+      qRound(cfg.getDouble("subtitle", "rectX", 0.1) * 100);
+  initialConfig_["sub_rectY"] =
+      qRound(cfg.getDouble("subtitle", "rectY", 0.75) * 100);
+  initialConfig_["sub_rectW"] =
+      qRound(cfg.getDouble("subtitle", "rectW", 0.8) * 100);
+  initialConfig_["sub_rectH"] =
+      qRound(cfg.getDouble("subtitle", "rectH", 0.2) * 100);
+  initialConfig_["sub_rotation"] =
+      qRound(cfg.getDouble("subtitle", "rotation", 0.0));
   initialConfig_["spk_bgFolder"] = cfg.getString("speaker", "bgFolder");
   initialConfig_["spk_marginLeft"] = cfg.getInt("speaker", "marginLeft", 15);
   initialConfig_["spk_marginTop"] = cfg.getInt("speaker", "marginTop", 15);
@@ -426,7 +435,8 @@ void ConfigDialog::saveConfig() {
   cfg.setValue("subtitle", "rectY", subtitleRectYSpin_->value() / 100.0);
   cfg.setValue("subtitle", "rectW", subtitleRectWSpin_->value() / 100.0);
   cfg.setValue("subtitle", "rectH", subtitleRectHSpin_->value() / 100.0);
-  cfg.setValue("subtitle", "rotation", static_cast<double>(subtitleRotationSpin_->value()));
+  cfg.setValue("subtitle", "rotation",
+               static_cast<double>(subtitleRotationSpin_->value()));
   cfg.setValue("speaker", "bgFolder", speakerBgFolderEdit_->text());
   cfg.setValue("speaker", "marginLeft", speakerMarginLeftSpin_->value());
   cfg.setValue("speaker", "marginTop", speakerMarginTopSpin_->value());

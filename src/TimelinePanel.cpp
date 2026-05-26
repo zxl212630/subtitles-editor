@@ -11,6 +11,7 @@
 #include "ThemeManager.h"
 #include <QFile>
 #include <QSvgRenderer>
+#include <QUndoStack>
 
 #include <QApplication>
 #include <QContextMenuEvent>
@@ -1281,20 +1282,30 @@ void TimelinePanel::startAsrPipeline(const QString &localPath,
             } else {
               dialog->accept();
               dialog->deleteLater();
-              track_->clear();
-              for (const auto &seg : result.segments) {
-                SubtitleItem item;
-                item.id = QUuid::createUuid().toString();
-                item.text = seg.text;
-                item.startMs = seg.startMs;
-                item.endMs = seg.endMs;
-                item.speakerId = seg.speakerId;
-                if (track_) {
-                  track_->applyDefaultStyle(item);
+
+              auto loadAction = [this, result]() {
+                track_->clear();
+                for (const auto &seg : result.segments) {
+                  SubtitleItem item;
+                  item.id = QUuid::createUuid().toString();
+                  item.text = seg.text;
+                  item.startMs = seg.startMs;
+                  item.endMs = seg.endMs;
+                  item.speakerId = seg.speakerId;
+                  if (track_) {
+                    track_->applyDefaultStyle(item);
+                  }
+                  track_->addItem(item);
+                  track_->autoRegisterSpeaker(seg.speakerId);
                 }
-                track_->addItem(item);
-                track_->autoRegisterSpeaker(seg.speakerId);
+              };
+
+              if (track_) {
+                track_->executeBatchAction(tr("语音转文字"), loadAction);
+              } else {
+                loadAction();
               }
+
               emit asrSucceeded();
               transcoder->deleteLater();
               if (uploader)

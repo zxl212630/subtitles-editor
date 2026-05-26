@@ -10,6 +10,9 @@
 #include <QRectF>
 #include <QSet>
 #include <QString>
+#include <functional>
+
+class QUndoStack;
 
 struct SpeakerInfo {
   int id = -1;
@@ -24,6 +27,12 @@ class SubtitleTrack : public QObject {
 public:
   explicit SubtitleTrack(QObject *parent = nullptr);
 
+  // --- 撤销/恢复栈集成接口 ---
+  void setUndoStack(QUndoStack *stack);
+  QUndoStack *undoStack() const { return undoStack_; }
+  QString selectedId() const { return selectedId_; }
+  QMap<int, SpeakerInfo> speakersMap() const { return speakers_; }
+
   void clear();
   void addItem(const SubtitleItem &item);
   void removeItem(const QString &id);
@@ -32,6 +41,10 @@ public:
   void selectItem(const QString &id);
   void setSelectedItems(const QSet<QString> &selectedIds);
   void clearSelection();
+
+  // 批量操作包装接口（支持撤销）
+  void executeBatchAction(const QString &commandName,
+                          std::function<void()> action);
 
   const QList<SubtitleItem> &items() const;
   const SubtitleItem *selectedItem() const;
@@ -108,6 +121,24 @@ signals:
   void speakersChanged();
 
 private:
+  // --- 撤销快照状态恢复与 Direct 操作（仅由撤销系统调用） ---
+  void setTrackState(const QList<SubtitleItem> &items,
+                     const QString &selectedId,
+                     const QMap<int, SpeakerInfo> &speakers);
+
+  void clearDirect();
+  void addItemDirect(const SubtitleItem &item);
+  void removeItemDirect(const QString &id);
+  void updateItemDirect(const QString &id, const SubtitleItem &newItem);
+  void updateItemsDirect(const QList<SubtitleItem> &newItems);
+  void splitItemDirect(const QString &id, int cursorPosition,
+                       const QString &currentText);
+  void mergeItemsDirect(const QString &id1, const QString &id2);
+  void addGapItemDirect(qint64 startMs, qint64 endMs);
+  void setSpeakerInfoDirect(int id, const SpeakerInfo &info);
+  void clearSpeakersDirect();
+  void applyStyleToAllDirect(const QString &sourceId);
+
   QList<SubtitleItem> items_;
   QString selectedId_;
   QMap<int, SpeakerInfo> speakers_;
@@ -123,4 +154,9 @@ private:
   int defaultAlignment_ = 0x84;
   QRectF defaultSubtitleRect_{0.1, 0.75, 0.8, 0.2};
   double defaultRotation_ = 0.0;
+
+  QUndoStack *undoStack_ = nullptr;
+  bool isPerformingUndoRedo_ = false;
+
+  friend class SubtitleTrackCommand;
 };
