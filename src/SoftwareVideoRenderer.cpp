@@ -35,7 +35,7 @@ static QCursor getRotateCursor() {
 #define LOG_RENDER(level, msg) LOG_RENDER_##level(msg)
 
 SoftwareVideoRenderer::SoftwareVideoRenderer(QWidget *parent)
-    : QWidget(parent) {
+    : QWidget(parent), videoSize_(1920, 1080) {
   setAttribute(Qt::WA_OpaquePaintEvent);
   setMinimumSize(320, 180);
   setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Preferred);
@@ -69,12 +69,22 @@ void SoftwareVideoRenderer::renderFrame(const DecodedVideoFrame &frame) {
 #endif
 }
 
+void SoftwareVideoRenderer::setVideoSize(const QSize &size) {
+  if (size.isValid()) {
+    videoSize_ = size;
+    update();
+  }
+}
+
 void SoftwareVideoRenderer::clear() {
   {
     QMutexLocker lock(&imageMutex_);
     hasFrame_ = false;
+    currentRgbaData_.clear();
+    currentWidth_ = 0;
+    currentHeight_ = 0;
   }
-  videoSize_ = QSize();
+  videoSize_ = QSize(1920, 1080);
   update();
 }
 
@@ -175,8 +185,9 @@ void SoftwareVideoRenderer::drawNinePatch(QPainter &painter, const QImage &src,
 }
 
 QRect SoftwareVideoRenderer::getTargetRect() const {
-  QMutexLocker lock(&imageMutex_);
-  if (!hasFrame_ || currentWidth_ <= 0 || currentHeight_ <= 0) {
+  int vw = videoSize_.width();
+  int vh = videoSize_.height();
+  if (vw <= 0 || vh <= 0) {
     return rect();
   }
 
@@ -259,6 +270,10 @@ void SoftwareVideoRenderer::paintEvent(QPaintEvent *event) {
 
   // Compute video target rect
   QRect targetRect = getTargetRect();
+
+  // 先用黑色填充视频区域作为背景画布
+  painter.fillRect(targetRect, Qt::black);
+
   if (hasFrame && w > 0 && h > 0) {
     // 构造零拷贝的 QImage，直接使用 rgbaSnapshot 的数据缓冲区
     QImage imageToDraw(

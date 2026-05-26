@@ -919,16 +919,26 @@ void VideoPreviewPanel::updateCurrentItemStyle(
 }
 
 void VideoPreviewPanel::onMediaLoaded(qint64 durationMs, QSize videoSize) {
-  Q_UNUSED(videoSize)
   totalDurationMs_ = durationMs;
   if (videoRenderer_) {
     videoRenderer_->clear();
+    if (videoSize.isValid()) {
+      videoRenderer_->setVideoSize(videoSize);
+    }
   }
   if (progressBar_) {
     progressBar_->setDuration(totalDurationMs_);
   }
   onTimeChanged(0);
   seekTo(0);
+}
+
+void VideoPreviewPanel::setTotalDuration(qint64 durationMs) {
+  totalDurationMs_ = durationMs;
+  if (progressBar_) {
+    progressBar_->setDuration(totalDurationMs_);
+  }
+  onTimeChanged(mediaPlayer_ ? mediaPlayer_->currentTimeMs() : 0);
 }
 
 void VideoPreviewPanel::seekTo(qint64 ms) {

@@ -23,6 +23,7 @@ public:
   void clearSubtitleBg();
 
   QSize videoSize() const { return videoSize_; }
+  void setVideoSize(const QSize &size);
 
   // === 字幕对齐与排版包围框设置 ===
   void setSubtitleAlignment(int alignment);

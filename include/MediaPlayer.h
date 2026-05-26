@@ -34,6 +34,9 @@ public:
   void stepForward();
   void stepBackward();
 
+  void setTotalDurationLimit(qint64 ms);
+  qint64 totalDurationLimit() const;
+
   void setVideoRenderer(SoftwareVideoRenderer *renderer);
 
   void setVolume(qreal volume);
@@ -102,4 +105,5 @@ private:
 
   qreal volume_ = 1.0;
   bool isMuted_ = false;
+  qint64 totalDurationLimitMs_ = 0;
 };

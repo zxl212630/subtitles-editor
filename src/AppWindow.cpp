@@ -269,24 +269,11 @@ void AppWindow::setupSplitterLayout() {
             }
           });
 
-  // 2. MediaPlayer -> Timeline: duration
-  connect(d->mediaPlayer, &MediaPlayer::mediaLoaded, d->timelinePanel,
-          &TimelinePanel::setTotalDuration);
-  connect(d->mediaPlayer, &MediaPlayer::mediaLoaded, d->subtitleListPanel,
-          &SubtitleListPanel::setTotalDuration);
-
-  // 2a. MediaPlayer -> Timeline & VideoPreview: video fps for drag throttle
+  // 2. MediaPlayer -> AppWindow: duration update
   connect(d->mediaPlayer, &MediaPlayer::mediaLoaded, this,
           [this](qint64, QSize) {
-            double fps = d->mediaPlayer->decoderFps();
-            d->timelinePanel->setVideoFps(fps);
-            d->videoPreviewPanel->setVideoFps(fps);
-            d->subtitleListPanel->setVideoFps(fps);
+            updateTotalDuration(true);
           });
-
-  // 3. MediaPlayer -> VideoPreview: seek display
-  connect(d->mediaPlayer, &MediaPlayer::mediaLoaded, d->videoPreviewPanel,
-          &VideoPreviewPanel::onMediaLoaded);
 
   // 4. MediaPlayer -> Timeline: time sync
   connect(d->mediaPlayer, &MediaPlayer::timeChanged, d->timelinePanel,
@@ -352,9 +339,11 @@ void AppWindow::setupSplitterLayout() {
   connect(d->videoPreviewPanel, &VideoPreviewPanel::previewSeekFinished,
           d->mediaPlayer, &MediaPlayer::stopPreviewDragging);
 
-  // 11. SubtitleTrack data change -> VideoPreview subtitle refresh
+  // 11. SubtitleTrack data change -> VideoPreview subtitle refresh & duration update
   connect(d->subtitleTrack, &SubtitleTrack::dataChanged, d->videoPreviewPanel,
           &VideoPreviewPanel::updateSubtitleOverlay);
+  connect(d->subtitleTrack, &SubtitleTrack::dataChanged, this,
+          [this]() { updateTotalDuration(false); });
 
   // Existing connections
   connect(d->subtitleListPanel, &SubtitleListPanel::itemSelected,
@@ -541,22 +530,7 @@ void AppWindow::onSubtitleFileDropped(const QString &path) {
         }
       });
 
-  // 刷新时间线和预览面板
-  if (maxEndMs > 0) {
-    qint64 videoDuration = (d->mediaPlayer && d->mediaPlayer->durationMs() > 0) ? d->mediaPlayer->durationMs() : 0;
-    if (videoDuration > 0) {
-      if (d->timelinePanel) {
-        d->timelinePanel->setTotalDuration(videoDuration);
-      }
-    } else {
-      if (d->timelinePanel) {
-        d->timelinePanel->setTotalDuration(maxEndMs);
-      }
-      if (d->videoPreviewPanel) {
-        d->videoPreviewPanel->onMediaLoaded(maxEndMs, QSize());
-      }
-    }
-  }
+  updateTotalDuration(true);
 
   // Seek to 0
   if (d->mediaPlayer)
@@ -1049,9 +1023,7 @@ void AppWindow::onNewProject() {
   if (d->timelinePanel) {
     d->timelinePanel->clear();
   }
-  if (d->videoPreviewPanel) {
-    d->videoPreviewPanel->onMediaLoaded(0, QSize());
-  }
+  updateTotalDuration(true);
   setWindowTitle(tr("字幕编辑"));
 }
 
@@ -1185,5 +1157,50 @@ void AppWindow::updateWindowTitle() {
     setWindowTitle(tr("字幕编辑") + (dirty ? " *" : ""));
   } else {
     setWindowTitle(tr("字幕编辑 - %1").arg(name) + (dirty ? " *" : ""));
+  }
+}
+
+void AppWindow::updateTotalDuration(bool resetPlayback) {
+  qint64 videoDuration = (d->mediaPlayer && d->mediaPlayer->durationMs() > 0) ? d->mediaPlayer->durationMs() : 0;
+  qint64 subtitleDuration = 0;
+  if (d->subtitleTrack) {
+    for (const auto &item : d->subtitleTrack->items()) {
+      if (item.endMs > subtitleDuration) {
+        subtitleDuration = item.endMs;
+      }
+    }
+  }
+  qint64 totalDuration = qMax(videoDuration, subtitleDuration);
+
+  if (d->timelinePanel) {
+    d->timelinePanel->setTotalDuration(totalDuration);
+  }
+  if (d->subtitleListPanel) {
+    d->subtitleListPanel->setTotalDuration(totalDuration);
+  }
+
+  if (d->videoPreviewPanel) {
+    if (resetPlayback) {
+      QSize videoSize = (d->mediaPlayer && d->mediaPlayer->durationMs() > 0) ? d->mediaPlayer->videoSize() : QSize();
+      d->videoPreviewPanel->onMediaLoaded(totalDuration, videoSize);
+    } else {
+      d->videoPreviewPanel->setTotalDuration(totalDuration);
+    }
+  }
+
+  if (d->mediaPlayer) {
+    d->mediaPlayer->setTotalDurationLimit(totalDuration);
+  }
+
+  // 更新 Fps
+  if (videoDuration <= 0) {
+    if (d->timelinePanel) d->timelinePanel->setVideoFps(25.0);
+    if (d->videoPreviewPanel) d->videoPreviewPanel->setVideoFps(25.0);
+    if (d->subtitleListPanel) d->subtitleListPanel->setVideoFps(25.0);
+  } else {
+    double fps = d->mediaPlayer->decoderFps();
+    if (d->timelinePanel) d->timelinePanel->setVideoFps(fps);
+    if (d->videoPreviewPanel) d->videoPreviewPanel->setVideoFps(fps);
+    if (d->subtitleListPanel) d->subtitleListPanel->setVideoFps(fps);
   }
 }

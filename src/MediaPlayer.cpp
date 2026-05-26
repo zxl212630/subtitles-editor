@@ -17,7 +17,8 @@
 #define LOG_MP_debug(msg) qDebug() << "[MediaPlayer]" << msg
 #define LOG_MP(level, msg) LOG_MP_##level(msg)
 
-MediaPlayer::MediaPlayer(QObject *parent) : QObject(parent) {
+MediaPlayer::MediaPlayer(QObject *parent)
+    : QObject(parent), totalDurationLimitMs_(0) {
   volume_ = ConfigManager::instance().volume();
   isMuted_ = ConfigManager::instance().muted();
 
@@ -180,6 +181,14 @@ void MediaPlayer::clear() {
   emit timeChanged(0);
 }
 
+void MediaPlayer::setTotalDurationLimit(qint64 ms) {
+  totalDurationLimitMs_ = ms;
+}
+
+qint64 MediaPlayer::totalDurationLimit() const {
+  return totalDurationLimitMs_;
+}
+
 void MediaPlayer::seek(qint64 ms) {
   LOG_MP(info, "seek() request target=" << ms << "ms");
 
@@ -308,6 +317,25 @@ void MediaPlayer::onPlaybackTimer() {
       playbackTimerRunning_ = false;
       LOG_MP(warning, "seek preview timed out");
     }
+    return;
+  }
+
+  qint64 videoDuration = (decoder_ && decoder_->hasVideo()) ? decoder_->durationMs() : 0;
+  bool noVideoOrOut = (videoDuration <= 0) || (currentTimeMs_ >= videoDuration);
+
+  if (noVideoOrOut) {
+    if (playbackTimerRunning_) {
+      currentTimeMs_ = playbackStartTimeMs_ + playbackElapsedTimer_.elapsed();
+    }
+    qint64 maxLimit = qMax(videoDuration, totalDurationLimitMs_);
+    if (currentTimeMs_ >= maxLimit) {
+      currentTimeMs_ = maxLimit;
+      stop();
+      emit timeChanged(currentTimeMs_);
+      emit playbackFinished();
+      return;
+    }
+    emit timeChanged(currentTimeMs_);
     return;
   }
 

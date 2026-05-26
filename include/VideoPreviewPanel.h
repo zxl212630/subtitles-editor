@@ -71,6 +71,7 @@ public:
 
   SoftwareVideoRenderer *videoRenderer() const { return videoRenderer_; }
   void onMediaLoaded(qint64 durationMs, QSize videoSize);
+  void setTotalDuration(qint64 durationMs);
   void seekTo(qint64 ms);
   void updateSubtitleOverlay();
   void setVideoFps(double fps);
