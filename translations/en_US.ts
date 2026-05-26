@@ -1646,4 +1646,127 @@ Make sure to include the necessary settings for FFmpeg, Tencent Cloud ASR, and A
         <translation>OK</translation>
     </message>
 </context>
+<context>
+    <name>ExportDialog</name>
+    <message>
+        <source>导出</source>
+        <translation>Export</translation>
+    </message>
+    <message>
+        <source>视频设置</source>
+        <translation>Video Settings</translation>
+    </message>
+    <message>
+        <source>字幕设置</source>
+        <translation>Subtitle Settings</translation>
+    </message>
+    <message>
+        <source>视频格式</source>
+        <translation>Video Format</translation>
+    </message>
+    <message>
+        <source>视频编码</source>
+        <translation>Video Codec</translation>
+    </message>
+    <message>
+        <source>分辨率</source>
+        <translation>Resolution</translation>
+    </message>
+    <message>
+        <source>帧率</source>
+        <translation>Frame Rate</translation>
+    </message>
+    <message>
+        <source>视频质量</source>
+        <translation>Video Quality</translation>
+    </message>
+    <message>
+        <source>音频码率</source>
+        <translation>Audio Bitrate</translation>
+    </message>
+    <message>
+        <source>音频采样率</source>
+        <translation>Audio Sample Rate</translation>
+    </message>
+    <message>
+        <source>字幕格式</source>
+        <translation>Subtitle Format</translation>
+    </message>
+    <message>
+        <source>输出路径</source>
+        <translation>Output Path</translation>
+    </message>
+    <message>
+        <source>导出标题</source>
+        <translation>Export Title</translation>
+    </message>
+    <message>
+        <source>输入导出文件名（不含后缀）</source>
+        <translation>Enter export filename (without extension)</translation>
+    </message>
+    <message>
+        <source>浏览...</source>
+        <translation>Browse...</translation>
+    </message>
+    <message>
+        <source>取消</source>
+        <translation>Cancel</translation>
+    </message>
+    <message>
+        <source>高质量</source>
+        <translation>High Quality</translation>
+    </message>
+    <message>
+        <source>中等质量 (推荐)</source>
+        <translation>Medium Quality (Recommended)</translation>
+    </message>
+    <message>
+        <source>较低质量</source>
+        <translation>Low Quality</translation>
+    </message>
+    <message>
+        <source>自定义码率</source>
+        <translation>Custom Bitrate</translation>
+    </message>
+    <message>
+        <source>保存路径不能为空。</source>
+        <translation>Save path cannot be empty.</translation>
+    </message>
+    <message>
+        <source>导出标题不能为空。</source>
+        <translation>Export title cannot be empty.</translation>
+    </message>
+    <message>
+        <source>保存目录不存在，请选择合法的路径。</source>
+        <translation>Save directory does not exist, please select a valid path.</translation>
+    </message>
+    <message>
+        <source>当前未载入视频，无法导出视频</source>
+        <translation>No video loaded, cannot export video.</translation>
+    </message>
+    <message>
+        <source>无音频轨道</source>
+        <translation>No Audio Track</translation>
+    </message>
+    <message>
+        <source>选择导出目录</source>
+        <translation>Select Export Directory</translation>
+    </message>
+    <message>
+        <source>%1x%2 (原始)</source>
+        <translation>%1x%2 (Original)</translation>
+    </message>
+    <message>
+        <source>%1 fps (原始)</source>
+        <translation>%1 fps (Original)</translation>
+    </message>
+    <message>
+        <source>%1 kbps (原始)</source>
+        <translation>%1 kbps (Original)</translation>
+    </message>
+    <message>
+        <source>%1 Hz (原始)</source>
+        <translation>%1 Hz (Original)</translation>
+    </message>
+</context>
 </TS>

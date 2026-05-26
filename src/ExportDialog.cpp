@@ -6,8 +6,10 @@
 
 #include <QCheckBox>
 #include <QComboBox>
+#include <QDateTime>
 #include <QDir>
 #include <QEvent>
+#include <QFile>
 #include <QFileDialog>
 #include <QFileInfo>
 #include <QFormLayout>
@@ -16,6 +18,8 @@
 #include <QLabel>
 #include <QLineEdit>
 #include <QPushButton>
+#include <QScrollArea>
+#include <QStandardPaths>
 #include <QStyle>
 #include <QVBoxLayout>
 
@@ -69,6 +73,16 @@ void ExportDialog::setSubtitleTrack(const SubtitleTrack *track) {
     exportSubtitleChk_->setEnabled(true);
     subtitleSectionHeader_->setEnabled(true);
   }
+
+  if (pathEdit_ && pathEdit_->text().isEmpty()) {
+    pathEdit_->setText(QDir::toNativeSeparators(
+        QStandardPaths::writableLocation(QStandardPaths::DocumentsLocation)));
+  }
+
+  if (titleEdit_ && titleEdit_->text().isEmpty()) {
+    titleEdit_->setText("subtitles");
+  }
+
   checkExportButtonEnabled();
 }
 
@@ -96,6 +110,20 @@ void ExportDialog::setSourceVideo(const QString &videoPath,
     exportVideoChk_->setToolTip(QString());
     videoSectionHeader_->setEnabled(true);
     videoExpanded_ = true;
+
+    // 如果有视频路径，且当前路径为空或为默认Documents路径，则智能覆盖为视频所在目录
+    QString currentPath = pathEdit_->text().trimmed();
+    QString docPath = QDir::toNativeSeparators(
+        QStandardPaths::writableLocation(QStandardPaths::DocumentsLocation));
+    if (currentPath.isEmpty() || currentPath == docPath) {
+      pathEdit_->setText(
+          QDir::toNativeSeparators(QFileInfo(sourceVideoPath_).absolutePath()));
+    }
+
+    // 初始化导出标题为视频文件名
+    if (titleEdit_) {
+      titleEdit_->setText(QFileInfo(sourceVideoPath_).completeBaseName());
+    }
   }
 
   // 根据源视频初始化视频和音频预设列表
@@ -135,12 +163,12 @@ void ExportDialog::initializeVideoPresets() {
 
     if (sourceIndex != -1) {
       // 在已有选项中标记原始
-      standards[sourceIndex].label = QString("%1x%2 (原始)")
+      standards[sourceIndex].label = tr("%1x%2 (原始)")
                                          .arg(sourceVideoSize_.width())
                                          .arg(sourceVideoSize_.height());
     } else {
       // 动态插入非标准源分辨率到首位
-      ResItem item = {QString("%1x%2 (原始)")
+      ResItem item = {tr("%1x%2 (原始)")
                           .arg(sourceVideoSize_.width())
                           .arg(sourceVideoSize_.height()),
                       sourceVideoSize_};
@@ -192,10 +220,10 @@ void ExportDialog::initializeVideoPresets() {
 
     if (sourceFpsIndex != -1) {
       fpsStandards[sourceFpsIndex].label =
-          QString("%1 fps (原始)").arg(qRound(sourceFps_));
+          tr("%1 fps (原始)").arg(qRound(sourceFps_));
     } else {
       // 动态插入非标准帧率
-      FpsItem item = {QString("%1 fps (原始)").arg(sourceFps_, 0, 'f', 2),
+      FpsItem item = {tr("%1 fps (原始)").arg(sourceFps_, 0, 'f', 2),
                       sourceFps_};
       fpsStandards.insert(0, item);
       sourceFpsAdded = true;
@@ -257,10 +285,9 @@ void ExportDialog::initializeAudioPresets() {
       }
     }
     if (index != -1) {
-      standards[index].label = QString("%1 kbps (原始)").arg(sourceBrKbps);
+      standards[index].label = tr("%1 kbps (原始)").arg(sourceBrKbps);
     } else {
-      BitrateItem item = {QString("%1 kbps (原始)").arg(sourceBrKbps),
-                          sourceBrKbps};
+      BitrateItem item = {tr("%1 kbps (原始)").arg(sourceBrKbps), sourceBrKbps};
       standards.insert(0, item);
       sourceBrAdded = true;
     }
@@ -309,9 +336,9 @@ void ExportDialog::initializeAudioPresets() {
     }
     if (index != -1) {
       sampleStandards[index].label =
-          QString("%1 Hz (原始)").arg(sourceAudioSampleRate_);
+          tr("%1 Hz (原始)").arg(sourceAudioSampleRate_);
     } else {
-      SampleItem item = {QString("%1 Hz (原始)").arg(sourceAudioSampleRate_),
+      SampleItem item = {tr("%1 Hz (原始)").arg(sourceAudioSampleRate_),
                          sourceAudioSampleRate_};
       sampleStandards.insert(0, item);
       sourceSrAdded = true;
@@ -350,13 +377,70 @@ void ExportDialog::setupUi() {
   contentLayout->setContentsMargins(30, 20, 30, 20);
   contentLayout->setSpacing(15);
 
-  // --- 1. 导出视频折叠区域 ---
-  exportVideoChk_ = new QCheckBox(contentWidget);
+  scrollArea_ = new QScrollArea(contentWidget);
+  scrollArea_->setWidgetResizable(true);
+  scrollArea_->setFrameShape(QFrame::NoFrame);
+  scrollArea_->setObjectName("PropertyScrollArea");
+
+  QWidget *scrollContent = new QWidget(scrollArea_);
+  scrollContent->setObjectName("PropertyScrollContent");
+  QVBoxLayout *scrollLayout = new QVBoxLayout(scrollContent);
+  scrollLayout->setContentsMargins(0, 0, 10, 0);
+  scrollLayout->setSpacing(15);
+
+  // --- 1. 导出标题与路径选择区 (移动到最顶端，使用 QFormLayout) ---
+  QFrame *pathFrame = new QFrame(scrollContent);
+  pathFrame->setObjectName("ExportSectionFrame");
+
+  QFormLayout *pathForm = new QFormLayout(pathFrame);
+  pathForm->setContentsMargins(15, 15, 15, 15);
+  pathForm->setSpacing(10);
+
+  // 导出标题
+  exportTitleLabel_ = new QLabel(tr("导出标题"), pathFrame);
+  exportTitleLabel_->setObjectName("ConfigFieldLabel");
+
+  titleEdit_ = new QLineEdit(pathFrame);
+  titleEdit_->setFixedHeight(32);
+  titleEdit_->setPlaceholderText(tr("输入导出文件名（不含后缀）"));
+  connect(titleEdit_, &QLineEdit::textChanged, this,
+          &ExportDialog::checkExportButtonEnabled);
+
+  pathForm->addRow(exportTitleLabel_, titleEdit_);
+
+  // 输出路径
+  pathTitle_ = new QLabel(tr("输出路径"), pathFrame);
+  pathTitle_->setObjectName("ConfigFieldLabel");
+
+  QHBoxLayout *pathLineLayout = new QHBoxLayout();
+  pathLineLayout->setContentsMargins(0, 0, 0, 0);
+  pathLineLayout->setSpacing(0); // 拼接无缝隙
+
+  pathEdit_ = new QLineEdit(pathFrame);
+  pathEdit_->setObjectName("SpeakerFolderEdit");
+  pathEdit_->setFixedHeight(32);
+  connect(pathEdit_, &QLineEdit::textChanged, this,
+          &ExportDialog::checkExportButtonEnabled);
+
+  browseBtn_ = new QPushButton(tr("浏览..."), pathFrame);
+  browseBtn_->setObjectName("SpeakerBrowseButton");
+  browseBtn_->setFixedHeight(32);
+  connect(browseBtn_, &QPushButton::clicked, this,
+          &ExportDialog::onBrowseClicked);
+
+  pathLineLayout->addWidget(pathEdit_, 1);
+  pathLineLayout->addWidget(browseBtn_);
+
+  pathForm->addRow(pathTitle_, pathLineLayout);
+  scrollLayout->addWidget(pathFrame);
+
+  // --- 2. 导出视频折叠区域 ---
+  exportVideoChk_ = new QCheckBox(scrollContent);
   exportVideoChk_->setStyleSheet("font-weight: bold; font-size: 13px;");
   connect(exportVideoChk_, &QCheckBox::stateChanged, this,
           &ExportDialog::onVideoCheckChanged);
 
-  videoSectionHeader_ = new QPushButton(contentWidget);
+  videoSectionHeader_ = new QPushButton(scrollContent);
   videoSectionHeader_->setFlat(true);
   videoSectionHeader_->setStyleSheet(
       "QPushButton {"
@@ -382,9 +466,9 @@ void ExportDialog::setupUi() {
   videoHeaderLayout->setContentsMargins(0, 0, 0, 0);
   videoHeaderLayout->addWidget(exportVideoChk_);
   videoHeaderLayout->addWidget(videoSectionHeader_, 1);
-  contentLayout->addLayout(videoHeaderLayout);
+  scrollLayout->addLayout(videoHeaderLayout);
 
-  videoSectionFrame_ = new QFrame(contentWidget);
+  videoSectionFrame_ = new QFrame(scrollContent);
   videoSectionFrame_->setObjectName("ExportSectionFrame");
 
   QFormLayout *videoForm = new QFormLayout(videoSectionFrame_);
@@ -398,9 +482,9 @@ void ExportDialog::setupUi() {
           QOverload<int>::of(&QComboBox::currentIndexChanged), this,
           &ExportDialog::onFormatChanged);
 
-  QLabel *l1 = new QLabel(tr("视频格式"), videoSectionFrame_);
-  l1->setObjectName("ConfigFieldLabel");
-  videoForm->addRow(l1, videoFormatCombo_);
+  videoFormatLabel_ = new QLabel(tr("视频格式"), videoSectionFrame_);
+  videoFormatLabel_->setObjectName("ConfigFieldLabel");
+  videoForm->addRow(videoFormatLabel_, videoFormatCombo_);
 
   videoCodecCombo_ = new QComboBox(videoSectionFrame_);
   // 探测 VideoToolbox 支持
@@ -418,19 +502,19 @@ void ExportDialog::setupUi() {
   }
   videoCodecCombo_->addItem(tr("H.265 / HEVC (CPU)"), "libx265");
 
-  QLabel *l2 = new QLabel(tr("视频编码"), videoSectionFrame_);
-  l2->setObjectName("ConfigFieldLabel");
-  videoForm->addRow(l2, videoCodecCombo_);
+  videoCodecLabel_ = new QLabel(tr("视频编码"), videoSectionFrame_);
+  videoCodecLabel_->setObjectName("ConfigFieldLabel");
+  videoForm->addRow(videoCodecLabel_, videoCodecCombo_);
 
   videoResolutionCombo_ = new QComboBox(videoSectionFrame_);
-  QLabel *l3 = new QLabel(tr("分辨率"), videoSectionFrame_);
-  l3->setObjectName("ConfigFieldLabel");
-  videoForm->addRow(l3, videoResolutionCombo_);
+  videoResolutionLabel_ = new QLabel(tr("分辨率"), videoSectionFrame_);
+  videoResolutionLabel_->setObjectName("ConfigFieldLabel");
+  videoForm->addRow(videoResolutionLabel_, videoResolutionCombo_);
 
   videoFpsCombo_ = new QComboBox(videoSectionFrame_);
-  QLabel *l4 = new QLabel(tr("帧率"), videoSectionFrame_);
-  l4->setObjectName("ConfigFieldLabel");
-  videoForm->addRow(l4, videoFpsCombo_);
+  videoFpsLabel_ = new QLabel(tr("帧率"), videoSectionFrame_);
+  videoFpsLabel_->setObjectName("ConfigFieldLabel");
+  videoForm->addRow(videoFpsLabel_, videoFpsCombo_);
 
   // 画质/码率控制
   videoQualityCombo_ = new QComboBox(videoSectionFrame_);
@@ -445,9 +529,9 @@ void ExportDialog::setupUi() {
           QOverload<int>::of(&QComboBox::currentIndexChanged), this,
           &ExportDialog::onQualityModeChanged);
 
-  QLabel *l5 = new QLabel(tr("视频质量"), videoSectionFrame_);
-  l5->setObjectName("ConfigFieldLabel");
-  videoForm->addRow(l5, videoQualityCombo_);
+  videoQualityLabel_ = new QLabel(tr("视频质量"), videoSectionFrame_);
+  videoQualityLabel_->setObjectName("ConfigFieldLabel");
+  videoForm->addRow(videoQualityLabel_, videoQualityCombo_);
 
   // 自定义码率输入子面板
   customBitrateFrame_ = new QFrame(videoSectionFrame_);
@@ -456,34 +540,34 @@ void ExportDialog::setupUi() {
   customBitrateEdit_ = new QLineEdit("8000", customBitrateFrame_);
   customBitrateEdit_->setValidator(new QIntValidator(100, 100000, this));
   customBitrateEdit_->setFixedWidth(80);
-  QLabel *kbpsLabel = new QLabel("kbps", customBitrateFrame_);
-  kbpsLabel->setObjectName("ConfigFieldLabel");
+  kbpsLabel_ = new QLabel("kbps", customBitrateFrame_);
+  kbpsLabel_->setObjectName("ConfigFieldLabel");
   bitrateLayout->addWidget(customBitrateEdit_);
-  bitrateLayout->addWidget(kbpsLabel);
+  bitrateLayout->addWidget(kbpsLabel_);
   bitrateLayout->addStretch();
   customBitrateFrame_->setVisible(false);
   videoForm->addRow(QString(), customBitrateFrame_);
 
   // 音频处理
   audioBitrateCombo_ = new QComboBox(videoSectionFrame_);
-  QLabel *l6 = new QLabel(tr("音频码率"), videoSectionFrame_);
-  l6->setObjectName("ConfigFieldLabel");
-  videoForm->addRow(l6, audioBitrateCombo_);
+  audioBitrateLabel_ = new QLabel(tr("音频码率"), videoSectionFrame_);
+  audioBitrateLabel_->setObjectName("ConfigFieldLabel");
+  videoForm->addRow(audioBitrateLabel_, audioBitrateCombo_);
 
   audioSampleRateCombo_ = new QComboBox(videoSectionFrame_);
-  QLabel *l7 = new QLabel(tr("音频采样率"), videoSectionFrame_);
-  l7->setObjectName("ConfigFieldLabel");
-  videoForm->addRow(l7, audioSampleRateCombo_);
+  audioSampleRateLabel_ = new QLabel(tr("音频采样率"), videoSectionFrame_);
+  audioSampleRateLabel_->setObjectName("ConfigFieldLabel");
+  videoForm->addRow(audioSampleRateLabel_, audioSampleRateCombo_);
 
-  contentLayout->addWidget(videoSectionFrame_);
+  scrollLayout->addWidget(videoSectionFrame_);
 
-  // --- 2. 导出字幕折叠区域 ---
-  exportSubtitleChk_ = new QCheckBox(contentWidget);
+  // --- 3. 导出字幕折叠区域 ---
+  exportSubtitleChk_ = new QCheckBox(scrollContent);
   exportSubtitleChk_->setStyleSheet("font-weight: bold; font-size: 13px;");
   connect(exportSubtitleChk_, &QCheckBox::stateChanged, this,
           &ExportDialog::onSubtitleCheckChanged);
 
-  subtitleSectionHeader_ = new QPushButton(contentWidget);
+  subtitleSectionHeader_ = new QPushButton(scrollContent);
   subtitleSectionHeader_->setFlat(true);
   subtitleSectionHeader_->setStyleSheet(
       "QPushButton {"
@@ -509,9 +593,9 @@ void ExportDialog::setupUi() {
   subHeaderLayout->setContentsMargins(0, 0, 0, 0);
   subHeaderLayout->addWidget(exportSubtitleChk_);
   subHeaderLayout->addWidget(subtitleSectionHeader_, 1);
-  contentLayout->addLayout(subHeaderLayout);
+  scrollLayout->addLayout(subHeaderLayout);
 
-  subtitleSectionFrame_ = new QFrame(contentWidget);
+  subtitleSectionFrame_ = new QFrame(scrollContent);
   subtitleSectionFrame_->setObjectName("ExportSectionFrame");
 
   QFormLayout *subForm = new QFormLayout(subtitleSectionFrame_);
@@ -527,39 +611,15 @@ void ExportDialog::setupUi() {
           QOverload<int>::of(&QComboBox::currentIndexChanged), this,
           &ExportDialog::updatePathExtension);
 
-  QLabel *l8 = new QLabel(tr("字幕格式"), subtitleSectionFrame_);
-  l8->setObjectName("ConfigFieldLabel");
-  subForm->addRow(l8, subtitleFormatCombo_);
+  subtitleFormatLabel_ = new QLabel(tr("字幕格式"), subtitleSectionFrame_);
+  subtitleFormatLabel_->setObjectName("ConfigFieldLabel");
+  subForm->addRow(subtitleFormatLabel_, subtitleFormatCombo_);
 
-  contentLayout->addWidget(subtitleSectionFrame_);
+  scrollLayout->addWidget(subtitleSectionFrame_);
 
-  // --- 3. 输出路径选择区 ---
-  QFrame *pathFrame = new QFrame(contentWidget);
-  QVBoxLayout *pathLayout = new QVBoxLayout(pathFrame);
-  pathLayout->setContentsMargins(0, 5, 0, 0);
-  pathLayout->setSpacing(5);
-
-  QLabel *pathTitle = new QLabel(tr("输出路径"), pathFrame);
-  pathTitle->setObjectName("ConfigFieldLabel");
-  pathLayout->addWidget(pathTitle);
-
-  QHBoxLayout *pathLineLayout = new QHBoxLayout();
-  pathEdit_ = new QLineEdit(pathFrame);
-  connect(pathEdit_, &QLineEdit::textChanged, this,
-          &ExportDialog::checkExportButtonEnabled);
-
-  browseBtn_ = new QPushButton(tr("浏览..."), pathFrame);
-  connect(browseBtn_, &QPushButton::clicked, this,
-          &ExportDialog::onBrowseClicked);
-  pathLineLayout->addWidget(pathEdit_);
-  pathLineLayout->addWidget(browseBtn_);
-  pathLayout->addLayout(pathLineLayout);
-
-  pathHintLabel_ = new QLabel(pathFrame);
-  pathHintLabel_->setStyleSheet(
-      "color: palette(placeholder-text); font-size: 11px;");
-  pathLayout->addWidget(pathHintLabel_);
-  contentLayout->addWidget(pathFrame);
+  scrollLayout->addStretch();
+  scrollArea_->setWidget(scrollContent);
+  contentLayout->addWidget(scrollArea_);
 
   mainLayout->addWidget(contentWidget, 1);
 
@@ -594,10 +654,135 @@ void ExportDialog::setupUi() {
 
 void ExportDialog::retranslateUi() {
   setWindowTitle(tr("导出"));
-  videoSectionHeader_->setText(tr("视频设置"));
-  subtitleSectionHeader_->setText(tr("字幕设置"));
-  exportBtn_->setText(tr("导出"));
+  if (titleLabel) {
+    titleLabel->setText(tr("导出"));
+  }
+
+  // 刷新 Header 折叠项文本
+  updateAccordionStates();
+
+  // 刷新 Label 文本
+  if (videoFormatLabel_)
+    videoFormatLabel_->setText(tr("视频格式"));
+  if (videoCodecLabel_)
+    videoCodecLabel_->setText(tr("视频编码"));
+  if (videoResolutionLabel_)
+    videoResolutionLabel_->setText(tr("分辨率"));
+  if (videoFpsLabel_)
+    videoFpsLabel_->setText(tr("帧率"));
+  if (videoQualityLabel_)
+    videoQualityLabel_->setText(tr("视频质量"));
+  if (audioBitrateLabel_)
+    audioBitrateLabel_->setText(tr("音频码率"));
+  if (audioSampleRateLabel_)
+    audioSampleRateLabel_->setText(tr("音频采样率"));
+  if (subtitleFormatLabel_)
+    subtitleFormatLabel_->setText(tr("字幕格式"));
+  if (kbpsLabel_)
+    kbpsLabel_->setText("kbps");
+  if (pathTitle_)
+    pathTitle_->setText(tr("输出路径"));
+  if (exportTitleLabel_)
+    exportTitleLabel_->setText(tr("导出标题"));
+  if (titleEdit_)
+    titleEdit_->setPlaceholderText(tr("输入导出文件名（不含后缀）"));
+
+  if (browseBtn_)
+    browseBtn_->setText(tr("浏览..."));
+  if (cancelBtn_)
+    cancelBtn_->setText(tr("取消"));
+  if (exportBtn_)
+    exportBtn_->setText(tr("导出"));
+
+  // 刷新静态下拉选项文本
+  if (videoFormatCombo_) {
+    videoFormatCombo_->setItemText(0, "MP4");
+    videoFormatCombo_->setItemText(1, "MOV");
+  }
+
+  if (videoQualityCombo_) {
+    videoQualityCombo_->setItemText(0, tr("高质量"));
+    videoQualityCombo_->setItemText(1, tr("中等质量 (推荐)"));
+    videoQualityCombo_->setItemText(2, tr("较低质量"));
+    videoQualityCombo_->setItemText(3, tr("自定义码率"));
+  }
+
+  if (subtitleFormatCombo_) {
+    subtitleFormatCombo_->setItemText(0, "SRT (*.srt)");
+    subtitleFormatCombo_->setItemText(1, "TXT (*.txt)");
+    subtitleFormatCombo_->setItemText(2, "Premiere Pro XML (*.xml)");
+    subtitleFormatCombo_->setItemText(3, "Final Cut Pro XML (*.fcpxml)");
+  }
+
+  // 刷新视频编码下拉选项文本
+  if (videoCodecCombo_) {
+    QString selectedCodec = videoCodecCombo_->currentData().toString();
+    videoCodecCombo_->clear();
+    bool hasH264Vt =
+        avcodec_find_encoder_by_name("h264_videotoolbox") != nullptr;
+    bool hasHevcVt =
+        avcodec_find_encoder_by_name("hevc_videotoolbox") != nullptr;
+
+    if (hasH264Vt) {
+      videoCodecCombo_->addItem(tr("H.264 (硬件加速)"), "h264_videotoolbox");
+    }
+    videoCodecCombo_->addItem(tr("H.264 (CPU)"), "libx264");
+
+    if (hasHevcVt) {
+      videoCodecCombo_->addItem(tr("H.265 / HEVC (硬件加速)"),
+                                "hevc_videotoolbox");
+    }
+    videoCodecCombo_->addItem(tr("H.265 / HEVC (CPU)"), "libx265");
+
+    for (int i = 0; i < videoCodecCombo_->count(); ++i) {
+      if (videoCodecCombo_->itemData(i).toString() == selectedCodec) {
+        videoCodecCombo_->setCurrentIndex(i);
+        break;
+      }
+    }
+  }
+
+  // 刷新动态预设 (保持选中)
+  if (videoResolutionCombo_ && videoFpsCombo_) {
+    QSize selectedRes = videoResolutionCombo_->currentData().toSize();
+    double selectedFps = videoFpsCombo_->currentData().toDouble();
+    initializeVideoPresets();
+
+    for (int i = 0; i < videoResolutionCombo_->count(); ++i) {
+      if (videoResolutionCombo_->itemData(i).toSize() == selectedRes) {
+        videoResolutionCombo_->setCurrentIndex(i);
+        break;
+      }
+    }
+    for (int i = 0; i < videoFpsCombo_->count(); ++i) {
+      if (qAbs(videoFpsCombo_->itemData(i).toDouble() - selectedFps) < 0.05) {
+        videoFpsCombo_->setCurrentIndex(i);
+        break;
+      }
+    }
+  }
+
+  if (audioBitrateCombo_ && audioSampleRateCombo_) {
+    int selectedBr = audioBitrateCombo_->currentData().toInt();
+    int selectedSr = audioSampleRateCombo_->currentData().toInt();
+    initializeAudioPresets();
+
+    for (int i = 0; i < audioBitrateCombo_->count(); ++i) {
+      if (audioBitrateCombo_->itemData(i).toInt() == selectedBr) {
+        audioBitrateCombo_->setCurrentIndex(i);
+        break;
+      }
+    }
+    for (int i = 0; i < audioSampleRateCombo_->count(); ++i) {
+      if (audioSampleRateCombo_->itemData(i).toInt() == selectedSr) {
+        audioSampleRateCombo_->setCurrentIndex(i);
+        break;
+      }
+    }
+  }
+
   checkExportButtonEnabled();
+  updatePathExtension();
 }
 
 void ExportDialog::changeEvent(QEvent *event) {
@@ -648,15 +833,12 @@ void ExportDialog::updateAccordionStates() {
   QString subtitlePrefix =
       (subtitleExpanded_ && exportSubtitleChk_->isChecked()) ? "▼ " : "▶ ";
   subtitleSectionHeader_->setText(subtitlePrefix + tr("字幕设置"));
-
-  adjustSize();
 }
 
 void ExportDialog::onQualityModeChanged(int index) {
   int mode = videoQualityCombo_->itemData(index).toInt();
   customBitrateFrame_->setVisible(mode ==
                                   VideoExportConfig::QualityCustomBitrate);
-  adjustSize();
 }
 
 void ExportDialog::onFormatChanged(int index) {
@@ -665,92 +847,69 @@ void ExportDialog::onFormatChanged(int index) {
 }
 
 void ExportDialog::updatePathExtension() {
-  QString path = pathEdit_->text().trimmed();
-  if (path.isEmpty())
-    return;
-
-  QFileInfo info(path);
-  QString base = info.absolutePath() + "/" + info.completeBaseName();
-
-  if (exportVideoChk_->isChecked()) {
-    // 视频主导扩展名
-    QString ext = videoFormatCombo_->currentData().toString();
-    pathEdit_->setText(base + "." + ext);
-    pathHintLabel_->setText(
-        exportSubtitleChk_->isChecked()
-            ? tr("提示：字幕文件将自动保存至同一目录下（文件名与视频相同）")
-            : QString());
-  } else if (exportSubtitleChk_->isChecked()) {
-    // 字幕主导扩展名
-    QString ext = subtitleFormatCombo_->currentData().toString();
-    pathEdit_->setText(base + "." + ext);
-    pathHintLabel_->setText(QString());
-  }
+  // 留空，根据用户反馈，文件夹下面不需要显示视频或者字幕文件的完整路径提示
 }
 
 void ExportDialog::onBrowseClicked() {
-  QString filter;
-  QString defaultExt;
-
-  if (exportVideoChk_->isChecked()) {
-    QString ext = videoFormatCombo_->currentData().toString();
-    if (ext == "mov") {
-      filter = tr("QuickTime 视频 (*.mov)");
-      defaultExt = "mov";
-    } else {
-      filter = tr("MPEG-4 视频 (*.mp4)");
-      defaultExt = "mp4";
-    }
-  } else if (exportSubtitleChk_->isChecked()) {
-    QString format = subtitleFormatCombo_->currentData().toString();
-    if (format == "txt") {
-      filter = tr("TXT 文本 (*.txt)");
-      defaultExt = "txt";
-    } else if (format == "xml") {
-      filter = tr("Premiere XML (*.xml)");
-      defaultExt = "xml";
-    } else if (format == "fcpxml") {
-      filter = tr("Final Cut Pro XML (*.fcpxml)");
-      defaultExt = "fcpxml";
-    } else {
-      filter = tr("SRT 字幕 (*.srt)");
-      defaultExt = "srt";
-    }
-  } else {
-    return;
-  }
-
-  QString path = QFileDialog::getSaveFileName(this, tr("选择保存路径"),
-                                              pathEdit_->text(), filter);
-  if (!path.isEmpty()) {
-    QFileInfo info(path);
-    if (info.suffix().isEmpty()) {
-      path += "." + defaultExt;
-    }
-    pathEdit_->setText(path);
+  QString dir = QFileDialog::getExistingDirectory(this, tr("选择导出目录"),
+                                                  pathEdit_->text());
+  if (!dir.isEmpty()) {
+    pathEdit_->setText(dir);
   }
 }
 
 void ExportDialog::checkExportButtonEnabled() {
   bool anyChecked =
       (exportVideoChk_->isChecked() || exportSubtitleChk_->isChecked());
+  bool titleOk = titleEdit_ && !titleEdit_->text().trimmed().isEmpty();
   bool pathOk = !pathEdit_->text().trimmed().isEmpty();
-  exportBtn_->setEnabled(anyChecked && pathOk);
+  exportBtn_->setEnabled(anyChecked && titleOk && pathOk);
 }
 
 void ExportDialog::onExportClicked() {
-  QString path = pathEdit_->text().trimmed();
-  if (path.isEmpty()) {
+  QString dirPath = pathEdit_->text().trimmed();
+  if (dirPath.isEmpty()) {
     AppMessageBox::warning(this, tr("导出"), tr("保存路径不能为空。"));
     return;
   }
 
-  QFileInfo info(path);
-  QDir dir = info.dir();
+  QDir dir(dirPath);
   if (!dir.exists()) {
     AppMessageBox::warning(this, tr("导出"),
                            tr("保存目录不存在，请选择合法的路径。"));
     return;
+  }
+
+  QString title = titleEdit_->text().trimmed();
+  if (title.isEmpty()) {
+    AppMessageBox::warning(this, tr("导出"), tr("导出标题不能为空。"));
+    return;
+  }
+
+  // 检测目标文件是否已存在，如果已存在，则自动在标题后面追加精确到秒的时间戳，如
+  // 20260526172815
+  bool videoExists = false;
+  bool subtitleExists = false;
+  QString cleanTitle = title;
+
+  if (exportVideoChk_->isChecked()) {
+    QString ext = videoFormatCombo_->currentData().toString();
+    QString videoPath = dirPath + "/" + cleanTitle + "." + ext;
+    if (QFile::exists(videoPath)) {
+      videoExists = true;
+    }
+  }
+  if (exportSubtitleChk_->isChecked()) {
+    QString ext = subtitleFormatCombo_->currentData().toString();
+    QString subPath = dirPath + "/" + cleanTitle + "." + ext;
+    if (QFile::exists(subPath)) {
+      subtitleExists = true;
+    }
+  }
+
+  if (videoExists || subtitleExists) {
+    QString timestamp = QDateTime::currentDateTime().toString("yyyyMMddHHmmss");
+    titleEdit_->setText(cleanTitle + "-" + timestamp);
   }
 
   accept();
@@ -768,12 +927,37 @@ QString ExportDialog::subtitleFormat() const {
   return subtitleFormatCombo_->currentData().toString();
 }
 
-QString ExportDialog::outputPath() const { return pathEdit_->text().trimmed(); }
+QString ExportDialog::outputPath() const {
+  QString dir = pathEdit_->text().trimmed();
+  if (dir.isEmpty())
+    return QString();
+
+  QString title = titleEdit_ ? titleEdit_->text().trimmed() : QString();
+  if (title.isEmpty()) {
+    if (!sourceVideoPath_.isEmpty()) {
+      title = QFileInfo(sourceVideoPath_).completeBaseName();
+    } else if (track_ && !track_->items().isEmpty()) {
+      title = "subtitles";
+    } else {
+      title = "export";
+    }
+  }
+
+  if (exportVideoChk_->isChecked()) {
+    QString ext = videoFormatCombo_->currentData().toString();
+    return dir + "/" + title + "." + ext;
+  } else if (exportSubtitleChk_->isChecked()) {
+    QString ext = subtitleFormatCombo_->currentData().toString();
+    return dir + "/" + title + "." + ext;
+  }
+
+  return dir;
+}
 
 VideoExportConfig ExportDialog::videoConfig() const {
   VideoExportConfig config;
   config.inputPath = sourceVideoPath_;
-  config.outputPath = pathEdit_->text().trimmed();
+  config.outputPath = outputPath();
   config.videoCodec = videoCodecCombo_->currentData().toString();
 
   int qIdx = videoQualityCombo_->currentIndex();
@@ -782,9 +966,6 @@ VideoExportConfig ExportDialog::videoConfig() const {
   config.customBitrateKbps = customBitrateEdit_->text().toInt();
 
   QSize targetSize = videoResolutionCombo_->currentData().toSize();
-  // 若选择的是与原始一致，即 standards 里的 standards[sourceIndex]，它的值就是
-  // sourceVideoSize_。 为了让 VideoExporter 了解是否有缩放，如果是
-  // sourceVideoSize_，我们也可以传 0（Exporter 识别 0 为保持原始）。
   if (targetSize == sourceVideoSize_) {
     config.outputWidth = 0;
     config.outputHeight = 0;

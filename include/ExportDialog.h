@@ -14,6 +14,7 @@ class QCheckBox;
 class QComboBox;
 class QLineEdit;
 class QPushButton;
+class QScrollArea;
 class SubtitleTrack;
 
 class ExportDialog : public QDialog {
@@ -93,13 +94,29 @@ private:
   QComboBox *audioBitrateCombo_ = nullptr;
   QComboBox *audioSampleRateCombo_ = nullptr;
 
-  // 路径选择
+  // 路径与标题选择
+  QLineEdit *titleEdit_ = nullptr;
   QLineEdit *pathEdit_ = nullptr;
   QPushButton *browseBtn_ = nullptr;
   QLabel *pathHintLabel_ = nullptr;
 
   QPushButton *exportBtn_ = nullptr;
   QPushButton *cancelBtn_ = nullptr;
+
+  // 用于动态语言切换的 Label 引用
+  QLabel *exportTitleLabel_ = nullptr;
+  QLabel *videoFormatLabel_ = nullptr;
+  QLabel *videoCodecLabel_ = nullptr;
+  QLabel *videoResolutionLabel_ = nullptr;
+  QLabel *videoFpsLabel_ = nullptr;
+  QLabel *videoQualityLabel_ = nullptr;
+  QLabel *audioBitrateLabel_ = nullptr;
+  QLabel *audioSampleRateLabel_ = nullptr;
+  QLabel *subtitleFormatLabel_ = nullptr;
+  QLabel *kbpsLabel_ = nullptr;
+  QLabel *pathTitle_ = nullptr;
+
+  QScrollArea *scrollArea_ = nullptr;
 
   QWK::WidgetWindowAgent *windowAgent = nullptr;
   QFrame *titleBar = nullptr;
