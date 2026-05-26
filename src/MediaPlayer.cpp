@@ -225,7 +225,6 @@ qint64 MediaPlayer::totalDurationLimit() const {
 void MediaPlayer::seek(qint64 ms) {
   LOG_MP(info, "seek() request target=" << ms << "ms");
 
-  State oldState = state_;
   if (state_ == Playing) {
     pause();
   }
@@ -235,13 +234,11 @@ void MediaPlayer::seek(qint64 ms) {
   pendingVideoFrame_ = std::nullopt;
   previewFrameRendered_ = false;
 
-  if (oldState == Playing) {
-    decoder_->requestSeek(ms);
-    decoder_->clearAllQueues();
-    play();
-  } else {
-    seekPreviewMode_ = true;
+  seekPreviewMode_ = true;
+  if (seekDecoder_) {
     seekDecoder_->requestSeek(ms);
+  }
+  if (decoder_) {
     decoder_->requestSeek(ms);
     decoder_->clearAllQueues();
   }
@@ -421,7 +418,18 @@ void MediaPlayer::onPlaybackTimer() {
         playbackStartTimeMs_ = videoDuration;
         playbackElapsedTimer_.restart();
       } else {
-        onPlaybackFinished();
+        qint64 current = currentTimeMs_;
+        if (playbackTimerRunning_) {
+          current = playbackStartTimeMs_ + playbackElapsedTimer_.elapsed();
+        }
+        if (current >= videoDuration) {
+          currentTimeMs_ = videoDuration;
+          onPlaybackFinished();
+          emit timeChanged(currentTimeMs_);
+        } else {
+          currentTimeMs_ = current;
+          emit timeChanged(currentTimeMs_);
+        }
       }
     }
     return;
