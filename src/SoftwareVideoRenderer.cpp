@@ -193,8 +193,21 @@ QRect SoftwareVideoRenderer::getTargetRect() const {
 
   double widgetRatio =
       static_cast<double>(width()) / static_cast<double>(height());
+
+  int cw = 0;
+  int ch = 0;
+  {
+    QMutexLocker lock(&imageMutex_);
+    cw = currentWidth_;
+    ch = currentHeight_;
+  }
+  if (cw <= 0 || ch <= 0) {
+    cw = vw;
+    ch = vh;
+  }
+
   double imageRatio =
-      static_cast<double>(currentWidth_) / static_cast<double>(currentHeight_);
+      static_cast<double>(cw) / static_cast<double>(ch);
 
   int newWidth;
   int newHeight;
