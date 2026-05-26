@@ -34,6 +34,7 @@ public:
   void setPlaying(bool playing);
   void setVideoFps(double fps);
   void setMediaFilePath(const QString &path);
+  void clear();
 
   qint64 totalDuration() const { return totalDurationMs_; }
   QString mediaFilePath() const { return mediaFilePath_; }

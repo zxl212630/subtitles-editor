@@ -248,6 +248,22 @@ void TimelinePanel::setTotalDuration(qint64 ms) {
   canvas_->update();
 }
 
+void TimelinePanel::clear() {
+  mediaFileName_.clear();
+  mediaFilePath_.clear();
+  totalDurationMs_ = 0;
+  currentTimeMs_ = 0;
+  scrollOffsetX_ = 0;
+  isPlaying_ = false;
+  if (hScrollBar_) {
+    hScrollBar_->blockSignals(true);
+    hScrollBar_->setValue(0);
+    hScrollBar_->setRange(0, 0);
+    hScrollBar_->blockSignals(false);
+  }
+  canvas_->update();
+}
+
 TimelinePanel::ClipInteractionMode
 TimelinePanel::hitTestClip(int mouseX, int mouseY, QString *outId) const {
   int trackY = RULER_HEIGHT;
@@ -372,6 +388,7 @@ void TimelinePanel::drawOnCanvas(QPainter &painter) {
                      SUBTITLE_TRACK_HEIGHT + VIDEO_TRACK_HEIGHT, bgBase);
 
     drawEmptyState(painter);
+    drawPlayhead(painter);
   } else {
     drawSubtitleTrack(painter, RULER_HEIGHT);
     drawVideoTrack(painter, RULER_HEIGHT + SUBTITLE_TRACK_HEIGHT);

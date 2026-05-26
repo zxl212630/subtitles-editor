@@ -162,6 +162,24 @@ void MediaPlayer::stop() {
   LOG_MP(info, "stop() state=Stopped");
 }
 
+void MediaPlayer::clear() {
+  stop();
+  if (decoder_) {
+    decoder_->close();
+  }
+  if (seekDecoder_) {
+    seekDecoder_->close();
+  }
+  if (audioOutput_) {
+    audioOutput_->close();
+  }
+  if (videoRenderer_) {
+    videoRenderer_->clear();
+  }
+  currentTimeMs_ = 0;
+  emit timeChanged(0);
+}
+
 void MediaPlayer::seek(qint64 ms) {
   LOG_MP(info, "seek() request target=" << ms << "ms");
 

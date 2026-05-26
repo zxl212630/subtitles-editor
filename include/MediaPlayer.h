@@ -27,6 +27,7 @@ public:
   void play();
   void pause();
   void stop();
+  void clear();
   void seek(qint64 ms);
   void previewSeek(qint64 ms);
   void stopPreviewDragging();

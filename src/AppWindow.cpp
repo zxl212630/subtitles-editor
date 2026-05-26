@@ -543,12 +543,18 @@ void AppWindow::onSubtitleFileDropped(const QString &path) {
 
   // 刷新时间线和预览面板
   if (maxEndMs > 0) {
-    if (d->timelinePanel) {
-      d->timelinePanel->setTotalDuration(
-          qMax(d->timelinePanel->totalDuration(), maxEndMs));
-    }
-    if (d->videoPreviewPanel) {
-      d->videoPreviewPanel->onMediaLoaded(maxEndMs, QSize());
+    qint64 videoDuration = (d->mediaPlayer && d->mediaPlayer->durationMs() > 0) ? d->mediaPlayer->durationMs() : 0;
+    if (videoDuration > 0) {
+      if (d->timelinePanel) {
+        d->timelinePanel->setTotalDuration(videoDuration);
+      }
+    } else {
+      if (d->timelinePanel) {
+        d->timelinePanel->setTotalDuration(maxEndMs);
+      }
+      if (d->videoPreviewPanel) {
+        d->videoPreviewPanel->onMediaLoaded(maxEndMs, QSize());
+      }
     }
   }
 
@@ -1038,11 +1044,10 @@ void AppWindow::onNewProject() {
     d->projectManager->newProject();
   }
   if (d->mediaPlayer) {
-    d->mediaPlayer->stop();
+    d->mediaPlayer->clear();
   }
   if (d->timelinePanel) {
-    d->timelinePanel->setMediaFilePath(QString());
-    d->timelinePanel->setTotalDuration(0);
+    d->timelinePanel->clear();
   }
   if (d->videoPreviewPanel) {
     d->videoPreviewPanel->onMediaLoaded(0, QSize());

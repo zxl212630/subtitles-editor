@@ -52,7 +52,13 @@ public:
     update();
   }
 
-  void setDuration(qint64 totalMs) { totalDurationMs_ = totalMs; }
+  void setDuration(qint64 totalMs) {
+    totalDurationMs_ = totalMs;
+    if (totalMs <= 0) {
+      ratio_ = 0.0;
+      update();
+    }
+  }
 
   void setVideoFps(double fps) {
     if (fps > 0.0)
@@ -942,8 +948,8 @@ void VideoPreviewPanel::onTimeChanged(qint64 ms) {
                                    .arg(formatTime(ms))
                                    .arg(formatTime(totalDurationMs_)));
   }
-  if (progressBar_ && totalDurationMs_ > 0) {
-    double ratio = static_cast<double>(ms) / totalDurationMs_;
+  if (progressBar_) {
+    double ratio = totalDurationMs_ > 0 ? static_cast<double>(ms) / totalDurationMs_ : 0.0;
     progressBar_->setRatio(ratio);
   }
   updateSubtitleOverlay();
