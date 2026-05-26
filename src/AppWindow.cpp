@@ -675,18 +675,36 @@ void AppWindow::setupDummyData() {
   addItem("PremierePro-supported XML format", 8000, 11170);
 }
 
-void AppWindow::onExportRequested() {
+void AppWindow::doExport(const QString &format) {
   if (!d->subtitleTrack || d->subtitleTrack->items().isEmpty()) {
     AppMessageBox::warning(this, tr("导出字幕"),
                            tr("当前没有字幕内容，无法导出。"));
     return;
   }
 
-  QString filter = tr("SRT 字幕 (*.srt);;纯文本 (*.txt);;Premiere XML [实验] "
-                      "(*.xml);;Final Cut Pro XML [实验] (*.fcpxml)");
+  QString filter;
+  QString dialogTitle;
+  if (format == "srt") {
+    filter = tr("SRT 字幕 (*.srt)");
+    dialogTitle = tr("导出 SRT");
+  } else if (format == "txt") {
+    filter = tr("TXT 文本 (*.txt)");
+    dialogTitle = tr("导出 TXT");
+  } else if (format == "xml") {
+    filter = tr("Premiere XML (*.xml)");
+    dialogTitle = tr("导出 Premiere XML");
+  } else if (format == "fcpxml") {
+    filter = tr("Final Cut Pro XML (*.fcpxml)");
+    dialogTitle = tr("导出 Final Cut Pro XML");
+  } else {
+    filter = tr("SRT 字幕 (*.srt);;纯文本 (*.txt);;Premiere XML "
+                "(*.xml);;Final Cut Pro XML (*.fcpxml)");
+    dialogTitle = tr("导出字幕");
+  }
+
   QString selectedFilter;
-  QString filePath = QFileDialog::getSaveFileName(
-      this, tr("导出字幕"), QString(), filter, &selectedFilter);
+  QString filePath = QFileDialog::getSaveFileName(this, dialogTitle, QString(),
+                                                  filter, &selectedFilter);
 
   if (filePath.isEmpty())
     return;
@@ -733,11 +751,16 @@ void AppWindow::onExportRequested() {
                                                videoSize);
   }
 
-  if (!success) {
+  if (success) {
+    AppMessageBox::information(this, tr("导出成功"),
+                               tr("字幕已导出到：%1").arg(filePath));
+  } else {
     AppMessageBox::critical(this, tr("导出失败"),
                             tr("导出字幕失败，请检查文件路径和权限。"));
   }
 }
+
+void AppWindow::onExportRequested() { doExport(QString()); }
 
 void AppWindow::onSettingsRequested() {
   ConfigDialog dialog(this);
@@ -871,6 +894,10 @@ void AppWindow::setupMenuBar() {
   connect(srtAction, &QAction::triggered, this, &AppWindow::onExportSrt);
   QAction *txtAction = d->exportMenu->addAction("TXT");
   connect(txtAction, &QAction::triggered, this, &AppWindow::onExportTxt);
+  QAction *xmlAction = d->exportMenu->addAction("Premiere XML");
+  connect(xmlAction, &QAction::triggered, this, &AppWindow::onExportXml);
+  QAction *fcpxmlAction = d->exportMenu->addAction("Final Cut Pro XML");
+  connect(fcpxmlAction, &QAction::triggered, this, &AppWindow::onExportFcpxml);
 
   d->fileMenu->addSeparator();
 
@@ -1040,41 +1067,13 @@ void AppWindow::onOpenRecentFile(const QString &filePath) {
 
 void AppWindow::onClearRecentFiles() { SubtitleProject::clearRecentFiles(); }
 
-void AppWindow::onExportSrt() {
-  if (!d->subtitleTrack)
-    return;
+void AppWindow::onExportSrt() { doExport("srt"); }
 
-  QString filePath = QFileDialog::getSaveFileName(
-      this, tr("导出 SRT"), QString(), tr("SRT 字幕 (*.srt)"));
+void AppWindow::onExportTxt() { doExport("txt"); }
 
-  if (filePath.isEmpty())
-    return;
+void AppWindow::onExportXml() { doExport("xml"); }
 
-  if (SubtitleExporter::exportToSRT(*d->subtitleTrack, filePath)) {
-    AppMessageBox::information(this, tr("导出成功"),
-                               tr("字幕已导出到：%1").arg(filePath));
-  } else {
-    AppMessageBox::critical(this, tr("导出失败"), tr("无法导出字幕文件。"));
-  }
-}
-
-void AppWindow::onExportTxt() {
-  if (!d->subtitleTrack)
-    return;
-
-  QString filePath = QFileDialog::getSaveFileName(
-      this, tr("导出 TXT"), QString(), tr("TXT 文本 (*.txt)"));
-
-  if (filePath.isEmpty())
-    return;
-
-  if (SubtitleExporter::exportToTXT(*d->subtitleTrack, filePath)) {
-    AppMessageBox::information(this, tr("导出成功"),
-                               tr("字幕已导出到：%1").arg(filePath));
-  } else {
-    AppMessageBox::critical(this, tr("导出失败"), tr("无法导出字幕文件。"));
-  }
-}
+void AppWindow::onExportFcpxml() { doExport("fcpxml"); }
 
 void AppWindow::onSelectAll() {
   if (d->subtitleTrack) {
