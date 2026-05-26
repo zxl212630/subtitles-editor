@@ -711,6 +711,6 @@ QScrollArea {
 QFrame#ExportSectionFrame {
     border: 1px solid @border_color;
     border-radius: 8px;
-    background-color: @bg_panel;
+    background-color: transparent;
 }
 

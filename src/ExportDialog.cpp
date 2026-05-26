@@ -29,8 +29,16 @@ extern "C" {
 
 ExportDialog::ExportDialog(QWidget *parent) : QDialog(parent) {
   setObjectName("ExportDialog");
+  setWindowFlags(windowFlags() & ~Qt::WindowMaximizeButtonHint);
   setMinimumSize(580, 560);
   resize(600, 600);
+
+  // 初始化折叠图标
+  downArrowPixmap_ = QPixmap(":/icons/down-arrow.svg");
+  QTransform trans;
+  trans.rotate(-90);
+  rightArrowPixmap_ =
+      downArrowPixmap_.transformed(trans, Qt::SmoothTransformation);
 
   windowAgent = new QWK::WidgetWindowAgent(this);
   windowAgent->setup(this);
@@ -443,18 +451,31 @@ void ExportDialog::setupUi() {
   videoSectionHeader_ = new QPushButton(scrollContent);
   videoSectionHeader_->setFlat(true);
   videoSectionHeader_->setCursor(Qt::PointingHandCursor);
-  videoSectionHeader_->setStyleSheet(
-      "QPushButton {"
-      "  text-align: left;"
-      "  font-weight: bold;"
-      "  font-size: 13px;"
-      "  padding: 6px 8px;"
-      "  border: none;"
-      "  color: palette(text);"
-      "}"
-      "QPushButton:hover {"
-      "  border-radius: 4px;"
-      "}");
+  videoSectionHeader_->setFixedHeight(28);
+  videoSectionHeader_->setStyleSheet("QPushButton {"
+                                     "  border: none;"
+                                     "  background: transparent;"
+                                     "}");
+
+  // 使用内部布局管理文字和 SVG 箭头
+  QHBoxLayout *videoHeaderInnerLayout = new QHBoxLayout(videoSectionHeader_);
+  videoHeaderInnerLayout->setContentsMargins(2, 0, 8, 0);
+  videoHeaderInnerLayout->setSpacing(6);
+
+  videoHeaderLabel_ = new QLabel(videoSectionHeader_);
+  videoHeaderLabel_->setStyleSheet("font-weight: bold;"
+                                   "font-size: 13px;"
+                                   "color: palette(text);");
+
+  videoHeaderIcon_ = new QLabel(videoSectionHeader_);
+  videoHeaderIcon_->setFixedSize(14, 14);
+  videoHeaderIcon_->setScaledContents(true);
+  videoHeaderIcon_->setStyleSheet("margin-bottom: 1px;");
+
+  videoHeaderInnerLayout->addWidget(videoHeaderLabel_, 0, Qt::AlignVCenter);
+  videoHeaderInnerLayout->addWidget(videoHeaderIcon_, 0, Qt::AlignVCenter);
+  videoHeaderInnerLayout->addStretch();
+
   connect(videoSectionHeader_, &QPushButton::clicked, this, [this]() {
     if (exportVideoChk_->isEnabled()) {
       videoExpanded_ = !videoExpanded_;
@@ -464,7 +485,7 @@ void ExportDialog::setupUi() {
 
   QHBoxLayout *videoHeaderLayout = new QHBoxLayout();
   videoHeaderLayout->setContentsMargins(0, 0, 0, 0);
-  videoHeaderLayout->setSpacing(0);
+  videoHeaderLayout->setSpacing(4);
   videoHeaderLayout->addWidget(exportVideoChk_);
   videoHeaderLayout->addWidget(videoSectionHeader_, 1);
   scrollLayout->addLayout(videoHeaderLayout);
@@ -571,18 +592,34 @@ void ExportDialog::setupUi() {
   subtitleSectionHeader_ = new QPushButton(scrollContent);
   subtitleSectionHeader_->setFlat(true);
   subtitleSectionHeader_->setCursor(Qt::PointingHandCursor);
-  subtitleSectionHeader_->setStyleSheet(
-      "QPushButton {"
-      "  text-align: left;"
-      "  font-weight: bold;"
-      "  font-size: 13px;"
-      "  padding: 6px 8px;"
-      "  border: none;"
-      "  color: palette(text);"
-      "}"
-      "QPushButton:hover {"
-      "  border-radius: 4px;"
-      "}");
+  subtitleSectionHeader_->setFixedHeight(28);
+  subtitleSectionHeader_->setStyleSheet("QPushButton {"
+                                        "  border: none;"
+                                        "  background: transparent;"
+                                        "}");
+
+  // 使用内部布局管理文字和 SVG 箭头
+  QHBoxLayout *subtitleHeaderInnerLayout =
+      new QHBoxLayout(subtitleSectionHeader_);
+  subtitleHeaderInnerLayout->setContentsMargins(2, 0, 8, 0);
+  subtitleHeaderInnerLayout->setSpacing(6);
+
+  subtitleHeaderLabel_ = new QLabel(subtitleSectionHeader_);
+  subtitleHeaderLabel_->setStyleSheet("font-weight: bold;"
+                                      "font-size: 13px;"
+                                      "color: palette(text);");
+
+  subtitleHeaderIcon_ = new QLabel(subtitleSectionHeader_);
+  subtitleHeaderIcon_->setFixedSize(14, 14);
+  subtitleHeaderIcon_->setScaledContents(true);
+  subtitleHeaderIcon_->setStyleSheet("margin-bottom: 1px;");
+
+  subtitleHeaderInnerLayout->addWidget(subtitleHeaderLabel_, 0,
+                                       Qt::AlignVCenter);
+  subtitleHeaderInnerLayout->addWidget(subtitleHeaderIcon_, 0,
+                                       Qt::AlignVCenter);
+  subtitleHeaderInnerLayout->addStretch();
+
   connect(subtitleSectionHeader_, &QPushButton::clicked, this, [this]() {
     if (exportSubtitleChk_->isEnabled()) {
       subtitleExpanded_ = !subtitleExpanded_;
@@ -592,7 +629,7 @@ void ExportDialog::setupUi() {
 
   QHBoxLayout *subHeaderLayout = new QHBoxLayout();
   subHeaderLayout->setContentsMargins(0, 0, 0, 0);
-  subHeaderLayout->setSpacing(0);
+  subHeaderLayout->setSpacing(4);
   subHeaderLayout->addWidget(exportSubtitleChk_);
   subHeaderLayout->addWidget(subtitleSectionHeader_, 1);
   scrollLayout->addLayout(subHeaderLayout);
@@ -827,14 +864,24 @@ void ExportDialog::updateAccordionStates() {
   subtitleSectionFrame_->setVisible(subtitleExpanded_ &&
                                     exportSubtitleChk_->isChecked());
 
-  // 修改 Header 上的文字指示符
-  QString videoPrefix =
-      (videoExpanded_ && exportVideoChk_->isChecked()) ? "▼ " : "▶ ";
-  videoSectionHeader_->setText(videoPrefix + tr("视频设置"));
+  // 刷新 Header 上的文字与图标
+  if (videoHeaderLabel_) {
+    videoHeaderLabel_->setText(tr("视频设置"));
+  }
+  if (videoHeaderIcon_) {
+    bool isExpanded = videoExpanded_ && exportVideoChk_->isChecked();
+    videoHeaderIcon_->setPixmap(isExpanded ? downArrowPixmap_
+                                           : rightArrowPixmap_);
+  }
 
-  QString subtitlePrefix =
-      (subtitleExpanded_ && exportSubtitleChk_->isChecked()) ? "▼ " : "▶ ";
-  subtitleSectionHeader_->setText(subtitlePrefix + tr("字幕设置"));
+  if (subtitleHeaderLabel_) {
+    subtitleHeaderLabel_->setText(tr("字幕设置"));
+  }
+  if (subtitleHeaderIcon_) {
+    bool isExpanded = subtitleExpanded_ && exportSubtitleChk_->isChecked();
+    subtitleHeaderIcon_->setPixmap(isExpanded ? downArrowPixmap_
+                                              : rightArrowPixmap_);
+  }
 }
 
 void ExportDialog::onQualityModeChanged(int index) {

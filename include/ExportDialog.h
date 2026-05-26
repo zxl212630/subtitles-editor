@@ -71,6 +71,8 @@ private:
   QCheckBox *exportVideoChk_ = nullptr;
   QFrame *videoSectionFrame_ = nullptr;
   QPushButton *videoSectionHeader_ = nullptr;
+  QLabel *videoHeaderLabel_ = nullptr;
+  QLabel *videoHeaderIcon_ = nullptr;
   bool videoExpanded_ = true;
 
   QComboBox *videoFormatCombo_ = nullptr;
@@ -86,9 +88,15 @@ private:
   QCheckBox *exportSubtitleChk_ = nullptr;
   QFrame *subtitleSectionFrame_ = nullptr;
   QPushButton *subtitleSectionHeader_ = nullptr;
+  QLabel *subtitleHeaderLabel_ = nullptr;
+  QLabel *subtitleHeaderIcon_ = nullptr;
   bool subtitleExpanded_ = false;
 
   QComboBox *subtitleFormatCombo_ = nullptr;
+
+  // 展开收起箭头 Pixmap
+  QPixmap downArrowPixmap_;
+  QPixmap rightArrowPixmap_;
 
   // 音频设置 (简化下拉框)
   QComboBox *audioBitrateCombo_ = nullptr;
