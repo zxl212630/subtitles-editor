@@ -66,9 +66,8 @@ void MediaPlayer::setVideoRenderer(SoftwareVideoRenderer *renderer) {
 }
 
 bool MediaPlayer::load(const QString &path) {
-  if (state_ != Stopped) {
-    stop();
-  }
+  // Use clear() to fully reset state without triggering seek on old video
+  clear();
 
   state_ = Loading;
   emit stateChanged(Loading);
