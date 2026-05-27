@@ -121,9 +121,6 @@ void MediaPlayer::play() {
     state_ = Playing;
     emit stateChanged(Playing);
 
-    decoder_->clearAllQueues();
-    pendingVideoFrame_ = std::nullopt;
-
     decoder_->setPlaying(true);
     playbackStartTimeMs_ = currentTimeMs_;
     playbackElapsedTimer_.restart();
