@@ -38,7 +38,12 @@ bool FFmpegDecoder::open(const QString &path) {
     return false;
   }
 
-  ret = avformat_find_stream_info(fmtCtx_, nullptr);
+  // Limit stream analysis to 5 seconds to avoid hangs on problematic files
+  AVDictionary *opts = nullptr;
+  av_dict_set(&opts, "analyzeduration", "5000000", 0);
+  av_dict_set(&opts, "probesize", "5000000", 0);
+  ret = avformat_find_stream_info(fmtCtx_, &opts);
+  av_dict_free(&opts);
   if (ret < 0) {
     char errbuf[256];
     av_strerror(ret, errbuf, sizeof(errbuf));

@@ -6,7 +6,10 @@
 #include <QObject>
 #include <QSize>
 #include <QTimer>
+#include <atomic>
+#include <mutex>
 #include <optional>
+#include <thread>
 
 class FFmpegDecoder;
 class SeekDecoder;
@@ -23,7 +26,7 @@ public:
   explicit MediaPlayer(QObject *parent = nullptr);
   ~MediaPlayer() override;
 
-  bool load(const QString &path);
+  void load(const QString &path);
   void play();
   void pause();
   void stop();
@@ -45,6 +48,7 @@ public:
   bool isMuted() const { return isMuted_; }
 
   State state() const { return state_; }
+  bool isLoading() const { return isLoading_.load(); }
   qint64 currentTimeMs() const { return currentTimeMs_; }
   double decoderFps() const;
   QSize videoSize() const;
@@ -65,6 +69,8 @@ signals:
   void playbackFinished();
   void playbackError(const QString &error);
   void volumeChanged(qreal volume, bool muted);
+  void loadFinished(const QString &path, bool decoderOk, bool seekDecoderOk,
+                    int generation);
 
 private slots:
   void onPlaybackTimer();
@@ -73,6 +79,8 @@ private slots:
   void executePendingSeek();
   void onSeekFrameReady(DecodedVideoFrame frame);
   void onPlaybackFinished();
+  void onLoadFinished(const QString &path, bool decoderOk, bool seekDecoderOk,
+                      int generation);
 
 private:
   FFmpegDecoder *decoder_ = nullptr;
@@ -109,4 +117,11 @@ private:
   qreal volume_ = 1.0;
   bool isMuted_ = false;
   qint64 totalDurationLimitMs_ = 0;
+
+  std::atomic<bool> isLoading_{false};
+  std::thread loadThread_;
+  QMetaObject::Connection loadConn_;
+  std::mutex loadMutex_;
+  bool loadDone_ = false;
+  int loadGeneration_ = 0;
 };

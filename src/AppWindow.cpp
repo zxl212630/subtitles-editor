@@ -241,9 +241,12 @@ void AppWindow::setupSplitterLayout() {
           [this](const QString &path) {
             d->timelinePanel->setMediaFilePath(path);
             d->videoImportTime_ = QDateTime::currentDateTime();
-            d->mediaPlayer->load(path);
+            // load() is triggered via ProjectManager::setVideoPath →
+            // videoPathChanged signal
             if (d->projectManager) {
               d->projectManager->setVideoPath(path);
+            } else {
+              d->mediaPlayer->load(path);
             }
           });
 
@@ -261,9 +264,12 @@ void AppWindow::setupSplitterLayout() {
               } else if (d->mediaPlayer) {
                 d->timelinePanel->setMediaFilePath(path);
                 d->videoImportTime_ = QDateTime::currentDateTime();
-                d->mediaPlayer->load(path);
+                // load() is triggered via ProjectManager::setVideoPath →
+                // videoPathChanged signal
                 if (d->projectManager) {
                   d->projectManager->setVideoPath(path);
+                } else {
+                  d->mediaPlayer->load(path);
                 }
               }
             }
@@ -271,9 +277,7 @@ void AppWindow::setupSplitterLayout() {
 
   // 2. MediaPlayer -> AppWindow: duration update
   connect(d->mediaPlayer, &MediaPlayer::mediaLoaded, this,
-          [this](qint64, QSize) {
-            updateTotalDuration(true);
-          });
+          [this](qint64, QSize) { updateTotalDuration(true); });
 
   // 4. MediaPlayer -> Timeline: time sync
   connect(d->mediaPlayer, &MediaPlayer::timeChanged, d->timelinePanel,
@@ -339,7 +343,8 @@ void AppWindow::setupSplitterLayout() {
   connect(d->videoPreviewPanel, &VideoPreviewPanel::previewSeekFinished,
           d->mediaPlayer, &MediaPlayer::stopPreviewDragging);
 
-  // 11. SubtitleTrack data change -> VideoPreview subtitle refresh & duration update
+  // 11. SubtitleTrack data change -> VideoPreview subtitle refresh & duration
+  // update
   connect(d->subtitleTrack, &SubtitleTrack::dataChanged, d->videoPreviewPanel,
           &VideoPreviewPanel::updateSubtitleOverlay);
   connect(d->subtitleTrack, &SubtitleTrack::dataChanged, this,
@@ -463,8 +468,14 @@ void AppWindow::setupSplitterLayout() {
 
 void AppWindow::loadFile(const QString &path) {
   if (d->mediaPlayer) {
+    // Auto-play once loading completes
+    auto conn = std::make_shared<QMetaObject::Connection>();
+    *conn = connect(d->mediaPlayer, &MediaPlayer::mediaLoaded, this,
+                    [this, conn]() {
+                      disconnect(*conn);
+                      d->mediaPlayer->play();
+                    });
     d->mediaPlayer->load(path);
-    d->mediaPlayer->play();
   }
 }
 
@@ -1161,7 +1172,9 @@ void AppWindow::updateWindowTitle() {
 }
 
 void AppWindow::updateTotalDuration(bool resetPlayback) {
-  qint64 videoDuration = (d->mediaPlayer && d->mediaPlayer->durationMs() > 0) ? d->mediaPlayer->durationMs() : 0;
+  qint64 videoDuration = (d->mediaPlayer && d->mediaPlayer->durationMs() > 0)
+                             ? d->mediaPlayer->durationMs()
+                             : 0;
   qint64 subtitleDuration = 0;
   if (d->subtitleTrack) {
     for (const auto &item : d->subtitleTrack->items()) {
@@ -1182,7 +1195,9 @@ void AppWindow::updateTotalDuration(bool resetPlayback) {
 
   if (d->videoPreviewPanel) {
     if (resetPlayback) {
-      QSize videoSize = (d->mediaPlayer && d->mediaPlayer->durationMs() > 0) ? d->mediaPlayer->videoSize() : QSize();
+      QSize videoSize = (d->mediaPlayer && d->mediaPlayer->durationMs() > 0)
+                            ? d->mediaPlayer->videoSize()
+                            : QSize();
       d->videoPreviewPanel->onMediaLoaded(totalDuration, videoSize);
     } else {
       d->videoPreviewPanel->setTotalDuration(totalDuration);
@@ -1195,13 +1210,19 @@ void AppWindow::updateTotalDuration(bool resetPlayback) {
 
   // 更新 Fps
   if (videoDuration <= 0) {
-    if (d->timelinePanel) d->timelinePanel->setVideoFps(25.0);
-    if (d->videoPreviewPanel) d->videoPreviewPanel->setVideoFps(25.0);
-    if (d->subtitleListPanel) d->subtitleListPanel->setVideoFps(25.0);
+    if (d->timelinePanel)
+      d->timelinePanel->setVideoFps(25.0);
+    if (d->videoPreviewPanel)
+      d->videoPreviewPanel->setVideoFps(25.0);
+    if (d->subtitleListPanel)
+      d->subtitleListPanel->setVideoFps(25.0);
   } else {
     double fps = d->mediaPlayer->decoderFps();
-    if (d->timelinePanel) d->timelinePanel->setVideoFps(fps);
-    if (d->videoPreviewPanel) d->videoPreviewPanel->setVideoFps(fps);
-    if (d->subtitleListPanel) d->subtitleListPanel->setVideoFps(fps);
+    if (d->timelinePanel)
+      d->timelinePanel->setVideoFps(fps);
+    if (d->videoPreviewPanel)
+      d->videoPreviewPanel->setVideoFps(fps);
+    if (d->subtitleListPanel)
+      d->subtitleListPanel->setVideoFps(fps);
   }
 }

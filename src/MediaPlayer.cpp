@@ -47,6 +47,28 @@ MediaPlayer::MediaPlayer(QObject *parent)
 }
 
 MediaPlayer::~MediaPlayer() {
+  if (loadConn_) {
+    disconnect(loadConn_);
+    loadConn_ = {};
+  }
+  if (loadThread_.joinable()) {
+    for (int i = 0; i < 100; ++i) {
+      {
+        std::lock_guard<std::mutex> lock(loadMutex_);
+        if (loadDone_)
+          break;
+      }
+      QThread::msleep(50);
+    }
+    {
+      std::lock_guard<std::mutex> lock(loadMutex_);
+      if (!loadDone_) {
+        loadThread_.detach();
+      } else {
+        loadThread_.join();
+      }
+    }
+  }
   stop();
   playbackTimer_->stop();
   playbackTimerRunning_ = false;
@@ -67,39 +89,86 @@ void MediaPlayer::setVideoRenderer(SoftwareVideoRenderer *renderer) {
   videoRenderer_ = renderer;
 }
 
-bool MediaPlayer::load(const QString &path) {
+void MediaPlayer::load(const QString &path) {
+  // If a previous async load is still running, wait for it
+  if (loadThread_.joinable()) {
+    loadThread_.join();
+  }
+
   // Use clear() to fully reset state without triggering seek on old video
   clear();
 
+  isLoading_.store(true);
+  {
+    std::lock_guard<std::mutex> lock(loadMutex_);
+    loadDone_ = false;
+    ++loadGeneration_;
+  }
   state_ = Loading;
   emit stateChanged(Loading);
 
-  LOG_MP(info, "load() started path=" << path);
+  LOG_MP(info, "load() started (async) path=" << path);
+  LOG_MP(info, "load() launching background thread...");
 
-  // Run both decoders' open() in parallel to halve initialization time
-  // (avformat_find_stream_info is the expensive operation, done once per
-  // decoder)
-  bool decoderOk = false;
-  bool seekDecoderOk = false;
+  // Connect loadFinished signal to onLoadFinished slot (auto-queued since
+  // signal is emitted from worker thread, slot runs on main thread)
+  loadConn_ = connect(this, &MediaPlayer::loadFinished, this,
+                      &MediaPlayer::onLoadFinished, Qt::QueuedConnection);
 
-  std::thread decoderThread(
-      [this, &path, &decoderOk]() { decoderOk = decoder_->open(path); });
-  std::thread seekThread([this, &path, &seekDecoderOk]() {
-    seekDecoderOk = seekDecoder_->open(path);
+  // Capture generation before starting thread
+  int gen = loadGeneration_;
+
+  // Launch background thread: opens both decoders in parallel
+  loadThread_ = std::thread([this, path, gen]() {
+    bool decoderOk = false;
+    bool seekDecoderOk = false;
+
+    std::thread decoderThread(
+        [this, &path, &decoderOk]() { decoderOk = decoder_->open(path); });
+    std::thread seekThread([this, &path, &seekDecoderOk]() {
+      seekDecoderOk = seekDecoder_->open(path);
+    });
+
+    decoderThread.join();
+    seekThread.join();
+
+    // Mark thread as done before emitting signal
+    {
+      std::lock_guard<std::mutex> lock(loadMutex_);
+      loadDone_ = true;
+    }
+
+    // Emit signal → Qt queues onLoadFinished on main thread
+    emit loadFinished(path, decoderOk, seekDecoderOk, gen);
   });
+}
 
-  decoderThread.join();
-  seekThread.join();
+void MediaPlayer::onLoadFinished(const QString &path, bool decoderOk,
+                                 bool seekDecoderOk, int generation) {
+  // Discard stale callback from a previous load that was superseded
+  {
+    std::lock_guard<std::mutex> lock(loadMutex_);
+    if (generation != loadGeneration_) {
+      LOG_MP(info, "onLoadFinished discarded (stale generation "
+                       << generation << " != current " << loadGeneration_
+                       << ")");
+      return;
+    }
+  }
+
+  LOG_MP(info, "onLoadFinished called decoderOk="
+                   << decoderOk << " seekDecoderOk=" << seekDecoderOk);
+  isLoading_.store(false);
 
   if (!decoderOk) {
     seekDecoder_->close();
     state_ = Stopped;
+    emit stateChanged(Stopped);
     emit playbackError("Failed to open media file: " + path);
-    return false;
+    return;
   }
 
   if (!seekDecoderOk) {
-    // Seek decoder failure is non-fatal, just no seek preview
     LOG_MP(warning, "SeekDecoder open failed, seek preview disabled");
   }
 
@@ -122,11 +191,11 @@ bool MediaPlayer::load(const QString &path) {
   emit mediaLoaded(decoder_->durationMs(), decoder_->videoSize());
   LOG_MP(info,
          "load() success state=Ready duration=" << decoder_->durationMs());
-
-  return true;
 }
 
 void MediaPlayer::play() {
+  if (isLoading_.load())
+    return;
   if (state_ == Ready || state_ == Paused || state_ == Stopped) {
     if (state_ == Stopped) {
       if (decoder_->hasAudio()) {
@@ -195,6 +264,38 @@ void MediaPlayer::stop() {
 }
 
 void MediaPlayer::clear() {
+  // Disconnect load signal before joining to prevent queued callback from
+  // executing on a partially-reset object
+  if (loadConn_) {
+    disconnect(loadConn_);
+    loadConn_ = {};
+  }
+
+  // Wait for background thread with timeout to prevent UI hang
+  if (loadThread_.joinable()) {
+    // Poll with short sleeps to keep event loop responsive
+    for (int i = 0; i < 100; ++i) { // max ~5 seconds
+      {
+        std::lock_guard<std::mutex> lock(loadMutex_);
+        if (loadDone_)
+          break;
+      }
+      QThread::msleep(50);
+    }
+    {
+      std::lock_guard<std::mutex> lock(loadMutex_);
+      if (!loadDone_) {
+        LOG_MP(warning, "clear() timed out waiting for load thread, detaching");
+        loadThread_.detach();
+        loadThread_ = {};
+      } else {
+        loadThread_.join();
+        loadThread_ = {};
+      }
+    }
+  }
+
+  isLoading_.store(false);
   stop();
   playbackTimer_->stop();
   playbackTimerRunning_ = false;
@@ -242,6 +343,9 @@ void MediaPlayer::setTotalDurationLimit(qint64 ms) {
 qint64 MediaPlayer::totalDurationLimit() const { return totalDurationLimitMs_; }
 
 void MediaPlayer::seek(qint64 ms) {
+  if (isLoading_.load())
+    return;
+
   if (sender()) {
     qInfo() << "[DEBUG_SEEK] seek requested by signal sender:"
             << sender()->metaObject()->className()
@@ -276,6 +380,8 @@ void MediaPlayer::seek(qint64 ms) {
 }
 
 void MediaPlayer::previewSeek(qint64 ms) {
+  if (isLoading_.load())
+    return;
   if (!decoder_)
     return;
 
