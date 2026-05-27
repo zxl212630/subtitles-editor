@@ -382,7 +382,13 @@ bool VideoExporter::initVideoEncoder() {
   }
 
   avcodec_parameters_from_context(outVideoStream_->codecpar, videoEncCtx_);
-  outVideoStream_->codecpar->codec_tag = 0;
+  // QuickTime Player requires 'hvc1' tag for HEVC (parameter sets in file header).
+  // FFmpeg defaults to 'hev1' (parameter sets in samples) when tag is 0.
+  if (videoEncCtx_->codec_id == AV_CODEC_ID_HEVC) {
+    outVideoStream_->codecpar->codec_tag = MKTAG('h', 'v', 'c', '1');
+  } else {
+    outVideoStream_->codecpar->codec_tag = 0;
+  }
 
   outputVideoStreamIdx_ = outVideoStream_->index;
 
