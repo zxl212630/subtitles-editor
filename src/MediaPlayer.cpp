@@ -9,6 +9,8 @@
 #include <QElapsedTimer>
 #include <QThread>
 
+#include <thread>
+
 #define PROFILE_TIMING 1
 
 #define LOG_MP_info(msg) qInfo() << "[MediaPlayer]" << msg
@@ -74,10 +76,31 @@ bool MediaPlayer::load(const QString &path) {
 
   LOG_MP(info, "load() started path=" << path);
 
-  if (!decoder_->open(path)) {
+  // Run both decoders' open() in parallel to halve initialization time
+  // (avformat_find_stream_info is the expensive operation, done once per
+  // decoder)
+  bool decoderOk = false;
+  bool seekDecoderOk = false;
+
+  std::thread decoderThread(
+      [this, &path, &decoderOk]() { decoderOk = decoder_->open(path); });
+  std::thread seekThread([this, &path, &seekDecoderOk]() {
+    seekDecoderOk = seekDecoder_->open(path);
+  });
+
+  decoderThread.join();
+  seekThread.join();
+
+  if (!decoderOk) {
+    seekDecoder_->close();
     state_ = Stopped;
     emit playbackError("Failed to open media file: " + path);
     return false;
+  }
+
+  if (!seekDecoderOk) {
+    // Seek decoder failure is non-fatal, just no seek preview
+    LOG_MP(warning, "SeekDecoder open failed, seek preview disabled");
   }
 
   if (decoder_->hasAudio()) {
@@ -86,8 +109,7 @@ bool MediaPlayer::load(const QString &path) {
 
   if (decoder_->hasVideo()) {
     videoRenderer_->clear();
-    seekDecoder_->open(path);
-    if (videoRenderer_) {
+    if (seekDecoderOk && videoRenderer_) {
       seekDecoder_->setOutputSize(videoRenderer_->size());
     }
   }
@@ -217,9 +239,7 @@ void MediaPlayer::setTotalDurationLimit(qint64 ms) {
   totalDurationLimitMs_ = ms;
 }
 
-qint64 MediaPlayer::totalDurationLimit() const {
-  return totalDurationLimitMs_;
-}
+qint64 MediaPlayer::totalDurationLimit() const { return totalDurationLimitMs_; }
 
 void MediaPlayer::seek(qint64 ms) {
   if (sender()) {
@@ -359,7 +379,8 @@ void MediaPlayer::onPlaybackTimer() {
     return;
   }
 
-  qint64 videoDuration = (decoder_ && decoder_->hasVideo()) ? decoder_->durationMs() : 0;
+  qint64 videoDuration =
+      (decoder_ && decoder_->hasVideo()) ? decoder_->durationMs() : 0;
   bool noVideoOrOut = (videoDuration <= 0) || (currentTimeMs_ >= videoDuration);
 
   if (noVideoOrOut) {
@@ -421,7 +442,8 @@ void MediaPlayer::onPlaybackTimer() {
     // Check for end of stream
     if (decoder_->videoQueueSize() == 0 && decoder_->audioQueueSize() == 0 &&
         decoder_->isFinished()) {
-      qint64 videoDuration = (decoder_ && decoder_->hasVideo()) ? decoder_->durationMs() : 0;
+      qint64 videoDuration =
+          (decoder_ && decoder_->hasVideo()) ? decoder_->durationMs() : 0;
       if (totalDurationLimitMs_ > videoDuration) {
         currentTimeMs_ = videoDuration;
         playbackStartTimeMs_ = videoDuration;
