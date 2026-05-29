@@ -8,9 +8,69 @@ BUILD_DIR="$PROJECT_DIR/cmake-build-release"
 APP_NAME="subtitles-editor"
 DMG_NAME="SubtitlesEditor-1.0.0-macOS-arm64"
 
-QT_ROOT="${QT_ROOT:-$HOME/Tools/Qt/6.5.8}"
-FFMPEG_ROOT="${FFMPEG_ROOT:-$HOME/Tools/ffmpeg/8.0}"
-QWINDOWKIT_ROOT="${QWINDOWKIT_ROOT:-$HOME/Tools/Qt/QwindowKit/Qt6}"
+# --- Usage ---
+usage() {
+    cat <<EOF
+Usage: $(basename "$0") [OPTIONS]
+
+Options:
+  --qt <path>            Qt6 安装根目录 (例: ~/Tools/Qt/6.5.7)
+  --ffmpeg <path>        FFmpeg 安装根目录 (例: ~/Tools/ffmpeg/8.0)
+  --qwindowkit <path>    QWindowKit 安装根目录 (例: ~/Tools/Qt/QwindowKit/Qt6)
+  --output <name>        DMG 输出文件名 (默认: $DMG_NAME)
+  -h, --help             显示此帮助信息
+
+示例:
+  # 完整参数
+  $(basename "$0") --qt ~/Tools/Qt/6.5.7 --ffmpeg ~/Tools/ffmpeg/8.0 --qwindowkit ~/Tools/Qt/QwindowKit/Qt6
+
+  # 仅 Qt 和 FFmpeg (QWindowKit 通过环境变量)
+  $(basename "$0") --qt ~/Tools/Qt/6.5.7 --ffmpeg ~/Tools/ffmpeg/8.0
+
+  # 通过环境变量
+  QT_ROOT=~/Tools/Qt/6.5.7 FFMPEG_ROOT=~/Tools/ffmpeg/8.0 $(basename "$0")
+
+环境变量 (命令行参数优先):
+  QT_ROOT, FFMPEG_ROOT, QWINDOWKIT_ROOT
+EOF
+    exit 0
+}
+
+# --- Parse arguments ---
+QT_ROOT="${QT_ROOT:-}"
+FFMPEG_ROOT="${FFMPEG_ROOT:-}"
+QWINDOWKIT_ROOT="${QWINDOWKIT_ROOT:-}"
+
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        --qt)        QT_ROOT="$2"; shift 2 ;;
+        --ffmpeg)    FFMPEG_ROOT="$2"; shift 2 ;;
+        --qwindowkit) QWINDOWKIT_ROOT="$2"; shift 2 ;;
+        --output)    DMG_NAME="$2"; shift 2 ;;
+        -h|--help)   usage ;;
+        *)           echo "未知参数: $1"; usage ;;
+    esac
+done
+
+# --- Validate required paths ---
+missing=()
+[[ -z "$QT_ROOT" ]]     && missing+=("--qt (Qt6 根目录)")
+[[ -z "$FFMPEG_ROOT" ]] && missing+=("--ffmpeg (FFmpeg 根目录)")
+[[ -z "$QWINDOWKIT_ROOT" ]] && missing+=("--qwindowkit (QWindowKit 根目录)")
+
+if [[ ${#missing[@]} -gt 0 ]]; then
+    echo "错误: 缺少必需参数:" >&2
+    for m in "${missing[@]}"; do
+        echo "  $m" >&2
+    done
+    echo "" >&2
+    echo "使用 --help 查看完整用法" >&2
+    exit 1
+fi
+
+for dir in "$QT_ROOT" "$FFMPEG_ROOT" "$QWINDOWKIT_ROOT"; do
+    [[ -d "$dir" ]] || { echo "错误: 目录不存在: $dir" >&2; exit 1; }
+done
 
 APP_BUNDLE="$BUILD_DIR/$APP_NAME.app"
 APP_BIN="$APP_BUNDLE/Contents/MacOS/$APP_NAME"
@@ -180,6 +240,9 @@ for dylib in "$APP_BIN" "$FW_DIR"/*.dylib; do
     fi
 done
 [[ $has_error -eq 0 ]] && echo "All dependencies resolved OK"
+
+echo "=== Signing bundle ==="
+codesign --force --deep --sign - "$APP_BUNDLE"
 
 echo "=== Creating DMG ==="
 STAGING_DIR=$(mktemp -d)

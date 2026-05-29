@@ -168,7 +168,14 @@ if(APPLE)
     set_target_properties(${PROJECT_NAME} PROPERTIES
         MACOSX_BUNDLE YES
         MACOSX_BUNDLE_GUI_IDENTIFIER "com.subtitles.editor"
+        MACOSX_BUNDLE_ICON_NAME "AppIcon"
+        MACOSX_BUNDLE_BUNDLE_NAME "Subtitles Editor"
+        MACOSX_BUNDLE_INFO_PLIST "${CMAKE_SOURCE_DIR}/Info.plist.in"
     )
+    set_source_files_properties(resources/AppIcon.icns PROPERTIES
+        MACOSX_PACKAGE_LOCATION "Resources"
+    )
+    target_sources(${PROJECT_NAME} PRIVATE resources/AppIcon.icns)
 endif()
 
 

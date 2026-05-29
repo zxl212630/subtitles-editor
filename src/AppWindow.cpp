@@ -996,6 +996,7 @@ void AppWindow::setupMenuBar() {
   d->settingsMenu = d->menuBar->addMenu(tr("设置"));
 
   d->configAction = d->settingsMenu->addAction(tr("配置..."));
+  d->configAction->setMenuRole(QAction::NoRole);
   connect(d->configAction, &QAction::triggered, this, [this]() {
     ConfigDialog dlg(this);
     connect(&dlg, &ConfigDialog::configApplied, this,
@@ -1015,6 +1016,7 @@ void AppWindow::setupMenuBar() {
   d->helpMenu = d->menuBar->addMenu(tr("帮助"));
 
   d->aboutAction = d->helpMenu->addAction(tr("关于"));
+  d->aboutAction->setMenuRole(QAction::NoRole);
   connect(d->aboutAction, &QAction::triggered, this, &AppWindow::onAbout);
 }
 
@@ -1154,9 +1156,13 @@ void AppWindow::onConfigApplied() {
 }
 
 void AppWindow::onAbout() {
-  AppMessageBox::information(
-      this, tr("关于"),
-      tr("字幕编辑器 v1.0\n\n一个简单易用的视频字幕编辑工具。"));
+  AppMessageBox::information(this, tr("关于"),
+                             tr("字幕编辑器 v1.0.0\n\n"
+                                "一个简单易用的视频字幕编辑工具。\n\n"
+                                "三方库:\n"
+                                "• Qt 6 - 跨平台UI框架\n"
+                                "• FFmpeg - 音视频处理\n"
+                                "• QWindowKit - 自定义窗口"));
 }
 
 void AppWindow::updateWindowTitle() {
