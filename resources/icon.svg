@@ -18,18 +18,21 @@
     </filter>
   </defs>
 
-  <!-- 渐变圆角背景 -->
-  <rect width="1024" height="1024" rx="256" fill="url(#bgGrad)"/>
-  
-  <!-- 播放按钮，加上投影和微渐变，等比放大16倍 -->
-  <path d="M432 152c-22.4-12.8-40-1.6-40 24v256c0 25.6 17.6 36.8 40 24l222.4-128c22.4-12.8 22.4-35.2 0-48l-222.4-128z" fill="url(#playGrad)" filter="url(#dropShadow)"/>
-  
-  <!-- 字幕横线条 (下半部分) -->
-  <!-- 第一排：高亮白，略带投影 -->
-  <rect x="128" y="608" width="448" height="96" rx="48" fill="#ffffff" fill-opacity="0.95" filter="url(#dropShadow)"/>
-  <rect x="640" y="608" width="256" height="96" rx="48" fill="#ffffff" fill-opacity="0.95" filter="url(#dropShadow)"/>
-  
-  <!-- 第二排：稍微淡化，形成主次层级 -->
-  <rect x="128" y="768" width="128" height="96" rx="48" fill="#ffffff" fill-opacity="0.65" filter="url(#dropShadow)"/>
-  <rect x="320" y="768" width="576" height="96" rx="48" fill="#ffffff" fill-opacity="0.65" filter="url(#dropShadow)"/>
+  <!-- 整体缩放 0.8046875 并居中偏移 (100, 100) 以留出 macOS 标准透明圆角边距 -->
+  <g transform="translate(100, 100) scale(0.8046875)">
+    <!-- 渐变圆角背景 -->
+    <rect width="1024" height="1024" rx="256" fill="url(#bgGrad)"/>
+    
+    <!-- 播放按钮，加上投影和微渐变，等比放大16倍 -->
+    <path d="M432 152c-22.4-12.8-40-1.6-40 24v256c0 25.6 17.6 36.8 40 24l222.4-128c22.4-12.8 22.4-35.2 0-48l-222.4-128z" fill="url(#playGrad)" filter="url(#dropShadow)"/>
+    
+    <!-- 字幕横线条 (下半部分) -->
+    <!-- 第一排：高亮白，略带投影 -->
+    <rect x="128" y="608" width="448" height="96" rx="48" fill="#ffffff" fill-opacity="0.95" filter="url(#dropShadow)"/>
+    <rect x="640" y="608" width="256" height="96" rx="48" fill="#ffffff" fill-opacity="0.95" filter="url(#dropShadow)"/>
+    
+    <!-- 第二排：稍微淡化，形成主次层级 -->
+    <rect x="128" y="768" width="128" height="96" rx="48" fill="#ffffff" fill-opacity="0.65" filter="url(#dropShadow)"/>
+    <rect x="320" y="768" width="576" height="96" rx="48" fill="#ffffff" fill-opacity="0.65" filter="url(#dropShadow)"/>
+  </g>
 </svg>
