@@ -172,6 +172,19 @@ for lib in libavcodec libavformat libavutil libswscale libswresample; do
     copy_to_frameworks "$src"
 done
 
+echo "=== Copying FFmpeg executables ==="
+FFMPEG_BIN_DIR="$FFMPEG_ROOT/bin"
+for exe in ffmpeg ffprobe; do
+    src="$FFMPEG_BIN_DIR/$exe"
+    if [[ -f "$src" ]]; then
+        echo "  Bundling: $exe"
+        cp "$src" "$APP_BUNDLE/Contents/MacOS/$exe"
+        chmod +x "$APP_BUNDLE/Contents/MacOS/$exe"
+    else
+        echo "WARNING: $exe not found in $FFMPEG_BIN_DIR"
+    fi
+done
+
 echo "=== Discovering and bundling dependencies ==="
 bundle_deps "$APP_BIN"
 for dylib in "$FW_DIR"/*.dylib; do
