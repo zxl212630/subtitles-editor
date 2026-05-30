@@ -9,6 +9,11 @@ AudioTranscoder::AudioTranscoder(QObject *parent) : QObject(parent) {
   if (ffmpegPath_.isEmpty()) {
     ffmpegPath_ = "ffmpeg";
   }
+  
+  // Verify FFmpeg exists at path
+  if (!QFileInfo::exists(ffmpegPath_) && ffmpegPath_ != "ffmpeg") {
+    qDebug() << "[AudioTranscoder] FFmpeg not found at:" << ffmpegPath_;
+  }
 }
 
 void AudioTranscoder::abort() {
