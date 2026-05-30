@@ -206,8 +206,7 @@ QRect SoftwareVideoRenderer::getTargetRect() const {
     ch = vh;
   }
 
-  double imageRatio =
-      static_cast<double>(cw) / static_cast<double>(ch);
+  double imageRatio = static_cast<double>(cw) / static_cast<double>(ch);
 
   int newWidth;
   int newHeight;
@@ -322,10 +321,13 @@ void SoftwareVideoRenderer::paintEvent(QPaintEvent *event) {
   if (!text.isEmpty()) {
     QRect textRect = getSubtitlePixelRect();
 
-    // 根据预览画面实际高度与基准高度 1080.0 的比例，缩放预览字体大小，保持与导出比例一致
+    // 根据预览画面实际高度与基准高度 1080.0
+    // 的比例，缩放预览字体大小，保持与导出比例一致
     QFont drawFont = font;
     double refHeight = 1080.0;
-    double scale = (targetRect.height() > 0) ? (static_cast<double>(targetRect.height()) / refHeight) : 1.0;
+    double scale = (targetRect.height() > 0)
+                       ? (static_cast<double>(targetRect.height()) / refHeight)
+                       : 1.0;
 
     int originalSize = font.pointSize();
     if (originalSize <= 0) {
@@ -342,17 +344,18 @@ void SoftwareVideoRenderer::paintEvent(QPaintEvent *event) {
     drawFont.setPixelSize(scaledSize);
 
     // 调试输出
-    qDebug() << "[VideoRenderer] Rendering Subtitle text=" << text 
-             << " font=" << drawFont.family() << " size=" << drawFont.pixelSize()
-             << " textRect=" << textRect << " targetRect=" << targetRect
-             << " scale=" << scale << " hasFrame=" << hasFrame;
+    qDebug() << "[VideoRenderer] Rendering Subtitle text=" << text
+             << " font=" << drawFont.family()
+             << " size=" << drawFont.pixelSize() << " textRect=" << textRect
+             << " targetRect=" << targetRect << " scale=" << scale
+             << " hasFrame=" << hasFrame;
 
     // 1. 调用通用的 SubtitleRenderer 渲染字幕及其背景
     painter.save();
     painter.setClipRect(targetRect);
-    SubtitleRenderer::renderSubtitle(painter, text, drawFont, subtitleAlignment_,
-                                     textRect, subtitleRotation_, bgPath,
-                                     is9Patch, bgMargins);
+    SubtitleRenderer::renderSubtitle(
+        painter, text, drawFont, subtitleAlignment_, textRect,
+        subtitleRotation_, bgPath, is9Patch, bgMargins);
     painter.restore();
 
     // 2. 绘制字幕的可拖拽编辑虚线框和 8 个控制点手柄，以及旋转手柄

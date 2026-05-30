@@ -382,8 +382,9 @@ bool VideoExporter::initVideoEncoder() {
   }
 
   avcodec_parameters_from_context(outVideoStream_->codecpar, videoEncCtx_);
-  // QuickTime Player requires 'hvc1' tag for HEVC (parameter sets in file header).
-  // FFmpeg defaults to 'hev1' (parameter sets in samples) when tag is 0.
+  // QuickTime Player requires 'hvc1' tag for HEVC (parameter sets in file
+  // header). FFmpeg defaults to 'hev1' (parameter sets in samples) when tag is
+  // 0.
   if (videoEncCtx_->codec_id == AV_CODEC_ID_HEVC) {
     outVideoStream_->codecpar->codec_tag = MKTAG('h', 'v', 'c', '1');
   } else {
@@ -399,7 +400,8 @@ bool VideoExporter::initVideoEncoder() {
   encVideoFrame_->height = outHeight;
   av_frame_get_buffer(encVideoFrame_, 0);
 
-  // 初始化 Sws 缩放与转换上下文，使用双三次插值（SWS_BICUBIC）提高缩放后的图像清晰度
+  // 初始化 Sws
+  // 缩放与转换上下文，使用双三次插值（SWS_BICUBIC）提高缩放后的图像清晰度
   swsToRgb_ =
       sws_getContext(videoDecCtx_->width, videoDecCtx_->height,
                      videoDecCtx_->pix_fmt, outWidth, outHeight,

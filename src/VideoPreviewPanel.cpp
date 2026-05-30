@@ -959,7 +959,8 @@ void VideoPreviewPanel::onTimeChanged(qint64 ms) {
                                    .arg(formatTime(totalDurationMs_)));
   }
   if (progressBar_) {
-    double ratio = totalDurationMs_ > 0 ? static_cast<double>(ms) / totalDurationMs_ : 0.0;
+    double ratio =
+        totalDurationMs_ > 0 ? static_cast<double>(ms) / totalDurationMs_ : 0.0;
     progressBar_->setRatio(ratio);
   }
   updateSubtitleOverlay();

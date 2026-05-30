@@ -514,7 +514,8 @@ void ExportDialog::setupUi() {
   bool hasHevcVt = avcodec_find_encoder_by_name("hevc_videotoolbox") != nullptr;
 
   if (hasH264Vt) {
-    videoCodecCombo_->addItem(tr("H.264 (h264_videotoolbox)"), "h264_videotoolbox");
+    videoCodecCombo_->addItem(tr("H.264 (h264_videotoolbox)"),
+                              "h264_videotoolbox");
   }
   videoCodecCombo_->addItem(tr("H.264 (libx264)"), "libx264");
 
@@ -763,7 +764,8 @@ void ExportDialog::retranslateUi() {
         avcodec_find_encoder_by_name("hevc_videotoolbox") != nullptr;
 
     if (hasH264Vt) {
-      videoCodecCombo_->addItem(tr("H.264 (h264_videotoolbox)"), "h264_videotoolbox");
+      videoCodecCombo_->addItem(tr("H.264 (h264_videotoolbox)"),
+                                "h264_videotoolbox");
     }
     videoCodecCombo_->addItem(tr("H.264 (libx264)"), "libx264");
 

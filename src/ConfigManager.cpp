@@ -62,9 +62,10 @@ bool ConfigManager::isValid() const {
 
   // Check if FFmpeg is available (bundled or configured)
   QString ffmpegPathStr = ffmpegPath();
-  bool ffmpegAvailable = !ffmpegPathStr.isEmpty() && 
-                         (QFileInfo::exists(ffmpegPathStr) || ffmpegPathStr == "ffmpeg");
-  
+  bool ffmpegAvailable =
+      !ffmpegPathStr.isEmpty() &&
+      (QFileInfo::exists(ffmpegPathStr) || ffmpegPathStr == "ffmpeg");
+
   bool valid = ffmpegAvailable && check("tencent_asr", "secret_id") &&
                check("tencent_asr", "secret_key") &&
                check("tencent_asr", "app_id") && storageValid;
@@ -82,13 +83,13 @@ QString ConfigManager::ffmpegPath() const {
   if (QFileInfo::exists(bundledPath)) {
     return bundledPath;
   }
-  
+
   // Fall back to config value
   QString configPath = getString("ffmpeg", "path");
   if (!configPath.isEmpty() && !configPath.contains("FFMPEG_PATH")) {
     return configPath;
   }
-  
+
   // Finally, try system path
   return "ffmpeg";
 }
