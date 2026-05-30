@@ -1,5 +1,6 @@
 [ffmpeg]
-path=FFMPEG_PATH
+# Optional: Leave empty to use bundled FFmpeg executable
+path=
 
 [tencent_asr]
 secret_id=YOUR_SECRET_ID
