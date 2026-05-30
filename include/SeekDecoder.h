@@ -28,6 +28,7 @@ public:
   // 打开视频文件进行 Seek 预览
   bool open(const QString &path);
   void close();
+  void setCancelOpen(bool cancel);
 
   // 设置预览输出的限宽限高尺寸（降分辨率缩放提高 sws_scale 效率）
   void setOutputSize(QSize size);
@@ -75,6 +76,8 @@ private:
   int lastProcessedGeneration_ = 0;
 
   std::atomic<bool> running_{false};
+  std::atomic<bool> cancelOpen_{false};
+  static int decodeInterruptCb(void *ctx);
   QMutex wakeMutex_;
   QWaitCondition wakeCondition_;
 

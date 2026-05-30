@@ -44,6 +44,7 @@ public:
 
   bool open(const QString &path);
   void close();
+  void setCancelOpen(bool cancel);
 
   void requestSeek(qint64 targetMs);
   void setPlaying(bool playing);
@@ -122,6 +123,8 @@ private:
   std::atomic<bool> playing_{false};
   std::atomic<bool> seekRequested_{false};
   std::atomic<qint64> seekTargetMs_{0};
+  std::atomic<bool> cancelOpen_{false};
+  static int decodeInterruptCb(void *ctx);
 
   QMutex playControlMutex_;
   QWaitCondition playCondition_;

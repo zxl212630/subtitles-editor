@@ -51,23 +51,13 @@ MediaPlayer::~MediaPlayer() {
     disconnect(loadConn_);
     loadConn_ = {};
   }
+  if (decoder_)
+    decoder_->setCancelOpen(true);
+  if (seekDecoder_)
+    seekDecoder_->setCancelOpen(true);
+
   if (loadThread_.joinable()) {
-    for (int i = 0; i < 100; ++i) {
-      {
-        std::lock_guard<std::mutex> lock(loadMutex_);
-        if (loadDone_)
-          break;
-      }
-      QThread::msleep(50);
-    }
-    {
-      std::lock_guard<std::mutex> lock(loadMutex_);
-      if (!loadDone_) {
-        loadThread_.detach();
-      } else {
-        loadThread_.join();
-      }
-    }
+    loadThread_.join();
   }
   stop();
   playbackTimer_->stop();
@@ -90,10 +80,22 @@ void MediaPlayer::setVideoRenderer(SoftwareVideoRenderer *renderer) {
 }
 
 void MediaPlayer::load(const QString &path) {
-  // If a previous async load is still running, wait for it
+  // If a previous async load is still running, interrupt it first to avoid
+  // blocking the main thread
+  if (decoder_)
+    decoder_->setCancelOpen(true);
+  if (seekDecoder_)
+    seekDecoder_->setCancelOpen(true);
+
   if (loadThread_.joinable()) {
     loadThread_.join();
   }
+
+  // Reset cancel state for the new load task
+  if (decoder_)
+    decoder_->setCancelOpen(false);
+  if (seekDecoder_)
+    seekDecoder_->setCancelOpen(false);
 
   // Use clear() to fully reset state without triggering seek on old video
   clear();
@@ -271,28 +273,15 @@ void MediaPlayer::clear() {
     loadConn_ = {};
   }
 
-  // Wait for background thread with timeout to prevent UI hang
+  // Interrupt the loading thread immediately
+  if (decoder_)
+    decoder_->setCancelOpen(true);
+  if (seekDecoder_)
+    seekDecoder_->setCancelOpen(true);
+
   if (loadThread_.joinable()) {
-    // Poll with short sleeps to keep event loop responsive
-    for (int i = 0; i < 100; ++i) { // max ~5 seconds
-      {
-        std::lock_guard<std::mutex> lock(loadMutex_);
-        if (loadDone_)
-          break;
-      }
-      QThread::msleep(50);
-    }
-    {
-      std::lock_guard<std::mutex> lock(loadMutex_);
-      if (!loadDone_) {
-        LOG_MP(warning, "clear() timed out waiting for load thread, detaching");
-        loadThread_.detach();
-        loadThread_ = {};
-      } else {
-        loadThread_.join();
-        loadThread_ = {};
-      }
-    }
+    loadThread_.join();
+    loadThread_ = {};
   }
 
   isLoading_.store(false);

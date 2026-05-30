@@ -24,8 +24,26 @@ SeekDecoder::~SeekDecoder() {
   close();
 }
 
+void SeekDecoder::setCancelOpen(bool cancel) { cancelOpen_.store(cancel); }
+
+int SeekDecoder::decodeInterruptCb(void *ctx) {
+  if (!ctx)
+    return 0;
+  auto *self = static_cast<SeekDecoder *>(ctx);
+  return self->cancelOpen_.load() ? 1 : 0;
+}
+
 bool SeekDecoder::open(const QString &path) {
   close();
+  cancelOpen_.store(false);
+
+  fmtCtx_ = avformat_alloc_context();
+  if (!fmtCtx_) {
+    LOG_SEEK(critical, "Failed to allocate AVFormatContext");
+    return false;
+  }
+  fmtCtx_->interrupt_callback.callback = decodeInterruptCb;
+  fmtCtx_->interrupt_callback.opaque = this;
 
   std::string stdPath = path.toStdString();
   int ret = avformat_open_input(&fmtCtx_, stdPath.c_str(), nullptr, nullptr);
@@ -33,15 +51,11 @@ bool SeekDecoder::open(const QString &path) {
     char errbuf[256];
     av_strerror(ret, errbuf, sizeof(errbuf));
     LOG_SEEK(critical, "Failed to open input: " << errbuf);
+    fmtCtx_ = nullptr;
     return false;
   }
 
-  // Limit stream analysis to 5 seconds to avoid hangs on problematic files
-  AVDictionary *opts = nullptr;
-  av_dict_set(&opts, "analyzeduration", "5000000", 0);
-  av_dict_set(&opts, "probesize", "5000000", 0);
-  ret = avformat_find_stream_info(fmtCtx_, &opts);
-  av_dict_free(&opts);
+  ret = avformat_find_stream_info(fmtCtx_, nullptr);
   if (ret < 0) {
     char errbuf[256];
     av_strerror(ret, errbuf, sizeof(errbuf));
