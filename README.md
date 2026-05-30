@@ -59,7 +59,7 @@
 2. **方法二**：右键点击应用，选择"打开"，在弹出窗口中点击"打开"
 3. **方法三**：在终端执行以下命令：
    ```bash
-   xattr -cr /Applications/SubtitlesEditor.app
+   xattr -cr /Applications/subtitles-editor.app
    ```
 
 ## 📦 依赖项
