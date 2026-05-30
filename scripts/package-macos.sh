@@ -6,7 +6,7 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PROJECT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 BUILD_DIR="$PROJECT_DIR/cmake-build-release"
 APP_NAME="subtitles-editor"
-DMG_NAME="SubtitlesEditor-1.0.0-macOS-arm64"
+DMG_NAME="SubtitlesEditor-1.0.0-macOS-arm64-unsigned"
 
 # --- Usage ---
 usage() {
@@ -248,13 +248,14 @@ echo "=== Creating DMG ==="
 STAGING_DIR=$(mktemp -d)
 cp -R "$APP_BUNDLE" "$STAGING_DIR/"
 ln -sf /Applications "$STAGING_DIR/Applications"
+mkdir -p "$PROJECT_DIR/dist/macos"
 hdiutil create -volname "$DMG_NAME" \
     -srcfolder "$STAGING_DIR" \
     -ov -format UDZO \
-    "$PROJECT_DIR/$DMG_NAME.dmg"
+    "$PROJECT_DIR/dist/macos/$DMG_NAME.dmg"
 rm -rf "$STAGING_DIR"
 
 echo ""
 echo "=== Done ==="
-echo "DMG: $PROJECT_DIR/$DMG_NAME.dmg"
-echo "Size: $(du -h "$PROJECT_DIR/$DMG_NAME.dmg" | cut -f1)"
+echo "DMG: $PROJECT_DIR/dist/macos/$DMG_NAME.dmg"
+echo "Size: $(du -h "$PROJECT_DIR/dist/macos/$DMG_NAME.dmg" | cut -f1)"
