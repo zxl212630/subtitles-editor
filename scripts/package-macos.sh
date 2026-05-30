@@ -212,6 +212,14 @@ done
 cd "$PROJECT_DIR"
 
 echo "=== Fixing rpaths ==="
+# Remove absolute rpaths that point to build machine
+for rpath in $(otool -l "$APP_BIN" 2>/dev/null | grep -A2 LC_RPATH | grep path | awk '{print $2}'); do
+    if [[ "$rpath" == /Users/* ]] || [[ "$rpath" == /opt/* ]]; then
+        echo "  Removing absolute rpath: $rpath"
+        install_name_tool -delete_rpath "$rpath" "$APP_BIN" 2>/dev/null || true
+    fi
+done
+
 # Ensure @executable_path/../Frameworks is in rpath
 install_name_tool -add_rpath "@executable_path/../Frameworks" "$APP_BIN" 2>/dev/null || true
 
