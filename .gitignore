@@ -33,4 +33,4 @@ doc/plan_verify*.png
 .antigravitycli
 .agent*.dmg
 *.dmg
-!dist/macos/*.dmg
+dist/
