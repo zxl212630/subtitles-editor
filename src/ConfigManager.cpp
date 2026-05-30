@@ -3,6 +3,7 @@
 #include <QDebug>
 #include <QDir>
 #include <QFile>
+#include <QFileInfo>
 #include <QStandardPaths>
 
 ConfigManager &ConfigManager::instance() {
@@ -59,7 +60,12 @@ bool ConfigManager::isValid() const {
                    check("aliyun_oss", "region");
   }
 
-  bool valid = check("ffmpeg", "path") && check("tencent_asr", "secret_id") &&
+  // Check if FFmpeg is available (bundled or configured)
+  QString ffmpegPathStr = ffmpegPath();
+  bool ffmpegAvailable = !ffmpegPathStr.isEmpty() && 
+                         (QFileInfo::exists(ffmpegPathStr) || ffmpegPathStr == "ffmpeg");
+  
+  bool valid = ffmpegAvailable && check("tencent_asr", "secret_id") &&
                check("tencent_asr", "secret_key") &&
                check("tencent_asr", "app_id") && storageValid;
 
@@ -70,7 +76,21 @@ bool ConfigManager::isValid() const {
 QString ConfigManager::configFilePath() const { return configFilePath_; }
 
 QString ConfigManager::ffmpegPath() const {
-  return getString("ffmpeg", "path");
+  // First, try bundled executable in app bundle
+  QString appDir = QCoreApplication::applicationDirPath();
+  QString bundledPath = appDir + "/ffmpeg";
+  if (QFileInfo::exists(bundledPath)) {
+    return bundledPath;
+  }
+  
+  // Fall back to config value
+  QString configPath = getString("ffmpeg", "path");
+  if (!configPath.isEmpty() && !configPath.contains("FFMPEG_PATH")) {
+    return configPath;
+  }
+  
+  // Finally, try system path
+  return "ffmpeg";
 }
 
 QString ConfigManager::tencentSecretId() const {
