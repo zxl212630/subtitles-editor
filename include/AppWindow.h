@@ -40,6 +40,7 @@ private:
   void setupMenuBar();
   void updateWindowTitle();
   void updateTotalDuration(bool resetPlayback = false);
+  bool openProjectFile(const QString &filePath);
 
   void onSubtitleFileDropped(const QString &path);
   void onVideoAsrRequested();

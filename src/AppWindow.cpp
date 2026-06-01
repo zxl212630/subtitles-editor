@@ -1048,34 +1048,7 @@ void AppWindow::onOpenProject() {
   if (filePath.isEmpty())
     return;
 
-  if (d->projectManager && d->projectManager->openProject(filePath)) {
-    setWindowTitle(
-        tr("字幕编辑 - %1").arg(d->projectManager->currentProjectName()));
-
-    // 加载工程中关联的视频文件
-    QString videoPath = d->projectManager->videoPath();
-    if (!videoPath.isEmpty() && QFileInfo::exists(videoPath)) {
-      if (d->mediaPlayer) {
-        d->mediaPlayer->load(videoPath);
-      }
-      if (d->timelinePanel) {
-        d->timelinePanel->setMediaFilePath(videoPath);
-      }
-    } else {
-      // 没有视频文件时，根据字幕最大结束时间设置时间线总时长
-      qint64 maxEndMs = 0;
-      for (const auto &item : d->subtitleTrack->items()) {
-        if (item.endMs > maxEndMs)
-          maxEndMs = item.endMs;
-      }
-      if (maxEndMs > 0 && d->timelinePanel) {
-        d->timelinePanel->setTotalDuration(maxEndMs);
-      }
-    }
-  } else {
-    AppMessageBox::critical(this, tr("打开失败"),
-                            tr("无法打开工程文件，请检查文件格式。"));
-  }
+  openProjectFile(filePath);
 }
 
 void AppWindow::onSaveProject() {
@@ -1109,11 +1082,62 @@ void AppWindow::onSaveProjectAs() {
 }
 
 void AppWindow::onOpenRecentFile(const QString &filePath) {
+  openProjectFile(filePath);
+}
+
+bool AppWindow::openProjectFile(const QString &filePath) {
+  if (filePath.isEmpty())
+    return false;
+
+  if (d->projectManager && d->projectManager->isDirty()) {
+    int ret = AppMessageBox::question(
+        this, tr("确认打开"), tr("当前工程有未保存的更改，是否继续打开？"));
+    if (ret != AppMessageBox::Yes)
+      return false;
+  }
+
   if (d->projectManager && d->projectManager->openProject(filePath)) {
     setWindowTitle(
         tr("字幕编辑 - %1").arg(d->projectManager->currentProjectName()));
+
+    // 加载工程中关联的视频文件
+    QString videoPath = d->projectManager->videoPath();
+    if (!videoPath.isEmpty() && QFileInfo::exists(videoPath)) {
+      if (d->mediaPlayer) {
+        d->mediaPlayer->load(videoPath);
+      }
+      if (d->timelinePanel) {
+        d->timelinePanel->setMediaFilePath(videoPath);
+      }
+    } else {
+      if (d->mediaPlayer) {
+        d->mediaPlayer->clear();
+      }
+      if (d->timelinePanel) {
+        d->timelinePanel->clear();
+      }
+
+      // 没有视频文件时，根据字幕最大结束时间设置时间线总时长
+      qint64 maxEndMs = 0;
+      if (d->subtitleTrack) {
+        for (const auto &item : d->subtitleTrack->items()) {
+          if (item.endMs > maxEndMs)
+            maxEndMs = item.endMs;
+        }
+      }
+      if (maxEndMs > 0 && d->timelinePanel) {
+        d->timelinePanel->setTotalDuration(maxEndMs);
+      }
+    }
+    updateTotalDuration(true);
+    return true;
+  } else {
+    AppMessageBox::critical(this, tr("打开失败"),
+                            tr("无法打开工程文件，请检查文件格式。"));
+    return false;
   }
 }
+
 
 void AppWindow::onClearRecentFiles() { SubtitleProject::clearRecentFiles(); }
 
