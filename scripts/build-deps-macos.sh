@@ -144,7 +144,6 @@ build_qt6() {
         -opensource -confirm-license \
         -nomake examples -nomake tests \
         -release \
-        -no-rpath \
         -skip qt3d \
         -skip qt5compat \
         -skip qtactiveqt \
