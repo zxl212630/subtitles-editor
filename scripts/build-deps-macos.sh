@@ -117,7 +117,7 @@ build_qt6() {
 
     # Download (tar.xz is smaller than zip: ~900MB vs 1.4GB)
     local qt_url="https://download.qt.io/official_releases/qt/6.5/${QT_VERSION}/src/single/qt-everywhere-opensource-src-${QT_VERSION}.tar.xz"
-    local qt_src="$src_dir/qt-everywhere-opensource-src-${QT_VERSION}"
+    local qt_src="$src_dir/qt-everywhere-src-${QT_VERSION}"
     if [[ ! -d "$qt_src" ]]; then
         local qt_tar="$OUTPUT_DIR/qt6-src.tar.xz"
         if [[ ! -f "$qt_tar" ]]; then
