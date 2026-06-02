@@ -4,6 +4,12 @@
 <dict>
     <key>CFBundleDevelopmentRegion</key>
     <string>en</string>
+    <key>CFBundleLocalizations</key>
+    <array>
+        <string>zh</string>
+        <string>zh_CN</string>
+        <string>en</string>
+    </array>
     <key>CFBundleDisplayName</key>
     <string>Subtitles Editor</string>
     <key>CFBundleExecutable</key>
