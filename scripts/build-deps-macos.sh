@@ -167,6 +167,7 @@ build_qt6() {
         -skip qtmqtt \
         -skip qtopcua \
         -skip qtwebview \
+        -skip qtdoc \
         -DCMAKE_OSX_DEPLOYMENT_TARGET=12.0
 
     echo "Building Qt6 with $JOBS jobs..."
