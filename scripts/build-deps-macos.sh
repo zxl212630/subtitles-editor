@@ -198,7 +198,8 @@ build_qwindowkit() {
     # Clone if not present
     if [[ ! -d "$src_dir" ]]; then
         echo "Cloning QWindowKit..."
-        git clone --depth 1 --branch v1.5.0 https://github.com/stdware/qwindowkit.git "$src_dir"
+        git clone https://github.com/stdware/qwindowkit.git "$src_dir"
+        cd "$src_dir" && git checkout v1.5.0 && cd -
     fi
 
     local build_dir="$OUTPUT_DIR/qwindowkit-build"
