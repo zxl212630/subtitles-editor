@@ -96,6 +96,16 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          # Ensure the release exists first
+          gh release view "${{ inputs.deps_tag }}" --repo "${{ github.repository }}" >/dev/null 2>&1 || {
+            echo "Release ${{ inputs.deps_tag }} not found. Creating it..."
+            gh release create "${{ inputs.deps_tag }}" \
+              --prerelease \
+              --title "${{ inputs.deps_tag }}" \
+              --notes "Pre-compiled dependencies for macOS" \
+              --repo "${{ github.repository }}"
+          }
+
           cd "${{ runner.temp }}/deps-output"
           # Check if there are any .tar.zst files to upload
           shopt -s nullglob
