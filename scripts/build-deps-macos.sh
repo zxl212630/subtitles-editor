@@ -115,20 +115,27 @@ build_qt6() {
     local build_dir="$OUTPUT_DIR/qt6-build"
     mkdir -p "$src_dir" "$build_dir"
 
-    # Download
-    local qt_url="https://download.qt.io/official_releases/qt/6.5/${QT_VERSION}/src/single/qt-everywhere-opensource-src-${QT_VERSION}.zip"
-    if [[ ! -d "$src_dir/qt-everywhere-opensource-src-${QT_VERSION}" ]]; then
-        local qt_zip="$OUTPUT_DIR/qt6-src.zip"
-        if [[ ! -f "$qt_zip" ]]; then
+    # Download (tar.xz is smaller than zip: ~900MB vs 1.4GB)
+    local qt_url="https://download.qt.io/official_releases/qt/6.5/${QT_VERSION}/src/single/qt-everywhere-opensource-src-${QT_VERSION}.tar.xz"
+    local qt_src="$src_dir/qt-everywhere-opensource-src-${QT_VERSION}"
+    if [[ ! -d "$qt_src" ]]; then
+        local qt_tar="$OUTPUT_DIR/qt6-src.tar.xz"
+        if [[ ! -f "$qt_tar" ]]; then
             echo "Downloading Qt6 $QT_VERSION..."
-            curl -L -o "$qt_zip" "$qt_url"
+            curl -L --retry 3 --retry-delay 5 -o "$qt_tar" "$qt_url"
         fi
         echo "Extracting Qt6 $QT_VERSION..."
-        unzip -q -d "$src_dir" "$qt_zip"
-        rm -f "$qt_zip"
+        tar -xJ -C "$src_dir" -f "$qt_tar"
+        rm -f "$qt_tar"
     fi
 
-    local qt_src="$src_dir/qt-everywhere-opensource-src-${QT_VERSION}"
+    # Verify source directory exists
+    if [[ ! -d "$qt_src" ]]; then
+        echo "Error: Qt source directory not found at $qt_src" >&2
+        echo "Contents of $src_dir:" >&2
+        ls -la "$src_dir" >&2
+        exit 1
+    fi
 
     echo "Configuring Qt6..."
     cd "$build_dir"
