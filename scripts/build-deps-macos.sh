@@ -118,8 +118,14 @@ build_qt6() {
     # Download
     local qt_url="https://download.qt.io/official_releases/qt/6.5/${QT_VERSION}/src/single/qt-everywhere-opensource-src-${QT_VERSION}.zip"
     if [[ ! -d "$src_dir/qt-everywhere-opensource-src-${QT_VERSION}" ]]; then
-        echo "Downloading Qt6 $QT_VERSION..."
-        curl -L "$qt_url" | unzip -q -d "$src_dir"
+        local qt_zip="$OUTPUT_DIR/qt6-src.zip"
+        if [[ ! -f "$qt_zip" ]]; then
+            echo "Downloading Qt6 $QT_VERSION..."
+            curl -L -o "$qt_zip" "$qt_url"
+        fi
+        echo "Extracting Qt6 $QT_VERSION..."
+        unzip -q -d "$src_dir" "$qt_zip"
+        rm -f "$qt_zip"
     fi
 
     local qt_src="$src_dir/qt-everywhere-opensource-src-${QT_VERSION}"
