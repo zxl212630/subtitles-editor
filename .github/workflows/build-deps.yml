@@ -13,6 +13,15 @@ on:
           - ffmpeg
           - qt6
           - qwindowkit
+      arch:
+        description: 'Architecture to build (all, arm64, x64)'
+        required: true
+        default: 'all'
+        type: choice
+        options:
+          - all
+          - arm64
+          - x64
       qt_version:
         description: 'Qt version to compile (if building qt6 or all)'
         required: false
@@ -60,11 +69,12 @@ jobs:
           df -h /
 
       - name: Install build tools
+        if: ${{ inputs.arch == 'all' || inputs.arch == matrix.arch }}
         run: |
           brew install autoconf automake libtool nasm yasm pkg-config cmake zstd
 
       - name: Pre-download Qt6 for QWindowKit
-        if: ${{ inputs.target == 'qwindowkit' }}
+        if: ${{ inputs.target == 'qwindowkit' && (inputs.arch == 'all' || inputs.arch == matrix.arch) }}
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -83,6 +93,7 @@ jobs:
           rm -f "qt6-macos-${{ matrix.arch }}.tar" "qt6-macos-${{ matrix.arch }}.tar.zst"
 
       - name: Build dependencies
+        if: ${{ inputs.arch == 'all' || inputs.arch == matrix.arch }}
         run: |
           ./scripts/build-deps-macos.sh \
             --arch ${{ matrix.arch }} \
@@ -93,6 +104,7 @@ jobs:
             --jobs $(sysctl -n hw.ncpu)
 
       - name: Upload dependency package
+        if: ${{ inputs.arch == 'all' || inputs.arch == matrix.arch }}
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
