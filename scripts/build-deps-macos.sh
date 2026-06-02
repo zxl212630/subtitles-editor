@@ -37,7 +37,7 @@ while [[ $# -gt 0 ]]; do
         --ffmpeg-version) FFMPEG_VERSION="$2"; shift 2 ;;
         --jobs)           JOBS="$2"; shift 2 ;;
         -h|--help)        usage ;;
-        *)                echo "Unknown argument: $1" >&2; usage ;;
+        *)                echo "Unknown argument: $1" >&2; usage; exit 1 ;;
     esac
 done
 
@@ -45,12 +45,15 @@ done
 if [[ -z "$ARCH" ]] || [[ -z "$OUTPUT_DIR" ]]; then
     echo "Error: --arch and --output are required" >&2
     usage
+    exit 1
 fi
 
 if [[ "$ARCH" != "arm64" && "$ARCH" != "x64" ]]; then
     echo "Error: --arch must be arm64 or x64" >&2
     exit 1
 fi
+
+command -v zstd >/dev/null 2>&1 || { echo "Error: zstd not found. Install with: brew install zstd" >&2; exit 1; }
 
 mkdir -p "$OUTPUT_DIR"
 DEPS_DIR="$OUTPUT_DIR/deps"
@@ -65,8 +68,7 @@ build_ffmpeg() {
     echo ""
     echo "=== Building FFmpeg $FFMPEG_VERSION ==="
     local src_dir="$OUTPUT_DIR/ffmpeg-src"
-    local build_dir="$OUTPUT_DIR/ffmpeg-build"
-    mkdir -p "$src_dir" "$build_dir"
+    mkdir -p "$src_dir"
 
     # Download
     if [[ ! -f "$src_dir/Makefile" ]]; then
