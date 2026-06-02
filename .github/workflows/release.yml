@@ -9,18 +9,75 @@ permissions:
   contents: write
 
 jobs:
-  build-macos:
-    runs-on: self-hosted
+  build:
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: arm64
+            runner: macos-14
+          - arch: x64
+            runner: macos-13
+
     steps:
       - uses: actions/checkout@v4
 
+      - name: Install tools
+        run: |
+          brew install zstd
+
+      - name: Find latest deps tag
+        id: find-deps
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Find the latest deps-v* tag
+          DEPS_TAG=$(gh release list --limit 100 --json tagName -q \
+            '[.[] | select(.tagName | startswith("deps-v"))] | sort_by(.tagName) | last | .tagName')
+          if [[ -z "$DEPS_TAG" ]]; then
+            echo "Error: No deps release found. Run build-deps workflow first." >&2
+            exit 1
+          fi
+          echo "tag=$DEPS_TAG" >> "$GITHUB_OUTPUT"
+          echo "Using dependencies from: $DEPS_TAG"
+
+      - name: Download dependencies
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release download "${{ steps.find-deps.outputs.tag }}" \
+            -p "deps-macos-${{ matrix.arch }}.tar.zst" \
+            --repo "${{ github.repository }}"
+          zstd -d "deps-macos-${{ matrix.arch }}.tar.zst"
+          tar -xf "deps-macos-${{ matrix.arch }}.tar"
+
       - name: Build and package
-        run: ./scripts/package-macos.sh
+        run: |
+          ./scripts/package-macos.sh \
+            --deps-dir "$PWD" \
+            --arch "${{ matrix.arch }}"
+
+      - name: Upload DMG artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: dmg-${{ matrix.arch }}
+          path: dist/macos/*.dmg
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download all DMGs
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          pattern: dmg-*
 
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
-          files: dist/macos/SubtitlesEditor-*-macOS-arm64-unsigned.dmg
+          files: artifacts/**/*.dmg
           generate_release_notes: true
           draft: false
           prerelease: false
