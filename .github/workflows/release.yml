@@ -4,6 +4,7 @@ on:
   push:
     tags:
       - 'v*'
+  workflow_dispatch:
 
 permissions:
   contents: write
@@ -47,10 +48,15 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           gh release download "${{ steps.find-deps.outputs.tag }}" \
-            -p "deps-macos-${{ matrix.arch }}.tar.zst" \
+            -p "ffmpeg-macos-${{ matrix.arch }}.tar.zst" \
+            -p "qt6-macos-${{ matrix.arch }}.tar.zst" \
+            -p "qwindowkit-macos-${{ matrix.arch }}.tar.zst" \
             --repo "${{ github.repository }}"
-          zstd -d "deps-macos-${{ matrix.arch }}.tar.zst"
-          tar -xf "deps-macos-${{ matrix.arch }}.tar"
+          for lib in ffmpeg qt6 qwindowkit; do
+            zstd -d "${lib}-macos-${{ matrix.arch }}.tar.zst"
+            tar -xf "${lib}-macos-${{ matrix.arch }}.tar"
+            rm -f "${lib}-macos-${{ matrix.arch }}.tar" "${lib}-macos-${{ matrix.arch }}.tar.zst"
+          done
 
       - name: Build and package
         run: |
@@ -58,17 +64,72 @@ jobs:
             --deps-dir "$PWD" \
             --arch "${{ matrix.arch }}"
 
+      - name: Archive App Bundle
+        run: |
+          tar -cf subtitles-editor-${{ matrix.arch }}.tar -C cmake-build-release subtitles-editor.app
+
+      - name: Upload app bundle artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-${{ matrix.arch }}
+          path: subtitles-editor-${{ matrix.arch }}.tar
+
+  universal:
+    needs: build
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download arm64 app bundle
+        uses: actions/download-artifact@v4
+        with:
+          name: app-arm64
+          path: artifacts/arm64
+
+      - name: Download x64 app bundle
+        uses: actions/download-artifact@v4
+        with:
+          name: app-x64
+          path: artifacts/x64
+
+      - name: Extract App Bundles
+        run: |
+          mkdir -p arm64-build x64-build
+          tar -xf artifacts/arm64/subtitles-editor-arm64.tar -C arm64-build
+          tar -xf artifacts/x64/subtitles-editor-x64.tar -C x64-build
+
+      - name: Merge into Universal App Bundle
+        run: |
+          ./scripts/merge-universal-macos.sh \
+            arm64-build/subtitles-editor.app \
+            x64-build/subtitles-editor.app \
+            subtitles-editor.app
+
+      - name: Create Universal DMG
+        run: |
+          STAGING_DIR=$(mktemp -d)
+          cp -R subtitles-editor.app "$STAGING_DIR/"
+          ln -sf /Applications "$STAGING_DIR/Applications"
+          mkdir -p dist/macos
+          
+          DMG_NAME="SubtitlesEditor-1.0.0-macOS-universal"
+          hdiutil create -volname "$DMG_NAME" \
+              -srcfolder "$STAGING_DIR" \
+              -ov -format UDZO \
+              "dist/macos/$DMG_NAME.dmg"
+          rm -rf "$STAGING_DIR"
+
       - name: Upload DMG artifact
         uses: actions/upload-artifact@v4
         with:
-          name: dmg-${{ matrix.arch }}
+          name: dmg-universal
           path: dist/macos/*.dmg
 
   release:
-    needs: build
+    needs: universal
     runs-on: ubuntu-latest
     steps:
-      - name: Download all DMGs
+      - name: Download Universal DMG
         uses: actions/download-artifact@v4
         with:
           path: artifacts

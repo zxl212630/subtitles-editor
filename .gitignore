@@ -29,6 +29,8 @@ translations/*.qm
 .worktrees/
 doc/plan_verify*.png
 .superpowers/
+.playwright-cli
+.playwright-mcp
 .cache
 .antigravitycli
 .agent*.dmg

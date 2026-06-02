@@ -3,12 +3,22 @@ name: Build Dependencies
 on:
   workflow_dispatch:
     inputs:
+      target:
+        description: 'Component to build (all, ffmpeg, qt6, qwindowkit)'
+        required: true
+        default: 'all'
+        type: choice
+        options:
+          - all
+          - ffmpeg
+          - qt6
+          - qwindowkit
       qt_version:
-        description: 'Qt version to compile'
+        description: 'Qt version to compile (if building qt6 or all)'
         required: false
         default: '6.5.9'
       ffmpeg_version:
-        description: 'FFmpeg version to compile'
+        description: 'FFmpeg version to compile (if building ffmpeg or all)'
         required: false
         default: '8.0'
       deps_tag:
@@ -53,6 +63,25 @@ jobs:
         run: |
           brew install autoconf automake libtool nasm yasm pkg-config cmake zstd
 
+      - name: Pre-download Qt6 for QWindowKit
+        if: ${{ inputs.target == 'qwindowkit' }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          mkdir -p "${{ runner.temp }}/deps-output"
+          echo "Downloading Qt6 dependency from release ${{ inputs.deps_tag }}..."
+          # Use || true to avoid crash if release or asset does not exist yet (though it should)
+          gh release download "${{ inputs.deps_tag }}" \
+            -p "qt6-macos-${{ matrix.arch }}.tar.zst" \
+            --dir "${{ runner.temp }}/deps-output" \
+            --repo "${{ github.repository }}" || { echo "Error: Could not download Qt6 dependency. Make sure it is already built and uploaded under tag ${{ inputs.deps_tag }}." >&2; exit 1; }
+          
+          # Extract it so the script finds it in deps/qt6
+          cd "${{ runner.temp }}/deps-output"
+          zstd -d "qt6-macos-${{ matrix.arch }}.tar.zst"
+          tar -xf "qt6-macos-${{ matrix.arch }}.tar"
+          rm -f "qt6-macos-${{ matrix.arch }}.tar" "qt6-macos-${{ matrix.arch }}.tar.zst"
+
       - name: Build dependencies
         run: |
           ./scripts/build-deps-macos.sh \
@@ -60,18 +89,24 @@ jobs:
             --output ${{ runner.temp }}/deps-output \
             --qt-version ${{ inputs.qt_version }} \
             --ffmpeg-version ${{ inputs.ffmpeg_version }} \
+            --target ${{ inputs.target }} \
             --jobs $(sysctl -n hw.ncpu)
 
       - name: Upload dependency package
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          PACKAGE="${{ runner.temp }}/deps-output/deps-macos-${{ matrix.arch }}.tar.zst"
-          if [[ ! -f "$PACKAGE" ]]; then
-            echo "Error: Package not found at $PACKAGE" >&2
+          cd "${{ runner.temp }}/deps-output"
+          # Check if there are any .tar.zst files to upload
+          shopt -s nullglob
+          files=( *.tar.zst )
+          if [[ ${#files[@]} -eq 0 ]]; then
+            echo "Error: No packages compiled!" >&2
             exit 1
           fi
-          echo "Uploading $(du -h "$PACKAGE" | cut -f1) package..."
-          gh release upload "${{ inputs.deps_tag }}" "$PACKAGE" \
-            --clobber \
-            --repo "${{ github.repository }}"
+          for file in "${files[@]}"; do
+            echo "Uploading $(du -h "$file" | cut -f1) package: $file..."
+            gh release upload "${{ inputs.deps_tag }}" "$file" \
+              --clobber \
+              --repo "${{ github.repository }}"
+          done

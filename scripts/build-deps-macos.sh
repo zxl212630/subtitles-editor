@@ -11,6 +11,7 @@ OUTPUT_DIR=""
 QT_VERSION="6.5.9"
 FFMPEG_VERSION="8.0"
 JOBS="$(sysctl -n hw.ncpu)"
+TARGET="all"
 
 # --- Usage ---
 usage() {
@@ -23,6 +24,7 @@ Options:
   --qt-version <ver>       Qt version (default: $QT_VERSION)
   --ffmpeg-version <ver>   FFmpeg version (default: $FFMPEG_VERSION)
   --jobs <n>               Parallel jobs (default: $JOBS)
+  --target <target>        Build target: all, ffmpeg, qt6, qwindowkit (default: $TARGET)
   -h, --help               Show this help
 EOF
     exit 0
@@ -36,6 +38,7 @@ while [[ $# -gt 0 ]]; do
         --qt-version)     QT_VERSION="$2"; shift 2 ;;
         --ffmpeg-version) FFMPEG_VERSION="$2"; shift 2 ;;
         --jobs)           JOBS="$2"; shift 2 ;;
+        --target)         TARGET="$2"; shift 2 ;;
         -h|--help)        usage ;;
         *)                echo "Unknown argument: $1" >&2; usage; exit 1 ;;
     esac
@@ -50,6 +53,11 @@ fi
 
 if [[ "$ARCH" != "arm64" && "$ARCH" != "x64" ]]; then
     echo "Error: --arch must be arm64 or x64" >&2
+    exit 1
+fi
+
+if [[ "$TARGET" != "all" && "$TARGET" != "ffmpeg" && "$TARGET" != "qt6" && "$TARGET" != "qwindowkit" ]]; then
+    echo "Error: --target must be one of all, ffmpeg, qt6, qwindowkit" >&2
     exit 1
 fi
 
@@ -198,8 +206,11 @@ build_qwindowkit() {
     # Clone if not present
     if [[ ! -d "$src_dir" ]]; then
         echo "Cloning QWindowKit..."
-        git clone https://github.com/stdware/qwindowkit.git "$src_dir"
-        cd "$src_dir" && git checkout v1.5.0 && cd -
+        git clone --recursive https://github.com/stdware/qwindowkit.git "$src_dir"
+        cd "$src_dir"
+        git checkout 1.5.0
+        git submodule update --init --recursive
+        cd -
     fi
 
     local build_dir="$OUTPUT_DIR/qwindowkit-build"
@@ -222,17 +233,50 @@ build_qwindowkit() {
 }
 
 # --- Main ---
-build_ffmpeg
-build_qt6
-build_qwindowkit
-
-echo ""
-echo "=== Packaging dependencies ==="
 cd "$OUTPUT_DIR"
-tar -cf - deps/ | zstd -T0 -o "$OUTPUT_DIR/deps-macos-${ARCH}.tar.zst"
-rm -rf deps
+
+if [[ "$TARGET" == "all" || "$TARGET" == "ffmpeg" ]]; then
+    build_ffmpeg
+    echo ""
+    echo "=== Packaging FFmpeg ==="
+    cd "$OUTPUT_DIR"
+    tar -cf - deps/ffmpeg | zstd -T0 -o "$OUTPUT_DIR/ffmpeg-macos-${ARCH}.tar.zst"
+    if [[ "$TARGET" == "ffmpeg" ]]; then
+        rm -rf deps
+    fi
+fi
+
+if [[ "$TARGET" == "all" || "$TARGET" == "qt6" ]]; then
+    build_qt6
+    echo ""
+    echo "=== Packaging Qt6 ==="
+    cd "$OUTPUT_DIR"
+    tar -cf - deps/qt6 | zstd -T0 -o "$OUTPUT_DIR/qt6-macos-${ARCH}.tar.zst"
+    if [[ "$TARGET" == "qt6" ]]; then
+        rm -rf deps
+    fi
+fi
+
+if [[ "$TARGET" == "all" || "$TARGET" == "qwindowkit" ]]; then
+    if [[ "$TARGET" == "qwindowkit" ]]; then
+        if [[ ! -d "$DEPS_DIR/qt6" ]]; then
+            echo "Error: Qt6 directory not found at $DEPS_DIR/qt6." >&2
+            echo "Please download and extract qt6-macos-${ARCH}.tar.zst first." >&2
+            exit 1
+        fi
+    fi
+    build_qwindowkit
+    echo ""
+    echo "=== Packaging QWindowKit ==="
+    cd "$OUTPUT_DIR"
+    tar -cf - deps/qwindowkit | zstd -T0 -o "$OUTPUT_DIR/qwindowkit-macos-${ARCH}.tar.zst"
+    rm -rf deps
+fi
 
 echo ""
 echo "=== Done ==="
-echo "Package: $OUTPUT_DIR/deps-macos-${ARCH}.tar.zst"
-echo "Size: $(du -h "$OUTPUT_DIR/deps-macos-${ARCH}.tar.zst" | cut -f1)"
+for file in *.tar.zst; do
+    if [[ -f "$file" ]]; then
+        echo "Package: $OUTPUT_DIR/$file ($(du -h "$file" | cut -f1))"
+    fi
+done
