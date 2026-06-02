@@ -149,6 +149,7 @@ build_qt6() {
         -skip qt3d \
         -skip qtdeclarative \
         -skip qtquick \
+        -skip qtquicktimeline \
         -skip qtquickcontrols2 \
         -skip qtquick3d \
         -skip qtactiveqt \
