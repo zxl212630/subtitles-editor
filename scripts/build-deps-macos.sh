@@ -145,29 +145,41 @@ build_qt6() {
         -nomake examples -nomake tests \
         -release \
         -no-rpath \
-        -skip qtwebengine \
         -skip qt3d \
-        -skip qtdeclarative \
-        -skip qtquick \
-        -skip qtquicktimeline \
-        -skip qtquickcontrols2 \
-        -skip qtquick3d \
+        -skip qt5compat \
         -skip qtactiveqt \
+        -skip qtcharts \
+        -skip qtcoap \
+        -skip qtconnectivity \
+        -skip qtdatavis3d \
+        -skip qtdeclarative \
+        -skip qtdoc \
+        -skip qtgrpc \
+        -skip qthttpserver \
+        -skip qtimageformats \
+        -skip qtlanguageserver \
+        -skip qtlocation \
+        -skip qtlottie \
+        -skip qtmqtt \
+        -skip qtnetworkauth \
+        -skip qtopcua \
+        -skip qtpositioning \
+        -skip qtquick3d \
+        -skip qtquick3dphysics \
+        -skip qtquickeffectmaker \
+        -skip qtquicktimeline \
+        -skip qtremoteobjects \
         -skip qtscxml \
+        -skip qtsensors \
         -skip qtserialbus \
         -skip qtserialport \
-        -skip qtlocation \
-        -skip qtsensors \
-        -skip qtconnectivity \
-        -skip qtwayland \
+        -skip qtspeech \
         -skip qtvirtualkeyboard \
-        -skip qtnetworkauth \
-        -skip qtremoteobjects \
-        -skip qtcoap \
-        -skip qtmqtt \
-        -skip qtopcua \
+        -skip qtwayland \
+        -skip qtwebchannel \
+        -skip qtwebengine \
+        -skip qtwebsockets \
         -skip qtwebview \
-        -skip qtdoc \
         -DCMAKE_OSX_DEPLOYMENT_TARGET=12.0
 
     echo "Building Qt6 with $JOBS jobs..."
