@@ -7,6 +7,7 @@ PROJECT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 BUILD_DIR="$PROJECT_DIR/cmake-build-release"
 APP_NAME="subtitles-editor"
 TARGET_ARCH="${TARGET_ARCH:-}"
+DMG_NAME="SubtitlesEditor-1.0.0-macOS-${TARGET_ARCH:-$(uname -m)}-unsigned"
 
 # --- Usage ---
 usage() {
