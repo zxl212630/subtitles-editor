@@ -7,7 +7,6 @@ PROJECT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 BUILD_DIR="$PROJECT_DIR/cmake-build-release"
 APP_NAME="subtitles-editor"
 TARGET_ARCH="${TARGET_ARCH:-}"
-DMG_NAME="SubtitlesEditor-1.0.0-macOS-${TARGET_ARCH:-$(uname -m)}-unsigned"
 
 # --- Usage ---
 usage() {
@@ -58,6 +57,9 @@ while [[ $# -gt 0 ]]; do
         *)              echo "未知参数: $1"; usage ;;
     esac
 done
+
+# --- Set DMG name based on architecture ---
+DMG_NAME="SubtitlesEditor-1.0.0-macOS-${TARGET_ARCH:-$(uname -m)}-unsigned"
 
 # --- Resolve dependencies from --deps-dir ---
 if [[ -n "$DEPS_DIR" ]]; then
