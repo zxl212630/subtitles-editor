@@ -183,7 +183,7 @@ build_qt6() {
 
     echo "Building Qt6 with $JOBS jobs..."
     cmake --build . -j"$JOBS"
-    make install
+    cmake --install .
 
     cd "$PROJECT_DIR"
     echo "Qt6 installed to $DEPS_DIR/qt6"
@@ -214,7 +214,7 @@ build_qwindowkit() {
 
     echo "Building QWindowKit..."
     cmake --build . -j"$JOBS"
-    make install
+    cmake --install .
 
     cd "$PROJECT_DIR"
     echo "QWindowKit installed to $DEPS_DIR/qwindowkit"
