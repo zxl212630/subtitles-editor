@@ -1,0 +1,62 @@
+name: Build Dependencies
+
+on:
+  workflow_dispatch:
+    inputs:
+      qt_version:
+        description: 'Qt version to compile'
+        required: false
+        default: '6.5.9'
+      ffmpeg_version:
+        description: 'FFmpeg version to compile'
+        required: false
+        default: '8.0'
+      deps_tag:
+        description: 'Tag for the dependency release (e.g. deps-v1)'
+        required: true
+        default: 'deps-v1'
+
+permissions:
+  contents: write
+
+jobs:
+  build-deps:
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: arm64
+            runner: macos-14
+          - arch: x64
+            runner: macos-13
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install build tools
+        run: |
+          brew install autoconf automake libtool nasm yasm pkg-config cmake zstd
+
+      - name: Build dependencies
+        run: |
+          ./scripts/build-deps-macos.sh \
+            --arch ${{ matrix.arch }} \
+            --output ${{ runner.temp }}/deps-output \
+            --qt-version ${{ inputs.qt_version }} \
+            --ffmpeg-version ${{ inputs.ffmpeg_version }} \
+            --jobs $(sysctl -n hw.ncpu)
+
+      - name: Upload dependency package
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          PACKAGE="${{ runner.temp }}/deps-output/deps-macos-${{ matrix.arch }}.tar.zst"
+          if [[ ! -f "$PACKAGE" ]]; then
+            echo "Error: Package not found at $PACKAGE" >&2
+            exit 1
+          fi
+          echo "Uploading $(du -h "$PACKAGE" | cut -f1) package..."
+          gh release upload "${{ inputs.deps_tag }}" "$PACKAGE" \
+            --clobber \
+            --repo "${{ github.repository }}"

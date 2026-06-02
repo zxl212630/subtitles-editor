@@ -6,7 +6,8 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PROJECT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 BUILD_DIR="$PROJECT_DIR/cmake-build-release"
 APP_NAME="subtitles-editor"
-DMG_NAME="SubtitlesEditor-1.0.0-macOS-arm64-unsigned"
+TARGET_ARCH="${TARGET_ARCH:-}"
+DMG_NAME="SubtitlesEditor-1.0.0-macOS-${TARGET_ARCH:-$(uname -m)}-unsigned"
 
 # --- Usage ---
 usage() {
@@ -18,6 +19,8 @@ Options:
   --ffmpeg <path>        FFmpeg 安装根目录 (例: ~/Tools/ffmpeg/8.0)
   --qwindowkit <path>    QWindowKit 安装根目录 (例: ~/Tools/Qt/QwindowKit/Qt6)
   --output <name>        DMG 输出文件名 (默认: $DMG_NAME)
+  --deps-dir <dir>       Use pre-compiled dependencies from this directory
+  --arch <arch>          Target architecture: arm64 or x64 (default: host arch)
   -h, --help             显示此帮助信息
 
 示例:
@@ -40,17 +43,34 @@ EOF
 QT_ROOT="${QT_ROOT:-}"
 FFMPEG_ROOT="${FFMPEG_ROOT:-}"
 QWINDOWKIT_ROOT="${QWINDOWKIT_ROOT:-}"
+DEPS_DIR=""
+TARGET_ARCH=""
 
 while [[ $# -gt 0 ]]; do
     case "$1" in
-        --qt)        QT_ROOT="$2"; shift 2 ;;
-        --ffmpeg)    FFMPEG_ROOT="$2"; shift 2 ;;
-        --qwindowkit) QWINDOWKIT_ROOT="$2"; shift 2 ;;
-        --output)    DMG_NAME="$2"; shift 2 ;;
-        -h|--help)   usage ;;
-        *)           echo "未知参数: $1"; usage ;;
+        --qt)           QT_ROOT="$2"; shift 2 ;;
+        --ffmpeg)       FFMPEG_ROOT="$2"; shift 2 ;;
+        --qwindowkit)   QWINDOWKIT_ROOT="$2"; shift 2 ;;
+        --output)       DMG_NAME="$2"; shift 2 ;;
+        --deps-dir)     DEPS_DIR="$2"; shift 2 ;;
+        --arch)         TARGET_ARCH="$2"; shift 2 ;;
+        -h|--help)      usage ;;
+        *)              echo "未知参数: $1"; usage ;;
     esac
 done
+
+# --- Set DMG name based on architecture ---
+DMG_NAME="SubtitlesEditor-1.0.0-macOS-${TARGET_ARCH:-$(uname -m)}-unsigned"
+
+# --- Resolve dependencies from --deps-dir ---
+if [[ -n "$DEPS_DIR" ]]; then
+    [[ -d "$DEPS_DIR/deps/qt6" ]]     || { echo "Error: $DEPS_DIR/deps/qt6 not found" >&2; exit 1; }
+    [[ -d "$DEPS_DIR/deps/ffmpeg" ]]   || { echo "Error: $DEPS_DIR/deps/ffmpeg not found" >&2; exit 1; }
+    [[ -d "$DEPS_DIR/deps/qwindowkit" ]] || { echo "Error: $DEPS_DIR/deps/qwindowkit not found" >&2; exit 1; }
+    QT_ROOT="$DEPS_DIR/deps/qt6"
+    FFMPEG_ROOT="$DEPS_DIR/deps/ffmpeg"
+    QWINDOWKIT_ROOT="$DEPS_DIR/deps/qwindowkit"
+fi
 
 # --- Validate required paths ---
 missing=()
