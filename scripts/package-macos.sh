@@ -195,6 +195,18 @@ bundle_deps() {
 
 # --- Main ---
 
+# 如果 FFMPEG_ROOT 为空，获取 Homebrew FFmpeg 路径
+if [[ -z "$FFMPEG_ROOT" ]]; then
+    BREW_PREFIX=$(brew --prefix)
+    for candidate in "$BREW_PREFIX/opt/ffmpeg" "$BREW_PREFIX/Cellar/ffmpeg/"*; do
+        if [[ -d "$candidate/include" ]]; then
+            FFMPEG_ROOT="$candidate"
+            echo "Found Homebrew FFmpeg: $FFMPEG_ROOT"
+            break
+        fi
+    done
+fi
+
 echo "=== Building Release ==="
 cmake -B "$BUILD_DIR" -S "$PROJECT_DIR" \
     -DCMAKE_BUILD_TYPE=Release \
