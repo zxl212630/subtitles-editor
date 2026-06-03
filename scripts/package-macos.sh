@@ -244,30 +244,31 @@ done
 # Ensure @executable_path/../Frameworks is in rpath
 install_name_tool -add_rpath "@executable_path/../Frameworks" "$APP_BIN" 2>/dev/null || true
 
-# Fix IDs of all real dylibs
-for dylib in "$FW_DIR"/*.dylib; do
-    [[ -L "$dylib" ]] && continue
-    install_name_tool -id "@rpath/$(basename "$dylib")" "$dylib"
+echo "=== Fixing references in main binary ==="
+# Rewrite all absolute references in main binary to @rpath
+for old_ref in $(otool -L "$APP_BIN" 2>/dev/null | tail -n +2 | awk '{print $1}'); do
+    if [[ "$old_ref" == /Users/* ]] || [[ "$old_ref" == /opt/* ]]; then
+        bname=$(basename "$old_ref")
+        echo "  Rewriting main binary reference: $old_ref -> @rpath/$bname"
+        install_name_tool -change "$old_ref" "@rpath/$bname" "$APP_BIN" 2>/dev/null || true
+    fi
 done
 
-# Rewrite all references in main binary to @rpath
+echo "=== Fixing references in bundled dylibs ==="
 for dylib in "$FW_DIR"/*.dylib; do
+    [[ -L "$dylib" ]] && continue
+    # Fix ID of the dylib itself
     bname=$(basename "$dylib")
-    old_ref=$(otool -L "$APP_BIN" | grep "$bname" | awk '{print $1}' | head -1 || true)
-    [[ -n "$old_ref" && "$old_ref" != "@rpath/$bname" ]] && \
-        install_name_tool -change "$old_ref" "@rpath/$bname" "$APP_BIN"
-done
+    install_name_tool -id "@rpath/$bname" "$dylib" 2>/dev/null || true
 
-# Fix inter-dependencies among bundled dylibs
-for dylib in "$FW_DIR"/*.dylib; do
-    [[ -L "$dylib" ]] && continue
-    while IFS= read -r ref; do
-        is_system_lib "$ref" && continue
-        is_framework "$ref" && continue
-        bname=$(basename "$ref")
-        [[ -f "$FW_DIR/$bname" && "$ref" != "@rpath/$bname" ]] && \
-            install_name_tool -change "$ref" "@rpath/$bname" "$dylib" 2>/dev/null || true
-    done < <(otool -L "$dylib" 2>/dev/null | tail -n +2 | awk '{print $1}')
+    # Fix absolute references inside the dylib
+    for old_ref in $(otool -L "$dylib" 2>/dev/null | tail -n +2 | awk '{print $1}'); do
+        if [[ "$old_ref" == /Users/* ]] || [[ "$old_ref" == /opt/* ]]; then
+            ref_bname=$(basename "$old_ref")
+            echo "  Rewriting dylib reference in $(basename "$dylib"): $old_ref -> @rpath/$ref_bname"
+            install_name_tool -change "$old_ref" "@rpath/$ref_bname" "$dylib" 2>/dev/null || true
+        fi
+    done
 done
 
 echo "=== Verifying bundle ==="
