@@ -174,6 +174,7 @@ bundle_deps() {
 echo "=== Building Release ==="
 cmake -B "$BUILD_DIR" -S "$PROJECT_DIR" \
     -DCMAKE_BUILD_TYPE=Release \
+    -DCMAKE_OSX_DEPLOYMENT_TARGET=12.0 \
     -DQt6_ROOT="$QT_ROOT" \
     -DFFMPEG_ROOT="$FFMPEG_ROOT" \
     -DQWindowKit_ROOT="$QWINDOWKIT_ROOT"
