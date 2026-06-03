@@ -225,25 +225,19 @@ echo "=== Copying FFmpeg libraries ==="
 mkdir -p "$FW_DIR"
 
 if [[ -n "$FFMPEG_ROOT" ]]; then
-    # 使用手动指定的 FFmpeg
-    for lib in libavcodec libavformat libavutil libswscale libswresample; do
-        src=$(find "$FFMPEG_ROOT/lib" -name "${lib}.*.*.*.dylib" | head -1)
-        [[ -z "$src" ]] && { echo "WARNING: $lib not found"; continue; }
-        copy_to_frameworks "$src"
-    done
+    FFMPEG_LIB_DIR="$FFMPEG_ROOT/lib"
     FFMPEG_BIN_DIR="$FFMPEG_ROOT/bin"
 else
-    # 使用系统 FFmpeg (Homebrew)
     BREW_PREFIX=$(brew --prefix)
     FFMPEG_LIB_DIR="$BREW_PREFIX/opt/ffmpeg/lib"
     FFMPEG_BIN_DIR="$BREW_PREFIX/opt/ffmpeg/bin"
-
-    for lib in libavcodec libavformat libavutil libswscale libswresample; do
-        src=$(find "$FFMPEG_LIB_DIR" -name "${lib}.*.*.*.dylib" | head -1)
-        [[ -z "$src" ]] && { echo "WARNING: $lib not found"; continue; }
-        copy_to_frameworks "$src"
-    done
 fi
+
+# 复制所有 FFmpeg dylib（libav*, libsw*, libpostproc*）
+for src in "$FFMPEG_LIB_DIR"/lib*.dylib; do
+    [[ -L "$src" ]] && continue  # 跳过符号链接
+    copy_to_frameworks "$src"
+done
 
 echo "=== Copying FFmpeg executables ==="
 for exe in ffmpeg ffprobe; do
