@@ -4,12 +4,13 @@ on:
   workflow_dispatch:
     inputs:
       target:
-        description: 'Component to build (all, qt6, qwindowkit)'
+        description: 'Component to build (all, ffmpeg, qt6, qwindowkit)'
         required: true
         default: 'all'
         type: choice
         options:
           - all
+          - ffmpeg
           - qt6
           - qwindowkit
       arch:
@@ -25,6 +26,10 @@ on:
         description: 'Qt version to compile (if building qt6 or all)'
         required: false
         default: '6.5.9'
+      ffmpeg_version:
+        description: 'FFmpeg version to compile (if building ffmpeg or all)'
+        required: false
+        default: '8.1.1'
       deps_tag:
         description: 'Tag for the dependency release (e.g. deps-v1)'
         required: true

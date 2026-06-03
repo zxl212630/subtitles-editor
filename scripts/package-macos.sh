@@ -68,26 +68,17 @@ DMG_NAME="SubtitlesEditor-${VERSION}-macOS-${TARGET_ARCH:-$(uname -m)}-unsigned"
 if [[ -n "$DEPS_DIR" ]]; then
     [[ -d "$DEPS_DIR/deps/qt6" ]]     || { echo "Error: $DEPS_DIR/deps/qt6 not found" >&2; exit 1; }
     [[ -d "$DEPS_DIR/deps/qwindowkit" ]] || { echo "Error: $DEPS_DIR/deps/qwindowkit not found" >&2; exit 1; }
+    [[ -d "$DEPS_DIR/deps/ffmpeg" ]]   || { echo "Error: $DEPS_DIR/deps/ffmpeg not found" >&2; exit 1; }
     QT_ROOT="$DEPS_DIR/deps/qt6"
     QWINDOWKIT_ROOT="$DEPS_DIR/deps/qwindowkit"
-
-    # FFmpeg: 优先使用系统安装，否则检查 deps 目录
-    if command -v ffmpeg &>/dev/null; then
-        echo "Using system FFmpeg: $(which ffmpeg)"
-        FFMPEG_ROOT=""
-    elif [[ -d "$DEPS_DIR/deps/ffmpeg" ]]; then
-        FFMPEG_ROOT="$DEPS_DIR/deps/ffmpeg"
-    else
-        echo "Error: No FFmpeg found (system or deps directory)" >&2
-        exit 1
-    fi
+    FFMPEG_ROOT="$DEPS_DIR/deps/ffmpeg"
 fi
 
 # --- Validate required paths ---
 missing=()
 [[ -z "$QT_ROOT" ]]     && missing+=("--qt (Qt6 根目录)")
 [[ -z "$QWINDOWKIT_ROOT" ]] && missing+=("--qwindowkit (QWindowKit 根目录)")
-# FFMPEG_ROOT 可以为空（使用系统 FFmpeg）
+[[ -z "$FFMPEG_ROOT" ]] && missing+=("--ffmpeg (FFmpeg 根目录)")
 
 if [[ ${#missing[@]} -gt 0 ]]; then
     echo "错误: 缺少必需参数:" >&2
@@ -195,18 +186,6 @@ bundle_deps() {
 
 # --- Main ---
 
-# 如果 FFMPEG_ROOT 为空，获取 Homebrew FFmpeg 路径
-if [[ -z "$FFMPEG_ROOT" ]]; then
-    BREW_PREFIX=$(brew --prefix)
-    for candidate in "$BREW_PREFIX/opt/ffmpeg" "$BREW_PREFIX/Cellar/ffmpeg/"*; do
-        if [[ -d "$candidate/include" ]]; then
-            FFMPEG_ROOT="$candidate"
-            echo "Found Homebrew FFmpeg: $FFMPEG_ROOT"
-            break
-        fi
-    done
-fi
-
 echo "=== Building Release ==="
 cmake -B "$BUILD_DIR" -S "$PROJECT_DIR" \
     -DCMAKE_BUILD_TYPE=Release \
@@ -223,15 +202,8 @@ echo "=== Bundling Qt frameworks ==="
 
 echo "=== Copying FFmpeg libraries ==="
 mkdir -p "$FW_DIR"
-
-if [[ -n "$FFMPEG_ROOT" ]]; then
-    FFMPEG_LIB_DIR="$FFMPEG_ROOT/lib"
-    FFMPEG_BIN_DIR="$FFMPEG_ROOT/bin"
-else
-    BREW_PREFIX=$(brew --prefix)
-    FFMPEG_LIB_DIR="$BREW_PREFIX/opt/ffmpeg/lib"
-    FFMPEG_BIN_DIR="$BREW_PREFIX/opt/ffmpeg/bin"
-fi
+FFMPEG_LIB_DIR="$FFMPEG_ROOT/lib"
+FFMPEG_BIN_DIR="$FFMPEG_ROOT/bin"
 
 # 复制所有 FFmpeg dylib（libav*, libsw*, libpostproc*）
 for src in "$FFMPEG_LIB_DIR"/lib*.dylib; do

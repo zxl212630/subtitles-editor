@@ -9,6 +9,7 @@ PROJECT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 ARCH=""
 OUTPUT_DIR=""
 QT_VERSION="6.5.9"
+FFMPEG_VERSION="8.1.1"
 JOBS="$(sysctl -n hw.ncpu)"
 TARGET="all"
 
@@ -21,8 +22,9 @@ Options:
   --arch <arm64|x64>       Target architecture (required)
   --output <dir>           Output directory for compiled deps (required)
   --qt-version <ver>       Qt version (default: $QT_VERSION)
+  --ffmpeg-version <ver>   FFmpeg version (default: $FFMPEG_VERSION)
   --jobs <n>               Parallel jobs (default: $JOBS)
-  --target <target>        Build target: all, qt6, qwindowkit (default: $TARGET)
+  --target <target>        Build target: all, ffmpeg, qt6, qwindowkit (default: $TARGET)
   -h, --help               Show this help
 EOF
     exit 0
@@ -34,6 +36,7 @@ while [[ $# -gt 0 ]]; do
         --arch)           ARCH="$2"; shift 2 ;;
         --output)         OUTPUT_DIR="$2"; shift 2 ;;
         --qt-version)     QT_VERSION="$2"; shift 2 ;;
+        --ffmpeg-version) FFMPEG_VERSION="$2"; shift 2 ;;
         --jobs)           JOBS="$2"; shift 2 ;;
         --target)         TARGET="$2"; shift 2 ;;
         -h|--help)        usage ;;
@@ -53,8 +56,8 @@ if [[ "$ARCH" != "arm64" && "$ARCH" != "x64" ]]; then
     exit 1
 fi
 
-if [[ "$TARGET" != "all" && "$TARGET" != "qt6" && "$TARGET" != "qwindowkit" ]]; then
-    echo "Error: --target must be one of all, qt6, qwindowkit" >&2
+if [[ "$TARGET" != "all" && "$TARGET" != "ffmpeg" && "$TARGET" != "qt6" && "$TARGET" != "qwindowkit" ]]; then
+    echo "Error: --target must be one of all, ffmpeg, qt6, qwindowkit" >&2
     exit 1
 fi
 
@@ -65,8 +68,64 @@ DEPS_DIR="$OUTPUT_DIR/deps"
 mkdir -p "$DEPS_DIR"
 
 echo "=== Building dependencies for macOS $ARCH ==="
-echo "Qt: $QT_VERSION | Jobs: $JOBS"
+echo "Qt: $QT_VERSION | FFmpeg: $FFMPEG_VERSION | Jobs: $JOBS"
 echo "Output: $OUTPUT_DIR"
+
+# --- Build FFmpeg ---
+build_ffmpeg() {
+    echo ""
+    echo "=== Building FFmpeg $FFMPEG_VERSION ==="
+    local src_dir="$OUTPUT_DIR/ffmpeg-src"
+    local build_dir="$OUTPUT_DIR/ffmpeg-build"
+    mkdir -p "$src_dir"
+
+    # Download
+    local ffmpeg_url="https://ffmpeg.org/releases/ffmpeg-${FFMPEG_VERSION}.tar.xz"
+    local ffmpeg_tar="$OUTPUT_DIR/ffmpeg-${FFMPEG_VERSION}.tar.xz"
+    if [[ ! -d "$src_dir/ffmpeg-${FFMPEG_VERSION}" ]]; then
+        if [[ ! -f "$ffmpeg_tar" ]]; then
+            echo "Downloading FFmpeg $FFMPEG_VERSION..."
+            curl -L --retry 3 --retry-delay 5 -o "$ffmpeg_tar" "$ffmpeg_url"
+        fi
+        echo "Extracting FFmpeg $FFMPEG_VERSION..."
+        tar -xJ -C "$src_dir" -f "$ffmpeg_tar"
+        rm -f "$ffmpeg_tar"
+    fi
+
+    local ffmpeg_src="$src_dir/ffmpeg-${FFMPEG_VERSION}"
+    if [[ ! -d "$ffmpeg_src" ]]; then
+        echo "Error: FFmpeg source directory not found at $ffmpeg_src" >&2
+        exit 1
+    fi
+
+    # Determine architecture
+    local host_arch
+    if [[ "$ARCH" == "arm64" ]]; then
+        host_arch="aarch64"
+    else
+        host_arch="x86_64"
+    fi
+
+    echo "Configuring FFmpeg..."
+    cd "$ffmpeg_src"
+    ./configure \
+        --prefix="$DEPS_DIR/ffmpeg" \
+        --enable-shared \
+        --disable-static \
+        --disable-doc \
+        --disable-programs \
+        --enable-videotoolbox \
+        --arch="$host_arch" \
+        --extra-cflags="-mmacosx-version-min=12.0" \
+        --extra-ldflags="-mmacosx-version-min=12.0"
+
+    echo "Building FFmpeg with $JOBS jobs..."
+    make -j"$JOBS"
+    make install
+
+    cd "$PROJECT_DIR"
+    echo "FFmpeg installed to $DEPS_DIR/ffmpeg"
+}
 
 # --- Build Qt6 ---
 build_qt6() {
@@ -187,6 +246,17 @@ build_qwindowkit() {
 
 # --- Main ---
 cd "$OUTPUT_DIR"
+
+if [[ "$TARGET" == "all" || "$TARGET" == "ffmpeg" ]]; then
+    build_ffmpeg
+    echo ""
+    echo "=== Packaging FFmpeg ==="
+    cd "$OUTPUT_DIR"
+    tar -cf - deps/ffmpeg | zstd -T0 -o "$OUTPUT_DIR/ffmpeg-macos-${ARCH}.tar.zst"
+    if [[ "$TARGET" == "ffmpeg" ]]; then
+        rm -rf deps
+    fi
+fi
 
 if [[ "$TARGET" == "all" || "$TARGET" == "qt6" ]]; then
     build_qt6

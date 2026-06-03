@@ -60,23 +60,16 @@ jobs:
           fi
           echo "Using dependencies from: ${{ steps.find-deps.outputs.tag }}"
 
-      - name: Install FFmpeg
-        run: |
-          brew install ffmpeg
-          echo "FFmpeg installed:"
-          ffmpeg -version | head -1
-          echo "VideoToolbox encoders:"
-          ffmpeg -encoders 2>/dev/null | grep videotoolbox || echo "None found"
-
-      - name: Download dependencies (Qt6 + QWindowKit)
+      - name: Download dependencies
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           gh release download "${{ steps.find-deps.outputs.tag }}" \
+            -p "ffmpeg-macos-${{ matrix.arch }}.tar.zst" \
             -p "qt6-macos-${{ matrix.arch }}.tar.zst" \
             -p "qwindowkit-macos-${{ matrix.arch }}.tar.zst" \
             --repo "${{ github.repository }}"
-          for lib in qt6 qwindowkit; do
+          for lib in ffmpeg qt6 qwindowkit; do
             zstd -d "${lib}-macos-${{ matrix.arch }}.tar.zst"
             tar -xf "${lib}-macos-${{ matrix.arch }}.tar"
             rm -f "${lib}-macos-${{ matrix.arch }}.tar" "${lib}-macos-${{ matrix.arch }}.tar.zst"
