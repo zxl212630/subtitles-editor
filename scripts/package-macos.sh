@@ -161,7 +161,10 @@ bundle_deps() {
         if [[ "$ref" == @rpath/* ]]; then
             real_path=$(resolve_rpath "$ref") || continue
         fi
-        [[ ! -f "$real_path" ]] && continue
+        if [[ ! -f "$real_path" ]]; then
+            # If the absolute path doesn't exist on this builder machine, try resolving it from local dependencies
+            real_path=$(resolve_rpath "@rpath/$(basename "$ref")") || continue
+        fi
 
         copy_to_frameworks "$real_path"
         mark_processed "$key"
