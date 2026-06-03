@@ -34,14 +34,16 @@ if(NOT DEFINED FFMPEG_ROOT)
     set(FFMPEG_LIBRARY_DIR "${FFMPEG_LIBRARY_DIRS}")
     set(USE_SYSTEM_FFMPEG TRUE)
   elseif(APPLE)
-    # macOS: 尝试 Homebrew 标准路径
-    if(EXISTS "/opt/homebrew/opt/ffmpeg/include")
-      set(FFMPEG_ROOT "/opt/homebrew/opt/ffmpeg")
-    elseif(EXISTS "/usr/local/opt/ffmpeg/include")
-      set(FFMPEG_ROOT "/usr/local/opt/ffmpeg")
-    endif()
-
-    if(DEFINED FFMPEG_ROOT)
+    # macOS: 使用 brew --prefix ffmpeg 获取路径
+    execute_process(
+      COMMAND brew --prefix ffmpeg
+      OUTPUT_VARIABLE HOMEBREW_FFMPEG_PREFIX
+      OUTPUT_STRIP_TRAILING_WHITESPACE
+      ERROR_QUIET
+      RESULT_VARIABLE BREW_RESULT
+    )
+    if(BREW_RESULT EQUAL 0 AND EXISTS "${HOMEBREW_FFMPEG_PREFIX}/include")
+      set(FFMPEG_ROOT "${HOMEBREW_FFMPEG_PREFIX}")
       set(FFMPEG_INCLUDE_DIR "${FFMPEG_ROOT}/include")
       set(FFMPEG_LIBRARY_DIR "${FFMPEG_ROOT}/lib")
       set(USE_SYSTEM_FFMPEG TRUE)
