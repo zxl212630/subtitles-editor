@@ -5,6 +5,11 @@ on:
     tags:
       - 'v*'
   workflow_dispatch:
+    inputs:
+      deps_tag:
+        description: 'Dependencies release tag (auto-detect if empty)'
+        required: false
+        default: ''
 
 permissions:
   contents: write
@@ -28,31 +33,50 @@ jobs:
         run: |
           brew install zstd
 
-      - name: Find latest deps tag
+      - name: Extract version from tag
+        id: version
+        run: |
+          if [[ "${{ github.ref_type }}" == "tag" ]]; then
+            echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+          else
+            echo "version=dev" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Find deps tag
         id: find-deps
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          # Find the latest deps-v* tag
-          DEPS_TAG=$(gh release list --limit 100 --json tagName -q \
-            '[.[] | select(.tagName | startswith("deps-v"))] | sort_by(.tagName) | last | .tagName')
-          if [[ -z "$DEPS_TAG" ]]; then
-            echo "Error: No deps release found. Run build-deps workflow first." >&2
-            exit 1
+          if [[ -n "${{ inputs.deps_tag }}" ]]; then
+            echo "tag=${{ inputs.deps_tag }}" >> "$GITHUB_OUTPUT"
+          else
+            DEPS_TAG=$(gh release list --limit 100 --json tagName -q \
+              '[.[] | select(.tagName | startswith("deps-v"))] | sort_by(.tagName) | last | .tagName')
+            if [[ -z "$DEPS_TAG" ]]; then
+              echo "Error: No deps release found. Run build-deps workflow first." >&2
+              exit 1
+            fi
+            echo "tag=$DEPS_TAG" >> "$GITHUB_OUTPUT"
           fi
-          echo "tag=$DEPS_TAG" >> "$GITHUB_OUTPUT"
-          echo "Using dependencies from: $DEPS_TAG"
+          echo "Using dependencies from: ${{ steps.find-deps.outputs.tag }}"
 
-      - name: Download dependencies
+      - name: Install FFmpeg
+        run: |
+          brew install ffmpeg
+          echo "FFmpeg installed:"
+          ffmpeg -version | head -1
+          echo "VideoToolbox encoders:"
+          ffmpeg -encoders 2>/dev/null | grep videotoolbox || echo "None found"
+
+      - name: Download dependencies (Qt6 + QWindowKit)
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           gh release download "${{ steps.find-deps.outputs.tag }}" \
-            -p "ffmpeg-macos-${{ matrix.arch }}.tar.zst" \
             -p "qt6-macos-${{ matrix.arch }}.tar.zst" \
             -p "qwindowkit-macos-${{ matrix.arch }}.tar.zst" \
             --repo "${{ github.repository }}"
-          for lib in ffmpeg qt6 qwindowkit; do
+          for lib in qt6 qwindowkit; do
             zstd -d "${lib}-macos-${{ matrix.arch }}.tar.zst"
             tar -xf "${lib}-macos-${{ matrix.arch }}.tar"
             rm -f "${lib}-macos-${{ matrix.arch }}.tar" "${lib}-macos-${{ matrix.arch }}.tar.zst"
@@ -62,7 +86,8 @@ jobs:
         run: |
           ./scripts/package-macos.sh \
             --deps-dir "$PWD" \
-            --arch "${{ matrix.arch }}"
+            --arch "${{ matrix.arch }}" \
+            --version "${{ steps.version.outputs.version }}"
 
       - name: Archive App Bundle
         run: |
@@ -98,6 +123,10 @@ jobs:
           tar -xf artifacts/arm64/subtitles-editor-arm64.tar -C arm64-build
           tar -xf artifacts/x64/subtitles-editor-x64.tar -C x64-build
 
+      - name: Extract version from tag
+        id: version
+        run: echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+
       - name: Merge into Universal App Bundle
         run: |
           ./scripts/merge-universal-macos.sh \
@@ -111,8 +140,9 @@ jobs:
           cp -a subtitles-editor.app "$STAGING_DIR/"
           ln -sf /Applications "$STAGING_DIR/Applications"
           mkdir -p dist/macos
-          
-          DMG_NAME="SubtitlesEditor-1.0.0-macOS-universal"
+
+          VERSION="${{ steps.version.outputs.version }}"
+          DMG_NAME="SubtitlesEditor-${VERSION}-macOS-universal"
           hdiutil create -volname "$DMG_NAME" \
               -srcfolder "$STAGING_DIR" \
               -ov -format UDZO \

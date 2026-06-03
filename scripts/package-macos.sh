@@ -7,7 +7,7 @@ PROJECT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 BUILD_DIR="$PROJECT_DIR/cmake-build-release"
 APP_NAME="subtitles-editor"
 TARGET_ARCH="${TARGET_ARCH:-}"
-DMG_NAME="SubtitlesEditor-1.0.0-macOS-${TARGET_ARCH:-$(uname -m)}-unsigned"
+VERSION="${VERSION:-1.0.0}"
 
 # --- Usage ---
 usage() {
@@ -21,6 +21,7 @@ Options:
   --output <name>        DMG 输出文件名 (默认: $DMG_NAME)
   --deps-dir <dir>       Use pre-compiled dependencies from this directory
   --arch <arch>          Target architecture: arm64 or x64 (default: host arch)
+  --version <ver>        App version for DMG name (default: 1.0.0)
   -h, --help             显示此帮助信息
 
 示例:
@@ -34,7 +35,7 @@ Options:
   QT_ROOT=~/Tools/Qt/6.5.7 FFMPEG_ROOT=~/Tools/ffmpeg/8.0 $(basename "$0")
 
 环境变量 (命令行参数优先):
-  QT_ROOT, FFMPEG_ROOT, QWINDOWKIT_ROOT
+  QT_ROOT, FFMPEG_ROOT, QWINDOWKIT_ROOT, VERSION
 EOF
     exit 0
 }
@@ -54,29 +55,39 @@ while [[ $# -gt 0 ]]; do
         --output)       DMG_NAME="$2"; shift 2 ;;
         --deps-dir)     DEPS_DIR="$2"; shift 2 ;;
         --arch)         TARGET_ARCH="$2"; shift 2 ;;
+        --version)      VERSION="$2"; shift 2 ;;
         -h|--help)      usage ;;
         *)              echo "未知参数: $1"; usage ;;
     esac
 done
 
 # --- Set DMG name based on architecture ---
-DMG_NAME="SubtitlesEditor-1.0.0-macOS-${TARGET_ARCH:-$(uname -m)}-unsigned"
+DMG_NAME="SubtitlesEditor-${VERSION}-macOS-${TARGET_ARCH:-$(uname -m)}-unsigned"
 
 # --- Resolve dependencies from --deps-dir ---
 if [[ -n "$DEPS_DIR" ]]; then
     [[ -d "$DEPS_DIR/deps/qt6" ]]     || { echo "Error: $DEPS_DIR/deps/qt6 not found" >&2; exit 1; }
-    [[ -d "$DEPS_DIR/deps/ffmpeg" ]]   || { echo "Error: $DEPS_DIR/deps/ffmpeg not found" >&2; exit 1; }
     [[ -d "$DEPS_DIR/deps/qwindowkit" ]] || { echo "Error: $DEPS_DIR/deps/qwindowkit not found" >&2; exit 1; }
     QT_ROOT="$DEPS_DIR/deps/qt6"
-    FFMPEG_ROOT="$DEPS_DIR/deps/ffmpeg"
     QWINDOWKIT_ROOT="$DEPS_DIR/deps/qwindowkit"
+
+    # FFmpeg: 优先使用系统安装，否则检查 deps 目录
+    if command -v ffmpeg &>/dev/null; then
+        echo "Using system FFmpeg: $(which ffmpeg)"
+        FFMPEG_ROOT=""
+    elif [[ -d "$DEPS_DIR/deps/ffmpeg" ]]; then
+        FFMPEG_ROOT="$DEPS_DIR/deps/ffmpeg"
+    else
+        echo "Error: No FFmpeg found (system or deps directory)" >&2
+        exit 1
+    fi
 fi
 
 # --- Validate required paths ---
 missing=()
 [[ -z "$QT_ROOT" ]]     && missing+=("--qt (Qt6 根目录)")
-[[ -z "$FFMPEG_ROOT" ]] && missing+=("--ffmpeg (FFmpeg 根目录)")
 [[ -z "$QWINDOWKIT_ROOT" ]] && missing+=("--qwindowkit (QWindowKit 根目录)")
+# FFMPEG_ROOT 可以为空（使用系统 FFmpeg）
 
 if [[ ${#missing[@]} -gt 0 ]]; then
     echo "错误: 缺少必需参数:" >&2
@@ -129,13 +140,21 @@ copy_to_frameworks() {
 # Resolve @rpath reference to actual file
 resolve_rpath() {
     local name="${1#@rpath/}"
-    for dir in \
-        "$FFMPEG_ROOT/lib" \
-        "$QT_ROOT/lib" \
-        "$QWINDOWKIT_ROOT/lib" \
-        /opt/homebrew/lib \
-        /opt/homebrew/opt/*/lib \
-        "$HOME/Tools/flowcut/release/build/lib"; do
+    local dirs=(
+        "$QT_ROOT/lib"
+        "$QWINDOWKIT_ROOT/lib"
+        /opt/homebrew/lib
+        /opt/homebrew/opt/ffmpeg/lib
+        /opt/homebrew/opt/*/lib
+        /usr/local/lib
+    )
+
+    # 如果有手动 FFmpeg，加入搜索路径
+    if [[ -n "$FFMPEG_ROOT" ]]; then
+        dirs+=("$FFMPEG_ROOT/lib")
+    fi
+
+    for dir in "${dirs[@]}"; do
         [[ -f "$dir/$name" ]] && echo "$dir/$name" && return 0
     done
     return 1
@@ -190,14 +209,29 @@ echo "=== Bundling Qt frameworks ==="
 
 echo "=== Copying FFmpeg libraries ==="
 mkdir -p "$FW_DIR"
-for lib in libavcodec libavformat libavutil libswscale libswresample; do
-    src=$(find "$FFMPEG_ROOT/lib" -name "${lib}.*.*.*.dylib" | head -1)
-    [[ -z "$src" ]] && { echo "WARNING: $lib not found"; continue; }
-    copy_to_frameworks "$src"
-done
+
+if [[ -n "$FFMPEG_ROOT" ]]; then
+    # 使用手动指定的 FFmpeg
+    for lib in libavcodec libavformat libavutil libswscale libswresample; do
+        src=$(find "$FFMPEG_ROOT/lib" -name "${lib}.*.*.*.dylib" | head -1)
+        [[ -z "$src" ]] && { echo "WARNING: $lib not found"; continue; }
+        copy_to_frameworks "$src"
+    done
+    FFMPEG_BIN_DIR="$FFMPEG_ROOT/bin"
+else
+    # 使用系统 FFmpeg (Homebrew)
+    BREW_PREFIX=$(brew --prefix)
+    FFMPEG_LIB_DIR="$BREW_PREFIX/opt/ffmpeg/lib"
+    FFMPEG_BIN_DIR="$BREW_PREFIX/opt/ffmpeg/bin"
+
+    for lib in libavcodec libavformat libavutil libswscale libswresample; do
+        src=$(find "$FFMPEG_LIB_DIR" -name "${lib}.*.*.*.dylib" | head -1)
+        [[ -z "$src" ]] && { echo "WARNING: $lib not found"; continue; }
+        copy_to_frameworks "$src"
+    done
+fi
 
 echo "=== Copying FFmpeg executables ==="
-FFMPEG_BIN_DIR="$FFMPEG_ROOT/bin"
 for exe in ffmpeg ffprobe; do
     src="$FFMPEG_BIN_DIR/$exe"
     if [[ -f "$src" ]]; then
@@ -238,7 +272,7 @@ cd "$PROJECT_DIR"
 echo "=== Fixing rpaths ==="
 # Remove absolute rpaths that point to build machine
 for rpath in $(otool -l "$APP_BIN" 2>/dev/null | grep -A2 LC_RPATH | grep path | awk '{print $2}'); do
-    if [[ "$rpath" == /Users/* ]] || [[ "$rpath" == /opt/* ]]; then
+    if [[ "$rpath" == /Users/* ]] || [[ "$rpath" == /opt/homebrew/* ]] || [[ "$rpath" == /usr/local/* ]]; then
         echo "  Removing absolute rpath: $rpath"
         install_name_tool -delete_rpath "$rpath" "$APP_BIN" 2>/dev/null || true
     fi

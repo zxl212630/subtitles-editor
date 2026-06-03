@@ -13,7 +13,37 @@ set(CMAKE_AUTOUIC ON)
 # ============================================================
 set(Qt6_ROOT "$ENV{HOME}/Tools/Qt/6.5.7" CACHE PATH "Qt6 installation root")
 set(QWindowKit_ROOT "$ENV{HOME}/Tools/Qt/QwindowKit/Qt6" CACHE PATH "QWindowKit installation root")
-set(FFMPEG_ROOT "$ENV{HOME}/Tools/ffmpeg/8.0" CACHE PATH "FFmpeg installation root")
+
+# FFmpeg: 优先使用系统包管理器，可通过 -DFFMPEG_ROOT 覆盖
+if(NOT DEFINED FFMPEG_ROOT)
+  # 尝试 pkg-config
+  find_package(PkgConfig QUIET)
+  if(PkgConfig_FOUND)
+    pkg_check_modules(FFMPEG QUIET
+      libavcodec
+      libavformat
+      libavutil
+      libswscale
+      libswresample
+    )
+  endif()
+
+  if(FFMPEG_FOUND)
+    message(STATUS "Found FFmpeg via pkg-config: ${FFMPEG_INCLUDE_DIRS}")
+    set(FFMPEG_INCLUDE_DIR "${FFMPEG_INCLUDE_DIRS}")
+    set(FFMPEG_LIBRARY_DIR "${FFMPEG_LIBRARY_DIRS}")
+    set(USE_SYSTEM_FFMPEG TRUE)
+  else()
+    # 回退到手动路径
+    set(FFMPEG_ROOT "$ENV{HOME}/Tools/ffmpeg/8.0" CACHE PATH "FFmpeg installation root")
+    set(FFMPEG_INCLUDE_DIR "${FFMPEG_ROOT}/include")
+    set(FFMPEG_LIBRARY_DIR "${FFMPEG_ROOT}/lib")
+  endif()
+else()
+  # 用户显式指定了 FFMPEG_ROOT
+  set(FFMPEG_INCLUDE_DIR "${FFMPEG_ROOT}/include")
+  set(FFMPEG_LIBRARY_DIR "${FFMPEG_ROOT}/lib")
+endif()
 
 # ============================================================
 # Qt6
@@ -30,9 +60,6 @@ find_package(QWindowKit REQUIRED COMPONENTS Widgets)
 # ============================================================
 # FFmpeg
 # ============================================================
-set(FFMPEG_INCLUDE_DIR "${FFMPEG_ROOT}/include")
-set(FFMPEG_LIBRARY_DIR "${FFMPEG_ROOT}/lib")
-
 find_path(AVCODEC_INCLUDE_DIR libavcodec/avcodec.h PATHS "${FFMPEG_INCLUDE_DIR}")
 find_path(AVFORMAT_INCLUDE_DIR libavformat/avformat.h PATHS "${FFMPEG_INCLUDE_DIR}")
 find_path(AVUTIL_INCLUDE_DIR libavutil/avutil.h PATHS "${FFMPEG_INCLUDE_DIR}")
@@ -152,13 +179,21 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
 
 # FFmpeg dependencies
 if(AVCODEC_INCLUDE_DIR AND AVFORMAT_INCLUDE_DIR AND AVUTIL_INCLUDE_DIR AND SWRESAMPLE_INCLUDE_DIR)
-    target_link_libraries(${PROJECT_NAME} PRIVATE
-        avcodec
-        avformat
-        avutil
-        swscale
-        swresample
-    )
+    if(USE_SYSTEM_FFMPEG)
+      # 系统 FFmpeg: 使用 pkg-config 提供的库名
+      target_link_libraries(${PROJECT_NAME} PRIVATE
+          ${FFMPEG_LIBRARIES}
+      )
+    else()
+      # 手动指定的 FFmpeg
+      target_link_libraries(${PROJECT_NAME} PRIVATE
+          avcodec
+          avformat
+          avutil
+          swscale
+          swresample
+      )
+    endif()
 endif()
 
 # ============================================================
