@@ -34,16 +34,24 @@ if(NOT DEFINED FFMPEG_ROOT)
     set(FFMPEG_LIBRARY_DIR "${FFMPEG_LIBRARY_DIRS}")
     set(USE_SYSTEM_FFMPEG TRUE)
   elseif(APPLE)
-    # macOS: 使用 brew --prefix ffmpeg 获取路径
-    execute_process(
-      COMMAND brew --prefix ffmpeg
-      OUTPUT_VARIABLE HOMEBREW_FFMPEG_PREFIX
-      OUTPUT_STRIP_TRAILING_WHITESPACE
-      ERROR_QUIET
-      RESULT_VARIABLE BREW_RESULT
-    )
-    if(BREW_RESULT EQUAL 0 AND EXISTS "${HOMEBREW_FFMPEG_PREFIX}/include")
-      set(FFMPEG_ROOT "${HOMEBREW_FFMPEG_PREFIX}")
+    # macOS: 尝试 Homebrew 标准路径
+    foreach(_brew_prefix "/opt/homebrew" "/usr/local")
+      if(EXISTS "${_brew_prefix}/opt/ffmpeg/include")
+        set(FFMPEG_ROOT "${_brew_prefix}/opt/ffmpeg")
+        break()
+      elseif(EXISTS "${_brew_prefix}/Cellar/ffmpeg")
+        # 查找 Cellar 中的最新版本
+        file(GLOB _ffmpeg_versions RELATIVE "${_brew_prefix}/Cellar/ffmpeg" "${_brew_prefix}/Cellar/ffmpeg/*")
+        if(_ffmpeg_versions)
+          list(SORT _ffmpeg_versions)
+          list(REVERSE _ffmpeg_versions)
+          list(GET _ffmpeg_versions 0 _latest_version)
+          set(FFMPEG_ROOT "${_brew_prefix}/Cellar/ffmpeg/${_latest_version}")
+        endif()
+      endif()
+    endforeach()
+
+    if(DEFINED FFMPEG_ROOT)
       set(FFMPEG_INCLUDE_DIR "${FFMPEG_ROOT}/include")
       set(FFMPEG_LIBRARY_DIR "${FFMPEG_ROOT}/lib")
       set(USE_SYSTEM_FFMPEG TRUE)
