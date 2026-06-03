@@ -57,7 +57,8 @@ find "$OUT_APP" -type f | while read -r out_file; do
             tmp_out=$(mktemp)
             lipo -create "$arm64_file" "$x64_file" -output "$tmp_out"
             mv "$tmp_out" "$out_file"
-            chmod --reference="$arm64_file" "$out_file"
+            perms=$(stat -f "%Lp" "$arm64_file")
+            chmod "$perms" "$out_file"
         fi
     fi
 done
