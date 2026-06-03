@@ -108,7 +108,7 @@ jobs:
       - name: Create Universal DMG
         run: |
           STAGING_DIR=$(mktemp -d)
-          cp -R subtitles-editor.app "$STAGING_DIR/"
+          cp -a subtitles-editor.app "$STAGING_DIR/"
           ln -sf /Applications "$STAGING_DIR/Applications"
           mkdir -p dist/macos
           

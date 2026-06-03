@@ -27,7 +27,7 @@ rm -rf "$OUT_APP"
 mkdir -p "$OUT_APP"
 
 echo "=== Copying structure and non-binary files from arm64 app ==="
-cp -R "$ARM64_APP/" "$OUT_APP/"
+cp -a "$ARM64_APP/" "$OUT_APP/"
 
 echo "=== Merging binaries with lipo ==="
 # Find all files in the output app bundle

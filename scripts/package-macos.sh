@@ -289,7 +289,7 @@ codesign --force --deep --sign - "$APP_BUNDLE"
 
 echo "=== Creating DMG ==="
 STAGING_DIR=$(mktemp -d)
-cp -R "$APP_BUNDLE" "$STAGING_DIR/"
+cp -a "$APP_BUNDLE" "$STAGING_DIR/"
 ln -sf /Applications "$STAGING_DIR/Applications"
 mkdir -p "$PROJECT_DIR/dist/macos"
 hdiutil create -volname "$DMG_NAME" \
