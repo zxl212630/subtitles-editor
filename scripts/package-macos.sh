@@ -99,9 +99,11 @@ if [[ ${#missing[@]} -gt 0 ]]; then
     exit 1
 fi
 
-for dir in "$QT_ROOT" "$FFMPEG_ROOT" "$QWINDOWKIT_ROOT"; do
+for dir in "$QT_ROOT" "$QWINDOWKIT_ROOT"; do
     [[ -d "$dir" ]] || { echo "错误: 目录不存在: $dir" >&2; exit 1; }
 done
+# FFMPEG_ROOT 可以为空（使用系统 FFmpeg），非空时检查目录
+[[ -n "$FFMPEG_ROOT" ]] && [[ ! -d "$FFMPEG_ROOT" ]] && { echo "错误: 目录不存在: $FFMPEG_ROOT" >&2; exit 1; }
 
 APP_BUNDLE="$BUILD_DIR/$APP_NAME.app"
 APP_BIN="$APP_BUNDLE/Contents/MacOS/$APP_NAME"
