@@ -128,6 +128,7 @@ copy_to_frameworks() {
     [[ -f "$FW_DIR/$bname" ]] && return 0
     echo "  Bundling: $bname"
     cp "$src" "$FW_DIR/$bname"
+    chmod 755 "$FW_DIR/$bname"
 }
 
 # Resolve @rpath reference to actual file
