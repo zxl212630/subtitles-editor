@@ -45,7 +45,11 @@ ProjectManager::ProjectManager(SubtitleTrack *track, QObject *parent)
 }
 
 ProjectManager::~ProjectManager() {
-  // QUndoStack 作为子对象会被自动释放
+  if (undoStack_) {
+    undoStack_->clear();
+    delete undoStack_;
+    undoStack_ = nullptr;
+  }
 }
 
 bool ProjectManager::newProject() {
