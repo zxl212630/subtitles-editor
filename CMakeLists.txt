@@ -11,20 +11,8 @@ set(CMAKE_AUTOUIC ON)
 # ============================================================
 # SDK Paths (可通过 -D 参数覆盖，如: -DQt6_ROOT=/path/to/qt)
 # ============================================================
-
-# Qt6: 优先读取 install-qt-action 设置的环境变量
-if(DEFINED ENV{Qt6_DIR})
-  set(Qt6_ROOT "$ENV{Qt6_DIR}" CACHE PATH "Qt6 installation root" FORCE)
-else()
-  set(Qt6_ROOT "$ENV{HOME}/Tools/Qt/6.5.7" CACHE PATH "Qt6 installation root")
-endif()
-
-# QWindowKit: 优先读取环境变量
-if(DEFINED ENV{QWINDOWKIT_ROOT})
-  set(QWindowKit_ROOT "$ENV{QWINDOWKIT_ROOT}" CACHE PATH "QWindowKit installation root" FORCE)
-else()
-  set(QWindowKit_ROOT "$ENV{HOME}/Tools/Qt/QwindowKit/Qt6" CACHE PATH "QWindowKit installation root")
-endif()
+set(Qt6_ROOT "$ENV{HOME}/Tools/Qt/6.5.7" CACHE PATH "Qt6 installation root")
+set(QWindowKit_ROOT "$ENV{HOME}/Tools/Qt/QwindowKit/Qt6" CACHE PATH "QWindowKit installation root")
 
 # FFmpeg: 优先使用系统包管理器，可通过 -DFFMPEG_ROOT 覆盖
 if(NOT DEFINED FFMPEG_ROOT)

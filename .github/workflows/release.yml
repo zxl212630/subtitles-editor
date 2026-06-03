@@ -5,6 +5,11 @@ on:
     tags:
       - 'v*'
   workflow_dispatch:
+    inputs:
+      deps_tag:
+        description: 'Dependencies release tag (auto-detect if empty)'
+        required: false
+        default: ''
 
 permissions:
   contents: write
@@ -24,6 +29,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Install tools
+        run: |
+          brew install zstd
+
       - name: Extract version from tag
         id: version
         run: |
@@ -33,12 +42,23 @@ jobs:
             echo "version=dev" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Install Qt6
-        uses: jurplel/install-qt-action@v4
-        with:
-          version: '6.5.3'
-          modules: 'qtmultimedia qtsvg'
-          cache: true
+      - name: Find deps tag
+        id: find-deps
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if [[ -n "${{ inputs.deps_tag }}" ]]; then
+            echo "tag=${{ inputs.deps_tag }}" >> "$GITHUB_OUTPUT"
+          else
+            DEPS_TAG=$(gh release list --limit 100 --json tagName -q \
+              '[.[] | select(.tagName | startswith("deps-v"))] | sort_by(.tagName) | last | .tagName')
+            if [[ -z "$DEPS_TAG" ]]; then
+              echo "Error: No deps release found. Run build-deps workflow first." >&2
+              exit 1
+            fi
+            echo "tag=$DEPS_TAG" >> "$GITHUB_OUTPUT"
+          fi
+          echo "Using dependencies from: ${{ steps.find-deps.outputs.tag }}"
 
       - name: Install FFmpeg
         run: |
@@ -48,26 +68,24 @@ jobs:
           echo "VideoToolbox encoders:"
           ffmpeg -encoders 2>/dev/null | grep videotoolbox || echo "None found"
 
-      - name: Build QWindowKit
+      - name: Download dependencies (Qt6 + QWindowKit)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          git clone --recursive https://github.com/stdware/qwindowkit.git /tmp/qwindowkit
-          cd /tmp/qwindowkit
-          git checkout 1.5.0
-          git submodule update --init --recursive
-          mkdir build && cd build
-          cmake .. \
-            -DCMAKE_PREFIX_PATH="${{ env.Qt6_DIR }}" \
-            -DCMAKE_INSTALL_PREFIX=/tmp/qwindowkit-install \
-            -DCMAKE_OSX_DEPLOYMENT_TARGET=12.0 \
-            -DBUILD_SHARED_LIBS=ON
-          cmake --build . -j$(sysctl -n hw.ncpu)
-          cmake --install .
+          gh release download "${{ steps.find-deps.outputs.tag }}" \
+            -p "qt6-macos-${{ matrix.arch }}.tar.zst" \
+            -p "qwindowkit-macos-${{ matrix.arch }}.tar.zst" \
+            --repo "${{ github.repository }}"
+          for lib in qt6 qwindowkit; do
+            zstd -d "${lib}-macos-${{ matrix.arch }}.tar.zst"
+            tar -xf "${lib}-macos-${{ matrix.arch }}.tar"
+            rm -f "${lib}-macos-${{ matrix.arch }}.tar" "${lib}-macos-${{ matrix.arch }}.tar.zst"
+          done
 
       - name: Build and package
         run: |
           ./scripts/package-macos.sh \
-            --qt "${{ env.Qt6_DIR }}" \
-            --qwindowkit /tmp/qwindowkit-install \
+            --deps-dir "$PWD" \
             --arch "${{ matrix.arch }}" \
             --version "${{ steps.version.outputs.version }}"
 

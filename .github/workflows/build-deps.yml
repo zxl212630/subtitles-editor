@@ -1,0 +1,128 @@
+name: Build Dependencies
+
+on:
+  workflow_dispatch:
+    inputs:
+      target:
+        description: 'Component to build (all, qt6, qwindowkit)'
+        required: true
+        default: 'all'
+        type: choice
+        options:
+          - all
+          - qt6
+          - qwindowkit
+      arch:
+        description: 'Architecture to build (all, arm64, x64)'
+        required: true
+        default: 'all'
+        type: choice
+        options:
+          - all
+          - arm64
+          - x64
+      qt_version:
+        description: 'Qt version to compile (if building qt6 or all)'
+        required: false
+        default: '6.5.9'
+      deps_tag:
+        description: 'Tag for the dependency release (e.g. deps-v1)'
+        required: true
+        default: 'deps-v1'
+
+permissions:
+  contents: write
+
+jobs:
+  build-deps:
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: arm64
+            runner: macos-14
+          - arch: x64
+            runner: macos-15-intel
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Free up disk space
+        run: |
+          echo "Before cleanup:"
+          df -h /
+          # Remove pre-installed software we don't need
+          sudo rm -rf /usr/local/share/boost
+          sudo rm -rf /usr/local/lib/android
+          sudo rm -rf /opt/hostedtoolcache/CodeQL
+          sudo rm -rf /opt/hostedtoolcache/go
+          sudo rm -rf /opt/hostedtoolcache/node
+          sudo rm -rf /opt/hostedtoolcache/python
+          sudo rm -rf /opt/hostedtoolcache/ruby
+          echo "After cleanup:"
+          df -h /
+
+      - name: Install build tools
+        if: ${{ inputs.arch == 'all' || inputs.arch == matrix.arch }}
+        run: |
+          brew install autoconf automake libtool nasm yasm pkg-config cmake zstd
+
+      - name: Pre-download Qt6 for QWindowKit
+        if: ${{ inputs.target == 'qwindowkit' && (inputs.arch == 'all' || inputs.arch == matrix.arch) }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          mkdir -p "${{ runner.temp }}/deps-output"
+          echo "Downloading Qt6 dependency from release ${{ inputs.deps_tag }}..."
+          # Use || true to avoid crash if release or asset does not exist yet (though it should)
+          gh release download "${{ inputs.deps_tag }}" \
+            -p "qt6-macos-${{ matrix.arch }}.tar.zst" \
+            --dir "${{ runner.temp }}/deps-output" \
+            --repo "${{ github.repository }}" || { echo "Error: Could not download Qt6 dependency. Make sure it is already built and uploaded under tag ${{ inputs.deps_tag }}." >&2; exit 1; }
+          
+          # Extract it so the script finds it in deps/qt6
+          cd "${{ runner.temp }}/deps-output"
+          zstd -d "qt6-macos-${{ matrix.arch }}.tar.zst"
+          tar -xf "qt6-macos-${{ matrix.arch }}.tar"
+          rm -f "qt6-macos-${{ matrix.arch }}.tar" "qt6-macos-${{ matrix.arch }}.tar.zst"
+
+      - name: Build dependencies
+        if: ${{ inputs.arch == 'all' || inputs.arch == matrix.arch }}
+        run: |
+          ./scripts/build-deps-macos.sh \
+            --arch ${{ matrix.arch }} \
+            --output ${{ runner.temp }}/deps-output \
+            --qt-version ${{ inputs.qt_version }} \
+            --target ${{ inputs.target }} \
+            --jobs $(sysctl -n hw.ncpu)
+
+      - name: Upload dependency package
+        if: ${{ inputs.arch == 'all' || inputs.arch == matrix.arch }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Ensure the release exists first
+          gh release view "${{ inputs.deps_tag }}" --repo "${{ github.repository }}" >/dev/null 2>&1 || {
+            echo "Release ${{ inputs.deps_tag }} not found. Creating it..."
+            gh release create "${{ inputs.deps_tag }}" \
+              --prerelease \
+              --title "${{ inputs.deps_tag }}" \
+              --notes "Pre-compiled dependencies for macOS" \
+              --repo "${{ github.repository }}"
+          }
+
+          cd "${{ runner.temp }}/deps-output"
+          # Check if there are any .tar.zst files to upload
+          shopt -s nullglob
+          files=( *.tar.zst )
+          if [[ ${#files[@]} -eq 0 ]]; then
+            echo "Error: No packages compiled!" >&2
+            exit 1
+          fi
+          for file in "${files[@]}"; do
+            echo "Uploading $(du -h "$file" | cut -f1) package: $file..."
+            gh release upload "${{ inputs.deps_tag }}" "$file" \
+              --clobber \
+              --repo "${{ github.repository }}"
+          done

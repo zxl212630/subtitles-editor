@@ -64,18 +64,23 @@ done
 # --- Set DMG name based on architecture ---
 DMG_NAME="SubtitlesEditor-${VERSION}-macOS-${TARGET_ARCH:-$(uname -m)}-unsigned"
 
-# --- Resolve dependencies ---
-# 优先使用直接指定的路径，其次从 deps-dir 解析
+# --- Resolve dependencies from --deps-dir ---
 if [[ -n "$DEPS_DIR" ]]; then
-    # 兼容旧模式：从 deps 目录解析
-    [[ -z "$QT_ROOT" ]] && [[ -d "$DEPS_DIR/deps/qt6" ]] && QT_ROOT="$DEPS_DIR/deps/qt6"
-    [[ -z "$QWINDOWKIT_ROOT" ]] && [[ -d "$DEPS_DIR/deps/qwindowkit" ]] && QWINDOWKIT_ROOT="$DEPS_DIR/deps/qwindowkit"
-fi
+    [[ -d "$DEPS_DIR/deps/qt6" ]]     || { echo "Error: $DEPS_DIR/deps/qt6 not found" >&2; exit 1; }
+    [[ -d "$DEPS_DIR/deps/qwindowkit" ]] || { echo "Error: $DEPS_DIR/deps/qwindowkit not found" >&2; exit 1; }
+    QT_ROOT="$DEPS_DIR/deps/qt6"
+    QWINDOWKIT_ROOT="$DEPS_DIR/deps/qwindowkit"
 
-# FFmpeg: 系统安装
-if command -v ffmpeg &>/dev/null; then
-    echo "Using system FFmpeg: $(which ffmpeg)"
-    FFMPEG_ROOT=""
+    # FFmpeg: 优先使用系统安装，否则检查 deps 目录
+    if command -v ffmpeg &>/dev/null; then
+        echo "Using system FFmpeg: $(which ffmpeg)"
+        FFMPEG_ROOT=""
+    elif [[ -d "$DEPS_DIR/deps/ffmpeg" ]]; then
+        FFMPEG_ROOT="$DEPS_DIR/deps/ffmpeg"
+    else
+        echo "Error: No FFmpeg found (system or deps directory)" >&2
+        exit 1
+    fi
 fi
 
 # --- Validate required paths ---
