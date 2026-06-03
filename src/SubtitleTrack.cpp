@@ -21,10 +21,6 @@ public:
     oldSpeakers_ = track->speakersMap();
   }
 
-  ~SubtitleTrackCommand() override {
-    doAction_ = nullptr; // 显式重置闭包以提前安全销毁其持有的捕获资源
-  }
-
   void redo() override {
     if (isFirst_) {
       isFirst_ = false;

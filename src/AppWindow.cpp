@@ -121,6 +121,25 @@ AppWindow::~AppWindow() {
   // children (timelinePanel, videoPreviewPanel). Disconnect all
   // outbound signals so no slot fires during MediaPlayer destruction.
   disconnect(d->mediaPlayer, nullptr, nullptr, nullptr);
+
+  // 清空字幕轨道的撤销栈指针，避免悬空
+  if (d->subtitleTrack) {
+    d->subtitleTrack->setUndoStack(nullptr);
+  }
+
+  if (d->projectManager) {
+    // 断开 projectManager
+    // 及其撤销栈的所有信号连接，防止在析构时触发槽函数访问已销毁的 Private 数据
+    // d
+    if (d->projectManager->undoStack()) {
+      disconnect(d->projectManager->undoStack(), nullptr, nullptr, nullptr);
+    }
+    disconnect(d->projectManager, nullptr, nullptr, nullptr);
+
+    // 显式销毁 projectManager，确保其在 d (Private) 被销毁前安全地完成析构
+    delete d->projectManager;
+    d->projectManager = nullptr;
+  }
 }
 
 void AppWindow::setupUi() {
@@ -1137,7 +1156,6 @@ bool AppWindow::openProjectFile(const QString &filePath) {
     return false;
   }
 }
-
 
 void AppWindow::onClearRecentFiles() { SubtitleProject::clearRecentFiles(); }
 
