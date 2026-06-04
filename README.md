@@ -43,6 +43,16 @@
 | macOS (Intel) | ⚠️ 未验证 | 欢迎测试反馈 |
 | Windows | ❌ 暂不支持 | 计划中 |
 
+## 🖼️ 界面预览
+
+| 主编辑界面 | AI 语音识别 |
+| :---: | :---: |
+| ![主编辑界面](docs/screenshots/main_interface.png) | ![AI 语音识别](docs/screenshots/asr_progress.png) |
+
+| 常规配置 | 导出设置 | 字幕设置 |
+| :---: | :---: | :---: |
+| ![常规配置](docs/screenshots/general_settings.png) | ![导出设置](docs/screenshots/export_settings.png) | ![字幕设置](docs/screenshots/subtitle_settings.png) |
+
 ## 📥 下载
 
 前往 [GitHub Releases](https://github.com/zxl212630/subtitles-editor/releases) 页面下载最新版本。
@@ -152,18 +162,3 @@ clang-tidy src/*.cpp -- -std=c++17
 ## 📄 许可证
 
 本项目采用 GPLv3 许可证 - 详见 [LICENSE](LICENSE) 文件
-
-## 🤝 贡献
-
-欢迎提交 Issue 和 Pull Request！
-
-1. Fork 本仓库
-2. 创建特性分支 (`git checkout -b feature/AmazingFeature`)
-3. 提交更改 (`git commit -m 'feat: Add some AmazingFeature'`)
-4. 推送到分支 (`git push origin feature/AmazingFeature`)
-5. 创建 Pull Request
-
-## 📧 联系方式
-
-- GitHub: [@zxl212630](https://github.com/zxl212630)
-- Gitee: [@zxl212630](https://gitee.com/zxl212630)
