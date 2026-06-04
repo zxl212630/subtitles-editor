@@ -116,7 +116,7 @@ build_ffmpeg() {
         --enable-shared \
         --disable-static \
         --disable-doc \
-        --disable-programs \
+        --disable-ffplay \
         --disable-avdevice \
         --disable-libxcb \
         --disable-libxcb-shm \
