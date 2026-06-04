@@ -67,6 +67,9 @@ mkdir -p "$OUTPUT_DIR"
 DEPS_DIR="$OUTPUT_DIR/deps"
 mkdir -p "$DEPS_DIR"
 
+# Force macOS deployment target to 12.0 for all compiled dependencies
+export MACOSX_DEPLOYMENT_TARGET="12.0"
+
 echo "=== Building dependencies for macOS $ARCH ==="
 echo "Qt: $QT_VERSION | FFmpeg: $FFMPEG_VERSION | Jobs: $JOBS"
 echo "Output: $OUTPUT_DIR"
@@ -114,9 +117,11 @@ build_ffmpeg() {
         --disable-static \
         --disable-doc \
         --disable-programs \
+        --enable-audiotoolbox \
         --enable-videotoolbox \
         --arch="$host_arch" \
         --extra-cflags="-mmacosx-version-min=12.0" \
+        --extra-cxxflags="-mmacosx-version-min=12.0" \
         --extra-ldflags="-mmacosx-version-min=12.0"
 
     echo "Building FFmpeg with $JOBS jobs..."

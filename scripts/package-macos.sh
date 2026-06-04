@@ -134,19 +134,26 @@ copy_to_frameworks() {
 # Resolve @rpath reference to actual file
 resolve_rpath() {
     local name="${1#@rpath/}"
-    local dirs=(
-        "$QT_ROOT/lib"
-        "$QWINDOWKIT_ROOT/lib"
+    local dirs=()
+
+    # 优先搜索指定的自定义依赖目录
+    if [[ -n "$QT_ROOT" ]]; then
+        dirs+=("$QT_ROOT/lib")
+    fi
+    if [[ -n "$QWINDOWKIT_ROOT" ]]; then
+        dirs+=("$QWINDOWKIT_ROOT/lib")
+    fi
+    if [[ -n "$FFMPEG_ROOT" ]]; then
+        dirs+=("$FFMPEG_ROOT/lib")
+    fi
+
+    # 最后才是系统级路径作为后备
+    dirs+=(
         /opt/homebrew/lib
         /opt/homebrew/opt/ffmpeg/lib
         /opt/homebrew/opt/*/lib
         /usr/local/lib
     )
-
-    # 如果有手动 FFmpeg，加入搜索路径
-    if [[ -n "$FFMPEG_ROOT" ]]; then
-        dirs+=("$FFMPEG_ROOT/lib")
-    fi
 
     for dir in "${dirs[@]}"; do
         [[ -f "$dir/$name" ]] && echo "$dir/$name" && return 0
