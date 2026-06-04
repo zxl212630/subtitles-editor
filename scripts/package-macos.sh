@@ -235,6 +235,12 @@ done
 
 echo "=== Discovering and bundling dependencies ==="
 bundle_deps "$APP_BIN"
+for exe in ffmpeg ffprobe; do
+    local_exe="$APP_BUNDLE/Contents/MacOS/$exe"
+    if [[ -f "$local_exe" ]]; then
+        bundle_deps "$local_exe"
+    fi
+done
 for dylib in "$FW_DIR"/*.dylib; do
     [[ -L "$dylib" ]] && continue
     bundle_deps "$dylib"
@@ -259,26 +265,31 @@ for f in *.dylib; do
 done
 cd "$PROJECT_DIR"
 
-echo "=== Fixing rpaths ==="
-# Remove absolute rpaths that point to build machine
-for rpath in $(otool -l "$APP_BIN" 2>/dev/null | grep -A2 LC_RPATH | grep path | awk '{print $2}'); do
-    if [[ "$rpath" == /Users/* ]] || [[ "$rpath" == /opt/homebrew/* ]] || [[ "$rpath" == /usr/local/* ]]; then
-        echo "  Removing absolute rpath: $rpath"
-        install_name_tool -delete_rpath "$rpath" "$APP_BIN" 2>/dev/null || true
-    fi
-done
-
-# Ensure @executable_path/../Frameworks is in rpath
-install_name_tool -add_rpath "@executable_path/../Frameworks" "$APP_BIN" 2>/dev/null || true
-
-echo "=== Fixing references in main binary ==="
-# Rewrite all absolute references in main binary to @rpath
-for old_ref in $(otool -L "$APP_BIN" 2>/dev/null | tail -n +2 | awk '{print $1}'); do
-    if [[ "$old_ref" == /Users/* ]] || [[ "$old_ref" == /opt/* ]]; then
-        bname=$(basename "$old_ref")
-        echo "  Rewriting main binary reference: $old_ref -> @rpath/$bname"
-        install_name_tool -change "$old_ref" "@rpath/$bname" "$APP_BIN" 2>/dev/null || true
-    fi
+echo "=== Fixing rpaths & references in executables ==="
+# Remove absolute rpaths that point to build machine, add Frameworks rpath, rewrite references to @rpath
+for bin in "$APP_BIN" "$APP_BUNDLE/Contents/MacOS/ffmpeg" "$APP_BUNDLE/Contents/MacOS/ffprobe"; do
+    [[ ! -f "$bin" ]] && continue
+    echo "  Processing executable: $(basename "$bin")"
+    
+    # 1. Remove absolute rpaths
+    for rpath in $(otool -l "$bin" 2>/dev/null | grep -A2 LC_RPATH | grep path | awk '{print $2}'); do
+        if [[ "$rpath" == /Users/* ]] || [[ "$rpath" == /opt/homebrew/* ]] || [[ "$rpath" == /usr/local/* ]]; then
+            echo "    Removing absolute rpath: $rpath"
+            install_name_tool -delete_rpath "$rpath" "$bin" 2>/dev/null || true
+        fi
+    done
+    
+    # 2. Ensure @executable_path/../Frameworks is in rpath
+    install_name_tool -add_rpath "@executable_path/../Frameworks" "$bin" 2>/dev/null || true
+    
+    # 3. Rewrite all absolute references to @rpath
+    for old_ref in $(otool -L "$bin" 2>/dev/null | tail -n +2 | awk '{print $1}'); do
+        if [[ "$old_ref" == /Users/* ]] || [[ "$old_ref" == /opt/* ]]; then
+            bname=$(basename "$old_ref")
+            echo "    Rewriting reference: $old_ref -> @rpath/$bname"
+            install_name_tool -change "$old_ref" "@rpath/$bname" "$bin" 2>/dev/null || true
+        fi
+    done
 done
 
 echo "=== Fixing references in bundled dylibs ==="
@@ -300,7 +311,8 @@ done
 
 echo "=== Verifying bundle ==="
 has_error=0
-for dylib in "$APP_BIN" "$FW_DIR"/*.dylib; do
+for dylib in "$APP_BIN" "$APP_BUNDLE/Contents/MacOS/ffmpeg" "$APP_BUNDLE/Contents/MacOS/ffprobe" "$FW_DIR"/*.dylib; do
+    [[ ! -f "$dylib" ]] && continue
     [[ -L "$dylib" ]] && continue
     bad=$(otool -L "$dylib" 2>/dev/null | tail -n +2 | awk '{print $1}' | grep -E "^/(Users|opt|usr/local)" || true)
     if [[ -n "$bad" ]]; then
