@@ -216,6 +216,8 @@ FFMPEG_BIN_DIR="$FFMPEG_ROOT/bin"
 # 复制所有 FFmpeg dylib（libav*, libsw*, libpostproc*）
 for src in "$FFMPEG_LIB_DIR"/lib*.dylib; do
     [[ -L "$src" ]] && continue  # 跳过符号链接
+    # 跳过 libavdevice，因为项目不需要它且它可能链接系统的 X11/XCB 库
+    [[ "$(basename "$src")" == libavdevice* ]] && continue
     copy_to_frameworks "$src"
 done
 
