@@ -118,10 +118,10 @@ build_ffmpeg() {
         --disable-doc \
         --disable-programs \
         --disable-avdevice \
-        --disable-xcb \
-        --disable-xcb-shm \
-        --disable-xcb-xfixes \
-        --disable-xcb-shape \
+        --disable-libxcb \
+        --disable-libxcb-shm \
+        --disable-libxcb-xfixes \
+        --disable-libxcb-shape \
         --disable-xlib \
         --disable-sdl2 \
         --enable-audiotoolbox \
