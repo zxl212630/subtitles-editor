@@ -260,41 +260,62 @@ build_qwindowkit() {
 cd "$OUTPUT_DIR"
 
 if [[ "$TARGET" == "all" || "$TARGET" == "ffmpeg" ]]; then
-    build_ffmpeg
-    echo ""
-    echo "=== Packaging FFmpeg ==="
-    cd "$OUTPUT_DIR"
-    tar -cf - deps/ffmpeg | zstd -T0 -o "$OUTPUT_DIR/ffmpeg-macos-${ARCH}.tar.zst"
-    if [[ "$TARGET" == "ffmpeg" ]]; then
-        rm -rf deps
+    if [[ -f "$OUTPUT_DIR/ffmpeg-macos-${ARCH}.tar.zst" ]]; then
+        echo "FFmpeg package already exists, skipping build."
+    else
+        build_ffmpeg
+        echo ""
+        echo "=== Packaging FFmpeg ==="
+        cd "$OUTPUT_DIR"
+        tar -cf - deps/ffmpeg | zstd -T0 -o "$OUTPUT_DIR/ffmpeg-macos-${ARCH}.tar.zst"
+        if [[ "$TARGET" == "ffmpeg" ]]; then
+            rm -rf deps
+        fi
     fi
 fi
 
 if [[ "$TARGET" == "all" || "$TARGET" == "qt6" ]]; then
-    build_qt6
-    echo ""
-    echo "=== Packaging Qt6 ==="
-    cd "$OUTPUT_DIR"
-    tar -cf - deps/qt6 | zstd -T0 -o "$OUTPUT_DIR/qt6-macos-${ARCH}.tar.zst"
-    if [[ "$TARGET" == "qt6" ]]; then
-        rm -rf deps
+    if [[ -f "$OUTPUT_DIR/qt6-macos-${ARCH}.tar.zst" ]]; then
+        echo "Qt6 package already exists, skipping build."
+        if [[ "$TARGET" == "all" && ! -d "$DEPS_DIR/qt6" && ! -f "$OUTPUT_DIR/qwindowkit-macos-${ARCH}.tar.zst" ]]; then
+            echo "Extracting Qt6 package for QWindowKit build..."
+            cd "$OUTPUT_DIR"
+            zstd -d -c "$OUTPUT_DIR/qt6-macos-${ARCH}.tar.zst" | tar -xf -
+        fi
+    else
+        build_qt6
+        echo ""
+        echo "=== Packaging Qt6 ==="
+        cd "$OUTPUT_DIR"
+        tar -cf - deps/qt6 | zstd -T0 -o "$OUTPUT_DIR/qt6-macos-${ARCH}.tar.zst"
+        if [[ "$TARGET" == "qt6" ]]; then
+            rm -rf deps
+        fi
     fi
 fi
 
 if [[ "$TARGET" == "all" || "$TARGET" == "qwindowkit" ]]; then
-    if [[ "$TARGET" == "qwindowkit" ]]; then
+    if [[ -f "$OUTPUT_DIR/qwindowkit-macos-${ARCH}.tar.zst" ]]; then
+        echo "QWindowKit package already exists, skipping build."
+    else
         if [[ ! -d "$DEPS_DIR/qt6" ]]; then
-            echo "Error: Qt6 directory not found at $DEPS_DIR/qt6." >&2
-            echo "Please download and extract qt6-macos-${ARCH}.tar.zst first." >&2
-            exit 1
+            if [[ -f "$OUTPUT_DIR/qt6-macos-${ARCH}.tar.zst" ]]; then
+                echo "Extracting existing Qt6 package for QWindowKit build..."
+                cd "$OUTPUT_DIR"
+                zstd -d -c "$OUTPUT_DIR/qt6-macos-${ARCH}.tar.zst" | tar -xf -
+            else
+                echo "Error: Qt6 directory not found at $DEPS_DIR/qt6." >&2
+                echo "Please download and extract qt6-macos-${ARCH}.tar.zst first." >&2
+                exit 1
+            fi
         fi
+        build_qwindowkit
+        echo ""
+        echo "=== Packaging QWindowKit ==="
+        cd "$OUTPUT_DIR"
+        tar -cf - deps/qwindowkit | zstd -T0 -o "$OUTPUT_DIR/qwindowkit-macos-${ARCH}.tar.zst"
+        rm -rf deps
     fi
-    build_qwindowkit
-    echo ""
-    echo "=== Packaging QWindowKit ==="
-    cd "$OUTPUT_DIR"
-    tar -cf - deps/qwindowkit | zstd -T0 -o "$OUTPUT_DIR/qwindowkit-macos-${ARCH}.tar.zst"
-    rm -rf deps
 fi
 
 echo ""

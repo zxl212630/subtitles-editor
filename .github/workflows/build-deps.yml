@@ -37,7 +37,15 @@ on:
       deps_tag:
         description: 'Tag for the dependency release (e.g. deps-v1)'
         required: true
-        default: 'deps-v1'
+        default: 'deps-v1.2'
+      force_rebuild:
+        description: 'Force rebuild all dependencies (do not copy/download existing ones)'
+        required: false
+        default: false
+        type: boolean
+  push:
+    tags:
+      - 'trigger-deps-*'
 
 permissions:
   contents: write
@@ -57,6 +65,34 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Setup environment variables
+        run: |
+          # 1. Determine the source of trigger
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            echo "TARGET=${{ inputs.target }}" >> "$GITHUB_ENV"
+            echo "ARCH=${{ inputs.arch }}" >> "$GITHUB_ENV"
+            echo "QT_VERSION=${{ inputs.qt_version }}" >> "$GITHUB_ENV"
+            echo "FFMPEG_VERSION=${{ inputs.ffmpeg_version }}" >> "$GITHUB_ENV"
+            echo "COPY_FROM_TAG=${{ inputs.copy_from_tag }}" >> "$GITHUB_ENV"
+            echo "DEPS_TAG=${{ inputs.deps_tag }}" >> "$GITHUB_ENV"
+            echo "FORCE_REBUILD=${{ inputs.force_rebuild }}" >> "$GITHUB_ENV"
+          else
+            # Triggered by push of tag, e.g., refs/tags/trigger-deps-v1.2
+            REF_NAME="${{ github.ref_name }}"
+            if [[ "$REF_NAME" =~ ^trigger-deps-(.+)$ ]]; then
+              TAG_SUFFIX="${BASH_REMATCH[1]}"
+              echo "DEPS_TAG=deps-$TAG_SUFFIX" >> "$GITHUB_ENV"
+            else
+              echo "DEPS_TAG=deps-v1.2" >> "$GITHUB_ENV"
+            fi
+            echo "TARGET=all" >> "$GITHUB_ENV"
+            echo "ARCH=all" >> "$GITHUB_ENV"
+            echo "QT_VERSION=6.5.9" >> "$GITHUB_ENV"
+            echo "FFMPEG_VERSION=8.1.1" >> "$GITHUB_ENV"
+            echo "COPY_FROM_TAG=" >> "$GITHUB_ENV"
+            echo "FORCE_REBUILD=false" >> "$GITHUB_ENV"
+          fi
+
       - name: Free up disk space
         run: |
           echo "Before cleanup:"
@@ -73,20 +109,21 @@ jobs:
           df -h /
 
       - name: Install build tools
-        if: ${{ inputs.arch == 'all' || inputs.arch == matrix.arch }}
+        if: ${{ env.ARCH == 'all' || env.ARCH == matrix.arch }}
         run: |
           brew install autoconf automake libtool nasm yasm pkg-config cmake zstd
 
       - name: Find base deps tag
+        if: ${{ env.ARCH == 'all' || env.ARCH == matrix.arch }}
         id: find-base-deps
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          if [[ -n "${{ inputs.copy_from_tag }}" ]]; then
-            echo "tag=${{ inputs.copy_from_tag }}" >> "$GITHUB_OUTPUT"
-            echo "Using manually specified base tag: ${{ inputs.copy_from_tag }}"
+          if [[ -n "$COPY_FROM_TAG" ]]; then
+            echo "tag=$COPY_FROM_TAG" >> "$GITHUB_OUTPUT"
+            echo "Using manually specified base tag: $COPY_FROM_TAG"
           else
-            TARGET_TAG="${{ inputs.deps_tag }}"
+            TARGET_TAG="$DEPS_TAG"
             BASE_TAG=$(gh release list --limit 100 | cut -f1 | \
               grep -E "^deps-v" | grep -v -x "$TARGET_TAG" | head -n 1 || true)
             
@@ -99,93 +136,52 @@ jobs:
             fi
           fi
 
-      - name: Pre-download Qt6 for QWindowKit
-        if: ${{ inputs.target == 'qwindowkit' && (inputs.arch == 'all' || inputs.arch == matrix.arch) }}
+      - name: Pre-download existing dependencies from base release
+        if: ${{ env.FORCE_REBUILD != 'true' && steps.find-base-deps.outputs.tag != '' && (env.ARCH == 'all' || env.ARCH == matrix.arch) }}
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           mkdir -p "${{ runner.temp }}/deps-output"
-          
-          # Determine download source
-          DOWNLOAD_TAG="${{ steps.find-base-deps.outputs.tag }}"
-          if [[ -z "$DOWNLOAD_TAG" ]]; then
-            DOWNLOAD_TAG="${{ inputs.deps_tag }}"
-          fi
-          
-          echo "Downloading Qt6 dependency from release $DOWNLOAD_TAG..."
-          # Use || true to avoid crash if release or asset does not exist yet (though it should)
-          gh release download "$DOWNLOAD_TAG" \
-            -p "qt6-macos-${{ matrix.arch }}.tar.zst" \
-            --dir "${{ runner.temp }}/deps-output" \
-            --repo "${{ github.repository }}" || { echo "Error: Could not download Qt6 dependency from tag $DOWNLOAD_TAG." >&2; exit 1; }
-          
-          # Extract it so the script finds it in deps/qt6
           cd "${{ runner.temp }}/deps-output"
-          zstd -d "qt6-macos-${{ matrix.arch }}.tar.zst"
-          tar -xf "qt6-macos-${{ matrix.arch }}.tar"
-          rm -f "qt6-macos-${{ matrix.arch }}.tar" "qt6-macos-${{ matrix.arch }}.tar.zst"
+          
+          echo "Attempting to pre-download existing compiled dependencies from tag ${{ steps.find-base-deps.outputs.tag }}..."
+          for comp in ffmpeg qt6 qwindowkit; do
+            # If the user explicitly requested to build a single component, do NOT download it so it gets compiled
+            if [[ "$TARGET" == "all" || "$TARGET" != "$comp" ]]; then
+              file_name="${comp}-macos-${{ matrix.arch }}.tar.zst"
+              echo "Downloading $file_name from ${{ steps.find-base-deps.outputs.tag }}..."
+              if gh release download "${{ steps.find-base-deps.outputs.tag }}" -p "$file_name" --repo "${{ github.repository }}" 2>/dev/null; then
+                echo "Successfully downloaded $file_name"
+              else
+                echo "Could not download $file_name (will be compiled if needed)"
+              fi
+            else
+              echo "Skipping download of $comp because it is the build target"
+            fi
+          done
 
       - name: Build dependencies
-        if: ${{ inputs.arch == 'all' || inputs.arch == matrix.arch }}
+        if: ${{ env.ARCH == 'all' || env.ARCH == matrix.arch }}
         run: |
           ./scripts/build-deps-macos.sh \
             --arch ${{ matrix.arch }} \
             --output ${{ runner.temp }}/deps-output \
-            --qt-version ${{ inputs.qt_version }} \
-            --target ${{ inputs.target }} \
+            --qt-version $QT_VERSION \
+            --ffmpeg-version $FFMPEG_VERSION \
+            --target $TARGET \
             --jobs $(sysctl -n hw.ncpu)
 
-      - name: Copy unchanged dependencies from base release
-        if: ${{ steps.find-base-deps.outputs.tag != '' && steps.find-base-deps.outputs.tag != inputs.deps_tag && inputs.target != 'all' && (inputs.arch == 'all' || inputs.arch == matrix.arch) }}
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          mkdir -p "${{ runner.temp }}/deps-output"
-          cd "${{ runner.temp }}/deps-output"
-          
-          # Ensure the release exists first
-          gh release view "${{ inputs.deps_tag }}" --repo "${{ github.repository }}" >/dev/null 2>&1 || {
-            echo "Release ${{ inputs.deps_tag }} not found. Creating it..."
-            gh release create "${{ inputs.deps_tag }}" \
-              --prerelease \
-              --title "${{ inputs.deps_tag }}" \
-              --notes "Pre-compiled dependencies for macOS" \
-              --repo "${{ github.repository }}"
-          }
-
-          components=()
-          if [[ "${{ inputs.target }}" != "qt6" ]]; then
-            components+=("qt6")
-          fi
-          if [[ "${{ inputs.target }}" != "qwindowkit" ]]; then
-            components+=("qwindowkit")
-          fi
-          if [[ "${{ inputs.target }}" != "ffmpeg" ]]; then
-            components+=("ffmpeg")
-          fi
-
-          for comp in "${components[@]}"; do
-            file_name="${comp}-macos-${{ matrix.arch }}.tar.zst"
-            echo "Copying $file_name from ${{ steps.find-base-deps.outputs.tag }} to ${{ inputs.deps_tag }}..."
-            if gh release download "${{ steps.find-base-deps.outputs.tag }}" -p "$file_name" --repo "${{ github.repository }}" 2>/dev/null; then
-              gh release upload "${{ inputs.deps_tag }}" "$file_name" --clobber --repo "${{ github.repository }}"
-              rm -f "$file_name"
-            else
-              echo "Warning: Could not download $file_name from ${{ steps.find-base-deps.outputs.tag }}. Skipping."
-            fi
-          done
-
       - name: Upload dependency package
-        if: ${{ inputs.arch == 'all' || inputs.arch == matrix.arch }}
+        if: ${{ env.ARCH == 'all' || env.ARCH == matrix.arch }}
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           # Ensure the release exists first
-          gh release view "${{ inputs.deps_tag }}" --repo "${{ github.repository }}" >/dev/null 2>&1 || {
-            echo "Release ${{ inputs.deps_tag }} not found. Creating it..."
-            gh release create "${{ inputs.deps_tag }}" \
+          gh release view "$DEPS_TAG" --repo "${{ github.repository }}" >/dev/null 2>&1 || {
+            echo "Release $DEPS_TAG not found. Creating it..."
+            gh release create "$DEPS_TAG" \
               --prerelease \
-              --title "${{ inputs.deps_tag }}" \
+              --title "$DEPS_TAG" \
               --notes "Pre-compiled dependencies for macOS" \
               --repo "${{ github.repository }}"
           }
@@ -195,12 +191,12 @@ jobs:
           shopt -s nullglob
           files=( *.tar.zst )
           if [[ ${#files[@]} -eq 0 ]]; then
-            echo "Error: No packages compiled!" >&2
+            echo "Error: No packages compiled or copied!" >&2
             exit 1
           fi
           for file in "${files[@]}"; do
             echo "Uploading $(du -h "$file" | cut -f1) package: $file..."
-            gh release upload "${{ inputs.deps_tag }}" "$file" \
+            gh release upload "$DEPS_TAG" "$file" \
               --clobber \
               --repo "${{ github.repository }}"
           done
