@@ -165,6 +165,12 @@ set(RESOURCES
 # ============================================================
 add_executable(${PROJECT_NAME} ${SOURCES} ${HEADERS} ${RESOURCES})
 
+if(WIN32)
+    set_target_properties(${PROJECT_NAME} PROPERTIES
+        WIN32_EXECUTABLE YES
+    )
+endif()
+
 target_include_directories(${PROJECT_NAME} PRIVATE
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src>
@@ -203,12 +209,17 @@ if(AVCODEC_INCLUDE_DIR AND AVFORMAT_INCLUDE_DIR AND AVUTIL_INCLUDE_DIR AND SWRES
       )
     else()
       # 手动指定的 FFmpeg
+      find_library(AVCODEC_LIB NAMES avcodec libavcodec PATHS "${FFMPEG_LIBRARY_DIR}" NO_DEFAULT_PATH)
+      find_library(AVFORMAT_LIB NAMES avformat libavformat PATHS "${FFMPEG_LIBRARY_DIR}" NO_DEFAULT_PATH)
+      find_library(AVUTIL_LIB NAMES avutil libavutil PATHS "${FFMPEG_LIBRARY_DIR}" NO_DEFAULT_PATH)
+      find_library(SWSCALE_LIB NAMES swscale libswscale PATHS "${FFMPEG_LIBRARY_DIR}" NO_DEFAULT_PATH)
+      find_library(SWRESAMPLE_LIB NAMES swresample libswresample PATHS "${FFMPEG_LIBRARY_DIR}" NO_DEFAULT_PATH)
       target_link_libraries(${PROJECT_NAME} PRIVATE
-          avcodec
-          avformat
-          avutil
-          swscale
-          swresample
+          ${AVCODEC_LIB}
+          ${AVFORMAT_LIB}
+          ${AVUTIL_LIB}
+          ${SWSCALE_LIB}
+          ${SWRESAMPLE_LIB}
       )
     endif()
 endif()

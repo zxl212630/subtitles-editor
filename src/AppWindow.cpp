@@ -712,6 +712,9 @@ void AppWindow::onOpenFileLocationRequested() {
 #ifdef Q_OS_MAC
   // Use 'open -R' to reveal and select the file in Finder
   QProcess::startDetached("open", QStringList() << "-R" << path);
+#elif defined(Q_OS_WIN)
+  // Use explorer.exe /select to reveal and select the file in Explorer
+  QProcess::startDetached("explorer.exe", QStringList() << "/select," + QDir::toNativeSeparators(path));
 #else
   QDesktopServices::openUrl(QUrl::fromLocalFile(QFileInfo(path).path()));
 #endif
