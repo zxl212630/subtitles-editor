@@ -113,6 +113,7 @@ jobs:
         with:
           version: '6.7.2'
           arch: 'win64_msvc2019_64'
+          modules: 'qtmultimedia qtsvg'
           cache: true
 
       - name: Install FFmpeg
