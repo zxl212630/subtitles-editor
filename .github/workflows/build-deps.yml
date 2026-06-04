@@ -87,8 +87,7 @@ jobs:
             echo "Using manually specified base tag: ${{ inputs.copy_from_tag }}"
           else
             TARGET_TAG="${{ inputs.deps_tag }}"
-            BASE_TAG=$(gh release list --limit 100 --json tagName -q \
-              --repo "${{ github.repository }}" | \
+            BASE_TAG=$(gh release list --limit 100 | cut -f1 | \
               grep -E "^deps-v" | grep -v -x "$TARGET_TAG" | head -n 1 || true)
             
             if [[ -z "$BASE_TAG" ]]; then
