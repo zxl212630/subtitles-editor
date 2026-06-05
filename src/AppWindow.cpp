@@ -51,6 +51,11 @@ struct AppWindow::Private {
   QLabel *titleLabel = nullptr;
   QPushButton *exportBtn = nullptr;
   QPushButton *settingsBtn = nullptr;
+#ifdef Q_OS_WIN
+  QPushButton *minBtn = nullptr;
+  QPushButton *maxBtn = nullptr;
+  QPushButton *closeBtn = nullptr;
+#endif
 
   QSplitter *verticalSplitter = nullptr;
   QSplitter *topSplitter = nullptr;
@@ -150,6 +155,7 @@ void AppWindow::setupUi() {
   d->windowAgent = new QWK::WidgetWindowAgent(this);
   d->windowAgent->setup(this);
 
+  setupMenuBar(); // Call this first so menuBar exists when setupTitleBar runs
   setupTitleBar();
   setupSplitterLayout();
 
@@ -159,7 +165,9 @@ void AppWindow::setupUi() {
   menuContainerLayout->setContentsMargins(0, 0, 0, 0);
   menuContainerLayout->setSpacing(0);
   menuContainerLayout->addWidget(d->titleBar);
+#ifndef Q_OS_WIN
   menuContainerLayout->addWidget(d->menuBar);
+#endif
 
   setMenuWidget(menuContainer);
   d->windowAgent->setTitleBar(d->titleBar);
@@ -183,6 +191,19 @@ void AppWindow::changeEvent(QEvent *event) {
   if (event->type() == QEvent::LanguageChange) {
     retranslateUi();
   }
+#ifdef Q_OS_WIN
+  if (event->type() == QEvent::WindowStateChange) {
+    if (d->maxBtn) {
+      if (isMaximized()) {
+        d->maxBtn->setText(QString::fromUtf8("\uE923")); // Restore icon
+        d->maxBtn->setToolTip(tr("向下还原"));
+      } else {
+        d->maxBtn->setText(QString::fromUtf8("\uE922")); // Maximize icon
+        d->maxBtn->setToolTip(tr("最大化"));
+      }
+    }
+  }
+#endif
   QMainWindow::changeEvent(event);
 }
 
@@ -192,9 +213,20 @@ void AppWindow::setupTitleBar() {
   d->titleBar->setObjectName("TitleBar");
 
   auto *layout = new QHBoxLayout(d->titleBar);
+#ifdef Q_OS_WIN
+  layout->setContentsMargins(12, 0, 0, 0); // Remove right margin for close button to stick to edge
+#else
   layout->setContentsMargins(12, 0, 12, 0);
+#endif
   layout->setSpacing(8);
   layout->setAlignment(Qt::AlignVCenter);
+
+#ifdef Q_OS_WIN
+  if (d->menuBar) {
+    layout->addWidget(d->menuBar);
+    d->windowAgent->setHitTestVisible(d->menuBar, true);
+  }
+#endif
 
   auto *leftSpacer = new QWidget(d->titleBar);
   leftSpacer->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Preferred);
@@ -233,6 +265,53 @@ void AppWindow::setupTitleBar() {
 
   d->windowAgent->setHitTestVisible(d->exportBtn, true);
   d->windowAgent->setHitTestVisible(d->settingsBtn, true);
+
+#ifdef Q_OS_WIN
+  // Separator
+  auto *line = new QFrame(d->titleBar);
+  line->setFrameShape(QFrame::VLine);
+  line->setFrameShadow(QFrame::Plain);
+  line->setObjectName("TitleBarSeparator");
+  line->setFixedWidth(1);
+  line->setFixedHeight(16);
+  layout->addWidget(line);
+
+  // System Control Buttons (Min, Max, Close)
+  d->minBtn = new QPushButton(d->titleBar);
+  d->maxBtn = new QPushButton(d->titleBar);
+  d->closeBtn = new QPushButton(d->titleBar);
+
+  d->minBtn->setObjectName("TitleBarMinBtn");
+  d->maxBtn->setObjectName("TitleBarMaxBtn");
+  d->closeBtn->setObjectName("TitleBarCloseBtn");
+
+  d->minBtn->setFixedSize(46, 36);
+  d->maxBtn->setFixedSize(46, 36);
+  d->closeBtn->setFixedSize(46, 36);
+
+  QFont iconFont("Segoe MDL2 Assets");
+  iconFont.setPixelSize(10);
+  d->minBtn->setFont(iconFont);
+  d->maxBtn->setFont(iconFont);
+  d->closeBtn->setFont(iconFont);
+
+  d->minBtn->setText(QString::fromUtf8("\uE921"));
+  d->maxBtn->setText(QString::fromUtf8("\uE922"));
+  d->closeBtn->setText(QString::fromUtf8("\uE8BB"));
+
+  d->minBtn->setToolTip(tr("最小化"));
+  d->maxBtn->setToolTip(tr("最大化"));
+  d->closeBtn->setToolTip(tr("关闭"));
+
+  layout->addWidget(d->minBtn);
+  layout->addWidget(d->maxBtn);
+  layout->addWidget(d->closeBtn);
+
+  // Register system buttons with QWindowKit
+  d->windowAgent->setSystemButton(QWK::WindowAgentBase::Minimize, d->minBtn);
+  d->windowAgent->setSystemButton(QWK::WindowAgentBase::Maximize, d->maxBtn);
+  d->windowAgent->setSystemButton(QWK::WindowAgentBase::Close, d->closeBtn);
+#endif
 }
 
 void AppWindow::setupSplitterLayout() {
@@ -426,9 +505,6 @@ void AppWindow::setupSplitterLayout() {
   centralLayout->setSpacing(0);
   centralLayout->addWidget(d->verticalSplitter);
   setCentralWidget(central);
-
-  // 创建菜单栏
-  setupMenuBar();
 
   // 创建 ProjectManager
   d->projectManager = new ProjectManager(d->subtitleTrack, this);

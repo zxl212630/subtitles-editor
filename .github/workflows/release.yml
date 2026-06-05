@@ -108,33 +108,40 @@ jobs:
             echo "version=dev" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Install Qt
-        uses: jurplel/install-qt-action@v4
-        with:
-          version: '6.7.2'
-          arch: 'win64_msvc2019_64'
-          modules: 'qtmultimedia'
-          cache: true
-
-      - name: Install FFmpeg
+      - name: Find deps tag
+        id: find-deps
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         shell: bash
         run: |
-          curl -L -o ffmpeg.zip "https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/ffmpeg-master-latest-win64-gpl-shared.zip"
-          unzip -q ffmpeg.zip
-          mv ffmpeg-master-latest-win64-gpl-shared deps_ffmpeg
+          if [[ -n "${{ inputs.deps_tag }}" ]]; then
+            echo "tag=${{ inputs.deps_tag }}" >> "$GITHUB_OUTPUT"
+          else
+            DEPS_TAG=$(gh release list --limit 100 --json tagName -q \
+              '[.[] | select(.tagName | startswith("deps-v"))] | sort_by(.tagName) | last | .tagName')
+            if [[ -z "$DEPS_TAG" ]]; then
+              echo "Error: No deps release found. Run build-deps workflow first." >&2
+              exit 1
+            fi
+            echo "tag=$DEPS_TAG" >> "$GITHUB_OUTPUT"
+          fi
+          echo "Using dependencies from: ${{ steps.find-deps.outputs.tag }}"
+
+      - name: Download dependencies
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
+        run: |
+          gh release download "${{ steps.find-deps.outputs.tag }}" \
+            -p "ffmpeg-windows-x64.zip" \
+            -p "qt6-windows-x64.zip" \
+            -p "qwindowkit-windows-x64.zip" \
+            --repo "${{ github.repository }}"
+          unzip -q ffmpeg-windows-x64.zip -d deps_ffmpeg
+          unzip -q qt6-windows-x64.zip -d deps_qt6
+          unzip -q qwindowkit-windows-x64.zip -d deps_qwindowkit
           echo "FFMPEG_ROOT=$PWD/deps_ffmpeg" >> $GITHUB_ENV
-
-      - name: Build QWindowKit
-        shell: bash
-        run: |
-          git clone --recursive https://github.com/stdware/qwindowkit.git
-          cd qwindowkit
-          git checkout 1.5.0
-          git submodule update --init --recursive
-          cmake -B build -DCMAKE_INSTALL_PREFIX="../deps_qwindowkit" -DCMAKE_PREFIX_PATH="$QT_DIR" -DBUILD_SHARED_LIBS=ON
-          cmake --build build --config Release
-          cmake --install build --config Release
-          cd ..
+          echo "QT_DIR=$PWD/deps_qt6" >> $GITHUB_ENV
           echo "QWindowKit_ROOT=$PWD/deps_qwindowkit" >> $GITHUB_ENV
 
       - name: Build
@@ -150,7 +157,7 @@ jobs:
           cp cmake-build-release/Release/subtitles-editor.exe dist/windows/SubtitlesEditor-${{ steps.version.outputs.version }}-Windows-x64/
           
           # Deploy Qt
-          windeployqt --release --no-compiler-runtime --no-opengl-sw --no-translations dist/windows/SubtitlesEditor-${{ steps.version.outputs.version }}-Windows-x64/subtitles-editor.exe
+          $QT_DIR/bin/windeployqt.exe --release --no-compiler-runtime --no-opengl-sw --no-translations dist/windows/SubtitlesEditor-${{ steps.version.outputs.version }}-Windows-x64/subtitles-editor.exe
           
           # Copy FFmpeg and QWindowKit DLLs
           cp $FFMPEG_ROOT/bin/*.dll dist/windows/SubtitlesEditor-${{ steps.version.outputs.version }}-Windows-x64/

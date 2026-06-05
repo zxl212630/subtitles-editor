@@ -37,7 +37,7 @@ on:
       deps_tag:
         description: 'Tag for the dependency release (e.g. deps-v1)'
         required: true
-        default: 'deps-v1.2'
+        default: 'deps-v1.3'
       force_rebuild:
         description: 'Force rebuild all dependencies (do not copy/download existing ones)'
         required: false
@@ -83,7 +83,7 @@ jobs:
               TAG_SUFFIX="${BASH_REMATCH[1]}"
               echo "DEPS_TAG=deps-$TAG_SUFFIX" >> "$GITHUB_ENV"
             else
-              echo "DEPS_TAG=deps-v1.2" >> "$GITHUB_ENV"
+              echo "DEPS_TAG=deps-v1.3" >> "$GITHUB_ENV"
             fi
             echo "TARGET=all" >> "$GITHUB_ENV"
             echo "ARCH=all" >> "$GITHUB_ENV"
@@ -200,3 +200,62 @@ jobs:
               --clobber \
               --repo "${{ github.repository }}"
           done
+
+  build-deps-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup environment variables
+        shell: bash
+        run: |
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            echo "DEPS_TAG=${{ inputs.deps_tag }}" >> "$GITHUB_ENV"
+            echo "QT_VERSION=${{ inputs.qt_version }}" >> "$GITHUB_ENV"
+            echo "FFMPEG_VERSION=${{ inputs.ffmpeg_version }}" >> "$GITHUB_ENV"
+          else
+            REF_NAME="${{ github.ref_name }}"
+            if [[ "$REF_NAME" =~ ^trigger-deps-(.+)$ ]]; then
+              TAG_SUFFIX="${BASH_REMATCH[1]}"
+              echo "DEPS_TAG=deps-$TAG_SUFFIX" >> "$GITHUB_ENV"
+            else
+              echo "DEPS_TAG=deps-v1.3" >> "$GITHUB_ENV"
+            fi
+            echo "QT_VERSION=6.5.9" >> "$GITHUB_ENV"
+            echo "FFMPEG_VERSION=8.1.1" >> "$GITHUB_ENV"
+          fi
+
+      - name: Setup MSVC
+        uses: ilammy/msvc-dev-cmd@v1
+
+      - name: Setup MSYS2
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: MSYS
+          install: make diffutils pkgconf yasm git
+
+      - name: Build dependencies
+        shell: pwsh
+        run: |
+          ./scripts/build-deps-windows.ps1 -TargetDir "D:\deps-build" -OutputDir "D:\deps-output" -QtVersion "$env:QT_VERSION" -FFmpegVersion "$env:FFMPEG_VERSION"
+
+      - name: Upload dependency package
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
+        run: |
+          gh release view "$DEPS_TAG" --repo "${{ github.repository }}" >/dev/null 2>&1 || {
+            echo "Release $DEPS_TAG not found. Creating it..."
+            gh release create "$DEPS_TAG" \
+              --prerelease \
+              --title "$DEPS_TAG" \
+              --notes "Pre-compiled dependencies for Windows" \
+              --repo "${{ github.repository }}"
+          }
+
+          cd "D:/deps-output"
+          for file in *.zip; do
+            echo "Uploading $file..."
+            gh release upload "$DEPS_TAG" "$file" --clobber --repo "${{ github.repository }}"
+          done
+

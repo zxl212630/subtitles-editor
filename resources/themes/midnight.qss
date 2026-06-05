@@ -714,3 +714,84 @@ QFrame#ExportSectionFrame {
     background-color: transparent;
 }
 
+/* QMenuBar & QMenu (Windows Titlebar integration & disable ghost fix) */
+QMenuBar {
+    background-color: transparent;
+    border: none;
+    color: @text_normal;
+}
+
+QMenuBar::item {
+    background: transparent;
+    padding: 4px 10px;
+    color: @text_normal;
+}
+
+QMenuBar::item:selected {
+    background-color: @border_dark;
+    border-radius: 4px;
+}
+
+QMenuBar::item:disabled {
+    color: @text_muted;
+    background-color: transparent;
+}
+
+QMenu {
+    background-color: @bg_lighter;
+    border: 1px solid @border_color;
+    border-radius: 6px;
+    padding: 4px 0px;
+}
+
+QMenu::item {
+    padding: 6px 24px;
+    color: @text_normal;
+}
+
+QMenu::item:selected {
+    background-color: @primary_color;
+    color: #ffffff;
+}
+
+QMenu::item:disabled {
+    color: @text_muted;
+    background-color: transparent;
+}
+
+QMenu::separator {
+    height: 1px;
+    background-color: @border_color;
+    margin: 4px 8px;
+}
+
+/* Windows System Title Bar Control Buttons */
+#TitleBarMinBtn, #TitleBarMaxBtn, #TitleBarCloseBtn {
+    background: transparent;
+    border: none;
+    color: @text_normal;
+}
+
+#TitleBarMinBtn:hover, #TitleBarMaxBtn:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+#TitleBarMinBtn:pressed, #TitleBarMaxBtn:pressed {
+    background-color: rgba(255, 255, 255, 0.05);
+}
+
+#TitleBarCloseBtn:hover {
+    background-color: #e81123;
+    color: #ffffff;
+}
+
+#TitleBarCloseBtn:pressed {
+    background-color: #f1707a;
+    color: #ffffff;
+}
+
+QFrame#TitleBarSeparator {
+    background-color: @border_color;
+    border: none;
+}
+
