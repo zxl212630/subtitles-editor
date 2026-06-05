@@ -140,9 +140,9 @@ jobs:
           unzip -q ffmpeg-windows-x64.zip -d deps_ffmpeg
           unzip -q qt6-windows-x64.zip -d deps_qt6
           unzip -q qwindowkit-windows-x64.zip -d deps_qwindowkit
-          echo "FFMPEG_ROOT=$PWD/deps_ffmpeg" >> $GITHUB_ENV
-          echo "QT_DIR=$PWD/deps_qt6" >> $GITHUB_ENV
-          echo "QWindowKit_ROOT=$PWD/deps_qwindowkit" >> $GITHUB_ENV
+          echo "FFMPEG_ROOT=$PWD/deps_ffmpeg/ffmpeg" >> $GITHUB_ENV
+          echo "QT_DIR=$PWD/deps_qt6/qt6" >> $GITHUB_ENV
+          echo "QWindowKit_ROOT=$PWD/deps_qwindowkit/qwindowkit" >> $GITHUB_ENV
 
       - name: Build
         shell: bash
