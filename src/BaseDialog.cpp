@@ -29,26 +29,6 @@ void BaseDialog::setupWindowAgent(QFrame *customTitleBar) {
   titleBar->installEventFilter(this);
 
 #ifdef Q_OS_WIN
-  // Add a small 16x16 icon to the top-left of the dialog title bar
-  if (titleBar->layout()) {
-    auto *iconLabel = new QLabel(titleBar);
-    iconLabel->setFixedSize(16, 16);
-    iconLabel->setScaledContents(true);
-    iconLabel->setPixmap(QIcon(":/icon.png").pixmap(16, 16));
-
-    QWidget *leftContainer = titleBar->findChild<QWidget *>("TitleLeftContainer");
-    if (leftContainer && leftContainer->layout()) {
-      if (auto *leftBoxLayout = qobject_cast<QHBoxLayout *>(leftContainer->layout())) {
-        leftBoxLayout->insertWidget(0, iconLabel);
-        leftBoxLayout->setSpacing(8);
-      }
-    } else {
-      if (auto *boxLayout = qobject_cast<QHBoxLayout *>(titleBar->layout())) {
-        boxLayout->insertWidget(0, iconLabel);
-      }
-    }
-  }
-
   // 创建系统按钮容器（使最小化、最大化、关闭按钮紧凑排列）
   auto *sysBtnContainer = new QWidget(titleBar);
   sysBtnContainer->setObjectName("TitleBarSystemButtonsContainer");
