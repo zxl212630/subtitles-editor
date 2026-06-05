@@ -9,17 +9,13 @@
 #include <QLabel>
 #include <QPushButton>
 #include <QSpinBox>
-#include <QWindowKit/QWKWidgets/widgetwindowagent.h>
 
-AsrConfigDialog::AsrConfigDialog(QWidget *parent) : QDialog(parent) {
+AsrConfigDialog::AsrConfigDialog(QWidget *parent) : BaseDialog(parent) {
   setWindowTitle(tr("语音识别配置"));
   setMinimumSize(460, 420);
   resize(480, 440);
 
   setObjectName("AsrConfigDialog");
-
-  windowAgent = new QWK::WidgetWindowAgent(this);
-  windowAgent->setup(this);
 
   setupTitleBar();
   setupUi();
@@ -28,7 +24,7 @@ AsrConfigDialog::AsrConfigDialog(QWidget *parent) : QDialog(parent) {
   connect(btnCancel_, &QPushButton::clicked, this, &QDialog::reject);
   connect(btnOk_, &QPushButton::clicked, this, &QDialog::accept);
 
-  windowAgent->setTitleBar(titleBar);
+  setupWindowAgent(titleBar);
 }
 
 void AsrConfigDialog::setupTitleBar() {
@@ -39,12 +35,6 @@ void AsrConfigDialog::setupTitleBar() {
   auto *layout = new QHBoxLayout(titleBar);
   layout->setContentsMargins(12, 0, 12, 0);
   layout->setSpacing(0);
-
-  layout->addStretch();
-
-  titleLabel = new QLabel(tr("语音识别配置"), titleBar);
-  titleLabel->setObjectName("ConfigTitleLeftLabel");
-  layout->addWidget(titleLabel);
 
   layout->addStretch();
 }

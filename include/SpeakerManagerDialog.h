@@ -1,7 +1,7 @@
 #pragma once
 
+#include "BaseDialog.h"
 #include "SubtitleTrack.h"
-#include <QDialog>
 #include <QMap>
 #include <QMargins>
 #include <QString>
@@ -14,12 +14,7 @@ class QComboBox;
 class QLabel;
 class QListWidgetItem;
 
-namespace QWK {
-class WidgetWindowAgent;
-}
-class QFrame;
-
-class SpeakerManagerDialog : public QDialog {
+class SpeakerManagerDialog : public BaseDialog {
   Q_OBJECT
 
 public:
@@ -57,10 +52,6 @@ private:
   QString tempBgFolder_;
   QMargins tempMargins_;
 
-  // 窗口无边框代理
-  QWK::WidgetWindowAgent *windowAgent = nullptr;
-  QFrame *titleBar = nullptr;
-  QLabel *titleLabel = nullptr;
   QLabel *folderLabel_ = nullptr;
   QLabel *marginLabel_ = nullptr;
   QLabel *marginLeftLabel_ = nullptr;

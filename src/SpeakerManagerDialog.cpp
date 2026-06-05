@@ -16,17 +16,13 @@
 #include <QSpinBox>
 #include <QStyleOptionViewItem>
 #include <QVBoxLayout>
-#include <QWindowKit/QWKWidgets/widgetwindowagent.h>
 #include <algorithm>
 
 SpeakerManagerDialog::SpeakerManagerDialog(SubtitleTrack *track,
                                            QWidget *parent)
-    : QDialog(parent), track_(track) {
+    : BaseDialog(parent), track_(track) {
   setMinimumSize(720, 520);
   setObjectName("SpeakerManagerDialog");
-
-  windowAgent = new QWK::WidgetWindowAgent(this);
-  windowAgent->setup(this);
 
   setupTitleBar();
   setupUi();
@@ -67,7 +63,7 @@ SpeakerManagerDialog::SpeakerManagerDialog(SubtitleTrack *track,
   connect(&TranslationManager::instance(), &TranslationManager::languageChanged,
           this, [this]() { retranslateUi(); });
 
-  windowAgent->setTitleBar(titleBar);
+  setupWindowAgent(titleBar);
 }
 
 SpeakerManagerDialog::~SpeakerManagerDialog() = default;
@@ -81,9 +77,6 @@ void SpeakerManagerDialog::setupTitleBar() {
   layout->setContentsMargins(80, 0, 12, 0); // 留出 macOS 三色球位置
   layout->setSpacing(0);
 
-  titleLabel = new QLabel(titleBar);
-  titleLabel->setObjectName("ConfigTitleLeftLabel");
-  layout->addWidget(titleLabel);
   layout->addStretch();
 }
 

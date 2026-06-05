@@ -1,6 +1,6 @@
 #pragma once
 
-#include <QDialog>
+#include "BaseDialog.h"
 #include <QFlags>
 #include <QString>
 
@@ -9,14 +9,10 @@ class QPushButton;
 class QFrame;
 class QVBoxLayout;
 
-namespace QWK {
-class WidgetWindowAgent;
-}
-
 // Frameless, themed replacement for QMessageBox.
 // Uses QWindowKit for native frame removal and provides
 // the same static API pattern as QMessageBox.
-class AppMessageBox : public QDialog {
+class AppMessageBox : public BaseDialog {
   Q_OBJECT
 
 public:
@@ -53,7 +49,7 @@ public:
                          const QString &text, StandardButtons buttons = Ok,
                          StandardButton defaultButton = Ok);
 
-private:
+ private:
   AppMessageBox(Icon icon, const QString &title, const QString &text,
                 StandardButtons buttons, StandardButton defaultButton,
                 QWidget *parent = nullptr);
@@ -64,10 +60,7 @@ private:
   void setupFooter();
   void onButtonClicked(StandardButton button);
 
-  QWK::WidgetWindowAgent *windowAgent_ = nullptr;
   QVBoxLayout *mainLayout_ = nullptr;
-  QFrame *titleBar_ = nullptr;
-  QLabel *titleLabel_ = nullptr;
   QLabel *iconLabel_ = nullptr;
   QLabel *textLabel_ = nullptr;
 

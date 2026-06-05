@@ -1,6 +1,6 @@
 #pragma once
 
-#include <QDialog>
+#include "BaseDialog.h"
 #include <QString>
 #include <QTimer>
 
@@ -9,11 +9,7 @@ class QLabel;
 class QPainter;
 class QFrame;
 
-namespace QWK {
-class WidgetWindowAgent;
-}
-
-class AsrProgressDialog : public QDialog {
+class AsrProgressDialog : public BaseDialog {
   Q_OBJECT
 public:
   enum class Stage { Extraction = 1, Upload = 2, Recognition = 3 };
@@ -52,11 +48,7 @@ private:
 
   QLabel *statusLabel_ = nullptr;
   QLabel *subStatusLabel_ = nullptr;
-  QLabel *titleLabel_ = nullptr;
   QPushButton *cancelButton_ = nullptr;
-
-  QWK::WidgetWindowAgent *windowAgent_ = nullptr;
-  QFrame *titleBar_ = nullptr;
 
   QTimer *animTimer_ = nullptr;
   int tickCount_ = 0;

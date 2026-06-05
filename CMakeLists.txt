@@ -87,6 +87,7 @@ find_path(SWRESAMPLE_INCLUDE_DIR libswresample/swresample.h PATHS "${FFMPEG_INCL
 # Source files
 # ============================================================
 set(SOURCES
+    src/BaseDialog.cpp
     src/SubtitleProject.cpp
     src/ProjectManager.cpp
     src/main.cpp
@@ -122,6 +123,7 @@ set(SOURCES
 )
 
 set(HEADERS
+    include/BaseDialog.h
     include/SubtitleProject.h
     include/ProjectManager.h
     include/AppWindow.h
@@ -159,6 +161,13 @@ set(HEADERS
 set(RESOURCES
     resources/resources.qrc
 )
+
+if(WIN32)
+    set(RESOURCES
+        ${RESOURCES}
+        resources/app.rc
+    )
+endif()
 
 # ============================================================
 # Executable

@@ -22,7 +22,6 @@
 #include <QStackedWidget>
 #include <QStandardPaths>
 #include <QToolButton>
-#include <QWindowKit/QWKWidgets/widgetwindowagent.h>
 
 namespace {
 QIcon createEyeIcon(bool open) {
@@ -38,15 +37,12 @@ QIcon createEyeIcon(bool open) {
 }
 } // namespace
 
-ConfigDialog::ConfigDialog(QWidget *parent) : QDialog(parent) {
+ConfigDialog::ConfigDialog(QWidget *parent) : BaseDialog(parent) {
   setWindowTitle(tr("设置"));
   setMinimumSize(800, 560);
 
   // Set object name for QSS
   setObjectName("ConfigDialog");
-
-  windowAgent = new QWK::WidgetWindowAgent(this);
-  windowAgent->setup(this);
 
   setupTitleBar();
   setupUi();
@@ -149,7 +145,10 @@ ConfigDialog::ConfigDialog(QWidget *parent) : QDialog(parent) {
   connect(speakerMarginBottomSpin_, qOverload<int>(&QSpinBox::valueChanged),
           this, &ConfigDialog::checkDirtyState);
 
-  windowAgent->setTitleBar(titleBar);
+  setupWindowAgent(titleBar);
+  if (titleLabel) {
+    titleLabel->setVisible(false); // ConfigDialog does not use standard centered titleLabel
+  }
 }
 
 void ConfigDialog::setupTitleBar() {

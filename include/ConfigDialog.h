@@ -1,5 +1,5 @@
 #pragma once
-#include <QDialog>
+#include "BaseDialog.h"
 #include <QVariantMap>
 
 class QListWidget;
@@ -17,12 +17,7 @@ class ColorSelectorWidget;
 class QAction;
 class QGroupBox;
 
-namespace QWK {
-class WidgetWindowAgent;
-}
-class QFrame;
-
-class ConfigDialog : public QDialog {
+class ConfigDialog : public BaseDialog {
   Q_OBJECT
 public:
   explicit ConfigDialog(QWidget *parent = nullptr);
@@ -49,8 +44,6 @@ private:
   void updateStorageLabels(const QString &provider);
   void onStorageProviderChanged(const QString &provider);
 
-  QWK::WidgetWindowAgent *windowAgent = nullptr;
-  QFrame *titleBar = nullptr;
   QLabel *titleLeftLabel = nullptr;
   QLabel *titleRightLabel = nullptr;
 

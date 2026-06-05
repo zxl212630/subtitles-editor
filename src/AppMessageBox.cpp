@@ -5,7 +5,6 @@
 #include <QLabel>
 #include <QPushButton>
 #include <QVBoxLayout>
-#include <QWindowKit/QWKWidgets/widgetwindowagent.h>
 
 // ── Static convenience methods ──
 
@@ -42,20 +41,13 @@ int AppMessageBox::information(QWidget *parent, const QString &title,
 AppMessageBox::AppMessageBox(Icon icon, const QString &title,
                              const QString &text, StandardButtons buttons,
                              StandardButton defaultButton, QWidget *parent)
-    : QDialog(parent), defaultButton_(defaultButton) {
+    : BaseDialog(parent), defaultButton_(defaultButton) {
   setObjectName("AppMessageBox");
   setWindowTitle(title);
   setMinimumWidth(380);
 
-  // Frameless window via QWindowKit
-  windowAgent_ = new QWK::WidgetWindowAgent(this);
-  windowAgent_->setup(this);
-
   setupTitleBar();
   setupContent();
-
-  // Set title text
-  titleLabel_->setText(title);
 
   // Set icon
   switch (icon) {
@@ -124,11 +116,10 @@ AppMessageBox::AppMessageBox(Icon icon, const QString &title,
     defaultBtn->setDefault(true);
     defaultBtn->setFocus();
   }
-
   // Setup footer after buttons are created
   setupFooter();
 
-  windowAgent_->setTitleBar(titleBar_);
+  setupWindowAgent(titleBar);
 
   // Fix size to disable maximize button on macOS
   adjustSize();
@@ -138,19 +129,13 @@ AppMessageBox::AppMessageBox(Icon icon, const QString &title,
 // ── Setup methods ──
 
 void AppMessageBox::setupTitleBar() {
-  titleBar_ = new QFrame(this);
-  titleBar_->setFixedHeight(36);
-  titleBar_->setObjectName("TitleBar");
+  titleBar = new QFrame(this);
+  titleBar->setFixedHeight(36);
+  titleBar->setObjectName("TitleBar");
 
-  auto *layout = new QHBoxLayout(titleBar_);
+  auto *layout = new QHBoxLayout(titleBar);
   layout->setContentsMargins(12, 0, 12, 0);
   layout->setSpacing(0);
-
-  layout->addStretch();
-
-  titleLabel_ = new QLabel(titleBar_);
-  titleLabel_->setObjectName("MessageBoxTitle");
-  layout->addWidget(titleLabel_);
 
   layout->addStretch();
 }
@@ -160,7 +145,7 @@ void AppMessageBox::setupContent() {
   mainLayout_->setContentsMargins(0, 0, 0, 0);
   mainLayout_->setSpacing(0);
 
-  mainLayout_->addWidget(titleBar_);
+  mainLayout_->addWidget(titleBar);
 
   auto *content = new QWidget(this);
   content->setObjectName("MessageBoxContent");

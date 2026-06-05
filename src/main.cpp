@@ -4,12 +4,14 @@
 #include "TranslationManager.h"
 #include <QApplication>
 #include <QDebug>
+#include <QIcon>
 #include <QPalette>
 #include <QStyleFactory>
 
 int main(int argc, char *argv[]) {
   QApplication app(argc, argv);
   app.setApplicationName("Subtitles Editor");
+  app.setWindowIcon(QIcon(":/icon.png"));
 
   // Use Fusion style for better dark theme support and cross-platform
   // consistency

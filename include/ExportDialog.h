@@ -1,13 +1,10 @@
 #pragma once
 
+#include "BaseDialog.h"
 #include "VideoExporter.h"
-#include <QDialog>
 #include <QSize>
 #include <QString>
 
-namespace QWK {
-class WidgetWindowAgent;
-}
 class QFrame;
 class QLabel;
 class QCheckBox;
@@ -17,7 +14,7 @@ class QPushButton;
 class QScrollArea;
 class SubtitleTrack;
 
-class ExportDialog : public QDialog {
+class ExportDialog : public BaseDialog {
   Q_OBJECT
 
 public:
@@ -125,8 +122,4 @@ private:
   QLabel *pathTitle_ = nullptr;
 
   QScrollArea *scrollArea_ = nullptr;
-
-  QWK::WidgetWindowAgent *windowAgent = nullptr;
-  QFrame *titleBar = nullptr;
-  QLabel *titleLabel = nullptr;
 };

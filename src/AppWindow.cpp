@@ -175,6 +175,11 @@ void AppWindow::setupUi() {
 }
 
 bool AppWindow::eventFilter(QObject *obj, QEvent *event) {
+  if (obj == d->titleBar && event->type() == QEvent::Resize) {
+    if (d->titleLabel) {
+      d->titleLabel->setGeometry(0, 0, d->titleBar->width(), d->titleBar->height());
+    }
+  }
   if (event->type() == QEvent::MouseButtonPress) {
     auto *me = static_cast<QMouseEvent *>(event);
     emit windowClicked(me->globalPosition().toPoint());
@@ -211,6 +216,15 @@ void AppWindow::setupTitleBar() {
   d->titleBar = new QFrame(this);
   d->titleBar->setFixedHeight(36);
   d->titleBar->setObjectName("TitleBar");
+  d->titleBar->installEventFilter(this); // 安装事件过滤器以实现标题绝对居中
+
+  // 创建物理上绝对居中的标题 Label
+  d->titleLabel = new QLabel(tr("字幕编辑"), d->titleBar);
+  d->titleLabel->setObjectName("AppTitleLabel");
+  d->titleLabel->setAlignment(Qt::AlignCenter);
+  d->titleLabel->setAttribute(Qt::WA_TransparentForMouseEvents, true); // 鼠标穿透以不阻碍拖拽与点击
+  d->titleLabel->setGeometry(0, 0, d->titleBar->width(), d->titleBar->height());
+  d->titleLabel->lower(); // 放置于底层
 
   auto *layout = new QHBoxLayout(d->titleBar);
 #ifdef Q_OS_WIN
@@ -222,24 +236,21 @@ void AppWindow::setupTitleBar() {
   layout->setAlignment(Qt::AlignVCenter);
 
 #ifdef Q_OS_WIN
+  auto *iconLabel = new QLabel(d->titleBar);
+  iconLabel->setFixedSize(16, 16);
+  iconLabel->setScaledContents(true);
+  iconLabel->setPixmap(QIcon(":/icon.png").pixmap(16, 16));
+  layout->addWidget(iconLabel, 0, Qt::AlignVCenter);
+
   if (d->menuBar) {
-    layout->addWidget(d->menuBar);
+    d->menuBar->setSizePolicy(QSizePolicy::Maximum, QSizePolicy::Preferred);
+    layout->addWidget(d->menuBar, 0, Qt::AlignVCenter);
     d->windowAgent->setHitTestVisible(d->menuBar, true);
   }
 #endif
 
-  auto *leftSpacer = new QWidget(d->titleBar);
-  leftSpacer->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Preferred);
-  layout->addWidget(leftSpacer);
-
-  d->titleLabel = new QLabel(tr("字幕编辑"), d->titleBar);
-  d->titleLabel->setObjectName("AppTitleLabel");
-  d->titleLabel->setAlignment(Qt::AlignCenter);
-  layout->addWidget(d->titleLabel);
-
-  auto *rightSpacer = new QWidget(d->titleBar);
-  rightSpacer->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Preferred);
-  layout->addWidget(rightSpacer);
+  // 添加横向弹簧将设置与导出按钮推至最右侧
+  layout->addStretch();
 
   d->settingsBtn = new QPushButton(d->titleBar);
   d->settingsBtn->setObjectName("TitleBarSettingsBtn");
@@ -277,7 +288,6 @@ void AppWindow::setupTitleBar() {
   layout->addWidget(line);
 
   // System Control Buttons (Min, Max, Close)
-  // System Control Buttons (Min, Max, Close)
   d->minBtn = new QPushButton(d->titleBar);
   d->maxBtn = new QPushButton(d->titleBar);
   d->closeBtn = new QPushButton(d->titleBar);
@@ -310,6 +320,17 @@ void AppWindow::setupTitleBar() {
   d->windowAgent->setSystemButton(QWK::WindowAgentBase::Minimize, d->minBtn);
   d->windowAgent->setSystemButton(QWK::WindowAgentBase::Maximize, d->maxBtn);
   d->windowAgent->setSystemButton(QWK::WindowAgentBase::Close, d->closeBtn);
+
+  // Connect system button signals
+  connect(d->minBtn, &QPushButton::clicked, this, &QWidget::showMinimized);
+  connect(d->maxBtn, &QPushButton::clicked, this, [this]() {
+    if (isMaximized()) {
+      showNormal();
+    } else {
+      showMaximized();
+    }
+  });
+  connect(d->closeBtn, &QPushButton::clicked, this, &QWidget::close);
 #endif
 }
 

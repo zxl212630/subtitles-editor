@@ -1,18 +1,12 @@
 #pragma once
 
-#include <QDialog>
+#include "BaseDialog.h"
 #include <QList>
 #include <QMap>
 #include <QPair>
 #include <QString>
 
-namespace QWK {
-class WidgetWindowAgent;
-}
-class QFrame;
-class QLabel;
-
-class VideoPropertyDialog : public QDialog {
+class VideoPropertyDialog : public BaseDialog {
   Q_OBJECT
 
 public:
@@ -25,10 +19,6 @@ public:
 private:
   void setupUi();
   void setupTitleBar();
-
-  QWK::WidgetWindowAgent *windowAgent = nullptr;
-  QFrame *titleBar = nullptr;
-  QLabel *titleLabel = nullptr;
 
   QList<Section> m_sections;
 };

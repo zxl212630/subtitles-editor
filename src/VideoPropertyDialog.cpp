@@ -7,22 +7,18 @@
 #include <QScrollArea>
 #include <QVBoxLayout>
 #include <QWidget>
-#include <QWindowKit/QWKWidgets/widgetwindowagent.h>
 
 VideoPropertyDialog::VideoPropertyDialog(const QList<Section> &sections,
                                          QWidget *parent)
-    : QDialog(parent), m_sections(sections) {
+    : BaseDialog(parent), m_sections(sections) {
   setObjectName("VideoPropertyDialog");
   setMinimumSize(480, 560);
   resize(520, 640);
 
-  windowAgent = new QWK::WidgetWindowAgent(this);
-  windowAgent->setup(this);
-
   setupTitleBar();
   setupUi();
 
-  windowAgent->setTitleBar(titleBar);
+  setupWindowAgent(titleBar);
 }
 
 void VideoPropertyDialog::setupTitleBar() {
@@ -35,12 +31,6 @@ void VideoPropertyDialog::setupTitleBar() {
   layout->setSpacing(0);
 
   layout->addStretch(); // 左侧填充
-
-  titleLabel = new QLabel(tr("视频属性"), titleBar);
-  titleLabel->setObjectName("ConfigTitleLeftLabel");
-  layout->addWidget(titleLabel);
-
-  layout->addStretch(); // 右侧填充
 }
 
 void VideoPropertyDialog::setupUi() {

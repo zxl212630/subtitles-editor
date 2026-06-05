@@ -43,5 +43,7 @@
         <file>themes/dark.qss</file>
         <file>themes/midnight.qss</file>
         <file>themes/oled.qss</file>
+        <file>icon.svg</file>
+        <file>icon.png</file>
     </qresource>
 </RCC>

@@ -1,6 +1,6 @@
 #pragma once
 
-#include <QDialog>
+#include "BaseDialog.h"
 #include <QString>
 
 class QComboBox;
@@ -9,12 +9,7 @@ class QPushButton;
 class QCheckBox;
 class QSpinBox;
 
-namespace QWK {
-class WidgetWindowAgent;
-}
-class QFrame;
-
-class AsrConfigDialog : public QDialog {
+class AsrConfigDialog : public BaseDialog {
   Q_OBJECT
 public:
   explicit AsrConfigDialog(QWidget *parent = nullptr);
@@ -32,10 +27,6 @@ private:
   void setupTitleBar();
   void retranslateUi();
   void loadDefaultConfig();
-
-  QWK::WidgetWindowAgent *windowAgent = nullptr;
-  QFrame *titleBar = nullptr;
-  QLabel *titleLabel = nullptr;
 
   QSpinBox *sentenceMaxLengthSpin_ = nullptr;
   QComboBox *engineModelTypeCombo_ = nullptr;

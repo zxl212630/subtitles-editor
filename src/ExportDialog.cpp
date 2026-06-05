@@ -2,7 +2,6 @@
 #include "AppMessageBox.h"
 #include "SubtitleTrack.h"
 #include "ThemeManager.h"
-#include <QWindowKit/QWKWidgets/widgetwindowagent.h>
 
 #include <QCheckBox>
 #include <QComboBox>
@@ -27,7 +26,7 @@ extern "C" {
 #include <libavcodec/avcodec.h>
 }
 
-ExportDialog::ExportDialog(QWidget *parent) : QDialog(parent) {
+ExportDialog::ExportDialog(QWidget *parent) : BaseDialog(parent) {
   setObjectName("ExportDialog");
   setWindowFlags(windowFlags() & ~Qt::WindowMaximizeButtonHint);
   setMinimumSize(580, 560);
@@ -40,14 +39,11 @@ ExportDialog::ExportDialog(QWidget *parent) : QDialog(parent) {
   rightArrowPixmap_ =
       downArrowPixmap_.transformed(trans, Qt::SmoothTransformation);
 
-  windowAgent = new QWK::WidgetWindowAgent(this);
-  windowAgent->setup(this);
-
   setupTitleBar();
   setupUi();
   retranslateUi();
 
-  windowAgent->setTitleBar(titleBar);
+  setupWindowAgent(titleBar);
 }
 
 ExportDialog::~ExportDialog() {}
@@ -60,12 +56,6 @@ void ExportDialog::setupTitleBar() {
   auto *layout = new QHBoxLayout(titleBar);
   layout->setContentsMargins(12, 0, 12, 0);
   layout->setSpacing(0);
-
-  layout->addStretch();
-
-  titleLabel = new QLabel(tr("导出"), titleBar);
-  titleLabel->setObjectName("ConfigTitleLeftLabel");
-  layout->addWidget(titleLabel);
 
   layout->addStretch();
 }

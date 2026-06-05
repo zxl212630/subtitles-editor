@@ -10,17 +10,12 @@
 #include <QPainterPath>
 #include <QPushButton>
 #include <QSvgRenderer>
-#include <QVBoxLayout>
-#include <QWindowKit/QWKWidgets/widgetwindowagent.h>
 #include <QtMath>
 
-AsrProgressDialog::AsrProgressDialog(QWidget *parent) : QDialog(parent) {
+AsrProgressDialog::AsrProgressDialog(QWidget *parent) : BaseDialog(parent) {
   setObjectName("AsrProgressDialog");
   setWindowTitle(tr("语音识别"));
   setFixedSize(460, 320);
-
-  windowAgent_ = new QWK::WidgetWindowAgent(this);
-  windowAgent_->setup(this);
 
   setupTitleBar();
 
@@ -28,7 +23,7 @@ AsrProgressDialog::AsrProgressDialog(QWidget *parent) : QDialog(parent) {
   mainLayout->setContentsMargins(0, 0, 0, 20);
   mainLayout->setSpacing(0);
 
-  mainLayout->addWidget(titleBar_);
+  mainLayout->addWidget(titleBar);
   mainLayout->addStretch();
 
   statusLabel_ = new QLabel(tr("Initializing..."), this);
@@ -70,7 +65,7 @@ AsrProgressDialog::AsrProgressDialog(QWidget *parent) : QDialog(parent) {
           &AsrProgressDialog::onAnimationTick);
   animTimer_->start();
 
-  windowAgent_->setTitleBar(titleBar_);
+  setupWindowAgent(titleBar);
 }
 
 AsrProgressDialog::~AsrProgressDialog() = default;
@@ -83,8 +78,6 @@ void AsrProgressDialog::setStage(Stage stage) {
 
 void AsrProgressDialog::retranslateUi() {
   setWindowTitle(tr("AI Subtitle Generation"));
-  if (titleLabel_)
-    titleLabel_->setText(tr("AI Subtitle Generation"));
 
   if (!isError_) {
     switch (currentStage_) {
@@ -180,19 +173,13 @@ void AsrProgressDialog::closeEvent(QCloseEvent *event) {
 }
 
 void AsrProgressDialog::setupTitleBar() {
-  titleBar_ = new QFrame(this);
-  titleBar_->setFixedHeight(36);
-  titleBar_->setObjectName("TitleBar");
+  titleBar = new QFrame(this);
+  titleBar->setFixedHeight(36);
+  titleBar->setObjectName("TitleBar");
 
-  auto *layout = new QHBoxLayout(titleBar_);
+  auto *layout = new QHBoxLayout(titleBar);
   layout->setContentsMargins(12, 0, 12, 0);
   layout->setSpacing(0);
-
-  layout->addStretch();
-
-  titleLabel_ = new QLabel(tr("语音识别"), titleBar_);
-  titleLabel_->setObjectName("ConfigTitleLeftLabel");
-  layout->addWidget(titleLabel_);
 
   layout->addStretch();
 }
