@@ -102,8 +102,46 @@ Set-Location $QtBuildDir
 $QtInstallDir = Join-Path $DepsDir "qt6"
 
 Write-Host "Configuring Qt..."
-# Compile only base, multimedia, svg, and tools modules to save build time
-& "$QtSrcDir\configure.bat" -prefix $QtInstallDir -opensource -confirm-license -nomake examples -nomake tests -release -submodules qtbase,qtmultimedia,qtsvg,qttools
+# Configure Qt with the same modules and skip list as macOS
+& "$QtSrcDir\configure.bat" -prefix $QtInstallDir `
+    -opensource -confirm-license `
+    -nomake examples -nomake tests `
+    -release `
+    -skip qt3d `
+    -skip qt5compat `
+    -skip qtactiveqt `
+    -skip qtcharts `
+    -skip qtcoap `
+    -skip qtconnectivity `
+    -skip qtdatavis3d `
+    -skip qtdeclarative `
+    -skip qtdoc `
+    -skip qtgrpc `
+    -skip qthttpserver `
+    -skip qtimageformats `
+    -skip qtlanguageserver `
+    -skip qtlocation `
+    -skip qtlottie `
+    -skip qtmqtt `
+    -skip qtnetworkauth `
+    -skip qtopcua `
+    -skip qtpositioning `
+    -skip qtquick3d `
+    -skip qtquick3dphysics `
+    -skip qtquickeffectmaker `
+    -skip qtquicktimeline `
+    -skip qtremoteobjects `
+    -skip qtscxml `
+    -skip qtsensors `
+    -skip qtserialbus `
+    -skip qtserialport `
+    -skip qtspeech `
+    -skip qtvirtualkeyboard `
+    -skip qtwayland `
+    -skip qtwebchannel `
+    -skip qtwebengine `
+    -skip qtwebsockets `
+    -skip qtwebview
 
 Write-Host "Building Qt..."
 cmake --build . --parallel 8
