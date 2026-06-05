@@ -85,15 +85,23 @@ fi
     $BashScriptPath = Join-Path $TargetDir "build-ffmpeg.sh"
     Set-Content -Path $BashScriptPath -Value $BashScript -Encoding utf8NoBOM
 
-    Write-Host "Running FFmpeg build inside MSYS2..."
-    & C:\msys64\usr\bin\bash.exe --login -c "$TargetDirUnix/build-ffmpeg.sh"
+    # Use MSYS2 location from environment or fallback to default
+    $MsysLocation = $env:MSYS2_LOCATION
+    if (-not $MsysLocation) {
+        $MsysLocation = "C:\msys64"
+    }
+    $BashExe = Join-Path $MsysLocation "usr\bin\bash.exe"
+    $env:MSYS2_PATH_TYPE = "inherit"
+
+    Write-Host "Running FFmpeg build inside MSYS2 at $MsysLocation..."
+    & $BashExe --login -c "$TargetDirUnix/build-ffmpeg.sh"
     if ($LASTEXITCODE -ne 0) {
         throw "FFmpeg build failed inside MSYS2 with exit code $LASTEXITCODE"
     }
 
     # Copy FFmpeg build output from MSYS2 tmp to Target deps
     Write-Host "Copying FFmpeg output to target deps folder..."
-    $MsysTmpInstall = "C:\msys64\tmp\ffmpeg-install"
+    $MsysTmpInstall = Join-Path $MsysLocation "tmp\ffmpeg-install"
     $FfmpegTarget = Join-Path $DepsDir "ffmpeg"
     New-Item -ItemType Directory -Force -Path $FfmpegTarget | Out-Null
     Copy-Item -Path "$MsysTmpInstall\*" -Destination $FfmpegTarget -Recurse -Force

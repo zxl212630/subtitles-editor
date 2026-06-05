@@ -349,15 +349,19 @@ jobs:
         uses: ilammy/msvc-dev-cmd@v1
 
       - name: Setup MSYS2
+        id: msys2-setup
         if: steps.check-cache.outputs.skip != 'true'
         uses: msys2/setup-msys2@v2
         with:
           msystem: MSYS
           install: make diffutils pkgconf yasm git
+          path-type: inherit
 
       - name: Build FFmpeg
         if: steps.check-cache.outputs.skip != 'true'
         shell: pwsh
+        env:
+          MSYS2_LOCATION: ${{ steps.msys2-setup.outputs.msys2-location }}
         run: |
           ./scripts/build-deps-windows.ps1 -TargetDir "D:\deps-build" -OutputDir "D:\deps-output" -FFmpegVersion "$env:FFMPEG_VERSION" -Target ffmpeg
 
