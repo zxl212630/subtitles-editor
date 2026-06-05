@@ -58,6 +58,9 @@ if [ ! -d "ffmpeg-${FFmpegVersion}" ]; then
     tar -xf "`$ffmpeg_tar"
 fi
 
+# Install dependencies in MSYS2
+pacman -S --noconfirm --needed mingw-w64-x86_64-x264 mingw-w64-x86_64-x265
+
 cd "ffmpeg-${FFmpegVersion}"
 ./configure \
     --toolchain=msvc \
@@ -67,13 +70,16 @@ cd "ffmpeg-${FFmpegVersion}"
     --disable-doc \
     --disable-ffplay \
     --disable-avdevice \
+    --enable-gpl \
+    --enable-libx264 \
+    --enable-libx265 \
     --enable-nvenc \
     --enable-nvdec \
     --enable-cuvid \
     --enable-ffnvcodec \
     --arch=x86_64
 
-make -j\$(nproc)
+make -j$env:NUMBER_OF_PROCESSORS
 make install
 
 # Restore original link tool
@@ -83,7 +89,7 @@ fi
 "@
 
     $BashScriptPath = Join-Path $TargetDir "build-ffmpeg.sh"
-    Set-Content -Path $BashScriptPath -Value $BashScript -Encoding utf8NoBOM
+    [System.IO.File]::WriteAllText($BashScriptPath, $BashScript, (New-Object System.Text.UTF8Encoding($false)))
 
     # Use MSYS2 location from environment or fallback to default
     $MsysLocation = $env:MSYS2_LOCATION

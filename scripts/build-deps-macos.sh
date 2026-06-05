@@ -118,6 +118,9 @@ build_ffmpeg() {
         --disable-doc \
         --disable-ffplay \
         --disable-avdevice \
+        --enable-gpl \
+        --enable-libx264 \
+        --enable-libx265 \
         --disable-libxcb \
         --disable-libxcb-shm \
         --disable-libxcb-xfixes \
