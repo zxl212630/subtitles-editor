@@ -128,8 +128,7 @@ void VideoExportDialog::onExportFinished(const QString &outputPath) {
 void VideoExportDialog::onExportFailed(const QString &error) {
   isFinished_ = true;
   updateTimer_->stop();
-  AppMessageBox::critical(this, tr("导出失败"),
-                          tr("视频导出失败：%1").arg(error));
+  errorString_ = error;
   reject();
 }
 

@@ -25,6 +25,62 @@ extern "C" {
 #define LOG_EXP_critical(msg) qCritical() << "[VideoExporter]" << msg
 #define LOG_EXP_debug(msg) qDebug() << "[VideoExporter]" << msg
 
+static const AVCodec* find_fallback_video_encoder(AVCodecID codecId) {
+  if (codecId == AV_CODEC_ID_H264) {
+    const char* H264_ENCODERS[] = {
+      "h264_videotoolbox",
+      "h264_mf",
+      "h264_nvenc",
+      "libx264",
+      nullptr
+    };
+    for (int i = 0; H264_ENCODERS[i] != nullptr; ++i) {
+      const AVCodec* c = avcodec_find_encoder_by_name(H264_ENCODERS[i]);
+      if (c) {
+        AVCodecContext* ctx = avcodec_alloc_context3(c);
+        if (ctx) {
+          ctx->width = 64;
+          ctx->height = 64;
+          ctx->pix_fmt = AV_PIX_FMT_YUV420P;
+          ctx->time_base = {1, 25};
+          ctx->framerate = {25, 1};
+          ctx->bit_rate = 1000000;
+          int ret = avcodec_open2(ctx, c, nullptr);
+          avcodec_free_context(&ctx);
+          if (ret >= 0) return c;
+        }
+      }
+    }
+  } else if (codecId == AV_CODEC_ID_HEVC) {
+    const char* HEVC_ENCODERS[] = {
+      "hevc_videotoolbox",
+      "hevc_mf",
+      "hevc_nvenc",
+      "libx265",
+      nullptr
+    };
+    for (int i = 0; HEVC_ENCODERS[i] != nullptr; ++i) {
+      const AVCodec* c = avcodec_find_encoder_by_name(HEVC_ENCODERS[i]);
+      if (c) {
+        AVCodecContext* ctx = avcodec_alloc_context3(c);
+        if (ctx) {
+          ctx->width = 64;
+          ctx->height = 64;
+          ctx->pix_fmt = AV_PIX_FMT_YUV420P;
+          ctx->time_base = {1, 25};
+          ctx->framerate = {25, 1};
+          ctx->bit_rate = 1000000;
+          int ret = avcodec_open2(ctx, c, nullptr);
+          avcodec_free_context(&ctx);
+          if (ret >= 0) return c;
+        }
+      }
+    }
+  }
+  return avcodec_find_encoder(codecId);
+}
+
+
 VideoExporter::VideoExporter(QObject *parent) : QThread(parent) {}
 
 VideoExporter::~VideoExporter() { cleanup(); }
@@ -272,15 +328,17 @@ bool VideoExporter::initVideoEncoder() {
 
   if (!encoder) {
     // 安全降级
-    QString fallbackCodec =
-        config_.videoCodec.contains("hevc") ? "libx265" : "libx264";
-    encoder = avcodec_find_encoder_by_name(fallbackCodec.toUtf8().constData());
-    if (!encoder) {
-      encoder = avcodec_find_encoder(AV_CODEC_ID_H264);
-    }
-    LOG_EXP_warning(
-        "Requested encoder not found. Falling back to:" << encoder->name);
+    AVCodecID codecId = (config_.videoCodec.contains("hevc") || config_.videoCodec.contains("265"))
+                            ? AV_CODEC_ID_HEVC
+                            : AV_CODEC_ID_H264;
+    encoder = find_fallback_video_encoder(codecId);
   }
+
+  if (!encoder) {
+    emit exportFailed(tr("未找到任何可用的 H.264 或 HEVC 视频编码器。"));
+    return false;
+  }
+  LOG_EXP_info("Using video encoder:" << encoder->name);
 
   outVideoStream_ = avformat_new_stream(outputFmtCtx_, nullptr);
   if (!outVideoStream_) {
@@ -318,6 +376,7 @@ bool VideoExporter::initVideoEncoder() {
     outFps = 25.0; // 默认防崩溃
 
   videoEncCtx_->time_base = av_inv_q(av_d2q(outFps, 100000));
+  videoEncCtx_->framerate = av_d2q(outFps, 100000);
   outVideoStream_->time_base = videoEncCtx_->time_base;
 
   // 帧组 GOP
@@ -325,9 +384,10 @@ bool VideoExporter::initVideoEncoder() {
   videoEncCtx_->keyint_min = qRound(outFps);
 
   // 质量与码率控制
-  bool isHardware = config_.videoCodec.contains("videotoolbox");
-  if (isHardware) {
-    // VideoToolbox 硬件编码通过 bit_rate 控速
+  bool useCrf = QString(encoder->name).contains("x264") ||
+                QString(encoder->name).contains("x265");
+  if (!useCrf) {
+    // 硬件/系统编码器 (videotoolbox, nvenc, mf, d3d12va 等) 通过 bit_rate 控速
     int64_t targetBitrate = 6000000; // 默认中等质量
     if (config_.qualityMode == VideoExportConfig::QualityHigh) {
       targetBitrate = 12000000;
@@ -347,7 +407,7 @@ bool VideoExporter::initVideoEncoder() {
     videoEncCtx_->rc_max_rate = targetBitrate * 1.5;
     videoEncCtx_->rc_buffer_size = targetBitrate * 2;
   } else {
-    // CPU 编码器使用 CRF 控制
+    // CPU 编码器 (libx264, libx265) 使用 CRF 控制
     int crf = 23;
     if (config_.qualityMode == VideoExportConfig::QualityHigh) {
       crf = 18;

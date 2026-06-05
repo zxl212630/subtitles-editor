@@ -17,6 +17,8 @@ public:
                              QWidget *parent = nullptr);
   ~VideoExportDialog() override;
 
+  QString errorString() const { return errorString_; }
+
 private slots:
   void onProgressChanged(int percent);
   void onExportFinished(const QString &outputPath);
@@ -41,4 +43,5 @@ private:
   QPushButton *cancelBtn_ = nullptr;
 
   bool isFinished_ = false;
+  QString errorString_;
 };

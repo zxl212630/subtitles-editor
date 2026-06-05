@@ -928,6 +928,12 @@ void AppWindow::onExportRequested() {
         successMsg += tr("\n\n关联字幕文件已一并输出。");
       }
       AppMessageBox::information(this, tr("导出成功"), successMsg);
+    } else {
+      QString errMsg = progressDlg.errorString();
+      if (!errMsg.isEmpty()) {
+        AppMessageBox::critical(this, tr("导出失败"),
+                                tr("视频导出失败：%1").arg(errMsg));
+      }
     }
   }
 }

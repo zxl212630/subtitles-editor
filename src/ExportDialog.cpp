@@ -26,6 +26,46 @@ extern "C" {
 #include <libavcodec/avcodec.h>
 }
 
+#include <future>
+
+static bool isEncoderAvailable(const char *name) {
+  // MediaFoundation encoders (h264_mf, hevc_mf) fail to open in the main thread
+  // because Qt initializes COM in STA mode on the main GUI thread.
+  // Running this check in std::async launches a worker thread (which has no COM or is MTA),
+  // allowing MediaFoundation to initialize correctly.
+  auto future = std::async(std::launch::async, [name]() -> bool {
+    const AVCodec *encoder = avcodec_find_encoder_by_name(name);
+    if (!encoder) {
+      return false;
+    }
+
+    AVCodecContext *ctx = avcodec_alloc_context3(encoder);
+    if (!ctx) {
+      return false;
+    }
+
+    ctx->width = 64;
+    ctx->height = 64;
+    ctx->pix_fmt = AV_PIX_FMT_YUV420P;
+    ctx->time_base = {1, 25};
+    ctx->framerate = {25, 1};
+    ctx->bit_rate = 1000000;
+
+    int ret = avcodec_open2(ctx, encoder, nullptr);
+    avcodec_free_context(&ctx);
+
+    return ret >= 0;
+  });
+
+  try {
+    return future.get();
+  } catch (...) {
+    return false;
+  }
+}
+
+
+
 ExportDialog::ExportDialog(QWidget *parent) : BaseDialog(parent) {
   setObjectName("ExportDialog");
   setWindowFlags(windowFlags() & ~Qt::WindowMaximizeButtonHint);
@@ -499,21 +539,59 @@ void ExportDialog::setupUi() {
   videoForm->addRow(videoFormatLabel_, videoFormatCombo_);
 
   videoCodecCombo_ = new QComboBox(videoSectionFrame_);
-  // 探测 VideoToolbox 支持
-  bool hasH264Vt = avcodec_find_encoder_by_name("h264_videotoolbox") != nullptr;
-  bool hasHevcVt = avcodec_find_encoder_by_name("hevc_videotoolbox") != nullptr;
-
-  if (hasH264Vt) {
-    videoCodecCombo_->addItem(tr("H.264 (h264_videotoolbox)"),
-                              "h264_videotoolbox");
+  // Populate H.264 encoders dynamically based on availability
+  bool addedH264 = false;
+  if (isEncoderAvailable("h264_videotoolbox")) {
+    videoCodecCombo_->addItem(tr("H.264 (硬件 - VideoToolbox)"), "h264_videotoolbox");
+    addedH264 = true;
   }
-  videoCodecCombo_->addItem(tr("H.264 (libx264)"), "libx264");
-
-  if (hasHevcVt) {
-    videoCodecCombo_->addItem(tr("HEVC (hevc_videotoolbox)"),
-                              "hevc_videotoolbox");
+  if (isEncoderAvailable("h264_mf")) {
+    videoCodecCombo_->addItem(tr("H.264 (硬件 - MediaFoundation)"), "h264_mf");
+    addedH264 = true;
   }
-  videoCodecCombo_->addItem(tr("HEVC (libx265)"), "libx265");
+  if (isEncoderAvailable("h264_nvenc")) {
+    videoCodecCombo_->addItem(tr("H.264 (硬件 - NVIDIA NVENC)"), "h264_nvenc");
+    addedH264 = true;
+  }
+  if (isEncoderAvailable("libx264")) {
+    videoCodecCombo_->addItem(tr("H.264 (软件 - libx264)"), "libx264");
+    addedH264 = true;
+  }
+  if (!addedH264) {
+    if (const AVCodec *codec = avcodec_find_encoder(AV_CODEC_ID_H264)) {
+      if (isEncoderAvailable(codec->name)) {
+        videoCodecCombo_->addItem(QString("H.264 (%1)").arg(codec->name), codec->name);
+        addedH264 = true;
+      }
+    }
+  }
+
+  // Populate HEVC encoders dynamically based on availability
+  bool addedHevc = false;
+  if (isEncoderAvailable("hevc_videotoolbox")) {
+    videoCodecCombo_->addItem(tr("HEVC (硬件 - VideoToolbox)"), "hevc_videotoolbox");
+    addedHevc = true;
+  }
+  if (isEncoderAvailable("hevc_mf")) {
+    videoCodecCombo_->addItem(tr("HEVC (硬件 - MediaFoundation)"), "hevc_mf");
+    addedHevc = true;
+  }
+  if (isEncoderAvailable("hevc_nvenc")) {
+    videoCodecCombo_->addItem(tr("HEVC (硬件 - NVIDIA NVENC)"), "hevc_nvenc");
+    addedHevc = true;
+  }
+  if (isEncoderAvailable("libx265")) {
+    videoCodecCombo_->addItem(tr("HEVC (软件 - libx265)"), "libx265");
+    addedHevc = true;
+  }
+  if (!addedHevc) {
+    if (const AVCodec *codec = avcodec_find_encoder(AV_CODEC_ID_HEVC)) {
+      if (isEncoderAvailable(codec->name)) {
+        videoCodecCombo_->addItem(QString("HEVC (%1)").arg(codec->name), codec->name);
+        addedHevc = true;
+      }
+    }
+  }
 
   videoCodecLabel_ = new QLabel(tr("视频编码"), videoSectionFrame_);
   videoCodecLabel_->setObjectName("ConfigFieldLabel");
@@ -748,22 +826,60 @@ void ExportDialog::retranslateUi() {
   if (videoCodecCombo_) {
     QString selectedCodec = videoCodecCombo_->currentData().toString();
     videoCodecCombo_->clear();
-    bool hasH264Vt =
-        avcodec_find_encoder_by_name("h264_videotoolbox") != nullptr;
-    bool hasHevcVt =
-        avcodec_find_encoder_by_name("hevc_videotoolbox") != nullptr;
-
-    if (hasH264Vt) {
-      videoCodecCombo_->addItem(tr("H.264 (h264_videotoolbox)"),
-                                "h264_videotoolbox");
+    
+    // Populate H.264 encoders dynamically based on availability
+    bool addedH264 = false;
+    if (isEncoderAvailable("h264_videotoolbox")) {
+      videoCodecCombo_->addItem(tr("H.264 (硬件 - VideoToolbox)"), "h264_videotoolbox");
+      addedH264 = true;
     }
-    videoCodecCombo_->addItem(tr("H.264 (libx264)"), "libx264");
-
-    if (hasHevcVt) {
-      videoCodecCombo_->addItem(tr("HEVC (hevc_videotoolbox)"),
-                                "hevc_videotoolbox");
+    if (isEncoderAvailable("h264_mf")) {
+      videoCodecCombo_->addItem(tr("H.264 (硬件 - MediaFoundation)"), "h264_mf");
+      addedH264 = true;
     }
-    videoCodecCombo_->addItem(tr("HEVC (libx265)"), "libx265");
+    if (isEncoderAvailable("h264_nvenc")) {
+      videoCodecCombo_->addItem(tr("H.264 (硬件 - NVIDIA NVENC)"), "h264_nvenc");
+      addedH264 = true;
+    }
+    if (isEncoderAvailable("libx264")) {
+      videoCodecCombo_->addItem(tr("H.264 (软件 - libx264)"), "libx264");
+      addedH264 = true;
+    }
+    if (!addedH264) {
+      if (const AVCodec *codec = avcodec_find_encoder(AV_CODEC_ID_H264)) {
+        if (isEncoderAvailable(codec->name)) {
+          videoCodecCombo_->addItem(QString("H.264 (%1)").arg(codec->name), codec->name);
+          addedH264 = true;
+        }
+      }
+    }
+
+    // Populate HEVC encoders dynamically based on availability
+    bool addedHevc = false;
+    if (isEncoderAvailable("hevc_videotoolbox")) {
+      videoCodecCombo_->addItem(tr("HEVC (硬件 - VideoToolbox)"), "hevc_videotoolbox");
+      addedHevc = true;
+    }
+    if (isEncoderAvailable("hevc_mf")) {
+      videoCodecCombo_->addItem(tr("HEVC (硬件 - MediaFoundation)"), "hevc_mf");
+      addedHevc = true;
+    }
+    if (isEncoderAvailable("hevc_nvenc")) {
+      videoCodecCombo_->addItem(tr("HEVC (硬件 - NVIDIA NVENC)"), "hevc_nvenc");
+      addedHevc = true;
+    }
+    if (isEncoderAvailable("libx265")) {
+      videoCodecCombo_->addItem(tr("HEVC (软件 - libx265)"), "libx265");
+      addedHevc = true;
+    }
+    if (!addedHevc) {
+      if (const AVCodec *codec = avcodec_find_encoder(AV_CODEC_ID_HEVC)) {
+        if (isEncoderAvailable(codec->name)) {
+          videoCodecCombo_->addItem(QString("HEVC (%1)").arg(codec->name), codec->name);
+          addedHevc = true;
+        }
+      }
+    }
 
     for (int i = 0; i < videoCodecCombo_->count(); ++i) {
       if (videoCodecCombo_->itemData(i).toString() == selectedCodec) {
