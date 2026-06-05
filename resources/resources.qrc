@@ -28,6 +28,10 @@
         <file>icons/track_video.svg</file>
         <file>icons/volume.svg</file>
         <file>icons/volume-mute.svg</file>
+        <file>icons/minimize.svg</file>
+        <file>icons/maximize.svg</file>
+        <file>icons/restore.svg</file>
+        <file>icons/close-hover.svg</file>
         <file>icons/bold.svg</file>
         <file>icons/italic.svg</file>
         <file>icons/underline.svg</file>

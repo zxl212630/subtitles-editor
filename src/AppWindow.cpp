@@ -44,89 +44,6 @@
 #include <QUuid>
 #include <QVBoxLayout>
 #include <QWindowKit/QWKWidgets/widgetwindowagent.h>
-#include <QPainter>
-
-#ifdef Q_OS_WIN
-class TitleBarButton : public QPushButton {
-public:
-  enum Type {
-    Min,
-    Max,
-    Restore,
-    Close
-  };
-
-  TitleBarButton(Type type, QWidget *parent = nullptr)
-      : QPushButton(parent), type_(type) {
-    setFlat(true);
-    setAttribute(Qt::WA_Hover, true);
-  }
-
-  void setType(Type type) {
-    if (type_ != type) {
-      type_ = type;
-      update();
-    }
-  }
-
-protected:
-  void enterEvent(QEnterEvent *event) override {
-    QPushButton::enterEvent(event);
-    update();
-  }
-
-  void leaveEvent(QEvent *event) override {
-    QPushButton::leaveEvent(event);
-    update();
-  }
-
-  void paintEvent(QPaintEvent *event) override {
-    QPushButton::paintEvent(event); // Draw QSS background
-
-    QPainter painter(this);
-    painter.setRenderHint(QPainter::Antialiasing, false);
-
-    QColor color = palette().color(QPalette::WindowText);
-    
-    // Close button foreground turns white on hover/pressed
-    if (type_ == Close && (underMouse() || isDown())) {
-      color = Qt::white;
-    }
-
-    QPen pen(color, 1);
-    painter.setPen(pen);
-
-    int w = width();
-    int h = height();
-    int cx = w / 2;
-    int cy = h / 2;
-
-    if (type_ == Min) {
-      // Minimize: horizontal line
-      painter.drawLine(cx - 5, cy, cx + 5, cy);
-    } else if (type_ == Max) {
-      // Maximize: square
-      painter.drawRect(cx - 5, cy - 5, 10, 10);
-    } else if (type_ == Restore) {
-      // Restore: overlapping squares
-      // Back square
-      painter.drawRect(cx - 3, cy - 5, 8, 8);
-      // Front square
-      painter.drawRect(cx - 5, cy - 3, 8, 8);
-    } else if (type_ == Close) {
-      // Close: X sign
-      painter.setRenderHint(QPainter::Antialiasing, true);
-      QPen closePen(color, 1.2);
-      painter.setPen(closePen);
-      painter.drawLine(cx - 5, cy - 5, cx + 5, cy + 5);
-      painter.drawLine(cx + 5, cy - 5, cx - 5, cy + 5);
-    }
-  }
-
-private:
-  Type type_;
-};
-#endif
 
 struct AppWindow::Private {
   QWK::WidgetWindowAgent *windowAgent = nullptr;
@@ -277,15 +194,12 @@ void AppWindow::changeEvent(QEvent *event) {
 #ifdef Q_OS_WIN
   if (event->type() == QEvent::WindowStateChange) {
     if (d->maxBtn) {
-      auto *maxBtn = qobject_cast<TitleBarButton *>(d->maxBtn);
-      if (maxBtn) {
-        if (isMaximized()) {
-          maxBtn->setType(TitleBarButton::Restore);
-          maxBtn->setToolTip(tr("向下还原"));
-        } else {
-          maxBtn->setType(TitleBarButton::Max);
-          maxBtn->setToolTip(tr("最大化"));
-        }
+      if (isMaximized()) {
+        d->maxBtn->setIcon(QIcon(":/icons/restore.svg"));
+        d->maxBtn->setToolTip(tr("向下还原"));
+      } else {
+        d->maxBtn->setIcon(QIcon(":/icons/maximize.svg"));
+        d->maxBtn->setToolTip(tr("最大化"));
       }
     }
   }
@@ -363,9 +277,10 @@ void AppWindow::setupTitleBar() {
   layout->addWidget(line);
 
   // System Control Buttons (Min, Max, Close)
-  d->minBtn = new TitleBarButton(TitleBarButton::Min, d->titleBar);
-  d->maxBtn = new TitleBarButton(TitleBarButton::Max, d->titleBar);
-  d->closeBtn = new TitleBarButton(TitleBarButton::Close, d->titleBar);
+  // System Control Buttons (Min, Max, Close)
+  d->minBtn = new QPushButton(d->titleBar);
+  d->maxBtn = new QPushButton(d->titleBar);
+  d->closeBtn = new QPushButton(d->titleBar);
 
   d->minBtn->setObjectName("TitleBarMinBtn");
   d->maxBtn->setObjectName("TitleBarMaxBtn");
@@ -374,6 +289,14 @@ void AppWindow::setupTitleBar() {
   d->minBtn->setFixedSize(46, 36);
   d->maxBtn->setFixedSize(46, 36);
   d->closeBtn->setFixedSize(46, 36);
+
+  d->minBtn->setIcon(QIcon(":/icons/minimize.svg"));
+  d->maxBtn->setIcon(QIcon(":/icons/maximize.svg"));
+  d->closeBtn->setIcon(QIcon(":/icons/close.svg"));
+
+  d->minBtn->setIconSize(QSize(16, 16));
+  d->maxBtn->setIconSize(QSize(16, 16));
+  d->closeBtn->setIconSize(QSize(16, 16));
 
   d->minBtn->setToolTip(tr("最小化"));
   d->maxBtn->setToolTip(tr("最大化"));

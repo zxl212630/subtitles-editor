@@ -782,12 +782,12 @@ QMenu::separator {
 
 #TitleBarCloseBtn:hover {
     background-color: #e81123;
-    color: #ffffff;
+    qproperty-icon: url(:/icons/close-hover.svg);
 }
 
 #TitleBarCloseBtn:pressed {
     background-color: #f1707a;
-    color: #ffffff;
+    qproperty-icon: url(:/icons/close-hover.svg);
 }
 
 QFrame#TitleBarSeparator {
