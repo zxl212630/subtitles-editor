@@ -54,12 +54,12 @@ if(NOT DEFINED FFMPEG_ROOT)
   if(NOT DEFINED FFMPEG_ROOT)
     set(FFMPEG_ROOT "$ENV{HOME}/Tools/ffmpeg/8.0" CACHE PATH "FFmpeg installation root")
     set(FFMPEG_INCLUDE_DIR "${FFMPEG_ROOT}/include")
-    set(FFMPEG_LIBRARY_DIR "${FFMPEG_ROOT}/lib")
+    set(FFMPEG_LIBRARY_DIR "${FFMPEG_ROOT}/lib" "${FFMPEG_ROOT}/bin")
   endif()
 else()
   # 用户显式指定了 FFMPEG_ROOT
   set(FFMPEG_INCLUDE_DIR "${FFMPEG_ROOT}/include")
-  set(FFMPEG_LIBRARY_DIR "${FFMPEG_ROOT}/lib")
+  set(FFMPEG_LIBRARY_DIR "${FFMPEG_ROOT}/lib" "${FFMPEG_ROOT}/bin")
 endif()
 
 # ============================================================
