@@ -60,13 +60,7 @@ bool ConfigManager::isValid() const {
                    check("aliyun_oss", "region");
   }
 
-  // Check if FFmpeg is available (bundled or configured)
-  QString ffmpegPathStr = ffmpegPath();
-  bool ffmpegAvailable =
-      !ffmpegPathStr.isEmpty() &&
-      (QFileInfo::exists(ffmpegPathStr) || ffmpegPathStr == "ffmpeg");
-
-  bool valid = ffmpegAvailable && check("tencent_asr", "secret_id") &&
+  bool valid = check("tencent_asr", "secret_id") &&
                check("tencent_asr", "secret_key") &&
                check("tencent_asr", "app_id") && storageValid;
 
@@ -80,6 +74,9 @@ QString ConfigManager::ffmpegPath() const {
   // First, try bundled executable in app bundle
   QString appDir = QCoreApplication::applicationDirPath();
   QString bundledPath = appDir + "/ffmpeg";
+#ifdef Q_OS_WIN
+  bundledPath += ".exe";
+#endif
   if (QFileInfo::exists(bundledPath)) {
     return bundledPath;
   }

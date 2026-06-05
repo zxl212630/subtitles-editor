@@ -109,14 +109,10 @@ AppWindow::AppWindow(QWidget *parent)
 
 void AppWindow::checkConfig() {
   if (!ConfigManager::instance().isValid()) {
-    QString configPath = ConfigManager::instance().configFilePath();
     AppMessageBox::warning(
         this, tr("配置缺失"),
-        QString(
-            tr("未检测到有效配置文件，部分功能（如语音识别）将无法使用。\n\n"
-               "请在以下路径创建或编辑配置文件：\n%1\n\n"
-               "确保包含 ffmpeg、腾讯云 ASR 和阿里云 OSS 的必要配置项。"))
-            .arg(configPath));
+        tr("未检测到有效配置，部分功能（如语音识别）将无法使用。\n\n"
+           "请打开“设置”窗口配置 ASR 和云存储的必要参数。"));
   }
 }
 
