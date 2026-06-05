@@ -2,7 +2,8 @@ param (
     [string]$TargetDir = "D:\deps-build",
     [string]$OutputDir = "D:\deps-output",
     [string]$QtVersion = "6.5.9",
-    [string]$FFmpegVersion = "8.1.1"
+    [string]$FFmpegVersion = "8.1.1",
+    [string]$Target = "all"
 )
 
 $ErrorActionPreference = "Stop"
@@ -14,13 +15,27 @@ New-Item -ItemType Directory -Force -Path $OutputDir | Out-Null
 $DepsDir = Join-Path $TargetDir "deps"
 New-Item -ItemType Directory -Force -Path $DepsDir | Out-Null
 
-# 1. 编译 FFmpeg
-Write-Host "=== Building FFmpeg $FFmpegVersion ==="
-$MsysDepsDir = $DepsDir.Replace("\", "/").Replace("D:", "/d").Replace("C:", "/c")
-$TargetDirUnix = $TargetDir.Replace("\", "/").Replace("D:", "/d").Replace("C:", "/c")
+$OriginalLocation = Get-Location
 
-# 写入临时 bash 编译脚本以在 MSYS2 环境下执行
-$BashScript = @"
+# 1. 编译 FFmpeg
+if ($Target -eq "all" -or $Target -eq "ffmpeg") {
+    Write-Host "=== Building FFmpeg $FFmpegVersion ==="
+    
+    # Clone nv-codec-headers on host PowerShell where git is available
+    $NvCodecDir = Join-Path $TargetDir "nv-codec-headers"
+    if (-not (Test-Path $NvCodecDir)) {
+        Write-Host "Cloning nv-codec-headers..."
+        & git clone https://git.videolan.org/git/ffmpeg/nv-codec-headers.git $NvCodecDir
+        Set-Location $NvCodecDir
+        & git checkout n12.1.14.0
+        Set-Location $OriginalLocation
+    }
+
+    $MsysDepsDir = $DepsDir.Replace("\", "/").Replace("D:", "/d").Replace("d:", "/d").Replace("C:", "/c").Replace("c:", "/c")
+    $TargetDirUnix = $TargetDir.Replace("\", "/").Replace("D:", "/d").Replace("d:", "/d").Replace("C:", "/c").Replace("c:", "/c")
+
+    # Write temporary bash script
+    $BashScript = @"
 #!/usr/bin/env bash
 set -euo pipefail
 
@@ -29,17 +44,12 @@ if [ -f /usr/bin/link.exe ]; then
     mv /usr/bin/link.exe /usr/bin/link-original.exe
 fi
 
-# Build nv-codec-headers for NVIDIA hardware encoding/decoding support
-cd $TargetDirUnix
-if [ ! -d "nv-codec-headers" ]; then
-    git clone https://git.videolan.org/git/ffmpeg/nv-codec-headers.git
-    cd nv-codec-headers
-    git checkout n12.1.14.0
-    make install PREFIX=/usr
-    cd ..
-fi
+# Install nv-codec-headers into MSYS2
+cd "$TargetDirUnix/nv-codec-headers"
+make install PREFIX=/usr
 
 # Download & Extract FFmpeg Source
+cd "$TargetDirUnix"
 ffmpeg_tar="ffmpeg-${FFmpegVersion}.tar.xz"
 if [ ! -d "ffmpeg-${FFmpegVersion}" ]; then
     if [ ! -f "`$ffmpeg_tar" ]; then
@@ -51,7 +61,7 @@ fi
 cd "ffmpeg-${FFmpegVersion}"
 ./configure \
     --toolchain=msvc \
-    --prefix="$MsysDepsDir/ffmpeg" \
+    --prefix="/tmp/ffmpeg-install" \
     --enable-shared \
     --disable-static \
     --disable-doc \
@@ -72,120 +82,145 @@ if [ -f /usr/bin/link-original.exe ]; then
 fi
 "@
 
-$BashScriptPath = Join-Path $TargetDir "build-ffmpeg.sh"
-Set-Content -Path $BashScriptPath -Value $BashScript -Encoding utf8NoBOM
+    $BashScriptPath = Join-Path $TargetDir "build-ffmpeg.sh"
+    Set-Content -Path $BashScriptPath -Value $BashScript -Encoding utf8NoBOM
 
-Write-Host "Running FFmpeg build inside MSYS2..."
-& C:\msys64\usr\bin\bash.exe --login -c "$TargetDirUnix/build-ffmpeg.sh"
+    Write-Host "Running FFmpeg build inside MSYS2..."
+    & C:\msys64\usr\bin\bash.exe --login -c "$TargetDirUnix/build-ffmpeg.sh"
+    if ($LASTEXITCODE -ne 0) {
+        throw "FFmpeg build failed inside MSYS2 with exit code $LASTEXITCODE"
+    }
+
+    # Copy FFmpeg build output from MSYS2 tmp to Target deps
+    Write-Host "Copying FFmpeg output to target deps folder..."
+    $MsysTmpInstall = "C:\msys64\tmp\ffmpeg-install"
+    $FfmpegTarget = Join-Path $DepsDir "ffmpeg"
+    New-Item -ItemType Directory -Force -Path $FfmpegTarget | Out-Null
+    Copy-Item -Path "$MsysTmpInstall\*" -Destination $FfmpegTarget -Recurse -Force
+
+    # Pack FFmpeg
+    Write-Host "=== Packaging FFmpeg ==="
+    Set-Location $DepsDir
+    Compress-Archive -Path "ffmpeg" -DestinationPath (Join-Path $OutputDir "ffmpeg-windows-x64.zip") -Force
+    Set-Location $OriginalLocation
+}
 
 # 2. 编译 Qt 6.5.9
-Write-Host "=== Building Qt $QtVersion ==="
-$QtTarUrl = "https://download.qt.io/official_releases/qt/6.5/$QtVersion/src/single/qt-everywhere-opensource-src-$QtVersion.tar.xz"
-$QtTarPath = Join-Path $TargetDir "qt-src.tar.xz"
-$QtSrcDirName = "qt-everywhere-src-$QtVersion"
-$QtSrcDir = Join-Path $TargetDir $QtSrcDirName
+if ($Target -eq "all" -or $Target -eq "qt6") {
+    Write-Host "=== Building Qt $QtVersion ==="
+    $QtTarUrl = "https://download.qt.io/official_releases/qt/6.5/$QtVersion/src/single/qt-everywhere-opensource-src-$QtVersion.tar.xz"
+    $QtTarPath = Join-Path $TargetDir "qt-src.tar.xz"
+    $QtSrcDirName = "qt-everywhere-src-$QtVersion"
+    $QtSrcDir = Join-Path $TargetDir $QtSrcDirName
 
-if (-not (Test-Path $QtSrcDir)) {
-    if (-not (Test-Path $QtTarPath)) {
-        Write-Host "Downloading Qt $QtVersion source..."
-        Invoke-WebRequest -Uri $QtTarUrl -OutFile $QtTarPath
+    if (-not (Test-Path $QtSrcDir)) {
+        if (-not (Test-Path $QtTarPath)) {
+            Write-Host "Downloading Qt $QtVersion source..."
+            Invoke-WebRequest -Uri $QtTarUrl -OutFile $QtTarPath
+        }
+        Write-Host "Extracting Qt $QtVersion source..."
+        tar.exe -xf $QtTarPath -C $TargetDir
     }
-    Write-Host "Extracting Qt $QtVersion source..."
-    tar.exe -xf $QtTarPath -C $TargetDir
+
+    $QtBuildDir = Join-Path $TargetDir "qt6-build"
+    New-Item -ItemType Directory -Force -Path $QtBuildDir | Out-Null
+    Set-Location $QtBuildDir
+
+    $QtInstallDir = Join-Path $DepsDir "qt6"
+
+    Write-Host "Configuring Qt..."
+    & "$QtSrcDir\configure.bat" -prefix $QtInstallDir `
+        -opensource -confirm-license `
+        -nomake examples -nomake tests `
+        -release `
+        -skip qt3d `
+        -skip qt5compat `
+        -skip qtactiveqt `
+        -skip qtcharts `
+        -skip qtcoap `
+        -skip qtconnectivity `
+        -skip qtdatavis3d `
+        -skip qtdeclarative `
+        -skip qtdoc `
+        -skip qtgrpc `
+        -skip qthttpserver `
+        -skip qtimageformats `
+        -skip qtlanguageserver `
+        -skip qtlocation `
+        -skip qtlottie `
+        -skip qtmqtt `
+        -skip qtnetworkauth `
+        -skip qtopcua `
+        -skip qtpositioning `
+        -skip qtquick3d `
+        -skip qtquick3dphysics `
+        -skip qtquickeffectmaker `
+        -skip qtquicktimeline `
+        -skip qtremoteobjects `
+        -skip qtscxml `
+        -skip qtsensors `
+        -skip qtserialbus `
+        -skip qtserialport `
+        -skip qtspeech `
+        -skip qtvirtualkeyboard `
+        -skip qtwayland `
+        -skip qtwebchannel `
+        -skip qtwebengine `
+        -skip qtwebsockets `
+        -skip qtwebview
+
+    Write-Host "Building Qt..."
+    cmake --build . --parallel 8
+    Write-Host "Installing Qt..."
+    cmake --install .
+
+    Set-Location $OriginalLocation
+
+    # Pack Qt6
+    Write-Host "=== Packaging Qt6 ==="
+    Set-Location $DepsDir
+    Compress-Archive -Path "qt6" -DestinationPath (Join-Path $OutputDir "qt6-windows-x64.zip") -Force
+    Set-Location $OriginalLocation
 }
-
-$QtBuildDir = Join-Path $TargetDir "qt6-build"
-New-Item -ItemType Directory -Force -Path $QtBuildDir | Out-Null
-$OriginalLocation = Get-Location
-Set-Location $QtBuildDir
-
-$QtInstallDir = Join-Path $DepsDir "qt6"
-
-Write-Host "Configuring Qt..."
-# Configure Qt with the same modules and skip list as macOS
-& "$QtSrcDir\configure.bat" -prefix $QtInstallDir `
-    -opensource -confirm-license `
-    -nomake examples -nomake tests `
-    -release `
-    -skip qt3d `
-    -skip qt5compat `
-    -skip qtactiveqt `
-    -skip qtcharts `
-    -skip qtcoap `
-    -skip qtconnectivity `
-    -skip qtdatavis3d `
-    -skip qtdeclarative `
-    -skip qtdoc `
-    -skip qtgrpc `
-    -skip qthttpserver `
-    -skip qtimageformats `
-    -skip qtlanguageserver `
-    -skip qtlocation `
-    -skip qtlottie `
-    -skip qtmqtt `
-    -skip qtnetworkauth `
-    -skip qtopcua `
-    -skip qtpositioning `
-    -skip qtquick3d `
-    -skip qtquick3dphysics `
-    -skip qtquickeffectmaker `
-    -skip qtquicktimeline `
-    -skip qtremoteobjects `
-    -skip qtscxml `
-    -skip qtsensors `
-    -skip qtserialbus `
-    -skip qtserialport `
-    -skip qtspeech `
-    -skip qtvirtualkeyboard `
-    -skip qtwayland `
-    -skip qtwebchannel `
-    -skip qtwebengine `
-    -skip qtwebsockets `
-    -skip qtwebview
-
-Write-Host "Building Qt..."
-cmake --build . --parallel 8
-Write-Host "Installing Qt..."
-cmake --install .
-
-Set-Location $OriginalLocation
 
 # 3. 编译 QWindowKit
-Write-Host "=== Building QWindowKit ==="
-$QwkSrcDir = Join-Path $TargetDir "qwindowkit-src"
-if (-not (Test-Path $QwkSrcDir)) {
-    Write-Host "Cloning QWindowKit..."
-    git clone --recursive https://github.com/stdware/qwindowkit.git $QwkSrcDir
-    Set-Location $QwkSrcDir
-    git checkout 1.5.0
-    git submodule update --init --recursive
+if ($Target -eq "all" -or $Target -eq "qwindowkit") {
+    Write-Host "=== Building QWindowKit ==="
+    $QtInstallDir = Join-Path $DepsDir "qt6"
+    if (-not (Test-Path $QtInstallDir)) {
+        throw "Qt6 install folder not found at $QtInstallDir. Make sure Qt6 is compiled or downloaded."
+    }
+
+    $QwkSrcDir = Join-Path $TargetDir "qwindowkit-src"
+    if (-not (Test-Path $QwkSrcDir)) {
+        Write-Host "Cloning QWindowKit..."
+        git clone --recursive https://github.com/stdware/qwindowkit.git $QwkSrcDir
+        Set-Location $QwkSrcDir
+        git checkout 1.5.0
+        git submodule update --init --recursive
+        Set-Location $OriginalLocation
+    }
+
+    $QwkBuildDir = Join-Path $TargetDir "qwindowkit-build"
+    New-Item -ItemType Directory -Force -Path $QwkBuildDir | Out-Null
+    Set-Location $QwkBuildDir
+
+    $QwkInstallDir = Join-Path $DepsDir "qwindowkit"
+
+    Write-Host "Configuring QWindowKit..."
+    cmake $QwkSrcDir -DCMAKE_PREFIX_PATH="$QtInstallDir" -DCMAKE_INSTALL_PREFIX="$QwkInstallDir" -DBUILD_SHARED_LIBS=ON
+    Write-Host "Building QWindowKit..."
+    cmake --build . --config Release --parallel 8
+    Write-Host "Installing QWindowKit..."
+    cmake --install . --config Release
+
+    Set-Location $OriginalLocation
+
+    # Pack QWindowKit
+    Write-Host "=== Packaging QWindowKit ==="
+    Set-Location $DepsDir
+    Compress-Archive -Path "qwindowkit" -DestinationPath (Join-Path $OutputDir "qwindowkit-windows-x64.zip") -Force
+    Set-Location $OriginalLocation
 }
 
-$QwkBuildDir = Join-Path $TargetDir "qwindowkit-build"
-New-Item -ItemType Directory -Force -Path $QwkBuildDir | Out-Null
-Set-Location $QwkBuildDir
-
-$QwkInstallDir = Join-Path $DepsDir "qwindowkit"
-
-Write-Host "Configuring QWindowKit..."
-cmake $QwkSrcDir -DCMAKE_PREFIX_PATH="$QtInstallDir" -DCMAKE_INSTALL_PREFIX="$QwkInstallDir" -DBUILD_SHARED_LIBS=ON
-Write-Host "Building QWindowKit..."
-cmake --build . --config Release --parallel 8
-Write-Host "Installing QWindowKit..."
-cmake --install . --config Release
-
-Set-Location $OriginalLocation
-
-# 4. 打包输出为 ZIP 格式
-Write-Host "=== Packaging Dependencies ==="
-Set-Location $DepsDir
-
-Write-Host "Compressing ffmpeg..."
-Compress-Archive -Path "ffmpeg" -DestinationPath (Join-Path $OutputDir "ffmpeg-windows-x64.zip") -Force
-Write-Host "Compressing qt6..."
-Compress-Archive -Path "qt6" -DestinationPath (Join-Path $OutputDir "qt6-windows-x64.zip") -Force
-Write-Host "Compressing qwindowkit..."
-Compress-Archive -Path "qwindowkit" -DestinationPath (Join-Path $OutputDir "qwindowkit-windows-x64.zip") -Force
-
-Set-Location $OriginalLocation
 Write-Host "=== Done ==="

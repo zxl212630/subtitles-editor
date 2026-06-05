@@ -51,7 +51,52 @@ permissions:
   contents: write
 
 jobs:
-  build-deps:
+  setup-env:
+    runs-on: ubuntu-latest
+    outputs:
+      deps_tag: ${{ steps.env.outputs.deps_tag }}
+      base_tag: ${{ steps.env.outputs.base_tag }}
+      force_rebuild: ${{ steps.env.outputs.force_rebuild }}
+      qt_version: ${{ steps.env.outputs.qt_version }}
+      ffmpeg_version: ${{ steps.env.outputs.ffmpeg_version }}
+    steps:
+      - name: Compute env outputs
+        id: env
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            DEPS_TAG="${{ inputs.deps_tag }}"
+            FORCE_REBUILD="${{ inputs.force_rebuild }}"
+            QT_VERSION="${{ inputs.qt_version }}"
+            FFMPEG_VERSION="${{ inputs.ffmpeg_version }}"
+          else
+            REF_NAME="${{ github.ref_name }}"
+            if [[ "$REF_NAME" =~ ^trigger-deps-(.+)$ ]]; then
+              DEPS_TAG="deps-${BASH_REMATCH[1]}"
+            else
+              DEPS_TAG="deps-v1.3"
+            fi
+            FORCE_REBUILD="false"
+            QT_VERSION="6.5.9"
+            FFMPEG_VERSION="8.1.1"
+          fi
+          echo "deps_tag=$DEPS_TAG" >> "$GITHUB_OUTPUT"
+          echo "force_rebuild=$FORCE_REBUILD" >> "$GITHUB_OUTPUT"
+          echo "qt_version=$QT_VERSION" >> "$GITHUB_OUTPUT"
+          echo "ffmpeg_version=$FFMPEG_VERSION" >> "$GITHUB_OUTPUT"
+
+          if [[ -n "${{ inputs.copy_from_tag }}" ]]; then
+            echo "base_tag=${{ inputs.copy_from_tag }}" >> "$GITHUB_OUTPUT"
+          else
+            BASE_TAG=$(gh release list --limit 100 --repo "${{ github.repository }}" | cut -f1 | \
+              grep -E "^deps-v" | grep -v -x "$DEPS_TAG" | head -n 1 || true)
+            echo "base_tag=$BASE_TAG" >> "$GITHUB_OUTPUT"
+          fi
+
+  # --- macOS Jobs ---
+  build-ffmpeg-macos:
+    needs: setup-env
     runs-on: ${{ matrix.runner }}
     strategy:
       fail-fast: false
@@ -61,201 +106,389 @@ jobs:
             runner: macos-14
           - arch: x64
             runner: macos-15-intel
-
+    env:
+      DEPS_TAG: ${{ needs.setup-env.outputs.deps_tag }}
+      BASE_TAG: ${{ needs.setup-env.outputs.base_tag }}
+      FORCE_REBUILD: ${{ needs.setup-env.outputs.force_rebuild }}
+      FFMPEG_VERSION: ${{ needs.setup-env.outputs.ffmpeg_version }}
     steps:
       - uses: actions/checkout@v4
 
-      - name: Setup environment variables
+      - name: Check or Copy FFmpeg package
+        id: check-cache
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          # 1. Determine the source of trigger
-          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
-            echo "TARGET=${{ inputs.target }}" >> "$GITHUB_ENV"
-            echo "ARCH=${{ inputs.arch }}" >> "$GITHUB_ENV"
-            echo "QT_VERSION=${{ inputs.qt_version }}" >> "$GITHUB_ENV"
-            echo "FFMPEG_VERSION=${{ inputs.ffmpeg_version }}" >> "$GITHUB_ENV"
-            echo "COPY_FROM_TAG=${{ inputs.copy_from_tag }}" >> "$GITHUB_ENV"
-            echo "DEPS_TAG=${{ inputs.deps_tag }}" >> "$GITHUB_ENV"
-            echo "FORCE_REBUILD=${{ inputs.force_rebuild }}" >> "$GITHUB_ENV"
-          else
-            # Triggered by push of tag, e.g., refs/tags/trigger-deps-v1.2
-            REF_NAME="${{ github.ref_name }}"
-            if [[ "$REF_NAME" =~ ^trigger-deps-(.+)$ ]]; then
-              TAG_SUFFIX="${BASH_REMATCH[1]}"
-              echo "DEPS_TAG=deps-$TAG_SUFFIX" >> "$GITHUB_ENV"
-            else
-              echo "DEPS_TAG=deps-v1.3" >> "$GITHUB_ENV"
-            fi
-            echo "TARGET=all" >> "$GITHUB_ENV"
-            echo "ARCH=all" >> "$GITHUB_ENV"
-            echo "QT_VERSION=6.5.9" >> "$GITHUB_ENV"
-            echo "FFMPEG_VERSION=8.1.1" >> "$GITHUB_ENV"
-            echo "COPY_FROM_TAG=" >> "$GITHUB_ENV"
-            echo "FORCE_REBUILD=false" >> "$GITHUB_ENV"
+          FILE_NAME="ffmpeg-macos-${{ matrix.arch }}.tar.zst"
+          if gh release view "$DEPS_TAG" --repo "${{ github.repository }}" | grep -q "$FILE_NAME"; then
+            echo "Package $FILE_NAME already exists in $DEPS_TAG. Skipping build."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            exit 0
           fi
-
-      - name: Free up disk space
-        run: |
-          echo "Before cleanup:"
-          df -h /
-          # Remove pre-installed software we don't need
-          sudo rm -rf /usr/local/share/boost
-          sudo rm -rf /usr/local/lib/android
-          sudo rm -rf /opt/hostedtoolcache/CodeQL
-          sudo rm -rf /opt/hostedtoolcache/go
-          sudo rm -rf /opt/hostedtoolcache/node
-          sudo rm -rf /opt/hostedtoolcache/python
-          sudo rm -rf /opt/hostedtoolcache/ruby
-          echo "After cleanup:"
-          df -h /
+          if [[ "$FORCE_REBUILD" != "true" && -n "$BASE_TAG" ]]; then
+            echo "Checking if $FILE_NAME exists in base release $BASE_TAG..."
+            if gh release view "$BASE_TAG" --repo "${{ github.repository }}" | grep -q "$FILE_NAME"; then
+              echo "Found $FILE_NAME in $BASE_TAG. Copying to $DEPS_TAG..."
+              gh release download "$BASE_TAG" -p "$FILE_NAME" --repo "${{ github.repository }}"
+              gh release upload "$DEPS_TAG" "$FILE_NAME" --clobber --repo "${{ github.repository }}"
+              echo "skip=true" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+          fi
+          echo "skip=false" >> "$GITHUB_OUTPUT"
 
       - name: Install build tools
-        if: ${{ env.ARCH == 'all' || env.ARCH == matrix.arch }}
+        if: steps.check-cache.outputs.skip != 'true'
         run: |
           brew install autoconf automake libtool nasm yasm pkg-config cmake zstd
 
-      - name: Find base deps tag
-        if: ${{ env.ARCH == 'all' || env.ARCH == matrix.arch }}
-        id: find-base-deps
+      - name: Build FFmpeg
+        if: steps.check-cache.outputs.skip != 'true'
+        run: |
+          ./scripts/build-deps-macos.sh \
+            --arch ${{ matrix.arch }} \
+            --output ${{ runner.temp }}/deps-output \
+            --ffmpeg-version $FFMPEG_VERSION \
+            --target ffmpeg \
+            --jobs $(sysctl -n hw.ncpu)
+
+      - name: Upload FFmpeg package
+        if: steps.check-cache.outputs.skip != 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          if [[ -n "$COPY_FROM_TAG" ]]; then
-            echo "tag=$COPY_FROM_TAG" >> "$GITHUB_OUTPUT"
-            echo "Using manually specified base tag: $COPY_FROM_TAG"
-          else
-            TARGET_TAG="$DEPS_TAG"
-            BASE_TAG=$(gh release list --limit 100 | cut -f1 | \
-              grep -E "^deps-v" | grep -v -x "$TARGET_TAG" | head -n 1 || true)
-            
-            if [[ -z "$BASE_TAG" ]]; then
-              echo "Warning: No previous deps release found to copy from." >&2
-              echo "tag=" >> "$GITHUB_OUTPUT"
-            else
-              echo "tag=$BASE_TAG" >> "$GITHUB_OUTPUT"
-              echo "Auto-detected base tag: $BASE_TAG"
+          gh release view "$DEPS_TAG" --repo "${{ github.repository }}" >/dev/null 2>&1 || {
+            gh release create "$DEPS_TAG" --prerelease --title "$DEPS_TAG" --notes "Pre-compiled dependencies" --repo "${{ github.repository }}"
+          }
+          gh release upload "$DEPS_TAG" "${{ runner.temp }}/deps-output/ffmpeg-macos-${{ matrix.arch }}.tar.zst" --clobber --repo "${{ github.repository }}"
+
+  build-qt-macos:
+    needs: setup-env
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: arm64
+            runner: macos-14
+          - arch: x64
+            runner: macos-15-intel
+    env:
+      DEPS_TAG: ${{ needs.setup-env.outputs.deps_tag }}
+      BASE_TAG: ${{ needs.setup-env.outputs.base_tag }}
+      FORCE_REBUILD: ${{ needs.setup-env.outputs.force_rebuild }}
+      QT_VERSION: ${{ needs.setup-env.outputs.qt_version }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Free up disk space
+        run: |
+          sudo rm -rf /usr/local/share/boost /usr/local/lib/android /opt/hostedtoolcache/CodeQL /opt/hostedtoolcache/go /opt/hostedtoolcache/node /opt/hostedtoolcache/python /opt/hostedtoolcache/ruby
+
+      - name: Check or Copy Qt package
+        id: check-cache
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          FILE_NAME="qt6-macos-${{ matrix.arch }}.tar.zst"
+          if gh release view "$DEPS_TAG" --repo "${{ github.repository }}" | grep -q "$FILE_NAME"; then
+            echo "Package $FILE_NAME already exists in $DEPS_TAG. Skipping build."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          if [[ "$FORCE_REBUILD" != "true" && -n "$BASE_TAG" ]]; then
+            echo "Checking if $FILE_NAME exists in base release $BASE_TAG..."
+            if gh release view "$BASE_TAG" --repo "${{ github.repository }}" | grep -q "$FILE_NAME"; then
+              echo "Found $FILE_NAME in $BASE_TAG. Copying to $DEPS_TAG..."
+              gh release download "$BASE_TAG" -p "$FILE_NAME" --repo "${{ github.repository }}"
+              gh release upload "$DEPS_TAG" "$FILE_NAME" --clobber --repo "${{ github.repository }}"
+              echo "skip=true" >> "$GITHUB_OUTPUT"
+              exit 0
             fi
           fi
+          echo "skip=false" >> "$GITHUB_OUTPUT"
 
-      - name: Pre-download existing dependencies from base release
-        if: ${{ env.FORCE_REBUILD != 'true' && steps.find-base-deps.outputs.tag != '' && (env.ARCH == 'all' || env.ARCH == matrix.arch) }}
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Install build tools
+        if: steps.check-cache.outputs.skip != 'true'
         run: |
-          mkdir -p "${{ runner.temp }}/deps-output"
-          cd "${{ runner.temp }}/deps-output"
-          
-          echo "Attempting to pre-download existing compiled dependencies from tag ${{ steps.find-base-deps.outputs.tag }}..."
-          for comp in ffmpeg qt6 qwindowkit; do
-            # If the user explicitly requested to build a single component, do NOT download it so it gets compiled
-            if [[ "$TARGET" == "all" || "$TARGET" != "$comp" ]]; then
-              file_name="${comp}-macos-${{ matrix.arch }}.tar.zst"
-              echo "Downloading $file_name from ${{ steps.find-base-deps.outputs.tag }}..."
-              if gh release download "${{ steps.find-base-deps.outputs.tag }}" -p "$file_name" --repo "${{ github.repository }}" 2>/dev/null; then
-                echo "Successfully downloaded $file_name"
-              else
-                echo "Could not download $file_name (will be compiled if needed)"
-              fi
-            else
-              echo "Skipping download of $comp because it is the build target"
-            fi
-          done
+          brew install autoconf automake libtool nasm yasm pkg-config cmake zstd
 
-      - name: Build dependencies
-        if: ${{ env.ARCH == 'all' || env.ARCH == matrix.arch }}
+      - name: Build Qt
+        if: steps.check-cache.outputs.skip != 'true'
         run: |
           ./scripts/build-deps-macos.sh \
             --arch ${{ matrix.arch }} \
             --output ${{ runner.temp }}/deps-output \
             --qt-version $QT_VERSION \
-            --ffmpeg-version $FFMPEG_VERSION \
-            --target $TARGET \
+            --target qt6 \
             --jobs $(sysctl -n hw.ncpu)
 
-      - name: Upload dependency package
-        if: ${{ env.ARCH == 'all' || env.ARCH == matrix.arch }}
+      - name: Upload Qt package
+        if: steps.check-cache.outputs.skip != 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          # Ensure the release exists first
           gh release view "$DEPS_TAG" --repo "${{ github.repository }}" >/dev/null 2>&1 || {
-            echo "Release $DEPS_TAG not found. Creating it..."
-            gh release create "$DEPS_TAG" \
-              --prerelease \
-              --title "$DEPS_TAG" \
-              --notes "Pre-compiled dependencies for macOS" \
-              --repo "${{ github.repository }}"
+            gh release create "$DEPS_TAG" --prerelease --title "$DEPS_TAG" --notes "Pre-compiled dependencies" --repo "${{ github.repository }}"
           }
+          gh release upload "$DEPS_TAG" "${{ runner.temp }}/deps-output/qt6-macos-${{ matrix.arch }}.tar.zst" --clobber --repo "${{ github.repository }}"
 
-          cd "${{ runner.temp }}/deps-output"
-          # Check if there are any .tar.zst files to upload
-          shopt -s nullglob
-          files=( *.tar.zst )
-          if [[ ${#files[@]} -eq 0 ]]; then
-            echo "Error: No packages compiled or copied!" >&2
-            exit 1
-          fi
-          for file in "${files[@]}"; do
-            echo "Uploading $(du -h "$file" | cut -f1) package: $file..."
-            gh release upload "$DEPS_TAG" "$file" \
-              --clobber \
-              --repo "${{ github.repository }}"
-          done
-
-  build-deps-windows:
-    runs-on: windows-latest
+  build-qwindowkit-macos:
+    needs: [setup-env, build-qt-macos]
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: arm64
+            runner: macos-14
+          - arch: x64
+            runner: macos-15-intel
+    env:
+      DEPS_TAG: ${{ needs.setup-env.outputs.deps_tag }}
+      BASE_TAG: ${{ needs.setup-env.outputs.base_tag }}
+      FORCE_REBUILD: ${{ needs.setup-env.outputs.force_rebuild }}
     steps:
       - uses: actions/checkout@v4
 
-      - name: Setup environment variables
+      - name: Check or Copy QWindowKit package
+        id: check-cache
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          FILE_NAME="qwindowkit-macos-${{ matrix.arch }}.tar.zst"
+          if gh release view "$DEPS_TAG" --repo "${{ github.repository }}" | grep -q "$FILE_NAME"; then
+            echo "Package $FILE_NAME already exists in $DEPS_TAG. Skipping build."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          if [[ "$FORCE_REBUILD" != "true" && -n "$BASE_TAG" ]]; then
+            echo "Checking if $FILE_NAME exists in base release $BASE_TAG..."
+            if gh release view "$BASE_TAG" --repo "${{ github.repository }}" | grep -q "$FILE_NAME"; then
+              echo "Found $FILE_NAME in $BASE_TAG. Copying to $DEPS_TAG..."
+              gh release download "$BASE_TAG" -p "$FILE_NAME" --repo "${{ github.repository }}"
+              gh release upload "$DEPS_TAG" "$FILE_NAME" --clobber --repo "${{ github.repository }}"
+              echo "skip=true" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+          fi
+          echo "skip=false" >> "$GITHUB_OUTPUT"
+
+      - name: Install build tools
+        if: steps.check-cache.outputs.skip != 'true'
+        run: |
+          brew install autoconf automake libtool nasm yasm pkg-config cmake zstd
+
+      - name: Download Qt dependency
+        if: steps.check-cache.outputs.skip != 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release download "$DEPS_TAG" -p "qt6-macos-${{ matrix.arch }}.tar.zst" --repo "${{ github.repository }}"
+          mkdir -p "${{ runner.temp }}/deps-output"
+          zstd -d -c "qt6-macos-${{ matrix.arch }}.tar.zst" | tar -xf - -C "${{ runner.temp }}/deps-output"
+
+      - name: Build QWindowKit
+        if: steps.check-cache.outputs.skip != 'true'
+        run: |
+          ./scripts/build-deps-macos.sh \
+            --arch ${{ matrix.arch }} \
+            --output ${{ runner.temp }}/deps-output \
+            --target qwindowkit \
+            --jobs $(sysctl -n hw.ncpu)
+
+      - name: Upload QWindowKit package
+        if: steps.check-cache.outputs.skip != 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release view "$DEPS_TAG" --repo "${{ github.repository }}" >/dev/null 2>&1 || {
+            gh release create "$DEPS_TAG" --prerelease --title "$DEPS_TAG" --notes "Pre-compiled dependencies" --repo "${{ github.repository }}"
+          }
+          gh release upload "$DEPS_TAG" "${{ runner.temp }}/deps-output/qwindowkit-macos-${{ matrix.arch }}.tar.zst" --clobber --repo "${{ github.repository }}"
+
+
+  # --- Windows Jobs ---
+  build-ffmpeg-windows:
+    needs: setup-env
+    runs-on: windows-latest
+    env:
+      DEPS_TAG: ${{ needs.setup-env.outputs.deps_tag }}
+      BASE_TAG: ${{ needs.setup-env.outputs.base_tag }}
+      FORCE_REBUILD: ${{ needs.setup-env.outputs.force_rebuild }}
+      FFMPEG_VERSION: ${{ needs.setup-env.outputs.ffmpeg_version }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check or Copy FFmpeg package
+        id: check-cache
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         shell: bash
         run: |
-          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
-            echo "DEPS_TAG=${{ inputs.deps_tag }}" >> "$GITHUB_ENV"
-            echo "QT_VERSION=${{ inputs.qt_version }}" >> "$GITHUB_ENV"
-            echo "FFMPEG_VERSION=${{ inputs.ffmpeg_version }}" >> "$GITHUB_ENV"
-          else
-            REF_NAME="${{ github.ref_name }}"
-            if [[ "$REF_NAME" =~ ^trigger-deps-(.+)$ ]]; then
-              TAG_SUFFIX="${BASH_REMATCH[1]}"
-              echo "DEPS_TAG=deps-$TAG_SUFFIX" >> "$GITHUB_ENV"
-            else
-              echo "DEPS_TAG=deps-v1.3" >> "$GITHUB_ENV"
-            fi
-            echo "QT_VERSION=6.5.9" >> "$GITHUB_ENV"
-            echo "FFMPEG_VERSION=8.1.1" >> "$GITHUB_ENV"
+          FILE_NAME="ffmpeg-windows-x64.zip"
+          if gh release view "$DEPS_TAG" --repo "${{ github.repository }}" | grep -q "$FILE_NAME"; then
+            echo "Package $FILE_NAME already exists in $DEPS_TAG. Skipping build."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            exit 0
           fi
+          if [[ "$FORCE_REBUILD" != "true" && -n "$BASE_TAG" ]]; then
+            echo "Checking if $FILE_NAME exists in base release $BASE_TAG..."
+            if gh release view "$BASE_TAG" --repo "${{ github.repository }}" | grep -q "$FILE_NAME"; then
+              echo "Found $FILE_NAME in $BASE_TAG. Copying to $DEPS_TAG..."
+              gh release download "$BASE_TAG" -p "$FILE_NAME" --repo "${{ github.repository }}"
+              gh release upload "$DEPS_TAG" "$FILE_NAME" --clobber --repo "${{ github.repository }}"
+              echo "skip=true" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+          fi
+          echo "skip=false" >> "$GITHUB_OUTPUT"
 
       - name: Setup MSVC
+        if: steps.check-cache.outputs.skip != 'true'
         uses: ilammy/msvc-dev-cmd@v1
 
       - name: Setup MSYS2
+        if: steps.check-cache.outputs.skip != 'true'
         uses: msys2/setup-msys2@v2
         with:
           msystem: MSYS
           install: make diffutils pkgconf yasm git
 
-      - name: Build dependencies
+      - name: Build FFmpeg
+        if: steps.check-cache.outputs.skip != 'true'
         shell: pwsh
         run: |
-          ./scripts/build-deps-windows.ps1 -TargetDir "D:\deps-build" -OutputDir "D:\deps-output" -QtVersion "$env:QT_VERSION" -FFmpegVersion "$env:FFMPEG_VERSION"
+          ./scripts/build-deps-windows.ps1 -TargetDir "D:\deps-build" -OutputDir "D:\deps-output" -FFmpegVersion "$env:FFMPEG_VERSION" -Target ffmpeg
 
-      - name: Upload dependency package
+      - name: Upload FFmpeg package
+        if: steps.check-cache.outputs.skip != 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         shell: bash
         run: |
           gh release view "$DEPS_TAG" --repo "${{ github.repository }}" >/dev/null 2>&1 || {
-            echo "Release $DEPS_TAG not found. Creating it..."
-            gh release create "$DEPS_TAG" \
-              --prerelease \
-              --title "$DEPS_TAG" \
-              --notes "Pre-compiled dependencies for Windows" \
-              --repo "${{ github.repository }}"
+            gh release create "$DEPS_TAG" --prerelease --title "$DEPS_TAG" --notes "Pre-compiled dependencies" --repo "${{ github.repository }}"
           }
+          gh release upload "$DEPS_TAG" "D:/deps-output/ffmpeg-windows-x64.zip" --clobber --repo "${{ github.repository }}"
 
-          cd "D:/deps-output"
-          for file in *.zip; do
-            echo "Uploading $file..."
-            gh release upload "$DEPS_TAG" "$file" --clobber --repo "${{ github.repository }}"
-          done
+  build-qt-windows:
+    needs: setup-env
+    runs-on: windows-latest
+    env:
+      DEPS_TAG: ${{ needs.setup-env.outputs.deps_tag }}
+      BASE_TAG: ${{ needs.setup-env.outputs.base_tag }}
+      FORCE_REBUILD: ${{ needs.setup-env.outputs.force_rebuild }}
+      QT_VERSION: ${{ needs.setup-env.outputs.qt_version }}
+    steps:
+      - uses: actions/checkout@v4
 
+      - name: Check or Copy Qt package
+        id: check-cache
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
+        run: |
+          FILE_NAME="qt6-windows-x64.zip"
+          if gh release view "$DEPS_TAG" --repo "${{ github.repository }}" | grep -q "$FILE_NAME"; then
+            echo "Package $FILE_NAME already exists in $DEPS_TAG. Skipping build."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          if [[ "$FORCE_REBUILD" != "true" && -n "$BASE_TAG" ]]; then
+            echo "Checking if $FILE_NAME exists in base release $BASE_TAG..."
+            if gh release view "$BASE_TAG" --repo "${{ github.repository }}" | grep -q "$FILE_NAME"; then
+              echo "Found $FILE_NAME in $BASE_TAG. Copying to $DEPS_TAG..."
+              gh release download "$BASE_TAG" -p "$FILE_NAME" --repo "${{ github.repository }}"
+              gh release upload "$DEPS_TAG" "$FILE_NAME" --clobber --repo "${{ github.repository }}"
+              echo "skip=true" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+          fi
+          echo "skip=false" >> "$GITHUB_OUTPUT"
+
+      - name: Setup MSVC
+        if: steps.check-cache.outputs.skip != 'true'
+        uses: ilammy/msvc-dev-cmd@v1
+
+      - name: Build Qt
+        if: steps.check-cache.outputs.skip != 'true'
+        shell: pwsh
+        run: |
+          ./scripts/build-deps-windows.ps1 -TargetDir "D:\deps-build" -OutputDir "D:\deps-output" -QtVersion "$env:QT_VERSION" -Target qt6
+
+      - name: Upload Qt package
+        if: steps.check-cache.outputs.skip != 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
+        run: |
+          gh release view "$DEPS_TAG" --repo "${{ github.repository }}" >/dev/null 2>&1 || {
+            gh release create "$DEPS_TAG" --prerelease --title "$DEPS_TAG" --notes "Pre-compiled dependencies" --repo "${{ github.repository }}"
+          }
+          gh release upload "$DEPS_TAG" "D:/deps-output/qt6-windows-x64.zip" --clobber --repo "${{ github.repository }}"
+
+  build-qwindowkit-windows:
+    needs: [setup-env, build-qt-windows]
+    runs-on: windows-latest
+    env:
+      DEPS_TAG: ${{ needs.setup-env.outputs.deps_tag }}
+      BASE_TAG: ${{ needs.setup-env.outputs.base_tag }}
+      FORCE_REBUILD: ${{ needs.setup-env.outputs.force_rebuild }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check or Copy QWindowKit package
+        id: check-cache
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
+        run: |
+          FILE_NAME="qwindowkit-windows-x64.zip"
+          if gh release view "$DEPS_TAG" --repo "${{ github.repository }}" | grep -q "$FILE_NAME"; then
+            echo "Package $FILE_NAME already exists in $DEPS_TAG. Skipping build."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          if [[ "$FORCE_REBUILD" != "true" && -n "$BASE_TAG" ]]; then
+            echo "Checking if $FILE_NAME exists in base release $BASE_TAG..."
+            if gh release view "$BASE_TAG" --repo "${{ github.repository }}" | grep -q "$FILE_NAME"; then
+              echo "Found $FILE_NAME in $BASE_TAG. Copying to $DEPS_TAG..."
+              gh release download "$BASE_TAG" -p "$FILE_NAME" --repo "${{ github.repository }}"
+              gh release upload "$DEPS_TAG" "$FILE_NAME" --clobber --repo "${{ github.repository }}"
+              echo "skip=true" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+          fi
+          echo "skip=false" >> "$GITHUB_OUTPUT"
+
+      - name: Setup MSVC
+        if: steps.check-cache.outputs.skip != 'true'
+        uses: ilammy/msvc-dev-cmd@v1
+
+      - name: Download Qt dependency
+        if: steps.check-cache.outputs.skip != 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
+        run: |
+          gh release download "$DEPS_TAG" -p "qt6-windows-x64.zip" --repo "${{ github.repository }}"
+          mkdir -p D:/deps-build/deps
+          unzip -q qt6-windows-x64.zip -d D:/deps-build/deps
+
+      - name: Build QWindowKit
+        if: steps.check-cache.outputs.skip != 'true'
+        shell: pwsh
+        run: |
+          ./scripts/build-deps-windows.ps1 -TargetDir "D:\deps-build" -OutputDir "D:\deps-output" -Target qwindowkit
+
+      - name: Upload QWindowKit package
+        if: steps.check-cache.outputs.skip != 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
+        run: |
+          gh release view "$DEPS_TAG" --repo "${{ github.repository }}" >/dev/null 2>&1 || {
+            gh release create "$DEPS_TAG" --prerelease --title "$DEPS_TAG" --notes "Pre-compiled dependencies" --repo "${{ github.repository }}"
+          }
+          gh release upload "$DEPS_TAG" "D:/deps-output/qwindowkit-windows-x64.zip" --clobber --repo "${{ github.repository }}"
