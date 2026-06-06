@@ -584,41 +584,47 @@ double SoftwareVideoRenderer::getNormalizedFontHeight() const {
 
 bool SoftwareVideoRenderer::eventFilter(QObject *watched, QEvent *event) {
   if (watched == editor_ && isEditing_ && editor_) {
-    if (event->type() == QEvent::MouseButtonPress ||
-        event->type() == QEvent::MouseButtonRelease ||
-        event->type() == QEvent::MouseButtonDblClick ||
-        event->type() == QEvent::MouseMove) {
-
+    if (event->type() == QEvent::MouseButtonPress) {
       QMouseEvent *mouseEvent = static_cast<QMouseEvent *>(event);
-
-      // Clear selection on press to prevent drag-and-drop triggers
-      if (event->type() == QEvent::MouseButtonPress &&
-          editor_->hasSelectedText()) {
-        editor_->deselect();
-      }
-
-      // Map global coordinates through inverse rotation transform to parent
-      // widget space
       QPoint parentPos = mapFromGlobal(mouseEvent->globalPosition().toPoint());
       QTransform inv = getSubtitleTransform().inverted();
       QPoint localPos = inv.map(parentPos);
 
-      // Compute local click coordinates relative to the editor widget's
-      // geometry
-      QPoint localClickPos = localPos - editor_->geometry().topLeft();
-      localClickPos.setY(editor_->height() / 2);
+      int cursorPos = cursorPosFromLocalPoint(localPos);
+      if (editor_->hasSelectedText()) {
+        editor_->deselect();
+      }
+      editor_->setCursorPosition(cursorPos);
+      editClickAnchor_ = cursorPos;
+      cursorVisible_ = true;
+      update();
+      return true;
+    }
 
-      QMouseEvent mappedEvent(
-          mouseEvent->type(), localClickPos, mouseEvent->globalPosition(),
-          mouseEvent->button(), mouseEvent->buttons(), mouseEvent->modifiers());
+    if (event->type() == QEvent::MouseMove) {
+      QMouseEvent *mouseEvent = static_cast<QMouseEvent *>(event);
+      if (mouseEvent->buttons() & Qt::LeftButton) {
+        QPoint parentPos =
+            mapFromGlobal(mouseEvent->globalPosition().toPoint());
+        QTransform inv = getSubtitleTransform().inverted();
+        QPoint localPos = inv.map(parentPos);
 
-      // Deliver mapped mouse event directly by temporarily removing filter to
-      // bypass recursion
-      editor_->removeEventFilter(this);
-      QCoreApplication::sendEvent(editor_, &mappedEvent);
-      editor_->installEventFilter(this);
+        int cursorPos = cursorPosFromLocalPoint(localPos);
+        if (cursorPos != editClickAnchor_) {
+          editor_->setSelection(editClickAnchor_, cursorPos - editClickAnchor_);
+        } else {
+          editor_->deselect();
+          editor_->setCursorPosition(cursorPos);
+        }
+        cursorVisible_ = true;
+        update();
+      }
+      return true;
+    }
 
-      return true; // Discard original event
+    if (event->type() == QEvent::MouseButtonRelease ||
+        event->type() == QEvent::MouseButtonDblClick) {
+      return true;
     }
   }
   return QWidget::eventFilter(watched, event);
@@ -626,6 +632,23 @@ bool SoftwareVideoRenderer::eventFilter(QObject *watched, QEvent *event) {
 
 void SoftwareVideoRenderer::mousePressEvent(QMouseEvent *event) {
   if (isEditing_ && editor_) {
+    // Check if the click is within the subtitle area; if so, reposition cursor
+    // directly instead of cancelling
+    QRect pixelRect = getSubtitlePixelRect();
+    QTransform inv = getSubtitleTransform().inverted();
+    QPoint localPos = inv.map(event->pos());
+    if (pixelRect.contains(localPos)) {
+      int cursorPos = cursorPosFromLocalPoint(localPos);
+      if (editor_->hasSelectedText()) {
+        editor_->deselect();
+      }
+      editor_->setCursorPosition(cursorPos);
+      editClickAnchor_ = cursorPos;
+      cursorVisible_ = true;
+      update();
+      event->accept();
+      return;
+    }
     cancelEditing();
     event->accept();
     return;
@@ -768,6 +791,56 @@ void SoftwareVideoRenderer::updateEditorGeometry() {
   }
 
   editor_->setGeometry(startX, pixelRect.y(), widgetWidth, pixelRect.height());
+}
+
+int SoftwareVideoRenderer::cursorPosFromLocalPoint(
+    const QPoint &localPos) const {
+  if (!editor_)
+    return 0;
+
+  // Compute the same scaled font used for visual rendering in paintEvent
+  QRect targetRect = getTargetRect();
+  QFont drawFont;
+  {
+    QMutexLocker lock(&subtitleMutex_);
+    drawFont = subtitleFont_;
+  }
+  int originalSize = drawFont.pointSize();
+  if (originalSize <= 0)
+    originalSize = drawFont.pixelSize();
+  if (originalSize <= 0)
+    originalSize = 24;
+  double scale = (targetRect.height() > 0)
+                     ? (static_cast<double>(targetRect.height()) / 1080.0)
+                     : 1.0;
+  int scaledSize = qMax(1, qRound(originalSize * scale));
+  drawFont.setPixelSize(scaledSize);
+
+  QFontMetrics fm(drawFont);
+  QRect pixelRect = getSubtitlePixelRect();
+  QString text = editor_->text();
+  int totalTextWidth = fm.horizontalAdvance(text);
+
+  // Compute text start X using the same logic as paintEvent
+  int textStartX = pixelRect.left();
+  if (subtitleAlignment_ & Qt::AlignHCenter) {
+    textStartX = pixelRect.center().x() - totalTextWidth / 2;
+  } else if (subtitleAlignment_ & Qt::AlignRight) {
+    textStartX = pixelRect.right() - totalTextWidth;
+  }
+
+  int clickOffset = localPos.x() - textStartX;
+  if (clickOffset <= 0)
+    return 0;
+
+  for (int i = 1; i <= text.length(); ++i) {
+    int charX = fm.horizontalAdvance(text.left(i));
+    if (clickOffset < charX) {
+      int prevX = fm.horizontalAdvance(text.left(i - 1));
+      return (clickOffset - prevX < charX - clickOffset) ? i - 1 : i;
+    }
+  }
+  return text.length();
 }
 
 void SoftwareVideoRenderer::commitEditing() {

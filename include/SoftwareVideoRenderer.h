@@ -156,11 +156,13 @@ private:
   void commitEditing();
   void cancelEditing();
   void updateEditorGeometry();
+  int cursorPosFromLocalPoint(const QPoint &localPos) const;
 
   SubtitleLineEdit *editor_ = nullptr;
   bool isEditing_ = false;
   QTimer cursorTimer_;
   bool cursorVisible_ = true;
+  int editClickAnchor_ = 0;
 
   int dragStartFontSize_ = 24;
   double dragStartFontRefHeight_ = 0.05;
