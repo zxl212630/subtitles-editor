@@ -352,16 +352,30 @@ void SoftwareVideoRenderer::paintEvent(QPaintEvent *event) {
       originalSize = 24; // 默认备用值
     }
 
-    if (dragMode_ != DragNone && dragMode_ != DragRotate &&
-        dragMode_ != DragMove) {
-      originalSize = currentDragFontSize_;
-    }
-
-    int scaledSize = qRound(originalSize * scale);
-    if (scaledSize < 1)
-      scaledSize = 1;
-
+    int scaledSize = qMax(1, qRound(originalSize * scale));
     drawFont.setPixelSize(scaledSize);
+
+    // 动态判断：如果边框过小，则等比例缩放字体以适应边框
+    QFontMetrics fmTemp(drawFont);
+    QString textToDraw = text;
+    if (isEditing_ && editor_) {
+      textToDraw = editor_->text();
+    }
+    int textW = fmTemp.horizontalAdvance(textToDraw);
+    int textH = fmTemp.height();
+    double shrinkScale = 1.0;
+    if (textW > textRect.width() && textRect.width() > 0) {
+      shrinkScale =
+          qMin(shrinkScale, static_cast<double>(textRect.width()) / textW);
+    }
+    if (textH > textRect.height() && textRect.height() > 0) {
+      shrinkScale =
+          qMin(shrinkScale, static_cast<double>(textRect.height()) / textH);
+    }
+    if (shrinkScale < 1.0) {
+      scaledSize = qMax(1, qRound(scaledSize * shrinkScale));
+      drawFont.setPixelSize(scaledSize);
+    }
 
     // 调试输出
     qDebug() << "[VideoRenderer] Rendering Subtitle text=" << text
@@ -373,10 +387,6 @@ void SoftwareVideoRenderer::paintEvent(QPaintEvent *event) {
     // 1. 调用通用的 SubtitleRenderer 渲染字幕及其背景
     painter.save();
     painter.setClipRect(targetRect);
-    QString textToDraw = text;
-    if (isEditing_ && editor_) {
-      textToDraw = editor_->text();
-    }
     SubtitleRenderer::renderSubtitle(
         painter, textToDraw, drawFont, subtitleAlignment_, textRect,
         subtitleRotation_, bgPath, is9Patch, bgMargins);
@@ -732,10 +742,27 @@ void SoftwareVideoRenderer::mouseDoubleClickEvent(QMouseEvent *event) {
         originalSize = subtitleFont_.pixelSize();
       if (originalSize <= 0)
         originalSize = 24;
-      int scaledSize = qRound(originalSize * scale);
-      if (scaledSize < 1)
-        scaledSize = 1;
+      int scaledSize = qMax(1, qRound(originalSize * scale));
       drawFont.setPixelSize(scaledSize);
+
+      // 编辑状态下如果边框过小也等比例缩小
+      QRect pixelRect = getSubtitlePixelRect();
+      QFontMetrics fmTemp(drawFont);
+      int textW = fmTemp.horizontalAdvance(subtitleText_);
+      int textH = fmTemp.height();
+      double shrinkScale = 1.0;
+      if (textW > pixelRect.width() && pixelRect.width() > 0) {
+        shrinkScale =
+            qMin(shrinkScale, static_cast<double>(pixelRect.width()) / textW);
+      }
+      if (textH > pixelRect.height() && pixelRect.height() > 0) {
+        shrinkScale =
+            qMin(shrinkScale, static_cast<double>(pixelRect.height()) / textH);
+      }
+      if (shrinkScale < 1.0) {
+        scaledSize = qMax(1, qRound(scaledSize * shrinkScale));
+        drawFont.setPixelSize(scaledSize);
+      }
 
       // 1. 先设置样式属性，限制隐形输入框的字体族和大小
       QString style =
@@ -816,9 +843,28 @@ int SoftwareVideoRenderer::cursorPosFromLocalPoint(
   int scaledSize = qMax(1, qRound(originalSize * scale));
   drawFont.setPixelSize(scaledSize);
 
-  QFontMetrics fm(drawFont);
   QRect pixelRect = getSubtitlePixelRect();
   QString text = editor_->text();
+
+  // 与 paintEvent 相同的动态缩小逻辑
+  QFontMetrics fmTemp(drawFont);
+  int textW = fmTemp.horizontalAdvance(text);
+  int textH = fmTemp.height();
+  double shrinkScale = 1.0;
+  if (textW > pixelRect.width() && pixelRect.width() > 0) {
+    shrinkScale =
+        qMin(shrinkScale, static_cast<double>(pixelRect.width()) / textW);
+  }
+  if (textH > pixelRect.height() && pixelRect.height() > 0) {
+    shrinkScale =
+        qMin(shrinkScale, static_cast<double>(pixelRect.height()) / textH);
+  }
+  if (shrinkScale < 1.0) {
+    scaledSize = qMax(1, qRound(scaledSize * shrinkScale));
+    drawFont.setPixelSize(scaledSize);
+  }
+
+  QFontMetrics fm(drawFont);
   int totalTextWidth = fm.horizontalAdvance(text);
 
   // Compute text start X using the same logic as paintEvent
@@ -957,8 +1003,9 @@ void SoftwareVideoRenderer::mouseMoveEvent(QMouseEvent *event) {
     if (dragMode_ == DragMove) {
       newRect.translate(dx, dy);
     } else {
-      double minW = 0.05;
-      double minH = 0.05;
+      // 最小宽高度设置为 40 像素
+      double minW = 40.0 / targetRect.width();
+      double minH = 40.0 / targetRect.height();
 
       switch (dragMode_) {
       case DragResizeTL: {
@@ -1025,13 +1072,8 @@ void SoftwareVideoRenderer::mouseMoveEvent(QMouseEvent *event) {
         break;
       }
 
-      // Scale font size proportionally to height adjustments (uncapped)
-      if (dragStartNormalizedRect_.height() > 0.0001) {
-        double ratio = newRect.height() / dragStartNormalizedRect_.height();
-        currentDragFontSize_ = qMax(1, qRound(dragStartFontSize_ * ratio));
-      } else {
-        currentDragFontSize_ = dragStartFontSize_;
-      }
+      // 不再在拖拽时修改字体大小，只修改包围框
+      currentDragFontSize_ = dragStartFontSize_;
     }
 
     {
@@ -1085,9 +1127,8 @@ void SoftwareVideoRenderer::mouseReleaseEvent(QMouseEvent *event) {
     if (prevMode == DragRotate) {
       emit subtitleRotationChanged(subtitleRotation_);
     } else {
-      if (prevMode != DragMove && prevMode != DragNone) {
-        emit subtitleFontSizeChanged(currentDragFontSize_);
-      }
+      // 只发射包围框变更，不再发射字体大小变更
+      // 因为现在是通过包围框大小动态缩放字体，不超过原设定大小
       emit subtitleRectChanged(subtitleNormalizedRect_);
     }
     event->accept();

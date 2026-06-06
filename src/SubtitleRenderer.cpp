@@ -270,6 +270,24 @@ void SubtitleRenderer::renderItem(QPainter &painter, const SubtitleItem &item,
   // 2. 计算排版像素位置
   QRect textRect = calculateItemRect(item, videoSize);
 
+  // 3. 如果字幕框太小，等比例缩小字体
+  QFontMetrics fm(font);
+  int textW = fm.horizontalAdvance(item.text);
+  int textH = fm.height();
+  double shrinkScale = 1.0;
+  if (textW > textRect.width() && textRect.width() > 0) {
+    shrinkScale =
+        qMin(shrinkScale, static_cast<double>(textRect.width()) / textW);
+  }
+  if (textH > textRect.height() && textRect.height() > 0) {
+    shrinkScale =
+        qMin(shrinkScale, static_cast<double>(textRect.height()) / textH);
+  }
+  if (shrinkScale < 1.0) {
+    int newSize = qMax(1, qRound(font.pixelSize() * shrinkScale));
+    font.setPixelSize(newSize);
+  }
+
   // 3. 获取背景图和说话人信息
   QString bgPath;
   bool is9Patch = true;
