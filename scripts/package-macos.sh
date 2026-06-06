@@ -328,7 +328,7 @@ for dylib in "$APP_BIN" "$APP_BUNDLE/Contents/MacOS/ffmpeg" "$APP_BUNDLE/Content
     # 2. Check for missing @rpath references
     while IFS= read -r ref; do
         if [[ "$ref" == @rpath/* ]]; then
-            local rfile="${ref#@rpath/}"
+            rfile="${ref#@rpath/}"
             if [[ ! -f "$FW_DIR/$rfile" ]]; then
                 echo "ERROR: $(basename "$dylib") references $ref but $rfile is missing from Frameworks!"
                 has_error=1
