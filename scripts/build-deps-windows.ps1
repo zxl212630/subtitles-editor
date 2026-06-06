@@ -69,6 +69,8 @@ find /mingw64 -name "*x264*" -o -name "*x265*" || true
 
 
 # Create .lib copies of MinGW import libraries for MSVC linker (both with and without 'lib' prefix)
+echo "=== Copying import libraries for MSVC ==="
+set -x
 for lib in x264 x265; do
     src=""
     if [ -f /mingw64/lib/lib${lib}.dll.a ]; then
@@ -81,6 +83,15 @@ for lib in x264 x265; do
         cp "$src" "/mingw64/lib/${lib}.lib"
     fi
 done
+set +x
+
+echo "=== Verifying copied files in /mingw64/lib ==="
+ls -la /mingw64/lib/*x264* || true
+ls -la /mingw64/lib/*x265* || true
+echo "=== cygpath mapping for /mingw64/lib ==="
+cygpath -w /mingw64/lib || true
+cygpath -w /mingw64/lib/libx264.lib || true
+
 
 
 cd "ffmpeg-${FFmpegVersion}"
