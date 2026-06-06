@@ -59,6 +59,7 @@ jobs:
       force_rebuild: ${{ steps.env.outputs.force_rebuild }}
       qt_version: ${{ steps.env.outputs.qt_version }}
       ffmpeg_version: ${{ steps.env.outputs.ffmpeg_version }}
+      target: ${{ steps.env.outputs.target }}
     steps:
       - name: Compute env outputs
         id: env
@@ -70,6 +71,7 @@ jobs:
             FORCE_REBUILD="${{ inputs.force_rebuild }}"
             QT_VERSION="${{ inputs.qt_version }}"
             FFMPEG_VERSION="${{ inputs.ffmpeg_version }}"
+            TARGET="${{ inputs.target }}"
           else
             REF_NAME="${{ github.ref_name }}"
             if [[ "$REF_NAME" =~ ^trigger-deps-(.+)$ ]]; then
@@ -80,11 +82,13 @@ jobs:
             FORCE_REBUILD="false"
             QT_VERSION="6.5.9"
             FFMPEG_VERSION="8.1.1"
+            TARGET="all"
           fi
           echo "deps_tag=$DEPS_TAG" >> "$GITHUB_OUTPUT"
           echo "force_rebuild=$FORCE_REBUILD" >> "$GITHUB_OUTPUT"
           echo "qt_version=$QT_VERSION" >> "$GITHUB_OUTPUT"
           echo "ffmpeg_version=$FFMPEG_VERSION" >> "$GITHUB_OUTPUT"
+          echo "target=$TARGET" >> "$GITHUB_OUTPUT"
 
           if [[ -n "${{ inputs.copy_from_tag }}" ]]; then
             echo "base_tag=${{ inputs.copy_from_tag }}" >> "$GITHUB_OUTPUT"
@@ -111,6 +115,7 @@ jobs:
       BASE_TAG: ${{ needs.setup-env.outputs.base_tag }}
       FORCE_REBUILD: ${{ needs.setup-env.outputs.force_rebuild }}
       FFMPEG_VERSION: ${{ needs.setup-env.outputs.ffmpeg_version }}
+      TARGET: ${{ needs.setup-env.outputs.target }}
     steps:
       - uses: actions/checkout@v4
 
@@ -125,7 +130,11 @@ jobs:
             echo "skip=true" >> "$GITHUB_OUTPUT"
             exit 0
           fi
-          if [[ "$FORCE_REBUILD" != "true" && -n "$BASE_TAG" ]]; then
+          SHOULD_FORCE="false"
+          if [[ "$FORCE_REBUILD" == "true" && ( "$TARGET" == "all" || "$TARGET" == "ffmpeg" ) ]]; then
+            SHOULD_FORCE="true"
+          fi
+          if [[ "$SHOULD_FORCE" != "true" && -n "$BASE_TAG" ]]; then
             echo "Checking if $FILE_NAME exists in base release $BASE_TAG..."
             if gh release view "$BASE_TAG" --repo "${{ github.repository }}" | grep -q "$FILE_NAME"; then
               echo "Found $FILE_NAME in $BASE_TAG. Copying to $DEPS_TAG..."
@@ -178,6 +187,7 @@ jobs:
       BASE_TAG: ${{ needs.setup-env.outputs.base_tag }}
       FORCE_REBUILD: ${{ needs.setup-env.outputs.force_rebuild }}
       QT_VERSION: ${{ needs.setup-env.outputs.qt_version }}
+      TARGET: ${{ needs.setup-env.outputs.target }}
     steps:
       - uses: actions/checkout@v4
 
@@ -196,7 +206,11 @@ jobs:
             echo "skip=true" >> "$GITHUB_OUTPUT"
             exit 0
           fi
-          if [[ "$FORCE_REBUILD" != "true" && -n "$BASE_TAG" ]]; then
+          SHOULD_FORCE="false"
+          if [[ "$FORCE_REBUILD" == "true" && ( "$TARGET" == "all" || "$TARGET" == "qt6" ) ]]; then
+            SHOULD_FORCE="true"
+          fi
+          if [[ "$SHOULD_FORCE" != "true" && -n "$BASE_TAG" ]]; then
             echo "Checking if $FILE_NAME exists in base release $BASE_TAG..."
             if gh release view "$BASE_TAG" --repo "${{ github.repository }}" | grep -q "$FILE_NAME"; then
               echo "Found $FILE_NAME in $BASE_TAG. Copying to $DEPS_TAG..."
@@ -248,6 +262,7 @@ jobs:
       DEPS_TAG: ${{ needs.setup-env.outputs.deps_tag }}
       BASE_TAG: ${{ needs.setup-env.outputs.base_tag }}
       FORCE_REBUILD: ${{ needs.setup-env.outputs.force_rebuild }}
+      TARGET: ${{ needs.setup-env.outputs.target }}
     steps:
       - uses: actions/checkout@v4
 
@@ -262,7 +277,11 @@ jobs:
             echo "skip=true" >> "$GITHUB_OUTPUT"
             exit 0
           fi
-          if [[ "$FORCE_REBUILD" != "true" && -n "$BASE_TAG" ]]; then
+          SHOULD_FORCE="false"
+          if [[ "$FORCE_REBUILD" == "true" && ( "$TARGET" == "all" || "$TARGET" == "qwindowkit" ) ]]; then
+            SHOULD_FORCE="true"
+          fi
+          if [[ "$SHOULD_FORCE" != "true" && -n "$BASE_TAG" ]]; then
             echo "Checking if $FILE_NAME exists in base release $BASE_TAG..."
             if gh release view "$BASE_TAG" --repo "${{ github.repository }}" | grep -q "$FILE_NAME"; then
               echo "Found $FILE_NAME in $BASE_TAG. Copying to $DEPS_TAG..."
@@ -317,6 +336,7 @@ jobs:
       BASE_TAG: ${{ needs.setup-env.outputs.base_tag }}
       FORCE_REBUILD: ${{ needs.setup-env.outputs.force_rebuild }}
       FFMPEG_VERSION: ${{ needs.setup-env.outputs.ffmpeg_version }}
+      TARGET: ${{ needs.setup-env.outputs.target }}
     steps:
       - uses: actions/checkout@v4
 
@@ -332,7 +352,11 @@ jobs:
             echo "skip=true" >> "$GITHUB_OUTPUT"
             exit 0
           fi
-          if [[ "$FORCE_REBUILD" != "true" && -n "$BASE_TAG" ]]; then
+          SHOULD_FORCE="false"
+          if [[ "$FORCE_REBUILD" == "true" && ( "$TARGET" == "all" || "$TARGET" == "ffmpeg" ) ]]; then
+            SHOULD_FORCE="true"
+          fi
+          if [[ "$SHOULD_FORCE" != "true" && -n "$BASE_TAG" ]]; then
             echo "Checking if $FILE_NAME exists in base release $BASE_TAG..."
             if gh release view "$BASE_TAG" --repo "${{ github.repository }}" | grep -q "$FILE_NAME"; then
               echo "Found $FILE_NAME in $BASE_TAG. Copying to $DEPS_TAG..."
@@ -384,6 +408,7 @@ jobs:
       BASE_TAG: ${{ needs.setup-env.outputs.base_tag }}
       FORCE_REBUILD: ${{ needs.setup-env.outputs.force_rebuild }}
       QT_VERSION: ${{ needs.setup-env.outputs.qt_version }}
+      TARGET: ${{ needs.setup-env.outputs.target }}
     steps:
       - uses: actions/checkout@v4
 
@@ -399,7 +424,11 @@ jobs:
             echo "skip=true" >> "$GITHUB_OUTPUT"
             exit 0
           fi
-          if [[ "$FORCE_REBUILD" != "true" && -n "$BASE_TAG" ]]; then
+          SHOULD_FORCE="false"
+          if [[ "$FORCE_REBUILD" == "true" && ( "$TARGET" == "all" || "$TARGET" == "qt6" ) ]]; then
+            SHOULD_FORCE="true"
+          fi
+          if [[ "$SHOULD_FORCE" != "true" && -n "$BASE_TAG" ]]; then
             echo "Checking if $FILE_NAME exists in base release $BASE_TAG..."
             if gh release view "$BASE_TAG" --repo "${{ github.repository }}" | grep -q "$FILE_NAME"; then
               echo "Found $FILE_NAME in $BASE_TAG. Copying to $DEPS_TAG..."
@@ -439,6 +468,7 @@ jobs:
       DEPS_TAG: ${{ needs.setup-env.outputs.deps_tag }}
       BASE_TAG: ${{ needs.setup-env.outputs.base_tag }}
       FORCE_REBUILD: ${{ needs.setup-env.outputs.force_rebuild }}
+      TARGET: ${{ needs.setup-env.outputs.target }}
     steps:
       - uses: actions/checkout@v4
 
@@ -454,7 +484,11 @@ jobs:
             echo "skip=true" >> "$GITHUB_OUTPUT"
             exit 0
           fi
-          if [[ "$FORCE_REBUILD" != "true" && -n "$BASE_TAG" ]]; then
+          SHOULD_FORCE="false"
+          if [[ "$FORCE_REBUILD" == "true" && ( "$TARGET" == "all" || "$TARGET" == "qwindowkit" ) ]]; then
+            SHOULD_FORCE="true"
+          fi
+          if [[ "$SHOULD_FORCE" != "true" && -n "$BASE_TAG" ]]; then
             echo "Checking if $FILE_NAME exists in base release $BASE_TAG..."
             if gh release view "$BASE_TAG" --repo "${{ github.repository }}" | grep -q "$FILE_NAME"; then
               echo "Found $FILE_NAME in $BASE_TAG. Copying to $DEPS_TAG..."
