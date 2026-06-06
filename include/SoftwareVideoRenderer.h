@@ -1,12 +1,42 @@
 #pragma once
 
 #include "FFmpegDecoder.h"
+#include <QFocusEvent>
 #include <QHash>
 #include <QImage>
+#include <QKeyEvent>
+#include <QLineEdit>
 #include <QMargins>
 #include <QMutex>
 #include <QRectF>
 #include <QWidget>
+
+class SubtitleLineEdit : public QLineEdit {
+  Q_OBJECT
+public:
+  explicit SubtitleLineEdit(QWidget *parent = nullptr) : QLineEdit(parent) {
+    setStyleSheet("background: transparent; border: none;");
+  }
+
+protected:
+  void keyPressEvent(QKeyEvent *event) override {
+    if (event->key() == Qt::Key_Escape) {
+      emit escPressed();
+      event->accept();
+      return;
+    }
+    QLineEdit::keyPressEvent(event);
+  }
+
+  void focusOutEvent(QFocusEvent *event) override {
+    emit focusLost();
+    QLineEdit::focusOutEvent(event);
+  }
+
+signals:
+  void escPressed();
+  void focusLost();
+};
 
 class SoftwareVideoRenderer : public QWidget {
   Q_OBJECT
@@ -37,6 +67,9 @@ public:
 signals:
   void subtitleRectChanged(const QRectF &rect);
   void subtitleRotationChanged(double rotation);
+  void subtitleClicked();
+  void subtitleDoubleClicked();
+  void subtitleTextEdited(const QString &text);
 
 protected:
   void paintEvent(QPaintEvent *event) override;
@@ -45,6 +78,7 @@ protected:
 
   // 鼠标交互重写
   void mousePressEvent(QMouseEvent *event) override;
+  void mouseDoubleClickEvent(QMouseEvent *event) override;
   void mouseMoveEvent(QMouseEvent *event) override;
   void mouseReleaseEvent(QMouseEvent *event) override;
 
@@ -96,4 +130,10 @@ private:
 
   void drawNinePatch(QPainter &painter, const QImage &src, const QRect &target,
                      const QMargins &margins);
+
+  void commitEditing();
+  void cancelEditing();
+
+  SubtitleLineEdit *editor_ = nullptr;
+  bool isEditing_ = false;
 };

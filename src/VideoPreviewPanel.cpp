@@ -380,6 +380,34 @@ VideoPreviewPanel::VideoPreviewPanel(QWidget *parent) : QWidget(parent) {
                 [rotation](SubtitleItem &item) { item.rotation = rotation; });
           });
 
+  // 绑定视频渲染器点击选中信号，在当前播放时间查找并选中对应的字幕项
+  connect(videoRenderer_, &SoftwareVideoRenderer::subtitleClicked, this,
+          [this]() {
+            if (subtitleTrack_ && mediaPlayer_) {
+              qint64 currentTimeMs = mediaPlayer_->currentTimeMs();
+              const auto &items = subtitleTrack_->items();
+              for (int i = 0; i < items.size(); ++i) {
+                const auto &item = items[i];
+                bool isLast = (i == items.size() - 1);
+                if (currentTimeMs >= item.startMs) {
+                  if (currentTimeMs < item.endMs ||
+                      (isLast && currentTimeMs == item.endMs)) {
+                    subtitleTrack_->selectItem(item.id);
+                    break;
+                  }
+                }
+              }
+            }
+          });
+
+  // 绑定视频渲染器字幕双击编辑完成信号，更新当前字幕文本内容
+  connect(videoRenderer_, &SoftwareVideoRenderer::subtitleTextEdited, this,
+          [this](const QString &text) {
+            updateCurrentItemStyle(
+                [text](SubtitleItem &item) { item.text = text; });
+            updateSubtitleOverlay();
+          });
+
   if (auto *aw = qobject_cast<AppWindow *>(window())) {
     connect(aw, &AppWindow::windowClicked, this, [this](QPoint globalPos) {
       QWidget *w = QApplication::widgetAt(globalPos);

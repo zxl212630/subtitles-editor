@@ -85,6 +85,7 @@ void SoftwareVideoRenderer::clear() {
     currentHeight_ = 0;
   }
   videoSize_ = QSize(1920, 1080);
+  cancelEditing();
   update();
 }
 
@@ -97,6 +98,8 @@ int SoftwareVideoRenderer::heightForWidth(int width) const {
 }
 
 void SoftwareVideoRenderer::setSubtitleText(const QString &text) {
+  if (isEditing_)
+    return;
   {
     QMutexLocker lock(&subtitleMutex_);
     subtitleText_ = text;
@@ -105,6 +108,8 @@ void SoftwareVideoRenderer::setSubtitleText(const QString &text) {
 }
 
 void SoftwareVideoRenderer::setSubtitleFont(const QFont &font) {
+  if (isEditing_)
+    return;
   {
     QMutexLocker lock(&subtitleMutex_);
     subtitleFont_ = font;
@@ -237,6 +242,8 @@ QRect SoftwareVideoRenderer::getSubtitlePixelRect() const {
 }
 
 void SoftwareVideoRenderer::setSubtitleAlignment(int alignment) {
+  if (isEditing_)
+    return;
   {
     QMutexLocker lock(&subtitleMutex_);
     subtitleAlignment_ = alignment;
@@ -245,6 +252,8 @@ void SoftwareVideoRenderer::setSubtitleAlignment(int alignment) {
 }
 
 void SoftwareVideoRenderer::setSubtitleNormalizedRect(const QRectF &rect) {
+  if (isEditing_)
+    return;
   {
     QMutexLocker lock(&subtitleMutex_);
     subtitleNormalizedRect_ = rect;
@@ -353,8 +362,12 @@ void SoftwareVideoRenderer::paintEvent(QPaintEvent *event) {
     // 1. 调用通用的 SubtitleRenderer 渲染字幕及其背景
     painter.save();
     painter.setClipRect(targetRect);
+    QString textToDraw = text;
+    if (isEditing_) {
+      textToDraw = QString(text.length(), ' ');
+    }
     SubtitleRenderer::renderSubtitle(
-        painter, text, drawFont, subtitleAlignment_, textRect,
+        painter, textToDraw, drawFont, subtitleAlignment_, textRect,
         subtitleRotation_, bgPath, is9Patch, bgMargins);
     painter.restore();
 
@@ -472,6 +485,8 @@ SoftwareVideoRenderer::hitTest(const QPoint &pos) const {
 }
 
 void SoftwareVideoRenderer::setSubtitleRotation(double rotation) {
+  if (isEditing_)
+    return;
   {
     QMutexLocker lock(&subtitleMutex_);
     subtitleRotation_ = rotation;
@@ -490,6 +505,14 @@ QTransform SoftwareVideoRenderer::getSubtitleTransform() const {
 
 void SoftwareVideoRenderer::mousePressEvent(QMouseEvent *event) {
   if (event->button() == Qt::LeftButton) {
+    if (isEditing_ && editor_) {
+      if (!editor_->geometry().contains(event->pos())) {
+        cancelEditing();
+        event->accept();
+        return;
+      }
+    }
+
     dragMode_ = hitTest(event->pos());
     if (dragMode_ != DragNone) {
       dragStartPos_ = event->pos();
@@ -497,9 +520,96 @@ void SoftwareVideoRenderer::mousePressEvent(QMouseEvent *event) {
       dragStartTransform_ = getSubtitleTransform();
       event->accept();
       return;
+    } else if (!subtitleText_.isEmpty()) {
+      QRect pixelRect = getSubtitlePixelRect();
+      QTransform inv = getSubtitleTransform().inverted();
+      QPoint localPos = inv.map(event->pos());
+      if (pixelRect.contains(localPos)) {
+        emit subtitleClicked();
+        event->accept();
+        return;
+      }
     }
   }
   QWidget::mousePressEvent(event);
+}
+
+void SoftwareVideoRenderer::mouseDoubleClickEvent(QMouseEvent *event) {
+  if (event->button() == Qt::LeftButton && !subtitleText_.isEmpty()) {
+    QRect pixelRect = getSubtitlePixelRect();
+    QTransform inv = getSubtitleTransform().inverted();
+    QPoint localPos = inv.map(event->pos());
+    if (pixelRect.contains(localPos)) {
+      isEditing_ = true;
+      if (!editor_) {
+        editor_ = new SubtitleLineEdit(this);
+        connect(editor_, &QLineEdit::returnPressed, this,
+                &SoftwareVideoRenderer::commitEditing);
+        connect(editor_, &SubtitleLineEdit::escPressed, this,
+                &SoftwareVideoRenderer::cancelEditing);
+        connect(editor_, &SubtitleLineEdit::focusLost, this,
+                &SoftwareVideoRenderer::cancelEditing);
+      }
+
+      editor_->setText(subtitleText_);
+      editor_->setAlignment(static_cast<Qt::Alignment>(subtitleAlignment_));
+
+      QRect targetRect = getTargetRect();
+      double refHeight = 1080.0;
+      double scale =
+          (targetRect.height() > 0)
+              ? (static_cast<double>(targetRect.height()) / refHeight)
+              : 1.0;
+      QFont drawFont = subtitleFont_;
+      int originalSize = subtitleFont_.pointSize();
+      if (originalSize <= 0)
+        originalSize = subtitleFont_.pixelSize();
+      if (originalSize <= 0)
+        originalSize = 24;
+      int scaledSize = qRound(originalSize * scale);
+      if (scaledSize < 1)
+        scaledSize = 1;
+      drawFont.setPixelSize(scaledSize);
+
+      editor_->setFont(drawFont);
+
+      QColor primary = ThemeManager::instance().getPrimaryColor();
+      editor_->setStyleSheet(
+          QString("background: transparent; border: none; color: white; "
+                  "selection-background-color: %1;")
+              .arg(primary.name(QColor::HexArgb)));
+
+      editor_->setGeometry(pixelRect);
+      editor_->show();
+      editor_->setFocus();
+      editor_->selectAll();
+
+      update();
+      event->accept();
+      return;
+    }
+  }
+  QWidget::mouseDoubleClickEvent(event);
+}
+
+void SoftwareVideoRenderer::commitEditing() {
+  if (!isEditing_ || !editor_)
+    return;
+
+  QString newText = editor_->text();
+  isEditing_ = false;
+  editor_->hide();
+  update();
+  emit subtitleTextEdited(newText);
+}
+
+void SoftwareVideoRenderer::cancelEditing() {
+  if (!isEditing_ || !editor_)
+    return;
+
+  isEditing_ = false;
+  editor_->hide();
+  update();
 }
 
 void SoftwareVideoRenderer::mouseMoveEvent(QMouseEvent *event) {
