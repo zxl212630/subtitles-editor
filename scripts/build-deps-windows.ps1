@@ -77,7 +77,11 @@ cd "ffmpeg-${FFmpegVersion}"
     --enable-nvdec \
     --enable-cuvid \
     --enable-ffnvcodec \
-    --arch=x86_64
+    --arch=x86_64 || {
+        echo "=== configure failed, printing last 200 lines of ffbuild/config.log ==="
+        tail -n 200 ffbuild/config.log
+        exit 1
+    }
 
 make -j$env:NUMBER_OF_PROCESSORS
 make install
