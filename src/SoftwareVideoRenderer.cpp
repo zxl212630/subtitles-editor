@@ -2,6 +2,7 @@
 #include "SubtitleRenderer.h"
 #include "ThemeManager.h"
 
+#include <QCoreApplication>
 #include <QCursor>
 #include <QElapsedTimer>
 #include <QMouseEvent>
@@ -40,6 +41,11 @@ SoftwareVideoRenderer::SoftwareVideoRenderer(QWidget *parent)
   setMinimumSize(320, 180);
   setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Preferred);
   setMouseTracking(true);
+
+  connect(&cursorTimer_, &QTimer::timeout, this, [this]() {
+    cursorVisible_ = !cursorVisible_;
+    update();
+  });
 }
 
 void SoftwareVideoRenderer::renderFrame(const DecodedVideoFrame &frame) {
@@ -363,13 +369,62 @@ void SoftwareVideoRenderer::paintEvent(QPaintEvent *event) {
     painter.save();
     painter.setClipRect(targetRect);
     QString textToDraw = text;
-    if (isEditing_) {
-      textToDraw = QString(text.length(), ' ');
+    if (isEditing_ && editor_) {
+      textToDraw = editor_->text();
     }
     SubtitleRenderer::renderSubtitle(
         painter, textToDraw, drawFont, subtitleAlignment_, textRect,
         subtitleRotation_, bgPath, is9Patch, bgMargins);
     painter.restore();
+
+    // 2. 如果处于编辑状态，在旋转坐标系下自定义绘制光标和选区
+    if (isEditing_ && editor_) {
+      painter.save();
+      painter.setRenderHint(QPainter::Antialiasing, true);
+      QTransform trans = getSubtitleTransform();
+      painter.setTransform(trans, true);
+
+      QFontMetrics fm(drawFont);
+      int totalTextWidth = fm.horizontalAdvance(editor_->text());
+      int startX = textRect.left();
+      if (subtitleAlignment_ & Qt::AlignHCenter) {
+        startX = textRect.center().x() - totalTextWidth / 2;
+      } else if (subtitleAlignment_ & Qt::AlignRight) {
+        startX = textRect.right() - totalTextWidth;
+      }
+
+      int cursorYTop = textRect.center().y() - fm.height() / 2;
+      int cursorYBottom = textRect.center().y() + fm.height() / 2;
+
+      // 1. 绘制选区高亮
+      if (editor_->hasSelectedText()) {
+        int selStart = editor_->selectionStart();
+        int selLength = editor_->selectionLength();
+        QString textBeforeSel = editor_->text().left(selStart);
+        QString selText = editor_->text().mid(selStart, selLength);
+
+        int selStartX = startX + fm.horizontalAdvance(textBeforeSel);
+        int selWidth = fm.horizontalAdvance(selText);
+
+        QRect selRect(selStartX, cursorYTop, selWidth, fm.height());
+        QColor primary = ThemeManager::instance().getPrimaryColor();
+        primary.setAlpha(100); // 半透明选择色
+        painter.fillRect(selRect, primary);
+      }
+
+      // 2. 绘制闪烁光标
+      if (cursorVisible_) {
+        int cursorPos = editor_->cursorPosition();
+        QString textBeforeCursor = editor_->text().left(cursorPos);
+        int cursorX = startX + fm.horizontalAdvance(textBeforeCursor);
+
+        QColor primary = ThemeManager::instance().getPrimaryColor();
+        painter.setPen(QPen(primary, 2));
+        painter.drawLine(cursorX, cursorYTop, cursorX, cursorYBottom);
+      }
+
+      painter.restore();
+    }
 
     // 2. 绘制字幕的可拖拽编辑虚线框和 8 个控制点手柄，以及旋转手柄
     if (showEditFrame_) {
@@ -504,15 +559,26 @@ QTransform SoftwareVideoRenderer::getSubtitleTransform() const {
 }
 
 void SoftwareVideoRenderer::mousePressEvent(QMouseEvent *event) {
-  if (event->button() == Qt::LeftButton) {
-    if (isEditing_ && editor_) {
-      if (!editor_->geometry().contains(event->pos())) {
-        cancelEditing();
-        event->accept();
-        return;
-      }
+  if (isEditing_ && editor_) {
+    QRect pixelRect = getSubtitlePixelRect();
+    QTransform inv = getSubtitleTransform().inverted();
+    QPoint localPos = inv.map(event->pos());
+    if (pixelRect.contains(localPos)) {
+      QPoint localClickPos = localPos - pixelRect.topLeft();
+      QMouseEvent mappedEvent(event->type(), localClickPos,
+                              event->globalPosition(), event->button(),
+                              event->buttons(), event->modifiers());
+      QCoreApplication::sendEvent(editor_, &mappedEvent);
+      event->accept();
+      return;
+    } else {
+      cancelEditing();
+      event->accept();
+      return;
     }
+  }
 
+  if (event->button() == Qt::LeftButton) {
     dragMode_ = hitTest(event->pos());
     if (dragMode_ != DragNone) {
       dragStartPos_ = event->pos();
@@ -549,6 +615,11 @@ void SoftwareVideoRenderer::mouseDoubleClickEvent(QMouseEvent *event) {
                 &SoftwareVideoRenderer::cancelEditing);
         connect(editor_, &SubtitleLineEdit::focusLost, this,
                 &SoftwareVideoRenderer::cancelEditing);
+        connect(editor_, &QLineEdit::textChanged, this, [this]() { update(); });
+        connect(editor_, &QLineEdit::cursorPositionChanged, this, [this]() {
+          cursorVisible_ = true;
+          update();
+        });
       }
 
       editor_->setText(subtitleText_);
@@ -573,16 +644,20 @@ void SoftwareVideoRenderer::mouseDoubleClickEvent(QMouseEvent *event) {
 
       editor_->setFont(drawFont);
 
-      QColor primary = ThemeManager::instance().getPrimaryColor();
+      // 隐形输入框样式：颜色透明，背景透明，无聚焦框，禁用系统聚焦环
+      editor_->setAttribute(Qt::WA_MacShowFocusRect, false);
       editor_->setStyleSheet(
-          QString("background: transparent; border: none; color: white; "
-                  "selection-background-color: %1;")
-              .arg(primary.name(QColor::HexArgb)));
+          "QLineEdit { background: transparent; border: none; outline: none; "
+          "color: transparent; selection-background-color: transparent; "
+          "selection-color: transparent; }");
 
       editor_->setGeometry(pixelRect);
       editor_->show();
       editor_->setFocus();
       editor_->selectAll();
+
+      cursorVisible_ = true;
+      cursorTimer_.start(500);
 
       update();
       event->accept();
@@ -598,6 +673,7 @@ void SoftwareVideoRenderer::commitEditing() {
 
   QString newText = editor_->text();
   isEditing_ = false;
+  cursorTimer_.stop();
   editor_->hide();
   update();
   emit subtitleTextEdited(newText);
@@ -608,11 +684,27 @@ void SoftwareVideoRenderer::cancelEditing() {
     return;
 
   isEditing_ = false;
+  cursorTimer_.stop();
   editor_->hide();
   update();
 }
 
 void SoftwareVideoRenderer::mouseMoveEvent(QMouseEvent *event) {
+  if (isEditing_ && editor_) {
+    QRect pixelRect = getSubtitlePixelRect();
+    QTransform inv = getSubtitleTransform().inverted();
+    QPoint localClickPos = inv.map(event->pos()) - pixelRect.topLeft();
+    if (pixelRect.contains(inv.map(event->pos())) || editor_->underMouse() ||
+        (event->buttons() & Qt::LeftButton)) {
+      QMouseEvent mappedEvent(event->type(), localClickPos,
+                              event->globalPosition(), event->button(),
+                              event->buttons(), event->modifiers());
+      QCoreApplication::sendEvent(editor_, &mappedEvent);
+      event->accept();
+      return;
+    }
+  }
+
   if (dragMode_ == DragNone) {
     DragMode hit = hitTest(event->pos());
     switch (hit) {
@@ -784,6 +876,18 @@ void SoftwareVideoRenderer::mouseMoveEvent(QMouseEvent *event) {
 }
 
 void SoftwareVideoRenderer::mouseReleaseEvent(QMouseEvent *event) {
+  if (isEditing_ && editor_) {
+    QRect pixelRect = getSubtitlePixelRect();
+    QTransform inv = getSubtitleTransform().inverted();
+    QPoint localClickPos = inv.map(event->pos()) - pixelRect.topLeft();
+    QMouseEvent mappedEvent(event->type(), localClickPos,
+                            event->globalPosition(), event->button(),
+                            event->buttons(), event->modifiers());
+    QCoreApplication::sendEvent(editor_, &mappedEvent);
+    event->accept();
+    return;
+  }
+
   if (event->button() == Qt::LeftButton && dragMode_ != DragNone) {
     DragMode prevMode = dragMode_;
     dragMode_ = DragNone;

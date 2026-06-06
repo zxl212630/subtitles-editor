@@ -9,6 +9,7 @@
 #include <QMargins>
 #include <QMutex>
 #include <QRectF>
+#include <QTimer>
 #include <QWidget>
 
 class SubtitleLineEdit : public QLineEdit {
@@ -136,4 +137,6 @@ private:
 
   SubtitleLineEdit *editor_ = nullptr;
   bool isEditing_ = false;
+  QTimer cursorTimer_;
+  bool cursorVisible_ = true;
 };
