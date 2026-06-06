@@ -40,6 +40,9 @@ if ($Target -eq "all" -or $Target -eq "ffmpeg") {
 set -euo pipefail
 
 # Avoid linker clash with MSYS2 link tool
+export PKG_CONFIG_ALLOW_SYSTEM_CFLAGS=1
+export PKG_CONFIG_ALLOW_SYSTEM_LIBS=1
+
 if [ -f /usr/bin/link.exe ]; then
     mv /usr/bin/link.exe /usr/bin/link-original.exe
 fi
@@ -103,6 +106,8 @@ fi
     $BashExe = Join-Path $MsysLocation "usr\bin\bash.exe"
     $env:MSYS2_PATH_TYPE = "inherit"
     $env:MSYSTEM = "MINGW64"
+    $env:INCLUDE = "$(Join-Path $MsysLocation 'mingw64\include');$env:INCLUDE"
+    $env:LIB = "$(Join-Path $MsysLocation 'mingw64\lib');$env:LIB"
 
     Write-Host "Running FFmpeg build inside MSYS2 at $MsysLocation..."
     & $BashExe --login -c "$TargetDirUnix/build-ffmpeg.sh"
