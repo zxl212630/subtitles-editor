@@ -352,6 +352,11 @@ void SoftwareVideoRenderer::paintEvent(QPaintEvent *event) {
       originalSize = 24; // 默认备用值
     }
 
+    if (dragMode_ != DragNone && dragMode_ != DragRotate &&
+        dragMode_ != DragMove) {
+      originalSize = currentDragFontSize_;
+    }
+
     int scaledSize = qRound(originalSize * scale);
     if (scaledSize < 1)
       scaledSize = 1;
@@ -558,24 +563,72 @@ QTransform SoftwareVideoRenderer::getSubtitleTransform() const {
   return trans;
 }
 
+double SoftwareVideoRenderer::getNormalizedFontHeight() const {
+  QFont font;
+  {
+    QMutexLocker lock(&subtitleMutex_);
+    font = subtitleFont_;
+  }
+  int originalSize = font.pointSize();
+  if (originalSize <= 0) {
+    originalSize = font.pixelSize();
+  }
+  if (originalSize <= 0) {
+    originalSize = 24;
+  }
+  QFont refFont = font;
+  refFont.setPixelSize(originalSize);
+  QFontMetrics fm(refFont);
+  return static_cast<double>(fm.height()) / 1080.0;
+}
+
+bool SoftwareVideoRenderer::eventFilter(QObject *watched, QEvent *event) {
+  if (watched == editor_ && isEditing_ && editor_) {
+    if (event->type() == QEvent::MouseButtonPress ||
+        event->type() == QEvent::MouseButtonRelease ||
+        event->type() == QEvent::MouseButtonDblClick ||
+        event->type() == QEvent::MouseMove) {
+
+      QMouseEvent *mouseEvent = static_cast<QMouseEvent *>(event);
+
+      // Clear selection on press to prevent drag-and-drop triggers
+      if (event->type() == QEvent::MouseButtonPress &&
+          editor_->hasSelectedText()) {
+        editor_->deselect();
+      }
+
+      // Map global coordinates through inverse rotation transform to parent
+      // widget space
+      QPoint parentPos = mapFromGlobal(mouseEvent->globalPosition().toPoint());
+      QTransform inv = getSubtitleTransform().inverted();
+      QPoint localPos = inv.map(parentPos);
+
+      // Compute local click coordinates relative to the editor widget's
+      // geometry
+      QPoint localClickPos = localPos - editor_->geometry().topLeft();
+      localClickPos.setY(editor_->height() / 2);
+
+      QMouseEvent mappedEvent(
+          mouseEvent->type(), localClickPos, mouseEvent->globalPosition(),
+          mouseEvent->button(), mouseEvent->buttons(), mouseEvent->modifiers());
+
+      // Deliver mapped mouse event directly by temporarily removing filter to
+      // bypass recursion
+      editor_->removeEventFilter(this);
+      QCoreApplication::sendEvent(editor_, &mappedEvent);
+      editor_->installEventFilter(this);
+
+      return true; // Discard original event
+    }
+  }
+  return QWidget::eventFilter(watched, event);
+}
+
 void SoftwareVideoRenderer::mousePressEvent(QMouseEvent *event) {
   if (isEditing_ && editor_) {
-    QRect pixelRect = getSubtitlePixelRect();
-    QTransform inv = getSubtitleTransform().inverted();
-    QPoint localPos = inv.map(event->pos());
-    if (pixelRect.contains(localPos)) {
-      QPoint localClickPos = localPos - pixelRect.topLeft();
-      QMouseEvent mappedEvent(event->type(), localClickPos,
-                              event->globalPosition(), event->button(),
-                              event->buttons(), event->modifiers());
-      QCoreApplication::sendEvent(editor_, &mappedEvent);
-      event->accept();
-      return;
-    } else {
-      cancelEditing();
-      event->accept();
-      return;
-    }
+    cancelEditing();
+    event->accept();
+    return;
   }
 
   if (event->button() == Qt::LeftButton) {
@@ -584,6 +637,24 @@ void SoftwareVideoRenderer::mousePressEvent(QMouseEvent *event) {
       dragStartPos_ = event->pos();
       dragStartNormalizedRect_ = subtitleNormalizedRect_;
       dragStartTransform_ = getSubtitleTransform();
+
+      // Initialize drag start font size and reference height
+      QFont font = subtitleFont_;
+      int originalSize = font.pointSize();
+      if (originalSize <= 0) {
+        originalSize = font.pixelSize();
+      }
+      if (originalSize <= 0) {
+        originalSize = 24;
+      }
+      dragStartFontSize_ = originalSize;
+
+      QFont refFont = font;
+      refFont.setPixelSize(originalSize);
+      QFontMetrics fm(refFont);
+      dragStartFontRefHeight_ = static_cast<double>(fm.height()) / 1080.0;
+      currentDragFontSize_ = originalSize;
+
       event->accept();
       return;
     } else if (!subtitleText_.isEmpty()) {
@@ -609,21 +680,22 @@ void SoftwareVideoRenderer::mouseDoubleClickEvent(QMouseEvent *event) {
       isEditing_ = true;
       if (!editor_) {
         editor_ = new SubtitleLineEdit(this);
+        editor_->installEventFilter(this);
         connect(editor_, &QLineEdit::returnPressed, this,
                 &SoftwareVideoRenderer::commitEditing);
         connect(editor_, &SubtitleLineEdit::escPressed, this,
                 &SoftwareVideoRenderer::cancelEditing);
         connect(editor_, &SubtitleLineEdit::focusLost, this,
                 &SoftwareVideoRenderer::cancelEditing);
-        connect(editor_, &QLineEdit::textChanged, this, [this]() { update(); });
+        connect(editor_, &QLineEdit::textChanged, this, [this]() {
+          updateEditorGeometry();
+          update();
+        });
         connect(editor_, &QLineEdit::cursorPositionChanged, this, [this]() {
           cursorVisible_ = true;
           update();
         });
       }
-
-      editor_->setText(subtitleText_);
-      editor_->setAlignment(static_cast<Qt::Alignment>(subtitleAlignment_));
 
       QRect targetRect = getTargetRect();
       double refHeight = 1080.0;
@@ -642,16 +714,26 @@ void SoftwareVideoRenderer::mouseDoubleClickEvent(QMouseEvent *event) {
         scaledSize = 1;
       drawFont.setPixelSize(scaledSize);
 
-      editor_->setFont(drawFont);
-
-      // 隐形输入框样式：颜色透明，背景透明，无聚焦框，禁用系统聚焦环
+      // 1. 先设置样式属性，限制隐形输入框的字体族和大小
+      QString style =
+          QString(
+              "background: transparent; border: none; outline: none; "
+              "color: transparent; selection-background-color: transparent; "
+              "selection-color: transparent; "
+              "font-family: '%1'; font-size: %2px;")
+              .arg(drawFont.family())
+              .arg(scaledSize);
       editor_->setAttribute(Qt::WA_MacShowFocusRect, false);
-      editor_->setStyleSheet(
-          "QLineEdit { background: transparent; border: none; outline: none; "
-          "color: transparent; selection-background-color: transparent; "
-          "selection-color: transparent; }");
+      editor_->setStyleSheet(style);
 
-      editor_->setGeometry(pixelRect);
+      // 2. 设置文本和字体。为了在光标定位时精确测量坐标，使用左对齐方式
+      editor_->setText(subtitleText_);
+      editor_->setFont(drawFont);
+      editor_->setAlignment(Qt::AlignLeft);
+
+      // 3. 动态更新输入框几何形状，使其正好包裹文字
+      updateEditorGeometry();
+
       editor_->show();
       editor_->setFocus();
       editor_->selectAll();
@@ -665,6 +747,27 @@ void SoftwareVideoRenderer::mouseDoubleClickEvent(QMouseEvent *event) {
     }
   }
   QWidget::mouseDoubleClickEvent(event);
+}
+
+void SoftwareVideoRenderer::updateEditorGeometry() {
+  if (!editor_)
+    return;
+
+  QRect pixelRect = getSubtitlePixelRect();
+  QFontMetrics fm(editor_->font());
+  int totalTextWidth = fm.horizontalAdvance(editor_->text());
+
+  // 增加 20px 额外余量以容纳光标闪烁以及避免右边界裁剪
+  int widgetWidth = qMax(40, totalTextWidth + 20);
+
+  int startX = pixelRect.left();
+  if (subtitleAlignment_ & Qt::AlignHCenter) {
+    startX = pixelRect.center().x() - widgetWidth / 2;
+  } else if (subtitleAlignment_ & Qt::AlignRight) {
+    startX = pixelRect.right() - widgetWidth;
+  }
+
+  editor_->setGeometry(startX, pixelRect.y(), widgetWidth, pixelRect.height());
 }
 
 void SoftwareVideoRenderer::commitEditing() {
@@ -690,20 +793,6 @@ void SoftwareVideoRenderer::cancelEditing() {
 }
 
 void SoftwareVideoRenderer::mouseMoveEvent(QMouseEvent *event) {
-  if (isEditing_ && editor_) {
-    QRect pixelRect = getSubtitlePixelRect();
-    QTransform inv = getSubtitleTransform().inverted();
-    QPoint localClickPos = inv.map(event->pos()) - pixelRect.topLeft();
-    if (pixelRect.contains(inv.map(event->pos())) || editor_->underMouse() ||
-        (event->buttons() & Qt::LeftButton)) {
-      QMouseEvent mappedEvent(event->type(), localClickPos,
-                              event->globalPosition(), event->button(),
-                              event->buttons(), event->modifiers());
-      QCoreApplication::sendEvent(editor_, &mappedEvent);
-      event->accept();
-      return;
-    }
-  }
 
   if (dragMode_ == DragNone) {
     DragMode hit = hitTest(event->pos());
@@ -862,6 +951,14 @@ void SoftwareVideoRenderer::mouseMoveEvent(QMouseEvent *event) {
       default:
         break;
       }
+
+      // Scale font size proportionally to height adjustments (uncapped)
+      if (dragStartNormalizedRect_.height() > 0.0001) {
+        double ratio = newRect.height() / dragStartNormalizedRect_.height();
+        currentDragFontSize_ = qMax(1, qRound(dragStartFontSize_ * ratio));
+      } else {
+        currentDragFontSize_ = dragStartFontSize_;
+      }
     }
 
     {
@@ -876,17 +973,6 @@ void SoftwareVideoRenderer::mouseMoveEvent(QMouseEvent *event) {
 }
 
 void SoftwareVideoRenderer::mouseReleaseEvent(QMouseEvent *event) {
-  if (isEditing_ && editor_) {
-    QRect pixelRect = getSubtitlePixelRect();
-    QTransform inv = getSubtitleTransform().inverted();
-    QPoint localClickPos = inv.map(event->pos()) - pixelRect.topLeft();
-    QMouseEvent mappedEvent(event->type(), localClickPos,
-                            event->globalPosition(), event->button(),
-                            event->buttons(), event->modifiers());
-    QCoreApplication::sendEvent(editor_, &mappedEvent);
-    event->accept();
-    return;
-  }
 
   if (event->button() == Qt::LeftButton && dragMode_ != DragNone) {
     DragMode prevMode = dragMode_;
@@ -926,6 +1012,9 @@ void SoftwareVideoRenderer::mouseReleaseEvent(QMouseEvent *event) {
     if (prevMode == DragRotate) {
       emit subtitleRotationChanged(subtitleRotation_);
     } else {
+      if (prevMode != DragMove && prevMode != DragNone) {
+        emit subtitleFontSizeChanged(currentDragFontSize_);
+      }
       emit subtitleRectChanged(subtitleNormalizedRect_);
     }
     event->accept();

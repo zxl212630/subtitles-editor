@@ -380,6 +380,17 @@ VideoPreviewPanel::VideoPreviewPanel(QWidget *parent) : QWidget(parent) {
                 [rotation](SubtitleItem &item) { item.rotation = rotation; });
           });
 
+  // 绑定视频渲染器包围框拖拽和缩放的字号变更信号，写入字幕项并更新工具栏显示
+  connect(videoRenderer_, &SoftwareVideoRenderer::subtitleFontSizeChanged, this,
+          [this](int size) {
+            updateCurrentItemStyle(
+                [size](SubtitleItem &item) { item.fontSize = size; });
+            sizeCombo_->blockSignals(true);
+            sizeCombo_->setCurrentText(QString::number(size));
+            sizeCombo_->blockSignals(false);
+            updateSubtitleOverlay();
+          });
+
   // 绑定视频渲染器点击选中信号，在当前播放时间查找并选中对应的字幕项
   connect(videoRenderer_, &SoftwareVideoRenderer::subtitleClicked, this,
           [this]() {

@@ -20,6 +20,23 @@ public:
   }
 
 protected:
+  void paintEvent(QPaintEvent *event) override {
+    // Do nothing to prevent drawing native text, selection, and caret cursor
+    Q_UNUSED(event);
+  }
+
+  void mousePressEvent(QMouseEvent *event) override {
+    qInfo() << "[EditorLineEdit] mousePressEvent pos:" << event->position()
+            << "button:" << event->button() << "focus:" << hasFocus();
+    QLineEdit::mousePressEvent(event);
+  }
+
+  void mouseReleaseEvent(QMouseEvent *event) override {
+    qInfo() << "[EditorLineEdit] mouseReleaseEvent pos:" << event->position()
+            << "button:" << event->button();
+    QLineEdit::mouseReleaseEvent(event);
+  }
+
   void keyPressEvent(QKeyEvent *event) override {
     if (event->key() == Qt::Key_Escape) {
       emit escPressed();
@@ -71,8 +88,10 @@ signals:
   void subtitleClicked();
   void subtitleDoubleClicked();
   void subtitleTextEdited(const QString &text);
+  void subtitleFontSizeChanged(int size);
 
 protected:
+  bool eventFilter(QObject *watched, QEvent *event) override;
   void paintEvent(QPaintEvent *event) override;
   bool hasHeightForWidth() const override { return true; }
   int heightForWidth(int width) const override;
@@ -93,7 +112,7 @@ private:
 
   QString subtitleText_;
   QFont subtitleFont_;
-  QMutex subtitleMutex_;
+  mutable QMutex subtitleMutex_;
 
   QString bgImagePath_;
   bool bgIs9Patch_ = false;
@@ -132,11 +151,18 @@ private:
   void drawNinePatch(QPainter &painter, const QImage &src, const QRect &target,
                      const QMargins &margins);
 
+  double getNormalizedFontHeight() const;
+
   void commitEditing();
   void cancelEditing();
+  void updateEditorGeometry();
 
   SubtitleLineEdit *editor_ = nullptr;
   bool isEditing_ = false;
   QTimer cursorTimer_;
   bool cursorVisible_ = true;
+
+  int dragStartFontSize_ = 24;
+  double dragStartFontRefHeight_ = 0.05;
+  int currentDragFontSize_ = 24;
 };
