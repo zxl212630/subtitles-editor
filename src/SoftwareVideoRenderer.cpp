@@ -388,6 +388,18 @@ void SoftwareVideoRenderer::paintEvent(QPaintEvent *event) {
              << " targetRect=" << targetRect << " scale=" << scale
              << " hasFrame=" << hasFrame;
 
+    // 0. 如果处于编辑状态，绘制半透明背景以区分编辑状态
+    if (isEditing_ && editor_) {
+      painter.save();
+      painter.setClipRect(targetRect);
+      QTransform trans = getSubtitleTransform();
+      painter.setTransform(trans, true);
+      QColor bgColor = ThemeManager::instance().getPrimaryColor();
+      bgColor.setAlpha(30); // 半透明主色背景
+      painter.fillRect(textRect, bgColor);
+      painter.restore();
+    }
+
     // 1. 调用通用的 SubtitleRenderer 渲染字幕及其背景
     painter.save();
     painter.setClipRect(targetRect);
@@ -636,7 +648,8 @@ double SoftwareVideoRenderer::getNormalizedFontHeight() const {
 }
 
 bool SoftwareVideoRenderer::eventFilter(QObject *watched, QEvent *event) {
-  if (watched == editor_ && isEditing_ && editor_) {
+  if (editor_ && (watched == editor_ || watched == editor_->viewport()) &&
+      isEditing_) {
     if (event->type() == QEvent::MouseButtonPress) {
       QMouseEvent *mouseEvent = static_cast<QMouseEvent *>(event);
       QPoint parentPos = mapFromGlobal(mouseEvent->globalPosition().toPoint());
@@ -757,6 +770,7 @@ void SoftwareVideoRenderer::mouseDoubleClickEvent(QMouseEvent *event) {
       if (!editor_) {
         editor_ = new SubtitleLineEdit(this);
         editor_->installEventFilter(this);
+        editor_->viewport()->installEventFilter(this);
         connect(editor_, &SubtitleLineEdit::returnPressed, this,
                 &SoftwareVideoRenderer::commitEditing);
         connect(editor_, &SubtitleLineEdit::escPressed, this,
@@ -1077,9 +1091,9 @@ void SoftwareVideoRenderer::mouseMoveEvent(QMouseEvent *event) {
     if (dragMode_ == DragMove) {
       newRect.translate(dx, dy);
     } else {
-      // 最小宽高度设置为 40 像素
+      // 最小宽高度设置：宽度为 40 像素，高度为 20 像素
       double minW = 40.0 / targetRect.width();
-      double minH = 40.0 / targetRect.height();
+      double minH = 20.0 / targetRect.height();
 
       switch (dragMode_) {
       case DragResizeTL: {
