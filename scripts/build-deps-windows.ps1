@@ -49,7 +49,7 @@ fi
 
 # Install nv-codec-headers into MSYS2
 cd "$TargetDirUnix/nv-codec-headers"
-make install PREFIX=/usr
+make install PREFIX=/mingw64
 
 # Download & Extract FFmpeg Source
 cd "$TargetDirUnix"
