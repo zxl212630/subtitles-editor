@@ -31,7 +31,7 @@ jobs:
 
       - name: Install tools
         run: |
-          brew install zstd
+          brew install zstd x264 x265
 
       - name: Extract version from tag
         id: version

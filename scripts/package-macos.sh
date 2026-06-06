@@ -153,6 +153,8 @@ resolve_rpath() {
         /opt/homebrew/opt/ffmpeg/lib
         /opt/homebrew/opt/*/lib
         /usr/local/lib
+        /usr/local/opt/ffmpeg/lib
+        /usr/local/opt/*/lib
     )
 
     for dir in "${dirs[@]}"; do
@@ -314,14 +316,32 @@ has_error=0
 for dylib in "$APP_BIN" "$APP_BUNDLE/Contents/MacOS/ffmpeg" "$APP_BUNDLE/Contents/MacOS/ffprobe" "$FW_DIR"/*.dylib; do
     [[ ! -f "$dylib" ]] && continue
     [[ -L "$dylib" ]] && continue
+    
+    # 1. Check for absolute paths
     bad=$(otool -L "$dylib" 2>/dev/null | tail -n +2 | awk '{print $1}' | grep -E "^/(Users|opt|usr/local)" || true)
     if [[ -n "$bad" ]]; then
-        echo "ERROR: $(basename "$dylib") has unresolved paths:"
+        echo "ERROR: $(basename "$dylib") has unresolved absolute paths:"
         echo "$bad"
         has_error=1
     fi
+
+    # 2. Check for missing @rpath references
+    while IFS= read -r ref; do
+        if [[ "$ref" == @rpath/* ]]; then
+            local rfile="${ref#@rpath/}"
+            if [[ ! -f "$FW_DIR/$rfile" ]]; then
+                echo "ERROR: $(basename "$dylib") references $ref but $rfile is missing from Frameworks!"
+                has_error=1
+            fi
+        fi
+    done < <(otool -L "$dylib" 2>/dev/null | tail -n +2 | awk '{print $1}')
 done
-[[ $has_error -eq 0 ]] && echo "All dependencies resolved OK"
+
+if [[ $has_error -ne 0 ]]; then
+    echo "ERROR: Bundle verification failed!" >&2
+    exit 1
+fi
+echo "All dependencies resolved OK"
 
 echo "=== Signing bundle ==="
 codesign --force --deep --sign - "$APP_BUNDLE"
