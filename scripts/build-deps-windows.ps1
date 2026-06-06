@@ -39,6 +39,8 @@ if ($Target -eq "all" -or $Target -eq "ffmpeg") {
 #!/usr/bin/env bash
 set -euo pipefail
 
+export PKG_CONFIG_PATH="/mingw64/lib/pkgconfig:/mingw64/share/pkgconfig"
+
 # Avoid linker clash with MSYS2 link tool
 if [ -f /usr/bin/link.exe ]; then
     mv /usr/bin/link.exe /usr/bin/link-original.exe
