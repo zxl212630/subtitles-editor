@@ -4,7 +4,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 > ⚠️ Architecture information may be incomplete or outdated. When making component, signal, or layout changes, sync updates to this file.
 
-## Build Commands
+## Build & Run Commands
+
+### macOS (arm64 / x64)
 
 ```bash
 # Configure (default SDK paths, override with -D flags)
@@ -14,7 +16,20 @@ cmake -B cmake-build-debug -S .
 cmake --build cmake-build-debug
 
 # Run
-./cmake-build-debug/subtitles-editor
+./cmake-build-debug/subtitles-editor.app/Contents/MacOS/subtitles-editor
+```
+
+### Windows (x64)
+
+```powershell
+# Configure (default SDK paths, override with -D flags)
+cmake -B cmake-build-debug -S .
+
+# Build
+cmake --build cmake-build-debug --config Debug
+
+# Run
+.\cmake-build-debug\Debug\subtitles-editor.exe
 ```
 
 ## Formatting & Analysis
@@ -33,16 +48,25 @@ cmake --build cmake-build-debug
 ## Runtime Debugging & Interaction
 
 ### 1. Logging & Execution
-When debugging runtime issues, use `nohup` to start the application and collect logs:
-```bash
-nohup ./cmake-build-debug/subtitles-editor > /tmp/startup.log 2>&1 &
-```
-Analyze `/tmp/startup.log` (Qt warnings, FFmpeg errors, custom `qDebug()` output) to diagnose problems.
+When debugging runtime issues, capture application logs:
+- **macOS**:
+  ```bash
+  nohup ./cmake-build-debug/subtitles-editor.app/Contents/MacOS/subtitles-editor > /tmp/startup.log 2>&1 &
+  ```
+  Analyze `/tmp/startup.log` (Qt warnings, FFmpeg errors, custom `qDebug()` output).
+- **Windows**:
+  ```powershell
+  .\cmake-build-debug\Debug\subtitles-editor.exe > startup.log 2>&1
+  ```
+  Analyze `startup.log` in the root folder.
 
 ### 2. Visual Feedback (Screenshots)
-When UI verification or error dialog inspection is needed, invoke the system screenshot tool:
-- **macOS**: `screencapture -i /tmp/asr_screenshot.png`
-- **Action**: Instruct the user to "Select the relevant area in the pop-up tool" and wait for the capture.
+When UI verification or error dialog inspection is needed, capture screenshots:
+- **macOS**: `screencapture -i /tmp/asr_screenshot.png` (Instruct the user to "Select the relevant area in the pop-up tool").
+- **Windows (PowerShell)**:
+  ```powershell
+  powershell -c "Add-Type -AssemblyName System.Windows.Forms; [System.Windows.Forms.SendKeys]::SendWait('%{PRTSC}'); Start-Sleep -m 500; if ([System.Windows.Forms.Clipboard]::ContainsImage()) { [System.Windows.Forms.Clipboard]::GetImage().Save('startup_screenshot.png', [System.Drawing.Imaging.ImageFormat]::Png) }"
+  ```
 
 ### 3. Investigation Workflow
 - **Capture**: Run app with logging → Reproduce issue → Collect logs/screenshots.
@@ -51,7 +75,7 @@ When UI verification or error dialog inspection is needed, invoke the system scr
 
 ## Architecture
 
-C++17 Qt6 desktop app for video subtitle editing. macOS bundle.
+C++17 Qt6 desktop app for video subtitle editing. Supports macOS (arm64/x64) and Windows (x64).
 
 ### Key Dependencies
 
@@ -97,7 +121,7 @@ All splitters are non-collapsible.
 
 ## Multi-language / Internationalization (I18n)
 
-All user-facing text must support translation and dynamic language changes:
+Supports Chinese (`zh_CN`) and English (`en_US`). All user-facing text must support translation and dynamic language changes:
 - **String wrapping**: Wrap all user-visible strings in `tr()` (e.g., `tr("字幕")`, `tr("视频")`, `tr("属性")`).
 - **Dynamic switching**: Any custom widget that does drawing or caches translated text must implement `void changeEvent(QEvent *event) override`.
 - **Event Handling**: Inside `changeEvent()`, check for `QEvent::LanguageChange`. On this event, trigger updates (e.g., `update()` or custom translation refresh functions) to repaint or reload localized text immediately.
@@ -109,12 +133,21 @@ The application supports dynamic adjustment of theme modes (e.g., Dark/Light) an
 - **Dynamic Updates**: Custom styling (such as QSS stylesheets, palette changes, or custom painting) must be re-applied or repainted when the theme or primary color changes.
 - **Event Handling**: Custom widgets that cache styling values or use stylesheets should handle dynamic theme updates, for instance by checking for `QEvent::PaletteChange`, `QEvent::StyleChange`, or responding to global theme changed signals.
 
-## SDK Paths
+## SDK Paths & Environments
 
 Override via CMake `-D` flags (e.g., `-DQt6_ROOT=/path/to/qt`).
 
-| SDK | Default |
+### macOS Defaults
+| SDK | Default Path |
 |-----|---------|
 | Qt6 | `~/Tools/Qt/6.5.7` |
 | QWindowKit | `~/Tools/Qt/QwindowKit/Qt6` |
 | FFmpeg | `~/Tools/ffmpeg/8.0` |
+
+### Windows Defaults
+Recommended dependency build path is managed via `scripts/build-deps-windows.ps1`.
+| SDK | Default CMake Override Flag |
+|-----|---------|
+| Qt6 | `-DQt6_ROOT="D:/deps-build/deps/qt6"` |
+| QWindowKit | `-DQWindowKit_ROOT="D:/deps-build/deps/qwindowkit"` |
+| FFmpeg | `-DFFMPEG_ROOT="D:/deps-build/deps/ffmpeg"` |
