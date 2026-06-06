@@ -98,6 +98,15 @@ jobs:
             echo "base_tag=$BASE_TAG" >> "$GITHUB_OUTPUT"
           fi
 
+      - name: Create Release if not exists
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          DEPS_TAG="${{ steps.env.outputs.deps_tag }}"
+          gh release view "$DEPS_TAG" --repo "${{ github.repository }}" >/dev/null 2>&1 || {
+            gh release create "$DEPS_TAG" --prerelease --title "$DEPS_TAG" --notes "Pre-compiled dependencies" --repo "${{ github.repository }}"
+          }
+
   # --- macOS Jobs ---
   build-ffmpeg-macos:
     needs: setup-env
