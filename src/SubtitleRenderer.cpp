@@ -272,8 +272,12 @@ void SubtitleRenderer::renderItem(QPainter &painter, const SubtitleItem &item,
 
   // 3. 如果字幕框太小，等比例缩小字体
   QFontMetrics fm(font);
-  int textW = fm.horizontalAdvance(item.text);
-  int textH = fm.height();
+  QStringList linesTemp = item.text.split('\n');
+  int textW = 0;
+  for (const QString &line : linesTemp) {
+    textW = qMax(textW, fm.horizontalAdvance(line));
+  }
+  int textH = qMax(1, (int)linesTemp.size()) * fm.height();
   double shrinkScale = 1.0;
   if (textW > textRect.width() && textRect.width() > 0) {
     shrinkScale =

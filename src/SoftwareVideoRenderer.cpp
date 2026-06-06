@@ -361,8 +361,12 @@ void SoftwareVideoRenderer::paintEvent(QPaintEvent *event) {
     if (isEditing_ && editor_) {
       textToDraw = editor_->text();
     }
-    int textW = fmTemp.horizontalAdvance(textToDraw);
-    int textH = fmTemp.height();
+    QStringList linesTemp = textToDraw.split('\n');
+    int textW = 0;
+    for (const QString &line : linesTemp) {
+      textW = qMax(textW, fmTemp.horizontalAdvance(line));
+    }
+    int textH = qMax(1, (int)linesTemp.size()) * fmTemp.height();
     double shrinkScale = 1.0;
     if (textW > textRect.width() && textRect.width() > 0) {
       shrinkScale =
@@ -400,37 +404,76 @@ void SoftwareVideoRenderer::paintEvent(QPaintEvent *event) {
       painter.setTransform(trans, true);
 
       QFontMetrics fm(drawFont);
-      int totalTextWidth = fm.horizontalAdvance(editor_->text());
-      int startX = textRect.left();
-      if (subtitleAlignment_ & Qt::AlignHCenter) {
-        startX = textRect.center().x() - totalTextWidth / 2;
-      } else if (subtitleAlignment_ & Qt::AlignRight) {
-        startX = textRect.right() - totalTextWidth;
+      QStringList lines = editor_->text().split('\n');
+
+      int alignFlags = subtitleAlignment_ | Qt::AlignVCenter;
+      QRect br = fm.boundingRect(textRect, alignFlags, editor_->text());
+      int blockTop = br.top();
+
+      int cursorPos = editor_->cursorPosition();
+      int currentPos = 0;
+      int lineIndex = 0;
+      int posInLine = 0;
+      for (int i = 0; i < lines.size(); ++i) {
+        int len = lines[i].length() + 1; // +1 for \n
+        if (currentPos + len > cursorPos || i == lines.size() - 1) {
+          lineIndex = i;
+          posInLine = cursorPos - currentPos;
+          break;
+        }
+        currentPos += len;
       }
 
-      int cursorYTop = textRect.center().y() - fm.height() / 2;
-      int cursorYBottom = textRect.center().y() + fm.height() / 2;
+      int lineY = blockTop + lineIndex * fm.lineSpacing();
+      int cursorYTop = lineY;
+      int cursorYBottom = lineY + fm.height();
+
+      int lineW = fm.horizontalAdvance(lines[lineIndex]);
+      int startX = textRect.left();
+      if (subtitleAlignment_ & Qt::AlignHCenter) {
+        startX = textRect.center().x() - lineW / 2;
+      } else if (subtitleAlignment_ & Qt::AlignRight) {
+        startX = textRect.right() - lineW;
+      }
 
       // 1. 绘制选区高亮
       if (editor_->hasSelectedText()) {
         int selStart = editor_->selectionStart();
         int selLength = editor_->selectionLength();
-        QString textBeforeSel = editor_->text().left(selStart);
-        QString selText = editor_->text().mid(selStart, selLength);
+        int selEnd = selStart + selLength;
 
-        int selStartX = startX + fm.horizontalAdvance(textBeforeSel);
-        int selWidth = fm.horizontalAdvance(selText);
+        int drawPos = 0;
+        for (int i = 0; i < lines.size(); ++i) {
+          int lineLen = lines[i].length();
+          int lineStart = drawPos;
+          int lineEnd = drawPos + lineLen;
 
-        QRect selRect(selStartX, cursorYTop, selWidth, fm.height());
-        QColor primary = ThemeManager::instance().getPrimaryColor();
-        primary.setAlpha(100); // 半透明选择色
-        painter.fillRect(selRect, primary);
+          if (selEnd > lineStart && selStart <= lineEnd) {
+            int s = qMax(lineStart, selStart) - lineStart;
+            int e = qMin(lineEnd, selEnd) - lineStart;
+
+            int lw = fm.horizontalAdvance(lines[i]);
+            int lx = textRect.left();
+            if (subtitleAlignment_ & Qt::AlignHCenter)
+              lx = textRect.center().x() - lw / 2;
+            else if (subtitleAlignment_ & Qt::AlignRight)
+              lx = textRect.right() - lw;
+
+            int selX = lx + fm.horizontalAdvance(lines[i].left(s));
+            int selW = fm.horizontalAdvance(lines[i].mid(s, e - s));
+            QRect selRect(selX, blockTop + i * fm.lineSpacing(), selW,
+                          fm.height());
+            QColor primary = ThemeManager::instance().getPrimaryColor();
+            primary.setAlpha(100); // 半透明选择色
+            painter.fillRect(selRect, primary);
+          }
+          drawPos += lineLen + 1;
+        }
       }
 
       // 2. 绘制闪烁光标
       if (cursorVisible_) {
-        int cursorPos = editor_->cursorPosition();
-        QString textBeforeCursor = editor_->text().left(cursorPos);
+        QString textBeforeCursor = lines[lineIndex].left(posInLine);
         int cursorX = startX + fm.horizontalAdvance(textBeforeCursor);
 
         QColor primary = ThemeManager::instance().getPrimaryColor();
@@ -714,17 +757,17 @@ void SoftwareVideoRenderer::mouseDoubleClickEvent(QMouseEvent *event) {
       if (!editor_) {
         editor_ = new SubtitleLineEdit(this);
         editor_->installEventFilter(this);
-        connect(editor_, &QLineEdit::returnPressed, this,
+        connect(editor_, &SubtitleLineEdit::returnPressed, this,
                 &SoftwareVideoRenderer::commitEditing);
         connect(editor_, &SubtitleLineEdit::escPressed, this,
                 &SoftwareVideoRenderer::cancelEditing);
         connect(editor_, &SubtitleLineEdit::focusLost, this,
                 &SoftwareVideoRenderer::cancelEditing);
-        connect(editor_, &QLineEdit::textChanged, this, [this]() {
+        connect(editor_, &QTextEdit::textChanged, this, [this]() {
           updateEditorGeometry();
           update();
         });
-        connect(editor_, &QLineEdit::cursorPositionChanged, this, [this]() {
+        connect(editor_, &QTextEdit::cursorPositionChanged, this, [this]() {
           cursorVisible_ = true;
           update();
         });
@@ -748,8 +791,12 @@ void SoftwareVideoRenderer::mouseDoubleClickEvent(QMouseEvent *event) {
       // 编辑状态下如果边框过小也等比例缩小
       QRect pixelRect = getSubtitlePixelRect();
       QFontMetrics fmTemp(drawFont);
-      int textW = fmTemp.horizontalAdvance(subtitleText_);
-      int textH = fmTemp.height();
+      QStringList linesTemp = subtitleText_.split('\n');
+      int textW = 0;
+      for (const QString &line : linesTemp) {
+        textW = qMax(textW, fmTemp.horizontalAdvance(line));
+      }
+      int textH = qMax(1, (int)linesTemp.size()) * fmTemp.height();
       double shrinkScale = 1.0;
       if (textW > pixelRect.width() && pixelRect.width() > 0) {
         shrinkScale =
@@ -805,7 +852,11 @@ void SoftwareVideoRenderer::updateEditorGeometry() {
 
   QRect pixelRect = getSubtitlePixelRect();
   QFontMetrics fm(editor_->font());
-  int totalTextWidth = fm.horizontalAdvance(editor_->text());
+  QStringList linesTemp = editor_->text().split('\n');
+  int totalTextWidth = 0;
+  for (const QString &line : linesTemp) {
+    totalTextWidth = qMax(totalTextWidth, fm.horizontalAdvance(line));
+  }
 
   // 增加 20px 额外余量以容纳光标闪烁以及避免右边界裁剪
   int widgetWidth = qMax(40, totalTextWidth + 20);
@@ -848,8 +899,12 @@ int SoftwareVideoRenderer::cursorPosFromLocalPoint(
 
   // 与 paintEvent 相同的动态缩小逻辑
   QFontMetrics fmTemp(drawFont);
-  int textW = fmTemp.horizontalAdvance(text);
-  int textH = fmTemp.height();
+  QStringList lines = text.split('\n');
+  int textW = 0;
+  for (const QString &line : lines) {
+    textW = qMax(textW, fmTemp.horizontalAdvance(line));
+  }
+  int textH = qMax(1, (int)lines.size()) * fmTemp.height();
   double shrinkScale = 1.0;
   if (textW > pixelRect.width() && pixelRect.width() > 0) {
     shrinkScale =
@@ -865,28 +920,47 @@ int SoftwareVideoRenderer::cursorPosFromLocalPoint(
   }
 
   QFontMetrics fm(drawFont);
-  int totalTextWidth = fm.horizontalAdvance(text);
 
-  // Compute text start X using the same logic as paintEvent
+  int alignFlags = subtitleAlignment_ | Qt::AlignVCenter;
+  QRect br = fm.boundingRect(pixelRect, alignFlags, text);
+  int blockTop = br.top();
+
+  // Find which line we clicked based on Y coordinate
+  int clickYOffset = localPos.y() - blockTop;
+  int lineIndex = clickYOffset / fm.lineSpacing();
+  if (clickYOffset < 0)
+    lineIndex = 0;
+  if (lineIndex >= lines.size())
+    lineIndex = lines.size() - 1;
+
+  int lineW = fm.horizontalAdvance(lines[lineIndex]);
   int textStartX = pixelRect.left();
   if (subtitleAlignment_ & Qt::AlignHCenter) {
-    textStartX = pixelRect.center().x() - totalTextWidth / 2;
+    textStartX = pixelRect.center().x() - lineW / 2;
   } else if (subtitleAlignment_ & Qt::AlignRight) {
-    textStartX = pixelRect.right() - totalTextWidth;
+    textStartX = pixelRect.right() - lineW;
   }
 
   int clickOffset = localPos.x() - textStartX;
-  if (clickOffset <= 0)
-    return 0;
 
-  for (int i = 1; i <= text.length(); ++i) {
-    int charX = fm.horizontalAdvance(text.left(i));
+  int basePos = 0;
+  for (int i = 0; i < lineIndex; ++i) {
+    basePos += lines[i].length() + 1; // +1 for \n
+  }
+
+  QString lineText = lines[lineIndex];
+  if (clickOffset <= 0)
+    return basePos;
+
+  for (int i = 1; i <= lineText.length(); ++i) {
+    int charX = fm.horizontalAdvance(lineText.left(i));
     if (clickOffset < charX) {
-      int prevX = fm.horizontalAdvance(text.left(i - 1));
-      return (clickOffset - prevX < charX - clickOffset) ? i - 1 : i;
+      int prevX = fm.horizontalAdvance(lineText.left(i - 1));
+      return basePos +
+             ((clickOffset - prevX < charX - clickOffset) ? i - 1 : i);
     }
   }
-  return text.length();
+  return basePos + lineText.length();
 }
 
 void SoftwareVideoRenderer::commitEditing() {

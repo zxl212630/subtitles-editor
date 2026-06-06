@@ -5,18 +5,50 @@
 #include <QHash>
 #include <QImage>
 #include <QKeyEvent>
-#include <QLineEdit>
 #include <QMargins>
 #include <QMutex>
 #include <QRectF>
+#include <QTextCursor>
+#include <QTextEdit>
 #include <QTimer>
 #include <QWidget>
 
-class SubtitleLineEdit : public QLineEdit {
+class SubtitleLineEdit : public QTextEdit {
   Q_OBJECT
 public:
-  explicit SubtitleLineEdit(QWidget *parent = nullptr) : QLineEdit(parent) {
+  explicit SubtitleLineEdit(QWidget *parent = nullptr) : QTextEdit(parent) {
     setStyleSheet("background: transparent; border: none;");
+    setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+    setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+    setAcceptRichText(false);
+  }
+
+  QString text() const { return toPlainText(); }
+  void setText(const QString &t) { setPlainText(t); }
+
+  int cursorPosition() const { return textCursor().position(); }
+  void setCursorPosition(int pos) {
+    QTextCursor c = textCursor();
+    c.setPosition(pos);
+    setTextCursor(c);
+  }
+
+  bool hasSelectedText() const { return textCursor().hasSelection(); }
+  int selectionStart() const { return textCursor().selectionStart(); }
+  int selectionLength() const { return textCursor().selectedText().length(); }
+
+  void deselect() {
+    QTextCursor c = textCursor();
+    c.clearSelection();
+    setTextCursor(c);
+  }
+
+  void setSelection(int start, int len) {
+    QTextCursor c = textCursor();
+    c.setPosition(start);
+    // Determine the anchor mathematically. If len < 0, it selects backwards.
+    c.setPosition(start + len, QTextCursor::KeepAnchor);
+    setTextCursor(c);
   }
 
 protected:
@@ -26,15 +58,11 @@ protected:
   }
 
   void mousePressEvent(QMouseEvent *event) override {
-    qInfo() << "[EditorLineEdit] mousePressEvent pos:" << event->position()
-            << "button:" << event->button() << "focus:" << hasFocus();
-    QLineEdit::mousePressEvent(event);
+    QTextEdit::mousePressEvent(event);
   }
 
   void mouseReleaseEvent(QMouseEvent *event) override {
-    qInfo() << "[EditorLineEdit] mouseReleaseEvent pos:" << event->position()
-            << "button:" << event->button();
-    QLineEdit::mouseReleaseEvent(event);
+    QTextEdit::mouseReleaseEvent(event);
   }
 
   void keyPressEvent(QKeyEvent *event) override {
@@ -43,17 +71,27 @@ protected:
       event->accept();
       return;
     }
-    QLineEdit::keyPressEvent(event);
+    if (event->key() == Qt::Key_Return || event->key() == Qt::Key_Enter) {
+      if (event->modifiers() & Qt::ShiftModifier) {
+        QTextEdit::keyPressEvent(event); // Insert newline
+      } else {
+        emit returnPressed();
+      }
+      event->accept();
+      return;
+    }
+    QTextEdit::keyPressEvent(event);
   }
 
   void focusOutEvent(QFocusEvent *event) override {
     emit focusLost();
-    QLineEdit::focusOutEvent(event);
+    QTextEdit::focusOutEvent(event);
   }
 
 signals:
   void escPressed();
   void focusLost();
+  void returnPressed();
 };
 
 class SoftwareVideoRenderer : public QWidget {
