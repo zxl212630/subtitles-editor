@@ -64,9 +64,19 @@ fi
 # Install dependencies in MSYS2
 pacman -S --noconfirm --needed mingw-w64-x86_64-x264 mingw-w64-x86_64-x265 mingw-w64-x86_64-pkgconf
 
-# Create .lib copies of MinGW import libraries for MSVC linker
-cp /mingw64/lib/libx264.dll.a /mingw64/lib/libx264.lib 2>/dev/null || cp /mingw64/lib/libx264.a /mingw64/lib/libx264.lib || true
-cp /mingw64/lib/libx265.dll.a /mingw64/lib/libx265.lib 2>/dev/null || cp /mingw64/lib/libx265.a /mingw64/lib/libx265.lib || true
+# Create .lib copies of MinGW import libraries for MSVC linker (both with and without 'lib' prefix)
+for lib in x264 x265; do
+    src=""
+    if [ -f /mingw64/lib/lib${lib}.dll.a ]; then
+        src=/mingw64/lib/lib${lib}.dll.a
+    elif [ -f /mingw64/lib/lib${lib}.a ]; then
+        src=/mingw64/lib/lib${lib}.a
+    fi
+    if [ -n "$src" ]; then
+        cp "$src" "/mingw64/lib/lib${lib}.lib"
+        cp "$src" "/mingw64/lib/${lib}.lib"
+    fi
+done
 
 
 cd "ffmpeg-${FFmpegVersion}"
