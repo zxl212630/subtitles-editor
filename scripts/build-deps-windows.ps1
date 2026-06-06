@@ -73,14 +73,14 @@ echo "=== Copying import libraries for MSVC ==="
 set -x
 for lib in x264 x265; do
     src=""
-    if [ -f /mingw64/lib/lib${lib}.dll.a ]; then
-        src=/mingw64/lib/lib${lib}.dll.a
-    elif [ -f /mingw64/lib/lib${lib}.a ]; then
-        src=/mingw64/lib/lib${lib}.a
+    if [ -f /mingw64/lib/lib`${lib}.dll.a ]; then
+        src=/mingw64/lib/lib`${lib}.dll.a
+    elif [ -f /mingw64/lib/lib`${lib}.a ]; then
+        src=/mingw64/lib/lib`${lib}.a
     fi
-    if [ -n "$src" ]; then
-        cp "$src" "/mingw64/lib/lib${lib}.lib"
-        cp "$src" "/mingw64/lib/${lib}.lib"
+    if [ -n "`$src" ]; then
+        cp "`$src" "/mingw64/lib/lib`${lib}.lib"
+        cp "`$src" "/mingw64/lib/`${lib}.lib"
     fi
 done
 set +x
