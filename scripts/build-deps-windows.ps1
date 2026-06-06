@@ -64,6 +64,11 @@ fi
 # Install dependencies in MSYS2
 pacman -S --noconfirm --needed mingw-w64-x86_64-x264 mingw-w64-x86_64-x265 mingw-w64-x86_64-pkgconf
 
+# Create .lib copies of MinGW import libraries for MSVC linker
+cp /mingw64/lib/libx264.dll.a /mingw64/lib/libx264.lib 2>/dev/null || cp /mingw64/lib/libx264.a /mingw64/lib/libx264.lib || true
+cp /mingw64/lib/libx265.dll.a /mingw64/lib/libx265.lib 2>/dev/null || cp /mingw64/lib/libx265.a /mingw64/lib/libx265.lib || true
+
+
 cd "ffmpeg-${FFmpegVersion}"
 ./configure \
     --toolchain=msvc \
@@ -121,6 +126,14 @@ fi
     $FfmpegTarget = Join-Path $DepsDir "ffmpeg"
     New-Item -ItemType Directory -Force -Path $FfmpegTarget | Out-Null
     Copy-Item -Path "$MsysTmpInstall\*" -Destination $FfmpegTarget -Recurse -Force
+
+    # Copy dependent DLLs from MSYS2 mingw64/bin to target ffmpeg/bin
+    $FfmpegBinTarget = Join-Path $FfmpegTarget "bin"
+    Copy-Item -Path (Join-Path $MsysLocation "mingw64\bin\libx264*.dll") -Destination $FfmpegBinTarget -Force -ErrorAction SilentlyContinue
+    Copy-Item -Path (Join-Path $MsysLocation "mingw64\bin\libx265*.dll") -Destination $FfmpegBinTarget -Force -ErrorAction SilentlyContinue
+    Copy-Item -Path (Join-Path $MsysLocation "mingw64\bin\libwinpthread*.dll") -Destination $FfmpegBinTarget -Force -ErrorAction SilentlyContinue
+    Copy-Item -Path (Join-Path $MsysLocation "mingw64\bin\libgcc_s_seh*.dll") -Destination $FfmpegBinTarget -Force -ErrorAction SilentlyContinue
+    Copy-Item -Path (Join-Path $MsysLocation "mingw64\bin\libstdc++*.dll") -Destination $FfmpegBinTarget -Force -ErrorAction SilentlyContinue
 
     # Pack FFmpeg
     Write-Host "=== Packaging FFmpeg ==="
