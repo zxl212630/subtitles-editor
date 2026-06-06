@@ -39,9 +39,8 @@
 
 | 平台 | 状态 | 备注 |
 |------|------|------|
-| macOS (Apple Silicon) | ✅ 已验证 | M1/M2/M3 芯片 |
-| macOS (Intel) | ⚠️ 未验证 | 欢迎测试反馈 |
-| Windows | ❌ 暂不支持 | 计划中 |
+| macOS (Apple Silicon / Intel) | ✅ 已验证 | macOS 12+，支持 M 系列芯片及 Intel 芯片 |
+| Windows (x64) | ✅ 已验证 | Windows 10/11 x64 |
 
 ## 🖼️ 界面预览
 
@@ -76,7 +75,7 @@
 
 | 依赖 | 版本 | 用途 |
 |------|------|------|
-| Qt6 | 6.5.7+ | UI 框架 |
+| Qt6 | 6.5+ | UI 框架 |
 | FFmpeg | 8.0 | 视频/音频解码 |
 | QWindowKit | - | 自定义标题栏 |
 
@@ -85,38 +84,52 @@
 ### 环境准备
 
 确保已安装以下依赖：
-- CMake 3.16+
-- Qt6 6.5.7+
-- FFmpeg 8.0
-- C++17 兼容的编译器
+- CMake 3.20+
+- Qt6 6.5+
+- FFmpeg 8.0+
+- QWindowKit 1.5.0
+- C++17 兼容的编译器 (MSVC 2019+ 或 Clang/GCC)
 
-### 构建步骤
+### 构建步骤 (macOS / Linux)
 
 ```bash
 # 克隆仓库
 git clone https://github.com/zxl212630/subtitles-editor.git
 cd subtitles-editor
 
-# 配置（默认 SDK 路径，可通过 -D 参数覆盖）
+# 配置（如果 SDK 安装在非默认路径，可通过 -D 参数手动覆盖，详见下方说明）
 cmake -B cmake-build-debug -S .
 
 # 编译
 cmake --build cmake-build-debug
-
-# 运行
-./cmake-build-debug/subtitles-editor
 ```
 
-### SDK 路径配置
+### 构建步骤 (Windows - MSVC)
 
-如果 SDK 安装在非默认路径，可通过 CMake 参数指定：
+```powershell
+# 克隆仓库
+git clone https://github.com/zxl212630/subtitles-editor.git
+cd subtitles-editor
 
-```bash
-cmake -B cmake-build-debug -S . \
-  -DQt6_ROOT=/path/to/qt6 \
-  -DQWindowKit_ROOT=/path/to/qwindowkit \
-  -DFFmpeg_ROOT=/path/to/ffmpeg
+# 配置 (通过命令行传入相关的依赖 SDK 路径，或确保其已添加到系统变量)
+cmake -B cmake-build-debug -S . `
+  -DQt6_ROOT="C:/Qt/6.5.7/msvc2019_64" `
+  -DQWindowKit_ROOT="C:/Tools/QWindowKit" `
+  -DFFmpeg_ROOT="C:/Tools/ffmpeg"
+
+# 编译
+cmake --build cmake-build-debug --config Debug
 ```
+
+### SDK 路径配置说明
+
+默认情况下，`CMakeLists.txt` 会根据操作系统查找默认安装路径。若你的环境不同，可以在配置时手动覆盖：
+
+| 参数 | 说明 | macOS 默认值 | Windows 默认值 |
+|------|------|--------------|----------------|
+| `-DQt6_ROOT` | Qt6 安装根目录 | `~/Tools/Qt/6.5.7` | `C:/Qt/6.5.7/msvc2019_64` |
+| `-DQWindowKit_ROOT` | QWindowKit 安装根目录 | `~/Tools/Qt/QwindowKit/Qt6` | `C:/Tools/QWindowKit` |
+| `-DFFmpeg_ROOT` | FFmpeg 编译根目录 | `~/Tools/ffmpeg/8.0` | `C:/Tools/ffmpeg` |
 
 ## 📁 项目结构
 
@@ -161,4 +174,26 @@ clang-tidy src/*.cpp -- -std=c++17
 
 ## 📄 许可证
 
-本项目采用 GPLv3 许可证 - 详见 [LICENSE](LICENSE) 文件
+本项目采用 **GPLv3** 许可证，详见 [LICENSE](LICENSE) 文件。
+
+### 第三方开源组件声明
+
+本项目包含或使用了以下第三方开源组件：
+
+1. **Qt6**:
+   - **项目地址**: [https://www.qt.io](https://www.qt.io) / [GitHub](https://github.com/qt)
+   - **许可证**: LGPLv3 / 商业许可证
+   - **说明**: 跨平台的 C++ 开发框架，用于构建精美的用户界面与多媒体功能。
+2. **srtparser.h** (位于 `include/srtparser.h`):
+   - **项目地址**: [saurabhshri/simple-yet-powerful-srt-subtitle-parser-cpp](https://github.com/saurabhshri/simple-yet-powerful-srt-subtitle-parser-cpp)
+   - **作者**: Saurabh Shrivastava / Oleksii Maryshchenko ([LibSub-Parser](https://github.com/young-developer/subtitle-parser))
+   - **许可证**: MIT 许可证
+   - **说明**: 优秀的 C++ SRT 字幕解析组件。
+3. **QWindowKit**:
+   - **项目地址**: [stdware/qwindowkit](https://github.com/stdware/qwindowkit)
+   - **许可证**: Apache-2.0
+   - **说明**: 用于实现跨平台无边框窗口和自定义标题栏。
+4. **FFmpeg**:
+   - **项目地址**: [https://ffmpeg.org](https://ffmpeg.org) / [GitHub](https://github.com/FFmpeg/FFmpeg)
+   - **许可证**: LGPL / GPL
+   - **说明**: 用于高效率的音视频解码与多媒体数据处理。

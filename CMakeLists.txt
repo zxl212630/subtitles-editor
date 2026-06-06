@@ -11,8 +11,19 @@ set(CMAKE_AUTOUIC ON)
 # ============================================================
 # SDK Paths (可通过 -D 参数覆盖，如: -DQt6_ROOT=/path/to/qt)
 # ============================================================
-set(Qt6_ROOT "$ENV{HOME}/Tools/Qt/6.5.7" CACHE PATH "Qt6 installation root")
-set(QWindowKit_ROOT "$ENV{HOME}/Tools/Qt/QwindowKit/Qt6" CACHE PATH "QWindowKit installation root")
+if(APPLE)
+  set(Qt6_ROOT_DEFAULT "$ENV{HOME}/Tools/Qt/6.5.7")
+  set(QWindowKit_ROOT_DEFAULT "$ENV{HOME}/Tools/Qt/QwindowKit/Qt6")
+elseif(WIN32)
+  set(Qt6_ROOT_DEFAULT "C:/Qt/6.5.7/msvc2019_64")
+  set(QWindowKit_ROOT_DEFAULT "C:/Tools/QWindowKit")
+else()
+  set(Qt6_ROOT_DEFAULT "/usr/lib/qt6")
+  set(QWindowKit_ROOT_DEFAULT "/usr")
+endif()
+
+set(Qt6_ROOT "${Qt6_ROOT_DEFAULT}" CACHE PATH "Qt6 installation root")
+set(QWindowKit_ROOT "${QWindowKit_ROOT_DEFAULT}" CACHE PATH "QWindowKit installation root")
 
 # FFmpeg: 优先使用系统包管理器，可通过 -DFFMPEG_ROOT 覆盖
 if(NOT DEFINED FFMPEG_ROOT)
@@ -52,7 +63,14 @@ if(NOT DEFINED FFMPEG_ROOT)
 
   # 回退到手动路径
   if(NOT DEFINED FFMPEG_ROOT)
-    set(FFMPEG_ROOT "$ENV{HOME}/Tools/ffmpeg/8.0" CACHE PATH "FFmpeg installation root")
+    if(APPLE)
+      set(FFMPEG_ROOT_DEFAULT "$ENV{HOME}/Tools/ffmpeg/8.0")
+    elseif(WIN32)
+      set(FFMPEG_ROOT_DEFAULT "C:/Tools/ffmpeg")
+    else()
+      set(FFMPEG_ROOT_DEFAULT "/usr")
+    endif()
+    set(FFMPEG_ROOT "${FFMPEG_ROOT_DEFAULT}" CACHE PATH "FFmpeg installation root")
     set(FFMPEG_INCLUDE_DIR "${FFMPEG_ROOT}/include")
     set(FFMPEG_LIBRARY_DIR "${FFMPEG_ROOT}/lib" "${FFMPEG_ROOT}/bin")
   endif()
