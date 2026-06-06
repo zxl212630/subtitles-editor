@@ -362,7 +362,8 @@ void SoftwareVideoRenderer::paintEvent(QPaintEvent *event) {
     if (showEditFrame_) {
       painter.save();
       painter.setRenderHint(QPainter::Antialiasing, true);
-      painter.setClipRect(targetRect);
+      // Do not clip the edit frame to targetRect so handles remain visible and
+      // grabbable outside the video frame
 
       // 应用中心旋转平移变换
       QTransform trans = getSubtitleTransform();
@@ -591,75 +592,67 @@ void SoftwareVideoRenderer::mouseMoveEvent(QMouseEvent *event) {
 
     if (dragMode_ == DragMove) {
       newRect.translate(dx, dy);
-      if (newRect.left() < 0)
-        newRect.moveLeft(0);
-      if (newRect.top() < 0)
-        newRect.moveTop(0);
-      if (newRect.right() > 1.0)
-        newRect.moveRight(1.0);
-      if (newRect.bottom() > 1.0)
-        newRect.moveBottom(1.0);
     } else {
       double minW = 0.05;
       double minH = 0.05;
 
       switch (dragMode_) {
       case DragResizeTL: {
-        double newLeft = qBound(0.0, dragStartNormalizedRect_.left() + dx,
-                                dragStartNormalizedRect_.right() - minW);
-        double newTop = qBound(0.0, dragStartNormalizedRect_.top() + dy,
-                               dragStartNormalizedRect_.bottom() - minH);
+        double newLeft = qMin(dragStartNormalizedRect_.left() + dx,
+                              dragStartNormalizedRect_.right() - minW);
+        double newTop = qMin(dragStartNormalizedRect_.top() + dy,
+                             dragStartNormalizedRect_.bottom() - minH);
         newRect.setLeft(newLeft);
         newRect.setTop(newTop);
         break;
       }
       case DragResizeTM: {
-        double newTop = qBound(0.0, dragStartNormalizedRect_.top() + dy,
-                               dragStartNormalizedRect_.bottom() - minH);
+        double newTop = qMin(dragStartNormalizedRect_.top() + dy,
+                             dragStartNormalizedRect_.bottom() - minH);
         newRect.setTop(newTop);
         break;
       }
       case DragResizeTR: {
-        double newRight = qBound(dragStartNormalizedRect_.left() + minW,
-                                 dragStartNormalizedRect_.right() + dx, 1.0);
-        double newTop = qBound(0.0, dragStartNormalizedRect_.top() + dy,
-                               dragStartNormalizedRect_.bottom() - minH);
+        double newRight = qMax(dragStartNormalizedRect_.left() + minW,
+                               dragStartNormalizedRect_.right() + dx);
+        double newTop = qMin(dragStartNormalizedRect_.top() + dy,
+                             dragStartNormalizedRect_.bottom() - minH);
         newRect.setRight(newRight);
         newRect.setTop(newTop);
         break;
       }
       case DragResizeML: {
-        double newLeft = qBound(0.0, dragStartNormalizedRect_.left() + dx,
-                                dragStartNormalizedRect_.right() - minW);
+        double newLeft = qMin(dragStartNormalizedRect_.left() + dx,
+                              dragStartNormalizedRect_.right() - minW);
         newRect.setLeft(newLeft);
         break;
       }
       case DragResizeMR: {
-        double newRight = qBound(dragStartNormalizedRect_.left() + minW,
-                                 dragStartNormalizedRect_.right() + dx, 1.0);
+        double newRight = qMax(dragStartNormalizedRect_.left() + minW,
+                               dragStartNormalizedRect_.right() + dx);
         newRect.setRight(newRight);
         break;
       }
       case DragResizeBL: {
-        double newLeft = qBound(0.0, dragStartNormalizedRect_.left() + dx,
-                                dragStartNormalizedRect_.right() - minW);
-        double newBottom = qBound(dragStartNormalizedRect_.top() + minH,
-                                  dragStartNormalizedRect_.bottom() + dy, 1.0);
+        double newLeft = qMin(dragStartNormalizedRect_.left() + dx,
+                              dragStartNormalizedRect_.right() - minW);
+        double newBottom = qMax(dragStartNormalizedRect_.top() + minH,
+                                dragStartNormalizedRect_.bottom() + dy);
         newRect.setLeft(newLeft);
         newRect.setBottom(newBottom);
         break;
       }
       case DragResizeBM: {
-        double newBottom = qBound(dragStartNormalizedRect_.top() + minH,
-                                  dragStartNormalizedRect_.bottom() + dy, 1.0);
+        double newBottom = qMax(dragStartNormalizedRect_.top() + minH,
+                                dragStartNormalizedRect_.bottom() + dy);
         newRect.setBottom(newBottom);
         break;
       }
       case DragResizeBR: {
-        double newRight = qBound(dragStartNormalizedRect_.left() + minW,
-                                 dragStartNormalizedRect_.right() + dx, 1.0);
-        double newBottom = qBound(dragStartNormalizedRect_.top() + minH,
-                                  dragStartNormalizedRect_.bottom() + dy, 1.0);
+        double newRight = qMax(dragStartNormalizedRect_.left() + minW,
+                               dragStartNormalizedRect_.right() + dx);
+        double newBottom = qMax(dragStartNormalizedRect_.top() + minH,
+                                dragStartNormalizedRect_.bottom() + dy);
         newRect.setRight(newRight);
         newRect.setBottom(newBottom);
         break;
