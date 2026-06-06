@@ -49,7 +49,7 @@ public:
                          const QString &text, StandardButtons buttons = Ok,
                          StandardButton defaultButton = Ok);
 
- private:
+private:
   AppMessageBox(Icon icon, const QString &title, const QString &text,
                 StandardButtons buttons, StandardButton defaultButton,
                 QWidget *parent = nullptr);

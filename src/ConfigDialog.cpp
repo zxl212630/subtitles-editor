@@ -147,7 +147,8 @@ ConfigDialog::ConfigDialog(QWidget *parent) : BaseDialog(parent) {
 
   setupWindowAgent(titleBar);
   if (titleLabel) {
-    titleLabel->setVisible(false); // ConfigDialog does not use standard centered titleLabel
+    titleLabel->setVisible(
+        false); // ConfigDialog does not use standard centered titleLabel
   }
 }
 

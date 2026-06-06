@@ -31,8 +31,8 @@ extern "C" {
 static bool isEncoderAvailable(const char *name) {
   // MediaFoundation encoders (h264_mf, hevc_mf) fail to open in the main thread
   // because Qt initializes COM in STA mode on the main GUI thread.
-  // Running this check in std::async launches a worker thread (which has no COM or is MTA),
-  // allowing MediaFoundation to initialize correctly.
+  // Running this check in std::async launches a worker thread (which has no COM
+  // or is MTA), allowing MediaFoundation to initialize correctly.
   auto future = std::async(std::launch::async, [name]() -> bool {
     const AVCodec *encoder = avcodec_find_encoder_by_name(name);
     if (!encoder) {
@@ -63,8 +63,6 @@ static bool isEncoderAvailable(const char *name) {
     return false;
   }
 }
-
-
 
 ExportDialog::ExportDialog(QWidget *parent) : BaseDialog(parent) {
   setObjectName("ExportDialog");
@@ -542,7 +540,8 @@ void ExportDialog::setupUi() {
   // Populate H.264 encoders dynamically based on availability
   bool addedH264 = false;
   if (isEncoderAvailable("h264_videotoolbox")) {
-    videoCodecCombo_->addItem(tr("H.264 (硬件 - VideoToolbox)"), "h264_videotoolbox");
+    videoCodecCombo_->addItem(tr("H.264 (硬件 - VideoToolbox)"),
+                              "h264_videotoolbox");
     addedH264 = true;
   }
   if (isEncoderAvailable("h264_mf")) {
@@ -560,7 +559,8 @@ void ExportDialog::setupUi() {
   if (!addedH264) {
     if (const AVCodec *codec = avcodec_find_encoder(AV_CODEC_ID_H264)) {
       if (isEncoderAvailable(codec->name)) {
-        videoCodecCombo_->addItem(QString("H.264 (%1)").arg(codec->name), codec->name);
+        videoCodecCombo_->addItem(QString("H.264 (%1)").arg(codec->name),
+                                  codec->name);
         addedH264 = true;
       }
     }
@@ -569,7 +569,8 @@ void ExportDialog::setupUi() {
   // Populate HEVC encoders dynamically based on availability
   bool addedHevc = false;
   if (isEncoderAvailable("hevc_videotoolbox")) {
-    videoCodecCombo_->addItem(tr("HEVC (硬件 - VideoToolbox)"), "hevc_videotoolbox");
+    videoCodecCombo_->addItem(tr("HEVC (硬件 - VideoToolbox)"),
+                              "hevc_videotoolbox");
     addedHevc = true;
   }
   if (isEncoderAvailable("hevc_mf")) {
@@ -587,7 +588,8 @@ void ExportDialog::setupUi() {
   if (!addedHevc) {
     if (const AVCodec *codec = avcodec_find_encoder(AV_CODEC_ID_HEVC)) {
       if (isEncoderAvailable(codec->name)) {
-        videoCodecCombo_->addItem(QString("HEVC (%1)").arg(codec->name), codec->name);
+        videoCodecCombo_->addItem(QString("HEVC (%1)").arg(codec->name),
+                                  codec->name);
         addedHevc = true;
       }
     }
@@ -826,19 +828,22 @@ void ExportDialog::retranslateUi() {
   if (videoCodecCombo_) {
     QString selectedCodec = videoCodecCombo_->currentData().toString();
     videoCodecCombo_->clear();
-    
+
     // Populate H.264 encoders dynamically based on availability
     bool addedH264 = false;
     if (isEncoderAvailable("h264_videotoolbox")) {
-      videoCodecCombo_->addItem(tr("H.264 (硬件 - VideoToolbox)"), "h264_videotoolbox");
+      videoCodecCombo_->addItem(tr("H.264 (硬件 - VideoToolbox)"),
+                                "h264_videotoolbox");
       addedH264 = true;
     }
     if (isEncoderAvailable("h264_mf")) {
-      videoCodecCombo_->addItem(tr("H.264 (硬件 - MediaFoundation)"), "h264_mf");
+      videoCodecCombo_->addItem(tr("H.264 (硬件 - MediaFoundation)"),
+                                "h264_mf");
       addedH264 = true;
     }
     if (isEncoderAvailable("h264_nvenc")) {
-      videoCodecCombo_->addItem(tr("H.264 (硬件 - NVIDIA NVENC)"), "h264_nvenc");
+      videoCodecCombo_->addItem(tr("H.264 (硬件 - NVIDIA NVENC)"),
+                                "h264_nvenc");
       addedH264 = true;
     }
     if (isEncoderAvailable("libx264")) {
@@ -848,7 +853,8 @@ void ExportDialog::retranslateUi() {
     if (!addedH264) {
       if (const AVCodec *codec = avcodec_find_encoder(AV_CODEC_ID_H264)) {
         if (isEncoderAvailable(codec->name)) {
-          videoCodecCombo_->addItem(QString("H.264 (%1)").arg(codec->name), codec->name);
+          videoCodecCombo_->addItem(QString("H.264 (%1)").arg(codec->name),
+                                    codec->name);
           addedH264 = true;
         }
       }
@@ -857,7 +863,8 @@ void ExportDialog::retranslateUi() {
     // Populate HEVC encoders dynamically based on availability
     bool addedHevc = false;
     if (isEncoderAvailable("hevc_videotoolbox")) {
-      videoCodecCombo_->addItem(tr("HEVC (硬件 - VideoToolbox)"), "hevc_videotoolbox");
+      videoCodecCombo_->addItem(tr("HEVC (硬件 - VideoToolbox)"),
+                                "hevc_videotoolbox");
       addedHevc = true;
     }
     if (isEncoderAvailable("hevc_mf")) {
@@ -875,7 +882,8 @@ void ExportDialog::retranslateUi() {
     if (!addedHevc) {
       if (const AVCodec *codec = avcodec_find_encoder(AV_CODEC_ID_HEVC)) {
         if (isEncoderAvailable(codec->name)) {
-          videoCodecCombo_->addItem(QString("HEVC (%1)").arg(codec->name), codec->name);
+          videoCodecCombo_->addItem(QString("HEVC (%1)").arg(codec->name),
+                                    codec->name);
           addedHevc = true;
         }
       }

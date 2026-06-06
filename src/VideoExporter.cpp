@@ -25,19 +25,14 @@ extern "C" {
 #define LOG_EXP_critical(msg) qCritical() << "[VideoExporter]" << msg
 #define LOG_EXP_debug(msg) qDebug() << "[VideoExporter]" << msg
 
-static const AVCodec* find_fallback_video_encoder(AVCodecID codecId) {
+static const AVCodec *find_fallback_video_encoder(AVCodecID codecId) {
   if (codecId == AV_CODEC_ID_H264) {
-    const char* H264_ENCODERS[] = {
-      "h264_videotoolbox",
-      "h264_mf",
-      "h264_nvenc",
-      "libx264",
-      nullptr
-    };
+    const char *H264_ENCODERS[] = {"h264_videotoolbox", "h264_mf", "h264_nvenc",
+                                   "libx264", nullptr};
     for (int i = 0; H264_ENCODERS[i] != nullptr; ++i) {
-      const AVCodec* c = avcodec_find_encoder_by_name(H264_ENCODERS[i]);
+      const AVCodec *c = avcodec_find_encoder_by_name(H264_ENCODERS[i]);
       if (c) {
-        AVCodecContext* ctx = avcodec_alloc_context3(c);
+        AVCodecContext *ctx = avcodec_alloc_context3(c);
         if (ctx) {
           ctx->width = 64;
           ctx->height = 64;
@@ -47,22 +42,18 @@ static const AVCodec* find_fallback_video_encoder(AVCodecID codecId) {
           ctx->bit_rate = 1000000;
           int ret = avcodec_open2(ctx, c, nullptr);
           avcodec_free_context(&ctx);
-          if (ret >= 0) return c;
+          if (ret >= 0)
+            return c;
         }
       }
     }
   } else if (codecId == AV_CODEC_ID_HEVC) {
-    const char* HEVC_ENCODERS[] = {
-      "hevc_videotoolbox",
-      "hevc_mf",
-      "hevc_nvenc",
-      "libx265",
-      nullptr
-    };
+    const char *HEVC_ENCODERS[] = {"hevc_videotoolbox", "hevc_mf", "hevc_nvenc",
+                                   "libx265", nullptr};
     for (int i = 0; HEVC_ENCODERS[i] != nullptr; ++i) {
-      const AVCodec* c = avcodec_find_encoder_by_name(HEVC_ENCODERS[i]);
+      const AVCodec *c = avcodec_find_encoder_by_name(HEVC_ENCODERS[i]);
       if (c) {
-        AVCodecContext* ctx = avcodec_alloc_context3(c);
+        AVCodecContext *ctx = avcodec_alloc_context3(c);
         if (ctx) {
           ctx->width = 64;
           ctx->height = 64;
@@ -72,14 +63,14 @@ static const AVCodec* find_fallback_video_encoder(AVCodecID codecId) {
           ctx->bit_rate = 1000000;
           int ret = avcodec_open2(ctx, c, nullptr);
           avcodec_free_context(&ctx);
-          if (ret >= 0) return c;
+          if (ret >= 0)
+            return c;
         }
       }
     }
   }
   return avcodec_find_encoder(codecId);
 }
-
 
 VideoExporter::VideoExporter(QObject *parent) : QThread(parent) {}
 
@@ -328,7 +319,8 @@ bool VideoExporter::initVideoEncoder() {
 
   if (!encoder) {
     // 安全降级
-    AVCodecID codecId = (config_.videoCodec.contains("hevc") || config_.videoCodec.contains("265"))
+    AVCodecID codecId = (config_.videoCodec.contains("hevc") ||
+                         config_.videoCodec.contains("265"))
                             ? AV_CODEC_ID_HEVC
                             : AV_CODEC_ID_H264;
     encoder = find_fallback_video_encoder(codecId);

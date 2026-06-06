@@ -70,9 +70,11 @@ void BaseDialog::setupWindowAgent(QFrame *customTitleBar) {
   sysBtnLayout->addWidget(closeBtn);
 
   // 注入标题栏布局的最右端
-  QWidget *rightContainer = titleBar->findChild<QWidget *>("TitleRightContainer");
+  QWidget *rightContainer =
+      titleBar->findChild<QWidget *>("TitleRightContainer");
   if (rightContainer && rightContainer->layout()) {
-    if (auto *rightBoxLayout = qobject_cast<QHBoxLayout *>(rightContainer->layout())) {
+    if (auto *rightBoxLayout =
+            qobject_cast<QHBoxLayout *>(rightContainer->layout())) {
       int left, top, right, bottom;
       rightBoxLayout->getContentsMargins(&left, &top, &right, &bottom);
       // 清空右边距使关闭按钮能贴紧右侧边界

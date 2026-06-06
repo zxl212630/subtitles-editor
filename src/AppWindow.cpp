@@ -173,7 +173,8 @@ void AppWindow::setupUi() {
 bool AppWindow::eventFilter(QObject *obj, QEvent *event) {
   if (obj == d->titleBar && event->type() == QEvent::Resize) {
     if (d->titleLabel) {
-      d->titleLabel->setGeometry(0, 0, d->titleBar->width(), d->titleBar->height());
+      d->titleLabel->setGeometry(0, 0, d->titleBar->width(),
+                                 d->titleBar->height());
     }
   }
   if (event->type() == QEvent::MouseButtonPress) {
@@ -218,13 +219,15 @@ void AppWindow::setupTitleBar() {
   d->titleLabel = new QLabel(tr("字幕编辑"), d->titleBar);
   d->titleLabel->setObjectName("AppTitleLabel");
   d->titleLabel->setAlignment(Qt::AlignCenter);
-  d->titleLabel->setAttribute(Qt::WA_TransparentForMouseEvents, true); // 鼠标穿透以不阻碍拖拽与点击
+  d->titleLabel->setAttribute(Qt::WA_TransparentForMouseEvents,
+                              true); // 鼠标穿透以不阻碍拖拽与点击
   d->titleLabel->setGeometry(0, 0, d->titleBar->width(), d->titleBar->height());
   d->titleLabel->lower(); // 放置于底层
 
   auto *layout = new QHBoxLayout(d->titleBar);
 #ifdef Q_OS_WIN
-  layout->setContentsMargins(12, 0, 0, 0); // Remove right margin for close button to stick to edge
+  layout->setContentsMargins(
+      12, 0, 0, 0); // Remove right margin for close button to stick to edge
 #else
   layout->setContentsMargins(12, 0, 12, 0);
 #endif
@@ -806,7 +809,9 @@ void AppWindow::onOpenFileLocationRequested() {
   QProcess::startDetached("open", QStringList() << "-R" << path);
 #elif defined(Q_OS_WIN)
   // Use explorer.exe /select to reveal and select the file in Explorer
-  QProcess::startDetached("explorer.exe", QStringList() << "/select," + QDir::toNativeSeparators(path));
+  QProcess::startDetached("explorer.exe",
+                          QStringList()
+                              << "/select," + QDir::toNativeSeparators(path));
 #else
   QDesktopServices::openUrl(QUrl::fromLocalFile(QFileInfo(path).path()));
 #endif
