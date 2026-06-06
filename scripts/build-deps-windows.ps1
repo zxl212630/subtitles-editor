@@ -39,8 +39,6 @@ if ($Target -eq "all" -or $Target -eq "ffmpeg") {
 #!/usr/bin/env bash
 set -euo pipefail
 
-export PKG_CONFIG_PATH="/mingw64/lib/pkgconfig:/mingw64/share/pkgconfig"
-
 # Avoid linker clash with MSYS2 link tool
 if [ -f /usr/bin/link.exe ]; then
     mv /usr/bin/link.exe /usr/bin/link-original.exe
@@ -61,7 +59,7 @@ if [ ! -d "ffmpeg-${FFmpegVersion}" ]; then
 fi
 
 # Install dependencies in MSYS2
-pacman -S --noconfirm --needed mingw-w64-x86_64-x264 mingw-w64-x86_64-x265
+pacman -S --noconfirm --needed mingw-w64-x86_64-x264 mingw-w64-x86_64-x265 mingw-w64-x86_64-pkgconf
 
 cd "ffmpeg-${FFmpegVersion}"
 ./configure \
@@ -100,6 +98,7 @@ fi
     }
     $BashExe = Join-Path $MsysLocation "usr\bin\bash.exe"
     $env:MSYS2_PATH_TYPE = "inherit"
+    $env:MSYSTEM = "MINGW64"
 
     Write-Host "Running FFmpeg build inside MSYS2 at $MsysLocation..."
     & $BashExe --login -c "$TargetDirUnix/build-ffmpeg.sh"
