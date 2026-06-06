@@ -64,6 +64,10 @@ fi
 # Install dependencies in MSYS2
 pacman -S --noconfirm --needed mingw-w64-x86_64-x264 mingw-w64-x86_64-x265 mingw-w64-x86_64-pkgconf
 
+echo "=== Listing all x264/x265 files in /mingw64 ==="
+find /mingw64 -name "*x264*" -o -name "*x265*" || true
+
+
 # Create .lib copies of MinGW import libraries for MSVC linker (both with and without 'lib' prefix)
 for lib in x264 x265; do
     src=""
