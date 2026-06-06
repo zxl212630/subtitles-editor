@@ -286,7 +286,7 @@ for bin in "$APP_BIN" "$APP_BUNDLE/Contents/MacOS/ffmpeg" "$APP_BUNDLE/Contents/
     
     # 3. Rewrite all absolute references to @rpath
     for old_ref in $(otool -L "$bin" 2>/dev/null | tail -n +2 | awk '{print $1}'); do
-        if [[ "$old_ref" == /Users/* ]] || [[ "$old_ref" == /opt/* ]]; then
+        if [[ "$old_ref" == /Users/* ]] || [[ "$old_ref" == /opt/* ]] || [[ "$old_ref" == /usr/local/* ]]; then
             bname=$(basename "$old_ref")
             echo "    Rewriting reference: $old_ref -> @rpath/$bname"
             install_name_tool -change "$old_ref" "@rpath/$bname" "$bin" 2>/dev/null || true
@@ -303,7 +303,7 @@ for dylib in "$FW_DIR"/*.dylib; do
 
     # Fix absolute references inside the dylib
     for old_ref in $(otool -L "$dylib" 2>/dev/null | tail -n +2 | awk '{print $1}'); do
-        if [[ "$old_ref" == /Users/* ]] || [[ "$old_ref" == /opt/* ]]; then
+        if [[ "$old_ref" == /Users/* ]] || [[ "$old_ref" == /opt/* ]] || [[ "$old_ref" == /usr/local/* ]]; then
             ref_bname=$(basename "$old_ref")
             echo "  Rewriting dylib reference in $(basename "$dylib"): $old_ref -> @rpath/$ref_bname"
             install_name_tool -change "$old_ref" "@rpath/$ref_bname" "$dylib" 2>/dev/null || true
