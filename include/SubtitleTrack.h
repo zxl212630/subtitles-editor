@@ -23,6 +23,7 @@ struct SpeakerInfo {
 
 class SubtitleTrack : public QObject {
   Q_OBJECT
+  friend class SubtitleListPanel;
 
 public:
   explicit SubtitleTrack(QObject *parent = nullptr);
@@ -97,6 +98,9 @@ public:
   double defaultRotation() const { return defaultRotation_; }
   void setDefaultRotation(double rotation) { defaultRotation_ = rotation; }
 
+  SubtitleItem defaultStyleItem() const;
+  void setDefaultStyleItem(const SubtitleItem &item);
+
   // 一键应用样式到全部字幕
   void applyStyleToAll(const QString &sourceId);
 
@@ -154,6 +158,33 @@ private:
   int defaultAlignment_ = 0x84;
   QRectF defaultSubtitleRect_{0.1, 0.75, 0.8, 0.2};
   double defaultRotation_ = 0.0;
+
+  // 高级样式默认私有成员
+  int defaultFillType_ = 0;
+  QString defaultFillColor_ = "#FFFFFF";
+  QString defaultFillColor2_ = "#FFFFFF";
+  int defaultFillAngle_ = 90;
+  QString defaultFillTexturePath_ = "";
+  bool defaultFillTextureTile_ = true;
+  double defaultTextOpacity_ = 1.0;
+  bool defaultStrokeEnabled_ = false;
+  int defaultStrokeWidth_ = 2;
+  QString defaultStrokeColor_ = "#000000";
+  double defaultStrokeOpacity_ = 1.0;
+  bool defaultShadowEnabled_ = false;
+  int defaultShadowOffsetX_ = 3;
+  int defaultShadowOffsetY_ = 3;
+  int defaultShadowBlur_ = 5;
+  QString defaultShadowColor_ = "#000000";
+  double defaultShadowOpacity_ = 0.5;
+  int defaultBgType_ = 0;
+  QString defaultBgColor_ = "#000000";
+  double defaultBgOpacity_ = 0.6;
+  int defaultBgRoundness_ = 4;
+  int defaultBgPaddingX_ = 15;
+  int defaultBgPaddingY_ = 10;
+  QString defaultBgImagePath_ = "";
+  bool defaultBgImage9Patch_ = true;
 
   QUndoStack *undoStack_ = nullptr;
   bool isPerformingUndoRedo_ = false;

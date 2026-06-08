@@ -1,15 +1,60 @@
 #pragma once
 
+#include "SubtitleItem.h"
+#include <QCheckBox>
+#include <QColorDialog>
+#include <QComboBox>
+#include <QGridLayout>
+#include <QLineEdit>
+#include <QPushButton>
+#include <QSlider>
+#include <QSpinBox>
+#include <QStackedWidget>
 #include <QWidget>
 
 class SubtitleTrack;
 class SubtitleListModel;
 class SubtitleListDelegate;
 class QListView;
-class QLineEdit;
-class QPushButton;
 class QLabel;
 class SubtitleActionOverlay;
+
+class ColorButton : public QPushButton {
+  Q_OBJECT
+public:
+  explicit ColorButton(QWidget *parent = nullptr) : QPushButton(parent) {
+    setCursor(Qt::PointingHandCursor);
+    connect(this, &QPushButton::clicked, this, &ColorButton::chooseColor);
+  }
+
+  void setColor(const QColor &color) {
+    color_ = color;
+    updateButton();
+  }
+
+  QColor color() const { return color_; }
+
+signals:
+  void colorChanged(const QColor &color);
+
+private:
+  void chooseColor() {
+    QColor c = QColorDialog::getColor(color_, this, tr("Select Color"));
+    if (c.isValid()) {
+      setColor(c);
+      emit colorChanged(c);
+    }
+  }
+
+  void updateButton() {
+    setStyleSheet(
+        QString("background-color: %1; border: 1px solid #555; border-radius: "
+                "4px; min-height: 20px; max-height: 20px;")
+            .arg(color_.name()));
+  }
+
+  QColor color_ = Qt::white;
+};
 
 class SubtitleListPanel : public QWidget {
   Q_OBJECT
@@ -58,4 +103,52 @@ private:
 
   double videoFps_ = 25.0;
   qint64 totalDurationMs_ = 0;
+
+  QStackedWidget *stackedWidget_ = nullptr;
+  QString currentSelectedId_;
+  bool isUpdatingControls_ = false;
+
+  // Custom styling controls
+  QComboBox *fillTypeCombo_ = nullptr;
+  ColorButton *fillColorBtn_ = nullptr;
+  ColorButton *fillColor2Btn_ = nullptr;
+  QSlider *fillAngleSlider_ = nullptr;
+  QSpinBox *fillAngleSpin_ = nullptr;
+  QLineEdit *fillTextureEdit_ = nullptr;
+  QPushButton *fillTextureBrowse_ = nullptr;
+  QCheckBox *fillTextureTileCheck_ = nullptr;
+  QSlider *textOpacitySlider_ = nullptr;
+
+  QCheckBox *strokeEnableCheck_ = nullptr;
+  QSpinBox *strokeWidthSpin_ = nullptr;
+  ColorButton *strokeColorBtn_ = nullptr;
+  QSlider *strokeOpacitySlider_ = nullptr;
+
+  QCheckBox *shadowEnableCheck_ = nullptr;
+  QSpinBox *shadowOffsetXSpin_ = nullptr;
+  QSpinBox *shadowOffsetYSpin_ = nullptr;
+  QSlider *shadowBlurSlider_ = nullptr;
+  ColorButton *shadowColorBtn_ = nullptr;
+  QSlider *shadowOpacitySlider_ = nullptr;
+
+  QComboBox *bgTypeCombo_ = nullptr;
+  ColorButton *bgColorBtn_ = nullptr;
+  QSlider *bgOpacitySlider_ = nullptr;
+  QSlider *bgRoundnessSlider_ = nullptr;
+  QSlider *bgPaddingXSlider_ = nullptr;
+  QSlider *bgPaddingYSlider_ = nullptr;
+  QLineEdit *bgImagePathEdit_ = nullptr;
+  QPushButton *bgImageBrowse_ = nullptr;
+  QCheckBox *bgImage9PatchCheck_ = nullptr;
+
+  // Custom presets widget list
+  QFrame *presetGridContainer_ = nullptr;
+
+  QWidget *createCustomStylePanel();
+  QWidget *createPresetStylePanel();
+  void loadStyleFromItem(const SubtitleItem &item);
+  void applyCustomStyleToActiveItem();
+  void loadCustomPresets();
+  void addPresetCard(const QString &name, const SubtitleItem &style,
+                     QGridLayout *layout, int row, int col);
 };

@@ -18,6 +18,40 @@ struct SubtitleItem {
   bool underline = false;
   int alignment = 0x84; // Qt::AlignHCenter | Qt::AlignVCenter = 132
 
+  // === 高级填充与样式属性 ===
+  int fillType = 0; // 0 = 纯色 (Solid), 1 = 线性渐变 (Linear Gradient), 2 =
+                    // 贴图图片 (Texture Image)
+  QString fillColor = "#FFFFFF";  // 填充主色/渐变色1 (Hex)
+  QString fillColor2 = "#FFFFFF"; // 填充渐变色2 (Hex)
+  int fillAngle = 90;             // 渐变角度
+  QString fillTexturePath;        // 填充贴图文件路径
+  bool fillTextureTile = true;    // 贴图是否平铺
+  double textOpacity = 1.0;       // 不透明度 (0.0 - 1.0)
+
+  // 描边属性
+  bool strokeEnabled = false;
+  int strokeWidth = 2;
+  QString strokeColor = "#000000";
+  double strokeOpacity = 1.0;
+
+  // 阴影属性
+  bool shadowEnabled = false;
+  int shadowOffsetX = 3;
+  int shadowOffsetY = 3;
+  int shadowBlur = 5;
+  QString shadowColor = "#000000";
+  double shadowOpacity = 0.5;
+
+  // 背景属性
+  int bgType = 0; // 0 = 无背景, 1 = 单色底框, 2 = 图片底框
+  QString bgColor = "#000000";
+  double bgOpacity = 0.6;
+  int bgRoundness = 4;
+  int bgPaddingX = 15;
+  int bgPaddingY = 10;
+  QString bgImagePath;
+  bool bgImage9Patch = true;
+
   // 归一化排版坐标，默认底部区域 (x: 10%, y: 75%, width: 80%, height: 20%)
   double rectX = 0.1;
   double rectY = 0.75;

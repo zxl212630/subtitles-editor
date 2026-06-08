@@ -1,6 +1,7 @@
 #pragma once
 
 #include "FFmpegDecoder.h"
+#include "SubtitleItem.h"
 #include <QFocusEvent>
 #include <QHash>
 #include <QImage>
@@ -107,6 +108,7 @@ public:
   void setSubtitleBg(const QString &imagePath, bool is9Patch,
                      const QMargins &margins);
   void clearSubtitleBg();
+  void setSubtitleStyle(const SubtitleItem &style);
 
   QSize videoSize() const { return videoSize_; }
   void setVideoSize(const QSize &size);
@@ -150,6 +152,7 @@ private:
 
   QString subtitleText_;
   QFont subtitleFont_;
+  SubtitleItem subtitleStyle_;
   mutable QMutex subtitleMutex_;
 
   QString bgImagePath_;

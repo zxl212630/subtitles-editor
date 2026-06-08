@@ -1048,24 +1048,12 @@ void VideoPreviewPanel::updateSubtitleOverlay() {
     videoRenderer_->setSubtitleText(QString());
     videoRenderer_->clearSubtitleBg();
     videoRenderer_->setSubtitleRotation(0.0);
+    videoRenderer_->setSubtitleStyle(subtitleTrack_->defaultStyleItem());
     return;
   }
 
-  // 从当前字幕对象加载样式和排版框坐标，传给渲染器
-  QFont font(activeItem->fontFamily, activeItem->fontSize);
-  font.setBold(activeItem->bold);
-  font.setItalic(activeItem->italic);
-  font.setUnderline(activeItem->underline);
-  font.setStyleStrategy(QFont::PreferAntialias);
-  font.setHintingPreference(QFont::PreferFullHinting);
-
-  videoRenderer_->setSubtitleFont(font);
-  videoRenderer_->setSubtitleAlignment(activeItem->alignment);
-  videoRenderer_->setSubtitleNormalizedRect(
-      QRectF(activeItem->rectX, activeItem->rectY, activeItem->rectW,
-             activeItem->rectH));
-  videoRenderer_->setSubtitleText(activeItem->text);
-  videoRenderer_->setSubtitleRotation(activeItem->rotation);
+  // Pass the full style item to the renderer
+  videoRenderer_->setSubtitleStyle(*activeItem);
 
   // 加载说话人背景
   if (activeItem->speakerId >= 0) {

@@ -36,7 +36,7 @@ public:
 
   // 底层通用绘制方法，解耦具体数据模型，可供预览渲染器和导出渲染器底层共同调用
   static void renderSubtitle(QPainter &painter, const QString &text,
-                             const QFont &font, int alignment,
+                             const QFont &font, const SubtitleItem &style,
                              const QRect &textRect, double rotation,
                              const QString &bgPath, bool bgIs9Patch,
                              const QMargins &bgMargins);

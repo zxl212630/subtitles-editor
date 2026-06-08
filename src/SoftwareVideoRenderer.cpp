@@ -143,6 +143,24 @@ void SoftwareVideoRenderer::clearSubtitleBg() {
   update();
 }
 
+void SoftwareVideoRenderer::setSubtitleStyle(const SubtitleItem &style) {
+  {
+    QMutexLocker lock(&subtitleMutex_);
+    subtitleStyle_ = style;
+    subtitleText_ = style.text;
+    subtitleFont_.setFamily(style.fontFamily);
+    subtitleFont_.setPointSize(style.fontSize);
+    subtitleFont_.setBold(style.bold);
+    subtitleFont_.setItalic(style.italic);
+    subtitleFont_.setUnderline(style.underline);
+    subtitleAlignment_ = style.alignment;
+    subtitleRotation_ = style.rotation;
+    subtitleNormalizedRect_ =
+        QRectF(style.rectX, style.rectY, style.rectW, style.rectH);
+  }
+  update();
+}
+
 void SoftwareVideoRenderer::drawNinePatch(QPainter &painter, const QImage &src,
                                           const QRect &target,
                                           const QMargins &m) {
@@ -315,6 +333,7 @@ void SoftwareVideoRenderer::paintEvent(QPaintEvent *event) {
   // Draw subtitle overlay (clipped to video area)
   QString text;
   QFont font;
+  SubtitleItem activeStyle;
   QString bgPath;
   bool is9Patch = false;
   QMargins bgMargins;
@@ -322,6 +341,7 @@ void SoftwareVideoRenderer::paintEvent(QPaintEvent *event) {
     QMutexLocker lock(&subtitleMutex_);
     text = subtitleText_;
     font = subtitleFont_;
+    activeStyle = subtitleStyle_;
   }
   {
     QMutexLocker lock(&bgMutex_);
@@ -403,9 +423,9 @@ void SoftwareVideoRenderer::paintEvent(QPaintEvent *event) {
     // 1. 调用通用的 SubtitleRenderer 渲染字幕及其背景
     painter.save();
     painter.setClipRect(targetRect);
-    SubtitleRenderer::renderSubtitle(
-        painter, textToDraw, drawFont, subtitleAlignment_, textRect,
-        subtitleRotation_, bgPath, is9Patch, bgMargins);
+    SubtitleRenderer::renderSubtitle(painter, textToDraw, drawFont, activeStyle,
+                                     textRect, subtitleRotation_, bgPath,
+                                     is9Patch, bgMargins);
     painter.restore();
 
     // 2. 如果处于编辑状态，在旋转坐标系下自定义绘制光标和选区

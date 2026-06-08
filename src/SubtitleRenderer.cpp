@@ -3,10 +3,13 @@
 #include "SubtitleTrack.h"
 
 #include <QFontMetrics>
+#include <QLinearGradient>
 #include <QMap>
 #include <QMutex>
 #include <QPainter>
+#include <QPainterPath>
 #include <QPen>
+#include <QtMath>
 
 static QMutex s_bgCacheMutex;
 static QMap<QString, QImage> s_bgCache;
@@ -119,7 +122,8 @@ QFont SubtitleRenderer::buildFont(const SubtitleItem &item,
 }
 
 void SubtitleRenderer::renderSubtitle(QPainter &painter, const QString &text,
-                                      const QFont &font, int alignment,
+                                      const QFont &font,
+                                      const SubtitleItem &style,
                                       const QRect &textRect, double rotation,
                                       const QString &bgPath, bool bgIs9Patch,
                                       const QMargins &bgMargins) {
@@ -128,23 +132,52 @@ void SubtitleRenderer::renderSubtitle(QPainter &painter, const QString &text,
 
   painter.save();
 
-  // 开启抗锯齿和文本抗锯齿，确保绘制的文字与背景高清不模糊
   painter.setRenderHint(QPainter::Antialiasing, true);
   painter.setRenderHint(QPainter::TextAntialiasing, true);
   painter.setRenderHint(QPainter::SmoothPixmapTransform, true);
 
   painter.setFont(font);
 
-  // 应用旋转变换 (以文本框中心为旋转原点)
+  // Apply rotation transform around the text rect center
   QTransform trans;
   trans.translate(textRect.center().x(), textRect.center().y());
   trans.rotate(rotation);
   trans.translate(-textRect.center().x(), -textRect.center().y());
   painter.setTransform(trans, true);
 
+  int alignment = style.alignment;
   int alignFlags = alignment | Qt::AlignVCenter;
 
-  // 绘制背景图
+  // 1. Calculate text bounding rect for background drawing
+  QFontMetrics fm(font);
+  QStringList lines = text.split('\n');
+  int maxLineW = 0;
+  for (const QString &line : lines) {
+    maxLineW = qMax(maxLineW, fm.horizontalAdvance(line));
+  }
+  int textH = qMax(1, (int)lines.size()) * fm.height();
+
+  QRect textBounding;
+  int bx = textRect.x();
+  int by = textRect.y();
+
+  if (alignment & Qt::AlignHCenter) {
+    bx = textRect.center().x() - maxLineW / 2;
+  } else if (alignment & Qt::AlignRight) {
+    bx = textRect.right() - maxLineW;
+  }
+
+  if (alignFlags & Qt::AlignVCenter) {
+    by = textRect.center().y() - textH / 2;
+  } else if (alignFlags & Qt::AlignBottom) {
+    by = textRect.bottom() - textH;
+  }
+  textBounding = QRect(bx, by, maxLineW, textH);
+
+  // 2. Draw Background
+  bool bgDrawn = false;
+
+  // If a speaker background is active, draw it first
   if (!bgPath.isEmpty()) {
     QImage bgImage;
     {
@@ -161,99 +194,196 @@ void SubtitleRenderer::renderSubtitle(QPainter &painter, const QString &text,
     }
 
     if (!bgImage.isNull()) {
-      QFontMetrics fm(font);
-      int layoutFlags = alignFlags;
-      if (layoutFlags & Qt::AlignJustify) {
-        layoutFlags = (layoutFlags & ~Qt::AlignJustify) | Qt::AlignLeft;
-      }
-      QRect textBounding =
-          fm.boundingRect(textRect, layoutFlags | Qt::TextWordWrap, text);
-
-      // 根据 Margins 扩展背景框
       QRect bgRect =
           textBounding.adjusted(-bgMargins.left(), -bgMargins.top(),
                                 bgMargins.right(), bgMargins.bottom());
-
       if (bgIs9Patch) {
         drawNinePatch(painter, bgImage, bgRect, bgMargins);
       } else {
-        // 固定大小居中
         int imgX = textBounding.center().x() - bgImage.width() / 2;
         int imgY = textBounding.center().y() - bgImage.height() / 2;
         painter.drawImage(imgX, imgY, bgImage);
       }
+      bgDrawn = true;
     }
   }
 
-  // 绘制字幕文本 (含描边逻辑)
-  auto drawTextStroke = [&](QPainter &p, const QColor &color, int strokeWidth) {
-    if (strokeWidth > 0) {
-      p.setPen(
-          QPen(color, strokeWidth, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin));
-    } else {
-      p.setPen(color);
-    }
-
-    if (alignFlags & Qt::AlignJustify) {
-      // 英文单词和中文单字的分散对齐自适应逻辑
-      QList<QString> tokens;
-      QString currentWord;
-      for (int i = 0; i < text.length(); ++i) {
-        QChar ch = text[i];
-        if (ch.isSpace()) {
-          if (!currentWord.isEmpty()) {
-            tokens.append(currentWord);
-            currentWord.clear();
-          }
-          continue;
-        }
-        ushort unicode = ch.unicode();
-        bool isEnglish = (unicode >= 0x0020 && unicode <= 0x007E);
-        if (isEnglish) {
-          currentWord.append(ch);
+  // Draw custom background box if general style background is enabled and no
+  // speaker bg was drawn
+  if (!bgDrawn && style.bgType > 0) {
+    QRect bgRect = textBounding.adjusted(-style.bgPaddingX, -style.bgPaddingY,
+                                         style.bgPaddingX, style.bgPaddingY);
+    if (style.bgType == 1) { // Solid Box
+      painter.save();
+      painter.setRenderHint(QPainter::Antialiasing, true);
+      QColor bgColor = QColor(style.bgColor);
+      bgColor.setAlphaF(style.bgOpacity);
+      painter.setBrush(bgColor);
+      painter.setPen(Qt::NoPen);
+      painter.drawRoundedRect(bgRect, style.bgRoundness, style.bgRoundness);
+      painter.restore();
+    } else if (style.bgType == 2 &&
+               !style.bgImagePath.isEmpty()) { // Custom Image
+      QImage bgImage;
+      {
+        QMutexLocker lock(&s_bgCacheMutex);
+        auto it = s_bgCache.find(style.bgImagePath);
+        if (it != s_bgCache.end()) {
+          bgImage = *it;
         } else {
-          if (!currentWord.isEmpty()) {
-            tokens.append(currentWord);
-            currentWord.clear();
+          bgImage = QImage(style.bgImagePath);
+          if (!bgImage.isNull()) {
+            s_bgCache.insert(style.bgImagePath, bgImage);
           }
-          tokens.append(QString(ch));
         }
       }
-      if (!currentWord.isEmpty()) {
-        tokens.append(currentWord);
-      }
-
-      QFontMetrics fm(font);
-      int totalW = 0;
-      QList<int> tokenWidths;
-      for (const QString &t : tokens) {
-        int w = fm.horizontalAdvance(t);
-        tokenWidths.append(w);
-        totalW += w;
-      }
-
-      int N = tokens.size();
-      if (N <= 1 || totalW >= textRect.width()) {
-        p.drawText(textRect,
-                   (alignFlags & ~Qt::AlignJustify) | Qt::AlignHCenter, text);
-      } else {
-        double extra = textRect.width() - totalW;
-        double step = extra / (N - 1);
-        double currentX = textRect.left();
-        for (int i = 0; i < N; ++i) {
-          QRectF tokenRect(currentX, textRect.top(), tokenWidths[i],
-                           textRect.height());
-          p.drawText(tokenRect, Qt::AlignVCenter | Qt::AlignLeft, tokens[i]);
-          currentX += tokenWidths[i] + step;
+      if (!bgImage.isNull()) {
+        painter.save();
+        painter.setOpacity(style.bgOpacity);
+        if (style.bgImage9Patch) {
+          QMargins margins(15, 15, 15, 15);
+          drawNinePatch(painter, bgImage, bgRect, margins);
+        } else {
+          painter.drawImage(bgRect, bgImage);
         }
+        painter.restore();
+      }
+    }
+  }
+
+  // 3. Build text path to support precise outline, fill, and shadow rendering
+  // concurrently
+  QPainterPath textPath;
+  int lineSpacing = fm.lineSpacing();
+  for (int i = 0; i < lines.size(); ++i) {
+    QString line = lines[i];
+    int lw = fm.horizontalAdvance(line);
+
+    int lx = textRect.x();
+    if (alignment & Qt::AlignHCenter) {
+      lx = textRect.center().x() - lw / 2;
+    } else if (alignment & Qt::AlignRight) {
+      lx = textRect.right() - lw;
+    }
+
+    int ly = by + i * lineSpacing + fm.ascent();
+    textPath.addText(lx, ly, font, line);
+  }
+
+  // 4. Draw Shadow
+  if (style.shadowEnabled) {
+    painter.save();
+    QColor shColor = QColor(style.shadowColor);
+    shColor.setAlphaF(style.shadowOpacity);
+    painter.setBrush(shColor);
+    painter.setPen(Qt::NoPen);
+
+    QTransform shadowTrans;
+    shadowTrans.translate(style.shadowOffsetX, style.shadowOffsetY);
+    QPainterPath shadowPath = shadowTrans.map(textPath);
+
+    if (style.shadowBlur > 0) {
+      // Approximate soft shadows by drawing offset paths at reduced opacity
+      int passes = qMin(5, style.shadowBlur);
+      double stepOpacity = style.shadowOpacity / passes;
+      for (int p = 1; p <= passes; ++p) {
+        QColor blurColor = QColor(style.shadowColor);
+        blurColor.setAlphaF(stepOpacity);
+        painter.setBrush(blurColor);
+
+        QTransform blurTrans;
+        double radius =
+            static_cast<double>(p) * style.shadowBlur / passes / 2.0;
+        blurTrans.translate(radius, radius);
+        painter.fillPath(blurTrans.map(shadowPath), blurColor);
+        blurTrans.reset();
+        blurTrans.translate(-radius, -radius);
+        painter.fillPath(blurTrans.map(shadowPath), blurColor);
       }
     } else {
-      p.drawText(textRect, alignFlags, text);
+      painter.fillPath(shadowPath, shColor);
     }
-  };
+    painter.restore();
+  }
 
-  // 默认使用白色填充字，不添加描边
-  drawTextStroke(painter, Qt::white, 0);
+  // 5. Draw Outline (Stroke)
+  if (style.strokeEnabled && style.strokeWidth > 0) {
+    painter.save();
+    QColor strColor = QColor(style.strokeColor);
+    strColor.setAlphaF(style.strokeOpacity);
+    QPen strokePen(strColor, style.strokeWidth, Qt::SolidLine, Qt::RoundCap,
+                   Qt::RoundJoin);
+    painter.setPen(strokePen);
+    painter.setBrush(Qt::NoBrush);
+    painter.drawPath(textPath);
+    painter.restore();
+  }
+
+  // 6. Fill Text
+  painter.save();
+  QBrush fillBrush;
+  double opacity = style.textOpacity;
+
+  if (style.fillType == 0) { // Solid
+    QColor fColor = QColor(style.fillColor);
+    fColor.setAlphaF(opacity);
+    fillBrush = QBrush(fColor);
+  } else if (style.fillType == 1) { // Linear Gradient
+    QLinearGradient grad;
+    double angleRad = qDegreesToRadians(static_cast<double>(style.fillAngle));
+    double dx = qCos(angleRad);
+    double dy = -qSin(angleRad); // QPainter Y is inverted
+
+    double cx = textBounding.center().x();
+    double cy = textBounding.center().y();
+    double halfW = textBounding.width() / 2.0;
+    double halfH = textBounding.height() / 2.0;
+    double r = qAbs(halfW * dx) + qAbs(halfH * dy);
+
+    grad.setStart(cx - r * dx, cy - r * dy);
+    grad.setFinalStop(cx + r * dx, cy + r * dy);
+
+    QColor c1 = QColor(style.fillColor);
+    c1.setAlphaF(opacity);
+    QColor c2 = QColor(style.fillColor2);
+    c2.setAlphaF(opacity);
+
+    grad.setColorAt(0.0, c1);
+    grad.setColorAt(1.0, c2);
+    fillBrush = QBrush(grad);
+  } else if (style.fillType == 2 &&
+             !style.fillTexturePath.isEmpty()) { // Texture Image
+    QImage textureImage(style.fillTexturePath);
+    if (!textureImage.isNull()) {
+      QPixmap pm = QPixmap::fromImage(textureImage);
+      if (!style.fillTextureTile) {
+        pm = pm.scaled(textBounding.size(), Qt::IgnoreAspectRatio,
+                       Qt::SmoothTransformation);
+      }
+      QBrush texBrush(pm);
+      QTransform brushTrans;
+      brushTrans.translate(textBounding.x(), textBounding.y());
+      texBrush.setTransform(brushTrans);
+      fillBrush = texBrush;
+
+      if (opacity < 1.0) {
+        painter.setOpacity(opacity);
+      }
+    } else {
+      QColor fColor = QColor(style.fillColor);
+      fColor.setAlphaF(opacity);
+      fillBrush = QBrush(fColor);
+    }
+  } else {
+    QColor fColor = QColor(style.fillColor);
+    fColor.setAlphaF(opacity);
+    fillBrush = QBrush(fColor);
+  }
+
+  painter.setBrush(fillBrush);
+  painter.setPen(Qt::NoPen);
+  painter.fillPath(textPath, fillBrush);
+  painter.restore();
 
   painter.restore();
 }
@@ -310,7 +440,7 @@ void SubtitleRenderer::renderItem(QPainter &painter, const SubtitleItem &item,
     }
   }
 
-  // 4. 调用通用的无状态底层渲染方法
-  renderSubtitle(painter, item.text, font, item.alignment, textRect,
-                 item.rotation, bgPath, is9Patch, bgMargins);
+  // 4. 调用通用的无状态底层渲染方法，传入本项作为样式来源
+  renderSubtitle(painter, item.text, font, item, textRect, item.rotation,
+                 bgPath, is9Patch, bgMargins);
 }

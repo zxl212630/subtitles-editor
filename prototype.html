@@ -1,0 +1,1953 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>智能字幕编辑器 - 样式系统原型 Mockup</title>
+  <!-- Google Fonts Outfit & Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
+  
+  <style>
+    :root {
+      /* Theme colors (Dark Premium Theme) */
+      --bg-base: #121214;
+      --bg-panel: #1a1a1e;
+      --bg-surface: #222228;
+      --bg-surface-hover: #2c2c34;
+      --border-color: #2d2d34;
+      --border-color-focus: #4f46e5;
+      --text-normal: #e3e3e6;
+      --text-muted: #8b8b93;
+      --primary-color: #6366f1;
+      --primary-hover: #4f46e5;
+      --accent-color: #10b981;
+      --danger-color: #ef4444;
+      --font-ui: 'Inter', 'Outfit', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+    }
+
+    body {
+      background-color: var(--bg-base);
+      color: var(--text-normal);
+      font-family: var(--font-ui);
+      height: 100vh;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Scrollbars */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #3a3a42;
+      border-radius: 3px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #4d4d58;
+    }
+
+    /* --- Titlebar --- */
+    .titlebar {
+      height: 40px;
+      background-color: var(--bg-panel);
+      border-bottom: 1px solid var(--border-color);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 16px;
+      z-index: 100;
+    }
+
+    .window-controls {
+      display: flex;
+      gap: 8px;
+    }
+
+    .dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+    }
+    .dot-red { background-color: #ff5f56; }
+    .dot-yellow { background-color: #ffbd2e; }
+    .dot-green { background-color: #27c93f; }
+
+    .app-title {
+      font-weight: 500;
+      font-size: 13px;
+      color: var(--text-normal);
+      font-family: 'Outfit', sans-serif;
+      letter-spacing: 0.5px;
+    }
+
+    .app-status {
+      font-size: 11px;
+      color: var(--text-muted);
+      background-color: var(--bg-surface);
+      padding: 2px 8px;
+      border-radius: 10px;
+      border: 1px solid var(--border-color);
+    }
+
+    /* --- Main Layout --- */
+    .main-container {
+      flex: 1;
+      display: flex;
+      height: calc(100vh - 40px);
+      overflow: hidden;
+    }
+
+    /* Splitter Layout: Left is Preview (70%), Right is Sidebar (30%) */
+    .left-workspace {
+      flex: 7;
+      display: flex;
+      flex-direction: column;
+      border-right: 1px solid var(--border-color);
+      background-color: var(--bg-base);
+    }
+
+    .right-sidebar {
+      flex: 3;
+      min-width: 380px;
+      max-width: 440px;
+      background-color: var(--bg-panel);
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* --- Left Workspace: Preview + Timeline --- */
+    .preview-panel {
+      flex: 7;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+      background-color: #0b0b0d;
+      padding: 20px;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* Video Player Canvas Container */
+    .video-viewport {
+      width: 100%;
+      max-width: 760px;
+      aspect-ratio: 16 / 9;
+      background-color: #000;
+      position: relative;
+      box-shadow: 0 12px 36px rgba(0, 0, 0, 0.6);
+      border: 1px solid #202024;
+      border-radius: 8px;
+      overflow: hidden;
+    }
+
+    .video-placeholder-img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      opacity: 0.6;
+    }
+
+    /* Interactive Subtitle Overlay Container */
+    .subtitle-overlay-area {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 10;
+    }
+
+    /* The Rendered Subtitle Box */
+    .subtitle-item-box {
+      position: absolute;
+      cursor: move;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-sizing: border-box;
+      transform-origin: center center;
+    }
+
+    .subtitle-item-box.selected {
+      outline: 1px dashed var(--primary-color);
+    }
+
+    /* Bounding box drag handles */
+    .handle {
+      position: absolute;
+      width: 8px;
+      height: 8px;
+      background-color: var(--primary-color);
+      border: 1px solid #fff;
+      display: none;
+    }
+
+    .subtitle-item-box.selected .handle {
+      display: block;
+    }
+
+    .handle-tl { top: -4px; left: -4px; cursor: nwse-resize; }
+    .handle-tm { top: -4px; left: calc(50% - 4px); cursor: ns-resize; }
+    .handle-tr { top: -4px; right: -4px; cursor: nesw-resize; }
+    .handle-ml { top: calc(50% - 4px); left: -4px; cursor: ew-resize; }
+    .handle-mr { top: calc(50% - 4px); right: -4px; cursor: ew-resize; }
+    .handle-bl { bottom: -4px; left: -4px; cursor: nesw-resize; }
+    .handle-bm { bottom: -4px; left: calc(50% - 4px); cursor: ns-resize; }
+    .handle-br { bottom: -4px; right: -4px; cursor: nwse-resize; }
+
+    /* Rotation handle */
+    .handle-rot-line {
+      position: absolute;
+      top: -24px;
+      left: 50%;
+      width: 1px;
+      height: 20px;
+      border-left: 1px dashed var(--primary-color);
+      display: none;
+    }
+    .handle-rot {
+      position: absolute;
+      top: -30px;
+      left: calc(50% - 5px);
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background-color: var(--primary-color);
+      border: 1px solid #fff;
+      cursor: grab;
+      display: none;
+    }
+
+    .subtitle-item-box.selected .handle-rot-line,
+    .subtitle-item-box.selected .handle-rot {
+      display: block;
+    }
+
+    /* The Rendered Text element */
+    .rendered-subtitle-text {
+      width: 100%;
+      text-align: center;
+      white-space: pre-wrap;
+      line-height: 1.4;
+      user-select: text;
+      transition: text-shadow 0.1s ease;
+    }
+
+    /* Background box container */
+    .rendered-subtitle-bg {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: -1;
+      pointer-events: none;
+    }
+
+    /* Playback controls below viewport */
+    .player-controls {
+      width: 100%;
+      max-width: 760px;
+      height: 48px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding: 0 8px;
+      margin-top: 12px;
+      background-color: var(--bg-panel);
+      border-radius: 6px;
+      border: 1px solid var(--border-color);
+    }
+
+    .control-btn {
+      background: transparent;
+      border: none;
+      color: var(--text-normal);
+      cursor: pointer;
+      width: 32px;
+      height: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 4px;
+      transition: background 0.2s;
+    }
+
+    .control-btn:hover {
+      background-color: var(--bg-surface-hover);
+    }
+
+    .progress-bar-container {
+      flex: 1;
+      height: 4px;
+      background-color: #33333b;
+      border-radius: 2px;
+      position: relative;
+      cursor: pointer;
+    }
+    .progress-bar-fill {
+      height: 100%;
+      background-color: var(--primary-color);
+      border-radius: 2px;
+      width: 35%;
+    }
+    .progress-bar-handle {
+      position: absolute;
+      top: -4px;
+      left: calc(35% - 6px);
+      width: 12px;
+      height: 12px;
+      background-color: #fff;
+      border-radius: 50%;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.4);
+      display: none;
+    }
+    .progress-bar-container:hover .progress-bar-handle {
+      display: block;
+    }
+
+    .time-display {
+      font-size: 12px;
+      font-family: monospace;
+      color: var(--text-muted);
+    }
+
+    /* --- Timeline area at bottom --- */
+    .timeline-panel {
+      flex: 3;
+      min-height: 140px;
+      border-top: 1px solid var(--border-color);
+      background-color: var(--bg-panel);
+      display: flex;
+      flex-direction: column;
+    }
+
+    .timeline-header {
+      height: 30px;
+      border-bottom: 1px solid var(--border-color);
+      padding: 0 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+
+    .timeline-tracks {
+      flex: 1;
+      position: relative;
+      padding: 8px 16px;
+      overflow-x: auto;
+      background: repeating-linear-gradient(90deg, #1e1e24 0px, #1e1e24 49px, #26262d 49px, #26262d 50px);
+    }
+
+    .timeline-ruler {
+      height: 20px;
+      border-bottom: 1px solid #282830;
+      margin-bottom: 8px;
+      position: relative;
+      font-size: 9px;
+      font-family: monospace;
+      color: var(--text-muted);
+    }
+
+    .timeline-track-row {
+      height: 48px;
+      background-color: rgba(255, 255, 255, 0.02);
+      border: 1px dashed rgba(255, 255, 255, 0.05);
+      border-radius: 4px;
+      position: relative;
+    }
+
+    .timeline-block {
+      position: absolute;
+      height: 38px;
+      top: 4px;
+      background-color: rgba(99, 102, 241, 0.25);
+      border: 1.5px solid var(--primary-color);
+      border-radius: 4px;
+      color: #fff;
+      font-size: 11px;
+      display: flex;
+      align-items: center;
+      padding: 0 8px;
+      overflow: hidden;
+      white-space: nowrap;
+      text-overflow: ellipsis;
+      cursor: pointer;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+      transition: background-color 0.2s, border-color 0.2s;
+    }
+
+    .timeline-block.selected {
+      background-color: rgba(99, 102, 241, 0.45);
+      border-color: #fff;
+      box-shadow: 0 0 8px var(--primary-color);
+    }
+
+    .playhead {
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      width: 2px;
+      background-color: #f43f5e;
+      left: calc(35% + 16px);
+      z-index: 20;
+      pointer-events: none;
+    }
+
+    .playhead::before {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: -5px;
+      border-width: 6px 6px 0;
+      border-style: solid;
+      border-color: #f43f5e transparent;
+    }
+
+
+    /* --- Right Sidebar: Tab Panel --- */
+    .sidebar-tabs {
+      height: 40px;
+      border-bottom: 1px solid var(--border-color);
+      display: flex;
+      background-color: var(--bg-panel);
+      padding: 0 12px;
+      gap: 4px;
+      align-items: flex-end;
+    }
+
+    .tab-btn {
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      font-size: 13px;
+      font-weight: 500;
+      padding: 8px 16px;
+      cursor: pointer;
+      border-top-left-radius: 6px;
+      border-top-right-radius: 6px;
+      border-bottom: 2px solid transparent;
+      transition: all 0.2s;
+    }
+
+    .tab-btn:hover {
+      color: var(--text-normal);
+      background-color: var(--bg-surface);
+    }
+
+    .tab-btn.active {
+      color: var(--primary-color);
+      border-bottom-color: var(--primary-color);
+      background-color: var(--bg-surface);
+    }
+
+    /* Content Area below Tabs */
+    .sidebar-content {
+      flex: 1;
+      overflow-y: auto;
+      background-color: var(--bg-surface);
+      padding: 16px;
+    }
+
+    .sidebar-page {
+      display: none;
+      height: 100%;
+    }
+
+    .sidebar-page.active {
+      display: block;
+    }
+
+    /* --- Page 0: Subtitle List --- */
+    .search-container {
+      position: relative;
+      margin-bottom: 12px;
+    }
+    .search-input {
+      width: 100%;
+      height: 32px;
+      background-color: var(--bg-base);
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      padding: 0 12px;
+      color: var(--text-normal);
+      font-size: 13px;
+      outline: none;
+    }
+    .search-input:focus {
+      border-color: var(--border-color-focus);
+    }
+
+    .subtitle-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .list-item {
+      background-color: var(--bg-panel);
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      padding: 10px 12px;
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      transition: all 0.2s;
+    }
+
+    .list-item:hover {
+      border-color: #444;
+      background-color: var(--bg-surface-hover);
+    }
+
+    .list-item.selected {
+      border-color: var(--primary-color);
+      background-color: rgba(99, 102, 241, 0.08);
+    }
+
+    .list-item-meta {
+      display: flex;
+      justify-content: space-between;
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+    .list-item-time {
+      font-family: monospace;
+    }
+    .list-item-speaker {
+      background-color: var(--bg-surface);
+      padding: 1px 6px;
+      border-radius: 4px;
+      border: 1px solid rgba(255,255,255,0.05);
+    }
+    .list-item-text {
+      font-size: 13px;
+      color: var(--text-normal);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+
+    /* --- Page 1: Presets --- */
+    .presets-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 12px;
+    }
+
+    .preset-card {
+      background-color: var(--bg-panel);
+      border: 1.5px solid var(--border-color);
+      border-radius: 8px;
+      padding: 16px 8px;
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      height: 90px;
+      position: relative;
+      overflow: hidden;
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .preset-card:hover {
+      transform: translateY(-2px);
+      border-color: #555;
+      background-color: var(--bg-surface-hover);
+    }
+
+    .preset-card.selected {
+      border-color: var(--primary-color);
+      background-color: rgba(99, 102, 241, 0.06);
+    }
+
+    .preset-preview-label {
+      font-size: 10px;
+      color: var(--text-muted);
+      margin-top: 8px;
+    }
+
+    /* Save Preset Section */
+    .save-preset-btn {
+      width: 100%;
+      height: 38px;
+      background-color: var(--primary-color);
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      margin-top: 20px;
+      transition: background 0.2s;
+    }
+
+    .save-preset-btn:hover {
+      background-color: var(--primary-hover);
+    }
+
+
+    /* --- Page 2: Custom Styling --- */
+    .custom-section {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .settings-group {
+      background-color: var(--bg-panel);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 12px;
+    }
+
+    .settings-group-header {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-normal);
+      margin-bottom: 12px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid var(--border-color);
+      padding-bottom: 6px;
+    }
+
+    .settings-row {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      margin-bottom: 12px;
+    }
+
+    .settings-row:last-child {
+      margin-bottom: 0;
+    }
+
+    .row-horizontal {
+      flex-direction: row;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    label {
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    /* Form Controls Styling */
+    .picker-btn-wrapper {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .color-btn {
+      width: 28px;
+      height: 28px;
+      border-radius: 4px;
+      border: 1px solid rgba(255,255,255,0.2);
+      cursor: pointer;
+      background-color: #fff;
+      position: relative;
+    }
+    
+    .color-input-hidden {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      opacity: 0;
+      cursor: pointer;
+    }
+
+    select, input[type="text"] {
+      height: 28px;
+      background-color: var(--bg-base);
+      border: 1px solid var(--border-color);
+      border-radius: 4px;
+      color: var(--text-normal);
+      padding: 0 8px;
+      font-size: 12px;
+      outline: none;
+    }
+
+    select:focus, input[type="text"]:focus {
+      border-color: var(--border-color-focus);
+    }
+
+    /* Checkboxes */
+    input[type="checkbox"] {
+      accent-color: var(--primary-color);
+      width: 14px;
+      height: 14px;
+      cursor: pointer;
+    }
+
+    /* Custom range sliders */
+    .slider-container {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    input[type="range"] {
+      flex: 1;
+      height: 3px;
+      background: #333;
+      border-radius: 2px;
+      outline: none;
+      accent-color: var(--primary-color);
+      cursor: pointer;
+    }
+
+    .slider-val {
+      font-size: 11px;
+      font-family: monospace;
+      color: var(--text-muted);
+      width: 28px;
+      text-align: right;
+    }
+
+    /* Subgroup visibility */
+    .sub-settings {
+      margin-top: 8px;
+      padding-left: 12px;
+      border-left: 1.5px solid var(--border-color);
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    /* Path selector layout */
+    .path-selector {
+      display: flex;
+      gap: 6px;
+    }
+    .path-selector input {
+      flex: 1;
+    }
+    .browse-btn {
+      height: 28px;
+      padding: 0 10px;
+      background-color: var(--bg-surface);
+      border: 1px solid var(--border-color);
+      border-radius: 4px;
+      color: var(--text-normal);
+      font-size: 11px;
+      cursor: pointer;
+    }
+    .browse-btn:hover {
+      background-color: var(--bg-surface-hover);
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Titlebar -->
+  <div class="titlebar">
+    <div class="window-controls">
+      <div class="dot dot-red"></div>
+      <div class="dot dot-yellow"></div>
+      <div class="dot dot-green"></div>
+    </div>
+    <div class="app-title">Subtitle Editor Pro — Advanced Style Simulator</div>
+    <div class="app-status">交互原型图</div>
+  </div>
+
+  <!-- Main Container -->
+  <div class="main-container">
+    
+    <!-- Left Area: Preview and Timeline -->
+    <div class="left-workspace">
+      
+      <!-- Video Preview Panel -->
+      <div class="preview-panel">
+        
+        <!-- Video Viewport -->
+        <div class="video-viewport" id="viewport">
+          <!-- Stand-in background image showing scenic mountain video frame -->
+          <img class="video-placeholder-img" src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='1280' height='720' viewBox='0 0 1280 720'><defs><linearGradient id='grad' x1='0%' y1='0%' x2='100%' y2='100%'><stop offset='0%' style='stop-color:%2310101b;stop-opacity:1' /><stop offset='50%' style='stop-color:%231d2348;stop-opacity:1' /><stop offset='100%' style='stop-color:%23050b18;stop-opacity:1' /></linearGradient></defs><rect width='1280' height='720' fill='url(%23grad)'/><circle cx='640' cy='360' r='180' fill='none' stroke='white' stroke-opacity='0.03' stroke-width='4'/><path d='M440 220 L840 500 M440 500 L840 220' stroke='white' stroke-opacity='0.02' stroke-width='2'/><text x='50' y='80' font-family='sans-serif' font-size='24' fill='white' fill-opacity='0.3'>Camera Take: 02</text><text x='1120' y='80' font-family='sans-serif' font-size='24' fill='white' fill-opacity='0.3'>1080P</text></svg>" alt="Video Frame">
+          
+          <!-- Interactive Subtitle Overlay Container -->
+          <div class="subtitle-overlay-area" id="overlayArea">
+            
+            <!-- Dynamic Subtitle Box -->
+            <div class="subtitle-item-box selected" id="subtitleBox" style="left: 10%; top: 70%; width: 80%; height: 20%; transform: rotate(0deg);">
+              <!-- Bounding Box Handles -->
+              <div class="handle handle-tl"></div>
+              <div class="handle handle-tm"></div>
+              <div class="handle handle-tr"></div>
+              <div class="handle handle-ml"></div>
+              <div class="handle handle-mr"></div>
+              <div class="handle handle-bl"></div>
+              <div class="handle handle-bm"></div>
+              <div class="handle handle-br"></div>
+              
+              <!-- Rotation Handle -->
+              <div class="handle-rot-line"></div>
+              <div class="handle-rot" id="rotHandle"></div>
+
+              <!-- Rendered Background (Solid or Image) -->
+              <div class="rendered-subtitle-bg" id="subBg"></div>
+              
+              <!-- Rendered Subtitle Text -->
+              <div class="rendered-subtitle-text" id="subText">
+                双击可修改字幕文本内容
+              </div>
+            </div>
+
+          </div>
+
+        </div>
+
+        <!-- Player Control Bar -->
+        <div class="player-controls">
+          <button class="control-btn" title="上一步">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M6 6h2v12H6zm3.5 6l8.5 6V6z"/></svg>
+          </button>
+          <button class="control-btn" title="播放/暂停" style="color: var(--primary-color);">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+          </button>
+          <button class="control-btn" title="停止">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M6 6h12v12H6z"/></svg>
+          </button>
+          <button class="control-btn" title="下一步">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M6 18l8.5-6L6 6zm9-12v12h2V6z"/></svg>
+          </button>
+          
+          <div class="progress-bar-container">
+            <div class="progress-bar-fill" style="width: 25%;"></div>
+            <div class="progress-bar-handle" style="left: calc(25% - 6px);"></div>
+          </div>
+          
+          <div class="time-display">00:00:03.120 / 00:00:12.500</div>
+        </div>
+
+      </div>
+
+      <!-- Timeline Panel at bottom -->
+      <div class="timeline-panel">
+        <div class="timeline-header">
+          <span>时间轴轨道 (Zoom 100%)</span>
+          <span>FPS: 25.0</span>
+        </div>
+        <div class="timeline-tracks">
+          <div class="timeline-ruler">
+            <span style="position: absolute; left: 0%;">00:00</span>
+            <span style="position: absolute; left: 25%;">00:03</span>
+            <span style="position: absolute; left: 50%;">00:06</span>
+            <span style="position: absolute; left: 75%;">00:09</span>
+          </div>
+          <div class="timeline-track-row">
+            <!-- Mock Subtitle Blocks -->
+            <div class="timeline-block" style="left: 5%; width: 20%;" data-id="sub-1">欢迎使用智能字幕编辑器</div>
+            <div class="timeline-block selected" style="left: 25%; width: 35%;" data-id="sub-2">支持高级填充样式（颜色、渐变、图片）</div>
+            <div class="timeline-block" style="left: 65%; width: 25%;" data-id="sub-3">可一键套用各种预设样式</div>
+          </div>
+          <div class="playhead"></div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Right Area: Sidebar Panels with Tabs -->
+    <div class="right-sidebar">
+      
+      <!-- Tabs header -->
+      <div class="sidebar-tabs">
+        <button class="tab-btn active" data-target="tab-list">字幕列表</button>
+        <button class="tab-btn" data-target="tab-presets">样式预设</button>
+        <button class="tab-btn" data-target="tab-custom">自定义样式</button>
+      </div>
+
+      <!-- Scrollable Panels Container -->
+      <div class="sidebar-content">
+        
+        <!-- Panel 0: Subtitle List -->
+        <div class="sidebar-page active" id="tab-list">
+          <div class="search-container">
+            <input type="text" class="search-input" placeholder="搜索过滤字幕...">
+          </div>
+          
+          <div class="subtitle-list">
+            <div class="list-item" data-id="sub-1">
+              <div class="list-item-meta">
+                <span class="list-item-time">00:00:00.600 - 00:00:02.800</span>
+                <span class="list-item-speaker">未分配</span>
+              </div>
+              <div class="list-item-text">欢迎使用智能字幕编辑器</div>
+            </div>
+            
+            <div class="list-item selected" data-id="sub-2">
+              <div class="list-item-meta">
+                <span class="list-item-time">00:00:03.000 - 00:00:07.500</span>
+                <span class="list-item-speaker">Speaker 0</span>
+              </div>
+              <div class="list-item-text">支持高级填充样式（颜色、渐变、图片）</div>
+            </div>
+            
+            <div class="list-item" data-id="sub-3">
+              <div class="list-item-meta">
+                <span class="list-item-time">00:00:08.000 - 00:00:11.200</span>
+                <span class="list-item-speaker">未分配</span>
+              </div>
+              <div class="list-item-text">可一键套用各种预设样式</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Panel 1: Presets -->
+        <div class="sidebar-page" id="tab-presets">
+          <div class="presets-grid" id="presetsGrid">
+            <!-- Preset items will be populated by JS -->
+          </div>
+          
+          <button class="save-preset-btn" id="savePresetBtn">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+            将当前样式保存为新预设
+          </button>
+        </div>
+
+        <!-- Panel 2: Custom Styles -->
+        <div class="sidebar-page" id="tab-custom">
+          <div class="custom-section">
+            
+
+            <!-- Text Fill Settings -->
+            <div class="settings-group">
+              <div class="settings-group-header">
+                <span>填充</span>
+              </div>
+              <div class="settings-row">
+                <label for="fillType">模式</label>
+                <select id="fillType">
+                  <option value="0">纯色</option>
+                  <option value="1">渐变</option>
+                  <option value="2">贴图</option>
+                </select>
+              </div>
+              
+              <!-- Solid Color Subgroup -->
+              <div class="settings-row row-horizontal" id="fillSolidGroup">
+                <label>颜色</label>
+                <div class="picker-btn-wrapper">
+                  <div class="color-btn" id="fillColorBtn" style="background-color: #ffffff;">
+                    <input type="color" class="color-input-hidden" id="fillColor" value="#ffffff">
+                  </div>
+                  <span style="font-size: 11px; font-family: monospace;" id="fillColorHex">#ffffff</span>
+                </div>
+              </div>
+
+              <!-- Gradient Color Subgroup -->
+              <div class="sub-settings hidden" id="fillGradientGroup">
+                <div class="settings-row row-horizontal">
+                  <label>起止颜色</label>
+                  <div style="display: flex; gap: 8px; align-items: center;">
+                    <div class="color-btn" id="fillColorBtn1" style="background-color: #6366f1;">
+                      <input type="color" class="color-input-hidden" id="fillColor1" value="#6366f1">
+                    </div>
+                    <div class="color-btn" id="fillColorBtn2" style="background-color: #a855f7;">
+                      <input type="color" class="color-input-hidden" id="fillColor2" value="#a855f7">
+                    </div>
+                  </div>
+                </div>
+                <div class="settings-row">
+                  <label for="fillAngle">角度</label>
+                  <div class="slider-container">
+                    <input type="range" id="fillAngle" min="0" max="360" value="90">
+                    <span class="slider-val" id="fillAngleVal">90°</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Image / Texture Subgroup -->
+              <div class="sub-settings hidden" id="fillImageGroup">
+                <div class="settings-row">
+                  <label>图片</label>
+                  <div class="path-selector">
+                    <input type="text" id="fillTexturePath" placeholder="选择图片文件..." value="images/gradient-gold.jpg" readonly>
+                    <button class="browse-btn" id="fillTextureBrowse">浏览...</button>
+                  </div>
+                </div>
+                <div class="settings-row row-horizontal">
+                  <label for="fillTextureTile">平铺</label>
+                  <input type="checkbox" id="fillTextureTile" checked>
+                </div>
+              </div>
+
+              <!-- General text Opacity -->
+              <div class="settings-row">
+                <label for="textOpacity">不透明度</label>
+                <div class="slider-container">
+                  <input type="range" id="textOpacity" min="0" max="100" value="100">
+                  <span class="slider-val" id="textOpacityVal">100%</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Outline Settings -->
+            <div class="settings-group">
+              <div class="settings-group-header">
+                <span>描边</span>
+                <input type="checkbox" id="strokeEnabled" checked>
+              </div>
+              <div class="sub-settings" id="strokeSubgroup">
+                <div class="settings-row">
+                  <label for="strokeWidth">粗细</label>
+                  <div class="slider-container">
+                    <input type="range" id="strokeWidth" min="1" max="10" value="2">
+                    <span class="slider-val" id="strokeWidthVal">2px</span>
+                  </div>
+                </div>
+                <div class="settings-row row-horizontal">
+                  <label>颜色</label>
+                  <div class="picker-btn-wrapper">
+                    <div class="color-btn" id="strokeColorBtn" style="background-color: #000000;">
+                      <input type="color" class="color-input-hidden" id="strokeColor" value="#000000">
+                    </div>
+                    <span style="font-size: 11px; font-family: monospace;" id="strokeColorHex">#000000</span>
+                  </div>
+                </div>
+                <div class="settings-row">
+                  <label for="strokeOpacity">不透明度</label>
+                  <div class="slider-container">
+                    <input type="range" id="strokeOpacity" min="0" max="100" value="100">
+                    <span class="slider-val" id="strokeOpacityVal">100%</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Shadow Settings -->
+            <div class="settings-group">
+              <div class="settings-group-header">
+                <span>阴影</span>
+                <input type="checkbox" id="shadowEnabled">
+              </div>
+              <div class="sub-settings hidden" id="shadowSubgroup">
+                <div class="settings-row row-horizontal">
+                  <label>颜色</label>
+                  <div class="picker-btn-wrapper">
+                    <div class="color-btn" id="shadowColorBtn" style="background-color: #000000;">
+                      <input type="color" class="color-input-hidden" id="shadowColor" value="#000000">
+                    </div>
+                    <span style="font-size: 11px; font-family: monospace;" id="shadowColorHex">#000000</span>
+                  </div>
+                </div>
+                <div class="settings-row">
+                  <label for="shadowOffset">偏移 (X / Y)</label>
+                  <div class="slider-container">
+                    <span style="font-size: 11px; color: var(--text-muted);">X:</span>
+                    <input type="range" id="shadowOffsetX" min="-20" max="20" value="3">
+                    <span class="slider-val" id="shadowOffsetXVal">3</span>
+                    
+                    <span style="font-size: 11px; color: var(--text-muted); margin-left: 8px;">Y:</span>
+                    <input type="range" id="shadowOffsetY" min="-20" max="20" value="3">
+                    <span class="slider-val" id="shadowOffsetYVal">3</span>
+                  </div>
+                </div>
+                <div class="settings-row">
+                  <label for="shadowBlur">模糊度</label>
+                  <div class="slider-container">
+                    <input type="range" id="shadowBlur" min="0" max="20" value="5">
+                    <span class="slider-val" id="shadowBlurVal">5px</span>
+                  </div>
+                </div>
+                <div class="settings-row">
+                  <label for="shadowOpacity">不透明度</label>
+                  <div class="slider-container">
+                    <input type="range" id="shadowOpacity" min="0" max="100" value="50">
+                    <span class="slider-val" id="shadowOpacityVal">50%</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Background Box Settings -->
+            <div class="settings-group">
+              <div class="settings-group-header">
+                <span>背景</span>
+              </div>
+              <div class="settings-row">
+                <label for="bgType">类型</label>
+                <select id="bgType">
+                  <option value="0">无</option>
+                  <option value="1">单色</option>
+                  <option value="2">图片</option>
+                </select>
+              </div>
+
+              <!-- Solid Background Settings -->
+              <div class="sub-settings hidden" id="bgSolidGroup">
+                <div class="settings-row row-horizontal">
+                  <label>颜色</label>
+                  <div class="picker-btn-wrapper">
+                    <div class="color-btn" id="bgColorBtn" style="background-color: #000000;">
+                      <input type="color" class="color-input-hidden" id="bgColor" value="#000000">
+                    </div>
+                    <span style="font-size: 11px; font-family: monospace;" id="bgColorHex">#000000</span>
+                  </div>
+                </div>
+                <div class="settings-row">
+                  <label for="bgOpacity">不透明度</label>
+                  <div class="slider-container">
+                    <input type="range" id="bgOpacity" min="0" max="100" value="60">
+                    <span class="slider-val" id="bgOpacityVal">60%</span>
+                  </div>
+                </div>
+                <div class="settings-row">
+                  <label for="bgRoundness">圆角</label>
+                  <div class="slider-container">
+                    <input type="range" id="bgRoundness" min="0" max="30" value="4">
+                    <span class="slider-val" id="bgRoundnessVal">4px</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Image Background Settings -->
+              <div class="sub-settings hidden" id="bgImageGroup">
+                <div class="settings-row">
+                  <label>图片</label>
+                  <div class="path-selector">
+                    <input type="text" id="bgImagePath" placeholder="选择背景图片..." value="images/bubble-bg.png" readonly>
+                    <button class="browse-btn" id="bgImageBrowse">浏览...</button>
+                  </div>
+                </div>
+                <div class="settings-row row-horizontal">
+                  <label for="bgImage9Patch">九宫格</label>
+                  <input type="checkbox" id="bgImage9Patch" checked>
+                </div>
+              </div>
+
+              <!-- General Background Paddings (only visible if bgType > 0) -->
+              <div class="sub-settings hidden" id="bgPaddingGroup">
+                <div class="settings-row">
+                  <label for="bgPaddingX">内边距 (宽 / 高)</label>
+                  <div class="slider-container">
+                    <span style="font-size: 11px; color: var(--text-muted);">宽:</span>
+                    <input type="range" id="bgPaddingX" min="0" max="40" value="15">
+                    <span class="slider-val" id="bgPaddingXVal">15</span>
+                    
+                    <span style="font-size: 11px; color: var(--text-muted); margin-left: 8px;">高:</span>
+                    <input type="range" id="bgPaddingY" min="0" max="30" value="10">
+                    <span class="slider-val" id="bgPaddingYVal">10</span>
+                  </div>
+                </div>
+              </div>
+
+            </div>
+
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+
+  </div>
+
+  <script>
+    // --- Initial State and Style Databases ---
+    
+    // Default mock subtitles data
+    const subtitleData = {
+      "sub-1": {
+        id: "sub-1",
+        text: "欢迎使用智能字幕编辑器",
+        timecode: "00:00:00.600 - 00:00:02.800",
+        speaker: "未分配",
+        style: {
+          fontFamily: "system-ui",
+          fontSize: 28,
+          fontBold: true,
+          fontItalic: false,
+          fillType: 0,
+          fillColor: "#ffffff",
+          fillColor1: "#6366f1",
+          fillColor2: "#a855f7",
+          fillAngle: 90,
+          fillTexturePath: "images/gradient-gold.jpg",
+          fillTextureTile: true,
+          textOpacity: 100,
+          strokeEnabled: true,
+          strokeWidth: 2,
+          strokeColor: "#000000",
+          strokeOpacity: 100,
+          shadowEnabled: false,
+          shadowOffsetX: 3,
+          shadowOffsetY: 3,
+          shadowBlur: 5,
+          shadowColor: "#000000",
+          shadowOpacity: 50,
+          bgType: 0,
+          bgColor: "#000000",
+          bgOpacity: 60,
+          bgRoundness: 4,
+          bgImagePath: "images/bubble-bg.png",
+          bgImage9Patch: true,
+          bgPaddingX: 15,
+          bgPaddingY: 10
+        },
+        rect: { x: 10, y: 70, w: 80, h: 18, rot: 0 }
+      },
+      "sub-2": {
+        id: "sub-2",
+        text: "支持高级填充样式\n颜色、渐变和图片贴图！",
+        timecode: "00:00:03.000 - 00:00:07.500",
+        speaker: "Speaker 0",
+        style: {
+          fontFamily: "Arial",
+          fontSize: 32,
+          fontBold: true,
+          fontItalic: false,
+          fillType: 1, // Gradient
+          fillColor: "#ffffff",
+          fillColor1: "#fcd34d", // Gold yellow
+          fillColor2: "#f97316", // Orange
+          fillAngle: 90,
+          fillTexturePath: "images/gradient-gold.jpg",
+          fillTextureTile: true,
+          textOpacity: 100,
+          strokeEnabled: true,
+          strokeWidth: 3,
+          strokeColor: "#1e1b4b",
+          strokeOpacity: 100,
+          shadowEnabled: true,
+          shadowOffsetX: 4,
+          shadowOffsetY: 4,
+          shadowBlur: 4,
+          shadowColor: "#000000",
+          shadowOpacity: 60,
+          bgType: 0,
+          bgColor: "#000000",
+          bgOpacity: 60,
+          bgRoundness: 4,
+          bgImagePath: "images/bubble-bg.png",
+          bgImage9Patch: true,
+          bgPaddingX: 15,
+          bgPaddingY: 10
+        },
+        rect: { x: 10, y: 65, w: 80, h: 22, rot: 0 }
+      },
+      "sub-3": {
+        id: "sub-3",
+        text: "可一键套用各种预设样式",
+        timecode: "00:00:08.000 - 00:00:11.200",
+        speaker: "未分配",
+        style: {
+          fontFamily: "system-ui",
+          fontSize: 26,
+          fontBold: false,
+          fontItalic: false,
+          fillType: 0,
+          fillColor: "#38bdf8", // Cyan
+          fillColor1: "#6366f1",
+          fillColor2: "#a855f7",
+          fillAngle: 90,
+          fillTexturePath: "images/gradient-gold.jpg",
+          fillTextureTile: true,
+          textOpacity: 100,
+          strokeEnabled: true,
+          strokeWidth: 1,
+          strokeColor: "#ffffff",
+          strokeOpacity: 80,
+          shadowEnabled: true,
+          shadowOffsetX: 0,
+          shadowOffsetY: 0,
+          shadowBlur: 10,
+          shadowColor: "#38bdf8", // Cyan glow
+          shadowOpacity: 90,
+          bgType: 0,
+          bgColor: "#000000",
+          bgOpacity: 60,
+          bgRoundness: 4,
+          bgImagePath: "images/bubble-bg.png",
+          bgImage9Patch: true,
+          bgPaddingX: 15,
+          bgPaddingY: 10
+        },
+        rect: { x: 15, y: 72, w: 70, h: 16, rot: 0 }
+      }
+    };
+
+    let activeSubId = "sub-2"; // Initial active subtitle
+
+    // Predefined templates/presets
+    const defaultPresets = [
+      {
+        name: "默认白 (Default)",
+        style: {
+          fillType: 0, fillColor: "#ffffff", textOpacity: 100,
+          strokeEnabled: true, strokeWidth: 2, strokeColor: "#000000", strokeOpacity: 100,
+          shadowEnabled: false, bgType: 0
+        }
+      },
+      {
+        name: "经典双语黄",
+        style: {
+          fillType: 0, fillColor: "#facc15", textOpacity: 100,
+          strokeEnabled: true, strokeWidth: 2, strokeColor: "#000000", strokeOpacity: 100,
+          shadowEnabled: false, bgType: 0
+        }
+      },
+      {
+        name: "柔和阴影",
+        style: {
+          fillType: 0, fillColor: "#ffffff", textOpacity: 100,
+          strokeEnabled: true, strokeWidth: 1.5, strokeColor: "#000000", strokeOpacity: 80,
+          shadowEnabled: true, shadowOffsetX: 3, shadowOffsetY: 3, shadowBlur: 5, shadowColor: "#000000", shadowOpacity: 60,
+          bgType: 0
+        }
+      },
+      {
+        name: "国潮霓虹",
+        style: {
+          fillType: 0, fillColor: "#22d3ee", textOpacity: 100,
+          strokeEnabled: true, strokeWidth: 1.5, strokeColor: "#ffffff", strokeOpacity: 90,
+          shadowEnabled: true, shadowOffsetX: 0, shadowOffsetY: 0, shadowBlur: 12, shadowColor: "#06b6d4", shadowOpacity: 95,
+          bgType: 0
+        }
+      },
+      {
+        name: "半透背景",
+        style: {
+          fillType: 0, fillColor: "#ffffff", textOpacity: 100,
+          strokeEnabled: false,
+          shadowEnabled: false,
+          bgType: 1, bgColor: "#000000", bgOpacity: 65, bgRoundness: 6, bgPaddingX: 18, bgPaddingY: 10
+        }
+      },
+      {
+        name: "尊贵金渐变",
+        style: {
+          fillType: 1, fillColor1: "#fef08a", fillColor2: "#ca8a04", fillAngle: 90, textOpacity: 100,
+          strokeEnabled: true, strokeWidth: 2.5, strokeColor: "#1c1917", strokeOpacity: 100,
+          shadowEnabled: true, shadowOffsetX: 2, shadowOffsetY: 2, shadowBlur: 4, shadowColor: "#000000", shadowOpacity: 50,
+          bgType: 0
+        }
+      }
+    ];
+
+    // Copying presets database
+    let customPresets = [...defaultPresets];
+
+
+    // --- DOM Elements ---
+    const tabs = document.querySelectorAll('.tab-btn');
+    const pages = document.querySelectorAll('.sidebar-page');
+    const subtitleBox = document.getElementById('subtitleBox');
+    const subText = document.getElementById('subText');
+    const subBg = document.getElementById('subBg');
+    const presetsGrid = document.getElementById('presetsGrid');
+    
+    // Custom settings fields
+    const controls = {
+      fillType: document.getElementById('fillType'),
+      fillColor: document.getElementById('fillColor'),
+      fillColorBtn: document.getElementById('fillColorBtn'),
+      fillColorHex: document.getElementById('fillColorHex'),
+      fillColor1: document.getElementById('fillColor1'),
+      fillColorBtn1: document.getElementById('fillColorBtn1'),
+      fillColor2: document.getElementById('fillColor2'),
+      fillColorBtn2: document.getElementById('fillColorBtn2'),
+      fillAngle: document.getElementById('fillAngle'),
+      fillAngleVal: document.getElementById('fillAngleVal'),
+      fillTexturePath: document.getElementById('fillTexturePath'),
+      fillTextureTile: document.getElementById('fillTextureTile'),
+      textOpacity: document.getElementById('textOpacity'),
+      textOpacityVal: document.getElementById('textOpacityVal'),
+      
+      strokeEnabled: document.getElementById('strokeEnabled'),
+      strokeWidth: document.getElementById('strokeWidth'),
+      strokeWidthVal: document.getElementById('strokeWidthVal'),
+      strokeColor: document.getElementById('strokeColor'),
+      strokeColorBtn: document.getElementById('strokeColorBtn'),
+      strokeColorHex: document.getElementById('strokeColorHex'),
+      strokeOpacity: document.getElementById('strokeOpacity'),
+      strokeOpacityVal: document.getElementById('strokeOpacityVal'),
+      
+      shadowEnabled: document.getElementById('shadowEnabled'),
+      shadowColor: document.getElementById('shadowColor'),
+      shadowColorBtn: document.getElementById('shadowColorBtn'),
+      shadowColorHex: document.getElementById('shadowColorHex'),
+      shadowOffsetX: document.getElementById('shadowOffsetX'),
+      shadowOffsetXVal: document.getElementById('shadowOffsetXVal'),
+      shadowOffsetY: document.getElementById('shadowOffsetY'),
+      shadowOffsetYVal: document.getElementById('shadowOffsetYVal'),
+      shadowBlur: document.getElementById('shadowBlur'),
+      shadowBlurVal: document.getElementById('shadowBlurVal'),
+      shadowOpacity: document.getElementById('shadowOpacity'),
+      shadowOpacityVal: document.getElementById('shadowOpacityVal'),
+      
+      bgType: document.getElementById('bgType'),
+      bgColor: document.getElementById('bgColor'),
+      bgColorBtn: document.getElementById('bgColorBtn'),
+      bgColorHex: document.getElementById('bgColorHex'),
+      bgOpacity: document.getElementById('bgOpacity'),
+      bgOpacityVal: document.getElementById('bgOpacityVal'),
+      bgRoundness: document.getElementById('bgRoundness'),
+      bgRoundnessVal: document.getElementById('bgRoundnessVal'),
+      bgImagePath: document.getElementById('bgImagePath'),
+      bgImage9Patch: document.getElementById('bgImage9Patch'),
+      bgPaddingX: document.getElementById('bgPaddingX'),
+      bgPaddingXVal: document.getElementById('bgPaddingXVal'),
+      bgPaddingY: document.getElementById('bgPaddingY'),
+      bgPaddingYVal: document.getElementById('bgPaddingYVal'),
+    };
+
+    // Subgroup Elements
+    const fillSolidGroup = document.getElementById('fillSolidGroup');
+    const fillGradientGroup = document.getElementById('fillGradientGroup');
+    const fillImageGroup = document.getElementById('fillImageGroup');
+    const strokeSubgroup = document.getElementById('strokeSubgroup');
+    const shadowSubgroup = document.getElementById('shadowSubgroup');
+    const bgSolidGroup = document.getElementById('bgSolidGroup');
+    const bgImageGroup = document.getElementById('bgImageGroup');
+    const bgPaddingGroup = document.getElementById('bgPaddingGroup');
+
+
+    // --- Core Functions ---
+
+    // 1. Switch tabs in Sidebar
+    tabs.forEach(tab => {
+      tab.addEventListener('click', () => {
+        tabs.forEach(t => t.classList.remove('active'));
+        pages.forEach(p => p.classList.remove('active'));
+        
+        tab.classList.add('active');
+        const targetPage = document.getElementById(tab.dataset.target);
+        targetPage.classList.add('active');
+      });
+    });
+
+    // 2. Select subtitle (click list item, timeline block, or direct screen selection)
+    function selectSubtitle(id) {
+      if (!subtitleData[id]) return;
+      activeSubId = id;
+      
+      // Update sidebar list selection
+      document.querySelectorAll('.list-item').forEach(item => {
+        item.classList.toggle('selected', item.dataset.id === id);
+      });
+
+      // Update timeline selection
+      document.querySelectorAll('.timeline-block').forEach(block => {
+        block.classList.toggle('selected', block.dataset.id === id);
+      });
+
+      // Populate controls with active styles
+      populateStyleControls(subtitleData[id].style);
+      
+      // Apply style rendering on the canvas
+      renderSubtitleOverlay();
+      
+      // Sync box positions and text content
+      subText.innerHTML = subtitleData[id].text.replace(/\n/g, '<br>');
+      syncBoxPosition(subtitleData[id].rect);
+    }
+
+    // Connect Selection Handlers
+    document.querySelectorAll('.list-item').forEach(item => {
+      item.addEventListener('click', () => selectSubtitle(item.dataset.id));
+    });
+    document.querySelectorAll('.timeline-block').forEach(block => {
+      block.addEventListener('click', () => selectSubtitle(block.dataset.id));
+    });
+
+    // Double-click preview subtitle to edit text
+    subText.addEventListener('dblclick', (e) => {
+      e.stopPropagation();
+      const newText = prompt("编辑字幕文本:", subtitleData[activeSubId].text);
+      if (newText !== null) {
+        subtitleData[activeSubId].text = newText;
+        subText.innerHTML = newText.replace(/\n/g, '<br>');
+        
+        // Update list item text preview
+        const listItem = document.querySelector(`.list-item[data-id="${activeSubId}"] .list-item-text`);
+        if (listItem) listItem.textContent = newText;
+        // Update timeline block text
+        const timelineBlock = document.querySelector(`.timeline-block[data-id="${activeSubId}"]`);
+        if (timelineBlock) timelineBlock.textContent = newText;
+        
+        renderSubtitleOverlay();
+      }
+    });
+
+    // 3. Sync HTML form fields to model styles
+    function populateStyleControls(style) {
+      // Text Fill
+      controls.fillType.value = style.fillType;
+      controls.fillColor.value = style.fillColor;
+      controls.fillColorBtn.style.backgroundColor = style.fillColor;
+      controls.fillColorHex.textContent = style.fillColor.toUpperCase();
+      
+      controls.fillColor1.value = style.fillColor1;
+      controls.fillColorBtn1.style.backgroundColor = style.fillColor1;
+      controls.fillColor2.value = style.fillColor2;
+      controls.fillColorBtn2.style.backgroundColor = style.fillColor2;
+      controls.fillAngle.value = style.fillAngle;
+      controls.fillAngleVal.textContent = style.fillAngle + '°';
+      controls.fillTexturePath.value = style.fillTexturePath;
+      controls.fillTextureTile.checked = style.fillTextureTile;
+      controls.textOpacity.value = style.textOpacity;
+      controls.textOpacityVal.textContent = style.textOpacity + '%';
+
+      // Outline
+      controls.strokeEnabled.checked = style.strokeEnabled;
+      controls.strokeWidth.value = style.strokeWidth;
+      controls.strokeWidthVal.textContent = style.strokeWidth + 'px';
+      controls.strokeColor.value = style.strokeColor;
+      controls.strokeColorBtn.style.backgroundColor = style.strokeColor;
+      controls.strokeColorHex.textContent = style.strokeColor.toUpperCase();
+      controls.strokeOpacity.value = style.strokeOpacity;
+      controls.strokeOpacityVal.textContent = style.strokeOpacity + '%';
+
+      // Shadow
+      controls.shadowEnabled.checked = style.shadowEnabled;
+      controls.shadowColor.value = style.shadowColor;
+      controls.shadowColorBtn.style.backgroundColor = style.shadowColor;
+      controls.shadowColorHex.textContent = style.shadowColor.toUpperCase();
+      controls.shadowOffsetX.value = style.shadowOffsetX;
+      controls.shadowOffsetXVal.textContent = style.shadowOffsetX;
+      controls.shadowOffsetY.value = style.shadowOffsetY;
+      controls.shadowOffsetYVal.textContent = style.shadowOffsetY;
+      controls.shadowBlur.value = style.shadowBlur;
+      controls.shadowBlurVal.textContent = style.shadowBlur + 'px';
+      controls.shadowOpacity.value = style.shadowOpacity;
+      controls.shadowOpacityVal.textContent = style.shadowOpacity + '%';
+
+      // Background Box
+      controls.bgType.value = style.bgType;
+      controls.bgColor.value = style.bgColor;
+      controls.bgColorBtn.style.backgroundColor = style.bgColor;
+      controls.bgColorHex.textContent = style.bgColor.toUpperCase();
+      controls.bgOpacity.value = style.bgOpacity;
+      controls.bgOpacityVal.textContent = style.bgOpacity + '%';
+      controls.bgRoundness.value = style.bgRoundness;
+      controls.bgRoundnessVal.textContent = style.bgRoundness + 'px';
+      controls.bgImagePath.value = style.bgImagePath;
+      controls.bgImage9Patch.checked = style.bgImage9Patch;
+      controls.bgPaddingX.value = style.bgPaddingX;
+      controls.bgPaddingXVal.textContent = style.bgPaddingX;
+      controls.bgPaddingY.value = style.bgPaddingY;
+      controls.bgPaddingYVal.textContent = style.bgPaddingY;
+
+      // Adjust subgroup visibilities based on dropdown values
+      toggleSubgroupsVisibility(style);
+    }
+
+    function toggleSubgroupsVisibility(style) {
+      // Text Fill subgroups
+      const fType = parseInt(controls.fillType.value);
+      fillSolidGroup.classList.toggle('hidden', fType !== 0);
+      fillGradientGroup.classList.toggle('hidden', fType !== 1);
+      fillImageGroup.classList.toggle('hidden', fType !== 2);
+
+      // Outline subgroups
+      strokeSubgroup.classList.toggle('hidden', !controls.strokeEnabled.checked);
+
+      // Shadow subgroups
+      shadowSubgroup.classList.toggle('hidden', !controls.shadowEnabled.checked);
+
+      // Background subgroups
+      const bType = parseInt(controls.bgType.value);
+      bgSolidGroup.classList.toggle('hidden', bType !== 1);
+      bgImageGroup.classList.toggle('hidden', bType !== 2);
+      bgPaddingGroup.classList.toggle('hidden', bType === 0);
+    }
+
+    // 4. Render style updates in the video viewport (CSS wizardry)
+    function renderSubtitleOverlay() {
+      const style = subtitleData[activeSubId].style;
+      
+      // Basic font settings
+      subText.style.fontFamily = style.fontFamily;
+      // Font size scales with bounding box height to emulate resolution-independent scaling
+      subText.style.fontSize = `${style.fontSize}px`;
+      subText.style.fontWeight = style.fontBold ? 'bold' : 'normal';
+      subText.style.fontStyle = style.fontItalic ? 'italic' : 'normal';
+
+      // --- Text Fill Style ---
+      subText.style.background = 'none';
+      subText.style.webkitBackgroundClip = 'initial';
+      subText.style.webkitTextFillColor = 'initial';
+      subText.style.color = '#ffffff';
+
+      const opacityHex = Math.round(style.textOpacity * 2.55).toString(16).padStart(2, '0');
+      
+      if (style.fillType === 0) { // Solid
+        subText.style.color = `${style.fillColor}${opacityHex}`;
+      } 
+      else if (style.fillType === 1) { // Gradient
+        const c1 = `${style.fillColor1}${opacityHex}`;
+        const c2 = `${style.fillColor2}${opacityHex}`;
+        subText.style.background = `linear-gradient(${style.fillAngle}deg, ${c1}, ${c2})`;
+        subText.style.webkitBackgroundClip = 'text';
+        subText.style.webkitTextFillColor = 'transparent';
+      } 
+      else if (style.fillType === 2) { // Image/Texture
+        // To mimic image text fill in HTML/CSS, we use background-image clipped to text
+        // Use a gold metal texture svg placeholder representing the texture
+        const goldTexture = `data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 100 100'><defs><linearGradient id='g' x1='0%25' y1='0%25' x2='100%25' y2='100%25'><stop offset='0%25' stop-color='%23ffe259'/><stop offset='100%25' stop-color='%23ffa751'/></linearGradient></defs><rect width='100' height='100' fill='url(%23g)'/><circle cx='10' cy='20' r='30' fill='white' fill-opacity='0.15'/><circle cx='80' cy='70' r='40' fill='black' fill-opacity='0.1'/></svg>`;
+        subText.style.backgroundImage = `url("${goldTexture}")`;
+        subText.style.backgroundSize = style.fillTextureTile ? 'auto' : 'cover';
+        subText.style.webkitBackgroundClip = 'text';
+        subText.style.webkitTextFillColor = 'transparent';
+      }
+
+      // --- Outline (Stroke) ---
+      // Cleanest cross-browser text outline is using text-stroke
+      if (style.strokeEnabled) {
+        const strokeOpacityHex = Math.round(style.strokeOpacity * 2.55).toString(16).padStart(2, '0');
+        const strokeColorWithAlpha = `${style.strokeColor}${strokeOpacityHex}`;
+        subText.style.webkitTextStroke = `${style.strokeWidth}px ${strokeColorWithAlpha}`;
+      } else {
+        subText.style.webkitTextStroke = '0px transparent';
+      }
+
+      // --- Shadow ---
+      if (style.shadowEnabled) {
+        const shadowOpacityHex = Math.round(style.shadowOpacity * 2.55).toString(16).padStart(2, '0');
+        const shadowColorWithAlpha = `${style.shadowColor}${shadowOpacityHex}`;
+        // Standard text shadow
+        subText.style.textShadow = `${style.shadowOffsetX}px ${style.shadowOffsetY}px ${style.shadowBlur}px ${shadowColorWithAlpha}`;
+      } else {
+        subText.style.textShadow = 'none';
+      }
+
+      // --- Background Box ---
+      subBg.style.background = 'none';
+      subBg.style.border = 'none';
+      subBg.style.borderRadius = '0';
+      subBg.style.padding = '0';
+      subText.style.padding = '0';
+
+      if (style.bgType === 1) { // Solid Box
+        const bgOpacityHex = Math.round(style.bgOpacity * 2.55).toString(16).padStart(2, '0');
+        subBg.style.backgroundColor = `${style.bgColor}${bgOpacityHex}`;
+        subBg.style.borderRadius = `${style.bgRoundness}px`;
+        // Apply paddings
+        subtitleBox.style.padding = `${style.bgPaddingY}px ${style.bgPaddingX}px`;
+      } 
+      else if (style.bgType === 2) { // Image / 9-Patch
+        // Mocking a beautiful 9-patch frame border using border-image
+        // Use a round-border frame SVG representing the 9-patch background
+        const borderFrameSvg = `data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='60' height='60' viewBox='0 0 60 60'><rect x='5' y='5' width='50' height='50' rx='10' fill='%230b0b0f' fill-opacity='0.75' stroke='%236366f1' stroke-width='3'/></svg>`;
+        subBg.style.backgroundImage = `url("${borderFrameSvg}")`;
+        subBg.style.backgroundSize = style.bgImage9Patch ? '100% 100%' : 'cover';
+        subBg.style.borderRadius = '6px';
+        subtitleBox.style.padding = `${style.bgPaddingY}px ${style.bgPaddingX}px`;
+      } else {
+        subtitleBox.style.padding = '0';
+      }
+    }
+
+    function syncBoxPosition(rect) {
+      subtitleBox.style.left = rect.x + '%';
+      subtitleBox.style.top = rect.y + '%';
+      subtitleBox.style.width = rect.w + '%';
+      subtitleBox.style.height = rect.h + '%';
+      subtitleBox.style.transform = `rotate(${rect.rot}deg)`;
+    }
+
+    // 5. Gather input event listeners on custom sidebar panel
+    function hookControlEvents() {
+      // Helper function to bind range inputs to live updates
+      function bindRange(controlId, styleField, suffix = '') {
+        const slider = controls[controlId];
+        const valLabel = document.getElementById(controlId + 'Val');
+        
+        slider.addEventListener('input', () => {
+          const val = slider.value;
+          valLabel.textContent = val + suffix;
+          subtitleData[activeSubId].style[styleField] = parseFloat(val);
+          renderSubtitleOverlay();
+        });
+      }
+
+      // Bind basic properties
+      bindRange('fillAngle', 'fillAngle', '°');
+      bindRange('textOpacity', 'textOpacity', '%');
+      bindRange('strokeWidth', 'strokeWidth', 'px');
+      bindRange('strokeOpacity', 'strokeOpacity', '%');
+      bindRange('shadowOffsetX', 'shadowOffsetX');
+      bindRange('shadowOffsetY', 'shadowOffsetY');
+      bindRange('shadowBlur', 'shadowBlur', 'px');
+      bindRange('shadowOpacity', 'shadowOpacity', '%');
+      bindRange('bgOpacity', 'bgOpacity', '%');
+      bindRange('bgRoundness', 'bgRoundness', 'px');
+      bindRange('bgPaddingX', 'bgPaddingX');
+      bindRange('bgPaddingY', 'bgPaddingY');
+
+      // Dropdowns
+      controls.fillType.addEventListener('change', () => {
+        subtitleData[activeSubId].style.fillType = parseInt(controls.fillType.value);
+        toggleSubgroupsVisibility(subtitleData[activeSubId].style);
+        renderSubtitleOverlay();
+      });
+
+      controls.bgType.addEventListener('change', () => {
+        subtitleData[activeSubId].style.bgType = parseInt(controls.bgType.value);
+        toggleSubgroupsVisibility(subtitleData[activeSubId].style);
+        renderSubtitleOverlay();
+      });
+
+      // Checkboxes
+      controls.strokeEnabled.addEventListener('change', () => {
+        subtitleData[activeSubId].style.strokeEnabled = controls.strokeEnabled.checked;
+        toggleSubgroupsVisibility(subtitleData[activeSubId].style);
+        renderSubtitleOverlay();
+      });
+      controls.shadowEnabled.addEventListener('change', () => {
+        subtitleData[activeSubId].style.shadowEnabled = controls.shadowEnabled.checked;
+        toggleSubgroupsVisibility(subtitleData[activeSubId].style);
+        renderSubtitleOverlay();
+      });
+      controls.fillTextureTile.addEventListener('change', () => {
+        subtitleData[activeSubId].style.fillTextureTile = controls.fillTextureTile.checked;
+        renderSubtitleOverlay();
+      });
+      controls.bgImage9Patch.addEventListener('change', () => {
+        subtitleData[activeSubId].style.bgImage9Patch = controls.bgImage9Patch.checked;
+        renderSubtitleOverlay();
+      });
+
+      // Colors pickers
+      function bindColorPicker(pickerId, styleField) {
+        const picker = controls[pickerId];
+        const btn = controls[pickerId + 'Btn'];
+        const hexText = controls[pickerId + 'Hex'];
+        
+        picker.addEventListener('input', () => {
+          const val = picker.value;
+          btn.style.backgroundColor = val;
+          if (hexText) hexText.textContent = val.toUpperCase();
+          subtitleData[activeSubId].style[styleField] = val;
+          renderSubtitleOverlay();
+        });
+      }
+
+      bindColorPicker('fillColor', 'fillColor');
+      bindColorPicker('fillColor1', 'fillColor1');
+      bindColorPicker('fillColor2', 'fillColor2');
+      bindColorPicker('strokeColor', 'strokeColor');
+      bindColorPicker('shadowColor', 'shadowColor');
+      bindColorPicker('bgColor', 'bgColor');
+
+      // Browse dialog buttons (simulate opening directory)
+      document.getElementById('fillTextureBrowse').addEventListener('click', () => {
+        const paths = [
+          "images/gradient-gold.jpg",
+          "images/wooden-texture.png",
+          "images/fire-burn.gif",
+          "images/chrome-metal.jpg"
+        ];
+        const choice = prompt("选择填充图片贴图路径:\n1. 尊贵金箔 (gradient-gold.jpg)\n2. 复古木纹 (wooden-texture.png)\n3. 熊熊烈火 (fire-burn.gif)\n4. 金属铬度 (chrome-metal.jpg)", "1");
+        if (choice && ["1","2","3","4"].includes(choice.trim())) {
+          const path = paths[parseInt(choice) - 1];
+          controls.fillTexturePath.value = path;
+          subtitleData[activeSubId].style.fillTexturePath = path;
+          renderSubtitleOverlay();
+        }
+      });
+
+      document.getElementById('bgImageBrowse').addEventListener('click', () => {
+        const paths = [
+          "images/bubble-bg.png",
+          "images/dark-box.png",
+          "images/neon-border.png"
+        ];
+        const choice = prompt("选择背景图片路径:\n1. 磨砂气泡 (bubble-bg.png)\n2. 沉浸黑箱 (dark-box.png)\n3. 赛博霓虹 (neon-border.png)", "1");
+        if (choice && ["1","2","3","4"].includes(choice.trim())) {
+          const path = paths[parseInt(choice) - 1];
+          controls.bgImagePath.value = path;
+          subtitleData[activeSubId].style.bgImagePath = path;
+          renderSubtitleOverlay();
+        }
+      });
+    }
+
+    // 6. Presets cards population
+    function renderPresetsGrid() {
+      presetsGrid.innerHTML = '';
+      customPresets.forEach((preset, index) => {
+        const card = document.createElement('div');
+        card.className = 'preset-card';
+        
+        // Dynamic css rendering for small preview inside the grid card
+        const style = preset.style;
+        const textSpan = document.createElement('span');
+        textSpan.textContent = "Aa";
+        textSpan.style.fontSize = "22px";
+        textSpan.style.fontFamily = "sans-serif";
+        textSpan.style.fontWeight = "bold";
+        
+        // Apply colors/gradient styles on preset thumb
+        if (style.fillType === 1) { // gradient
+          textSpan.style.background = `linear-gradient(${style.fillAngle || 90}deg, ${style.fillColor1}, ${style.fillColor2})`;
+          textSpan.style.webkitBackgroundClip = 'text';
+          textSpan.style.webkitTextFillColor = 'transparent';
+        } else {
+          textSpan.style.color = style.fillColor || "#ffffff";
+        }
+
+        // Outline on thumb
+        if (style.strokeEnabled) {
+          textSpan.style.webkitTextStroke = `${style.strokeWidth || 1}px ${style.strokeColor || "#000"}`;
+        } else {
+          textSpan.style.webkitTextStroke = '0px transparent';
+        }
+
+        // Shadow on thumb
+        if (style.shadowEnabled) {
+          textSpan.style.textShadow = `${style.shadowOffsetX || 2}px ${style.shadowOffsetY || 2}px ${style.shadowBlur || 3}px ${style.shadowColor || "#000"}`;
+        } else {
+          textSpan.style.textShadow = 'none';
+        }
+
+        // Background box on card itself
+        if (style.bgType === 1) {
+          const bgOpacityHex = Math.round(style.bgOpacity * 2.55).toString(16).padStart(2, '0');
+          card.style.backgroundColor = `${style.bgColor}${bgOpacityHex}`;
+          card.style.borderRadius = `${style.bgRoundness || 4}px`;
+        }
+
+        const label = document.createElement('span');
+        label.className = 'preset-preview-label';
+        label.textContent = preset.name;
+
+        card.appendChild(textSpan);
+        card.appendChild(label);
+        
+        // Apply preset to active subtitle on click
+        card.addEventListener('click', () => {
+          document.querySelectorAll('.preset-card').forEach(c => c.classList.remove('selected'));
+          card.classList.add('selected');
+          
+          // Merge preset styles with current active subtitle
+          Object.assign(subtitleData[activeSubId].style, preset.style);
+          
+          // Refresh controls & redraw
+          populateStyleControls(subtitleData[activeSubId].style);
+          renderSubtitleOverlay();
+        });
+
+        presetsGrid.appendChild(card);
+      });
+    }
+
+    // Save Preset button click
+    document.getElementById('savePresetBtn').addEventListener('click', () => {
+      const presetName = prompt("请输入新样式预设的名称:", `自定义预设 ${customPresets.length - 5}`);
+      if (presetName) {
+        // Deep copy active styles
+        const activeStyle = JSON.parse(JSON.stringify(subtitleData[activeSubId].style));
+        customPresets.push({
+          name: presetName,
+          style: activeStyle
+        });
+        
+        // Re-render presets
+        renderPresetsGrid();
+      }
+    });
+
+    // 7. Interactive dragging inside the viewport
+    let isDragging = false;
+    let dragStartX = 0;
+    let dragStartY = 0;
+    let boxStartX = 0;
+    let boxStartY = 0;
+
+    subtitleBox.addEventListener('mousedown', (e) => {
+      if (e.target.classList.contains('handle') || e.target.id === 'rotHandle') {
+        return; // Don't drag when resizing/rotating
+      }
+      isDragging = true;
+      const viewport = document.getElementById('viewport');
+      const viewportRect = viewport.getBoundingClientRect();
+      
+      dragStartX = e.clientX;
+      dragStartY = e.clientY;
+      
+      const rect = subtitleData[activeSubId].rect;
+      // Convert percents to pixels relative to viewport
+      boxStartX = (rect.x / 100) * viewportRect.width;
+      boxStartY = (rect.y / 100) * viewportRect.height;
+      
+      subtitleBox.style.cursor = 'grabbing';
+      e.preventDefault();
+    });
+
+    window.addEventListener('mousemove', (e) => {
+      if (!isDragging) return;
+      
+      const viewport = document.getElementById('viewport');
+      const viewportRect = viewport.getBoundingClientRect();
+      
+      const dx = e.clientX - dragStartX;
+      const dy = e.clientY - dragStartY;
+      
+      let newPxX = boxStartX + dx;
+      let newPxY = boxStartY + dy;
+      
+      // Convert back to percentages
+      let newPctX = (newPxX / viewportRect.width) * 100;
+      let newPctY = (newPxY / viewportRect.height) * 100;
+      
+      // Boundaries check
+      newPctX = Math.max(0, Math.min(newPctX, 100 - subtitleData[activeSubId].rect.w));
+      newPctY = Math.max(0, Math.min(newPctY, 100 - subtitleData[activeSubId].rect.h));
+      
+      subtitleData[activeSubId].rect.x = Math.round(newPctX);
+      subtitleData[activeSubId].rect.y = Math.round(newPctY);
+      
+      syncBoxPosition(subtitleData[activeSubId].rect);
+    });
+
+    window.addEventListener('mouseup', () => {
+      if (isDragging) {
+        isDragging = false;
+        subtitleBox.style.cursor = 'move';
+      }
+    });
+
+
+    // --- Initialization ---
+    hookControlEvents();
+    renderPresetsGrid();
+    selectSubtitle(activeSubId);
+
+  </script>
+</body>
+</html>

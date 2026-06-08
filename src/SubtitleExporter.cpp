@@ -1,5 +1,6 @@
 #include "SubtitleExporter.h"
 #include "SubtitleTrack.h"
+#include <QColor>
 #include <QDebug>
 #include <QFile>
 #include <QTextStream>
@@ -312,8 +313,18 @@ bool SubtitleExporter::exportToFCPXML(const SubtitleTrack &track,
     xml.writeAttribute("fontSize", QString::number(item.fontSize));
     xml.writeAttribute("bold", item.bold ? "1" : "0");
     xml.writeAttribute("italic", item.italic ? "1" : "0");
-    xml.writeAttribute("strokeColor", "0 0 0 1");
-    xml.writeAttribute("strokeWidth", "2");
+    if (item.strokeEnabled) {
+      QColor sColor(item.strokeColor);
+      double alpha = item.strokeOpacity;
+      xml.writeAttribute("strokeColor", QString("%1 %2 %3 %4")
+                                            .arg(sColor.redF())
+                                            .arg(sColor.greenF())
+                                            .arg(sColor.blueF())
+                                            .arg(alpha));
+      xml.writeAttribute("strokeWidth", QString::number(item.strokeWidth));
+    } else {
+      xml.writeAttribute("strokeWidth", "0");
+    }
 
     QString alignment = "center";
     if (item.alignment & Qt::AlignLeft)
