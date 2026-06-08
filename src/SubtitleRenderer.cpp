@@ -208,47 +208,89 @@ void SubtitleRenderer::renderSubtitle(QPainter &painter, const QString &text,
     }
   }
 
+  // Draw bubble if bubble is enabled and no speaker bg was drawn
+  if (!bgDrawn && style.bubbleEnabled && !style.bubbleImagePath.isEmpty()) {
+    QImage bubbleImage;
+    {
+      QMutexLocker lock(&s_bgCacheMutex);
+      auto it = s_bgCache.find(style.bubbleImagePath);
+      if (it != s_bgCache.end()) {
+        bubbleImage = *it;
+      } else {
+        bubbleImage = QImage(style.bubbleImagePath);
+        if (!bubbleImage.isNull()) {
+          s_bgCache.insert(style.bubbleImagePath, bubbleImage);
+        }
+      }
+    }
+
+    if (!bubbleImage.isNull()) {
+      // 气泡框的外扩大小在切片大小的基础上加上 5
+      // 像素的呼吸缓冲，确保文本始终安全地装在中央拉伸区域中
+      QRect bubbleRect = textBounding.adjusted(
+          -style.bubblePaddingLeft - 5, -style.bubblePaddingTop - 5,
+          style.bubblePaddingRight + 5, style.bubblePaddingBottom + 5);
+
+      int tw = bubbleRect.width();
+      int th = bubbleRect.height();
+      int sw = bubbleImage.width();
+      int sh = bubbleImage.height();
+
+      QMargins bubbleMargins(style.bubblePaddingLeft, style.bubblePaddingTop,
+                             style.bubblePaddingRight,
+                             style.bubblePaddingBottom);
+
+      if (tw < sw && th < sh) {
+        // 1.
+        // 宽高都小于气泡原图：进行等比例缩小并在居中位置绘制，以防止切片重叠及形变
+        double scale = qMin((double)tw / sw, (double)th / sh);
+        int nw = qRound(sw * scale);
+        int nh = qRound(sh * scale);
+        QRect drawRect(bubbleRect.x() + (tw - nw) / 2,
+                       bubbleRect.y() + (th - nh) / 2, nw, nh);
+        painter.drawImage(drawRect, bubbleImage);
+      } else if (tw >= sw && th >= sh) {
+        // 2. 宽高都放得下：进行标准双向九宫格拉伸
+        drawNinePatch(painter, bubbleImage, bubbleRect, bubbleMargins);
+      } else if (tw >= sw && th < sh) {
+        // 3.
+        // 宽度放得下但高度太矮：将高度整体等比缩放到目标高度，宽度方向进行九宫格拉伸
+        QImage scaledSrc =
+            bubbleImage.scaledToHeight(th, Qt::SmoothTransformation);
+        double ratio = (double)th / sh;
+        int ml = qMax(1, qRound(style.bubblePaddingLeft * ratio));
+        int mr = qMax(1, qRound(style.bubblePaddingRight * ratio));
+        QMargins scaledMargins(ml, 0, mr, 0);
+        drawNinePatch(painter, scaledSrc, bubbleRect, scaledMargins);
+      } else {
+        // 4.
+        // 高度放得下但宽度太窄：将宽度整体等比缩放到目标宽度，高度方向进行九宫格拉伸
+        QImage scaledSrc =
+            bubbleImage.scaledToWidth(tw, Qt::SmoothTransformation);
+        double ratio = (double)tw / sw;
+        int mt = qMax(1, qRound(style.bubblePaddingTop * ratio));
+        int mb = qMax(1, qRound(style.bubblePaddingBottom * ratio));
+        QMargins scaledMargins(0, mt, 0, mb);
+        drawNinePatch(painter, scaledSrc, bubbleRect, scaledMargins);
+      }
+    }
+  }
+
   // Draw custom background box if general style background is enabled and no
   // speaker bg was drawn
   if (!bgDrawn && style.bgType > 0) {
     QRect bgRect = textBounding.adjusted(-style.bgPaddingX, -style.bgPaddingY,
                                          style.bgPaddingX, style.bgPaddingY);
-    if (style.bgType == 1) { // Solid Box
-      painter.save();
-      painter.setRenderHint(QPainter::Antialiasing, true);
-      QColor bgColor = QColor(style.bgColor);
-      bgColor.setAlphaF(style.bgOpacity);
-      painter.setBrush(bgColor);
-      painter.setPen(Qt::NoPen);
-      painter.drawRoundedRect(bgRect, style.bgRoundness, style.bgRoundness);
-      painter.restore();
-    } else if (style.bgType == 2 &&
-               !style.bgImagePath.isEmpty()) { // Custom Image
-      QImage bgImage;
-      {
-        QMutexLocker lock(&s_bgCacheMutex);
-        auto it = s_bgCache.find(style.bgImagePath);
-        if (it != s_bgCache.end()) {
-          bgImage = *it;
-        } else {
-          bgImage = QImage(style.bgImagePath);
-          if (!bgImage.isNull()) {
-            s_bgCache.insert(style.bgImagePath, bgImage);
-          }
-        }
-      }
-      if (!bgImage.isNull()) {
-        painter.save();
-        painter.setOpacity(style.bgOpacity);
-        if (style.bgImage9Patch) {
-          QMargins margins(15, 15, 15, 15);
-          drawNinePatch(painter, bgImage, bgRect, margins);
-        } else {
-          painter.drawImage(bgRect, bgImage);
-        }
-        painter.restore();
-      }
-    }
+    bgRect.translate(style.bgOffsetX, style.bgOffsetY);
+
+    painter.save();
+    painter.setRenderHint(QPainter::Antialiasing, true);
+    QColor bgColor = QColor(style.bgColor);
+    bgColor.setAlphaF(style.bgOpacity);
+    painter.setBrush(bgColor);
+    painter.setPen(Qt::NoPen);
+    painter.drawRoundedRect(bgRect, style.bgRoundness, style.bgRoundness);
+    painter.restore();
   }
 
   // 3. Build text path to support precise outline, fill, and shadow rendering
@@ -320,70 +362,72 @@ void SubtitleRenderer::renderSubtitle(QPainter &painter, const QString &text,
   }
 
   // 6. Fill Text
-  painter.save();
-  QBrush fillBrush;
-  double opacity = style.textOpacity;
+  if (style.fillType >= 0) {
+    painter.save();
+    QBrush fillBrush;
+    double opacity = style.textOpacity;
 
-  if (style.fillType == 0) { // Solid
-    QColor fColor = QColor(style.fillColor);
-    fColor.setAlphaF(opacity);
-    fillBrush = QBrush(fColor);
-  } else if (style.fillType == 1) { // Linear Gradient
-    QLinearGradient grad;
-    double angleRad = qDegreesToRadians(static_cast<double>(style.fillAngle));
-    double dx = qCos(angleRad);
-    double dy = -qSin(angleRad); // QPainter Y is inverted
+    if (style.fillType == 0) { // Solid
+      QColor fColor = QColor(style.fillColor);
+      fColor.setAlphaF(opacity);
+      fillBrush = QBrush(fColor);
+    } else if (style.fillType == 1) { // Linear Gradient
+      QLinearGradient grad;
+      double angleRad = qDegreesToRadians(static_cast<double>(style.fillAngle));
+      double dx = qCos(angleRad);
+      double dy = -qSin(angleRad); // QPainter Y is inverted
 
-    double cx = textBounding.center().x();
-    double cy = textBounding.center().y();
-    double halfW = textBounding.width() / 2.0;
-    double halfH = textBounding.height() / 2.0;
-    double r = qAbs(halfW * dx) + qAbs(halfH * dy);
+      double cx = textBounding.center().x();
+      double cy = textBounding.center().y();
+      double halfW = textBounding.width() / 2.0;
+      double halfH = textBounding.height() / 2.0;
+      double r = qAbs(halfW * dx) + qAbs(halfH * dy);
 
-    grad.setStart(cx - r * dx, cy - r * dy);
-    grad.setFinalStop(cx + r * dx, cy + r * dy);
+      grad.setStart(cx - r * dx, cy - r * dy);
+      grad.setFinalStop(cx + r * dx, cy + r * dy);
 
-    QColor c1 = QColor(style.fillColor);
-    c1.setAlphaF(opacity);
-    QColor c2 = QColor(style.fillColor2);
-    c2.setAlphaF(opacity);
+      QColor c1 = QColor(style.fillColor);
+      c1.setAlphaF(opacity);
+      QColor c2 = QColor(style.fillColor2);
+      c2.setAlphaF(opacity);
 
-    grad.setColorAt(0.0, c1);
-    grad.setColorAt(1.0, c2);
-    fillBrush = QBrush(grad);
-  } else if (style.fillType == 2 &&
-             !style.fillTexturePath.isEmpty()) { // Texture Image
-    QImage textureImage(style.fillTexturePath);
-    if (!textureImage.isNull()) {
-      QPixmap pm = QPixmap::fromImage(textureImage);
-      if (!style.fillTextureTile) {
-        pm = pm.scaled(textBounding.size(), Qt::IgnoreAspectRatio,
-                       Qt::SmoothTransformation);
-      }
-      QBrush texBrush(pm);
-      QTransform brushTrans;
-      brushTrans.translate(textBounding.x(), textBounding.y());
-      texBrush.setTransform(brushTrans);
-      fillBrush = texBrush;
+      grad.setColorAt(0.0, c1);
+      grad.setColorAt(1.0, c2);
+      fillBrush = QBrush(grad);
+    } else if (style.fillType == 2 &&
+               !style.fillTexturePath.isEmpty()) { // Texture Image
+      QImage textureImage(style.fillTexturePath);
+      if (!textureImage.isNull()) {
+        QPixmap pm = QPixmap::fromImage(textureImage);
+        if (!style.fillTextureTile) {
+          pm = pm.scaled(textBounding.size(), Qt::IgnoreAspectRatio,
+                         Qt::SmoothTransformation);
+        }
+        QBrush texBrush(pm);
+        QTransform brushTrans;
+        brushTrans.translate(textBounding.x(), textBounding.y());
+        texBrush.setTransform(brushTrans);
+        fillBrush = texBrush;
 
-      if (opacity < 1.0) {
-        painter.setOpacity(opacity);
+        if (opacity < 1.0) {
+          painter.setOpacity(opacity);
+        }
+      } else {
+        QColor fColor = QColor(style.fillColor);
+        fColor.setAlphaF(opacity);
+        fillBrush = QBrush(fColor);
       }
     } else {
       QColor fColor = QColor(style.fillColor);
       fColor.setAlphaF(opacity);
       fillBrush = QBrush(fColor);
     }
-  } else {
-    QColor fColor = QColor(style.fillColor);
-    fColor.setAlphaF(opacity);
-    fillBrush = QBrush(fColor);
-  }
 
-  painter.setBrush(fillBrush);
-  painter.setPen(Qt::NoPen);
-  painter.fillPath(textPath, fillBrush);
-  painter.restore();
+    painter.setBrush(fillBrush);
+    painter.setPen(Qt::NoPen);
+    painter.fillPath(textPath, fillBrush);
+    painter.restore();
+  }
 
   painter.restore();
 }

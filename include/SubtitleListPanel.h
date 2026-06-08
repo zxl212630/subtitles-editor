@@ -111,6 +111,9 @@ private:
   bool isUpdatingControls_ = false;
 
   // Custom styling controls
+  QCheckBox *fillEnableCheck_ = nullptr;
+  class QFormLayout *fillForm_ = nullptr;
+  class QFormLayout *bgForm_ = nullptr;
   QComboBox *fillTypeCombo_ = nullptr;
   ColorButton *fillColorBtn_ = nullptr;
   ColorButton *fillColor2Btn_ = nullptr;
@@ -133,15 +136,23 @@ private:
   ColorButton *shadowColorBtn_ = nullptr;
   QSlider *shadowOpacitySlider_ = nullptr;
 
-  QComboBox *bgTypeCombo_ = nullptr;
+  QCheckBox *bgEnableCheck_ = nullptr;
   ColorButton *bgColorBtn_ = nullptr;
   QSlider *bgOpacitySlider_ = nullptr;
   QSlider *bgRoundnessSlider_ = nullptr;
   QSlider *bgPaddingXSlider_ = nullptr;
   QSlider *bgPaddingYSlider_ = nullptr;
-  QLineEdit *bgImagePathEdit_ = nullptr;
-  QPushButton *bgImageBrowse_ = nullptr;
-  QCheckBox *bgImage9PatchCheck_ = nullptr;
+  QSpinBox *bgOffsetXSpin_ = nullptr;
+  QSpinBox *bgOffsetYSpin_ = nullptr;
+
+  // 气泡控件成员
+  QCheckBox *bubbleEnableCheck_ = nullptr;
+  QLineEdit *bubbleImagePathEdit_ = nullptr;
+  QPushButton *bubbleImageBrowse_ = nullptr;
+  QSpinBox *bubblePaddingLeftSpin_ = nullptr;
+  QSpinBox *bubblePaddingRightSpin_ = nullptr;
+  QSpinBox *bubblePaddingTopSpin_ = nullptr;
+  QSpinBox *bubblePaddingBottomSpin_ = nullptr;
 
   QComboBox *presetTypeCombo_ = nullptr;
   QListWidget *presetListWidget_ = nullptr;
@@ -154,6 +165,7 @@ private:
   QWidget *createCustomStylePanel();
   QWidget *createPresetStylePanel();
   void loadStyleFromItem(const SubtitleItem &item);
+  void updateFillTypeFields();
   void applyCustomStyleToActiveItem();
   void loadCustomPresets();
   void showPresetContextMenu(int idx, const QPoint &pos);

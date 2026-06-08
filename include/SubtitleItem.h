@@ -51,6 +51,16 @@ struct SubtitleItem {
   int bgPaddingY = 10;
   QString bgImagePath;
   bool bgImage9Patch = true;
+  int bgOffsetX = 0;
+  int bgOffsetY = 0;
+
+  // 气泡属性
+  bool bubbleEnabled = false;
+  QString bubbleImagePath;
+  int bubblePaddingLeft = 15;
+  int bubblePaddingRight = 15;
+  int bubblePaddingTop = 10;
+  int bubblePaddingBottom = 10;
 
   // 归一化排版坐标，默认底部区域 (x: 10%, y: 75%, width: 80%, height: 20%)
   double rectX = 0.1;

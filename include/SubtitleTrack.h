@@ -185,6 +185,14 @@ private:
   int defaultBgPaddingY_ = 10;
   QString defaultBgImagePath_ = "";
   bool defaultBgImage9Patch_ = true;
+  int defaultBgOffsetX_ = 0;
+  int defaultBgOffsetY_ = 0;
+  bool defaultBubbleEnabled_ = false;
+  QString defaultBubbleImagePath_ = "";
+  int defaultBubblePaddingLeft_ = 15;
+  int defaultBubblePaddingRight_ = 15;
+  int defaultBubblePaddingTop_ = 10;
+  int defaultBubblePaddingBottom_ = 10;
 
   QUndoStack *undoStack_ = nullptr;
   bool isPerformingUndoRedo_ = false;

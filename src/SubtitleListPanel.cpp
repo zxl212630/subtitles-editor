@@ -832,37 +832,131 @@ QWidget *SubtitleListPanel::createCustomStylePanel() {
 
   auto *container = new QWidget(scrollArea);
   container->setObjectName("CustomStyleContainer");
+
+  // 美化水平滑块为播放器类似的小圆形指针并适配高亮主题色
+  container->setStyleSheet("QSlider::groove:horizontal {"
+                           "  height: 4px;"
+                           "  background: #3c3c3c;"
+                           "  border-radius: 2px;"
+                           "}"
+                           "QSlider::sub-page:horizontal {"
+                           "  background: palette(highlight);"
+                           "  border-radius: 2px;"
+                           "}"
+                           "QSlider::add-page:horizontal {"
+                           "  background: #3c3c3c;"
+                           "  border-radius: 2px;"
+                           "}"
+                           "QSlider::handle:horizontal {"
+                           "  background: #d1d5db;"
+                           "  width: 12px;"
+                           "  height: 12px;"
+                           "  margin-top: -4px;"
+                           "  margin-bottom: -4px;"
+                           "  border-radius: 6px;"
+                           "}"
+                           "QSlider::handle:horizontal:hover {"
+                           "  background: #ffffff;"
+                           "}");
+
   auto *layout = new QVBoxLayout(container);
   layout->setContentsMargins(12, 12, 12, 12);
   layout->setSpacing(16);
 
-  // Helper for layout styling (unifies with stylesheet themes)
-  auto createGroup = [&](const QString &title, QLayout *insideLayout) {
-    auto *group = new QGroupBox(title, container);
-    group->setLayout(insideLayout);
-    group->setStyleSheet(
-        "QGroupBox { font-weight: bold; border: 1px solid #3c3c3c; "
-        "border-radius: 6px; margin-top: 10px; padding: 10px; }"
-        "QGroupBox::title { subcontrol-origin: margin; left: 10px; padding: 0 "
-        "3px; }");
-    return group;
-  };
+  // 初始化折叠图标
+  QPixmap downArrowPixmap(":/icons/down-arrow.svg");
+  QTransform trans;
+  trans.rotate(-90);
+  QPixmap rightArrowPixmap =
+      downArrowPixmap.transformed(trans, Qt::SmoothTransformation);
+
+  // Helper for collapsible section frame
+  auto createCollapsibleGroup =
+      [&](const QString &title, QFormLayout *formLayout, QCheckBox *toggleCheck,
+          bool defaultExpanded) {
+        auto *contentFrame = new QFrame(container);
+        // 去除额外白框与背景颜色，直接平铺融入面板中
+        contentFrame->setStyleSheet(
+            "QFrame { background: transparent; border: none; }");
+        contentFrame->setLayout(formLayout);
+        formLayout->setContentsMargins(12, 12, 12, 12);
+        formLayout->setSpacing(8);
+
+        auto *headerButton = new QPushButton(container);
+        headerButton->setFlat(true);
+        headerButton->setCursor(Qt::PointingHandCursor);
+        headerButton->setFixedHeight(28);
+        headerButton->setStyleSheet(
+            "QPushButton { border: none; background: transparent; }");
+
+        auto *headerInnerLayout = new QHBoxLayout(headerButton);
+        headerInnerLayout->setContentsMargins(4, 0, 8, 0);
+        headerInnerLayout->setSpacing(6);
+
+        auto *headerLabel = new QLabel(title, headerButton);
+        headerLabel->setStyleSheet(
+            "font-weight: bold; font-size: 13px; color: palette(text);");
+
+        auto *headerIcon = new QLabel(headerButton);
+        headerIcon->setFixedSize(12, 12);
+        headerIcon->setScaledContents(true);
+
+        headerInnerLayout->addWidget(headerLabel, 0, Qt::AlignVCenter);
+        headerInnerLayout->addWidget(headerIcon, 0, Qt::AlignVCenter);
+        headerInnerLayout->addStretch();
+
+        headerButton->setProperty("expanded", defaultExpanded);
+
+        auto updateState = [=]() {
+          bool checked = toggleCheck->isChecked();
+          bool expanded = headerButton->property("expanded").toBool();
+
+          // 即使不启用，也可以展开/折叠
+          contentFrame->setVisible(expanded);
+
+          headerIcon->setPixmap(expanded ? downArrowPixmap : rightArrowPixmap);
+
+          // 置灰不可编辑
+          contentFrame->setEnabled(checked);
+          headerButton->setEnabled(true);
+        };
+
+        connect(headerButton, &QPushButton::clicked, this, [=]() {
+          bool expanded = headerButton->property("expanded").toBool();
+          headerButton->setProperty("expanded", !expanded);
+          updateState();
+        });
+
+        connect(toggleCheck, &QCheckBox::stateChanged, this,
+                [=](int /*state*/) { updateState(); });
+
+        auto *headerLayout = new QHBoxLayout();
+        headerLayout->setContentsMargins(0, 0, 0, 0);
+        headerLayout->setSpacing(4);
+        headerLayout->addWidget(toggleCheck);
+        headerLayout->addWidget(headerButton, 1);
+
+        layout->addLayout(headerLayout);
+        layout->addWidget(contentFrame);
+
+        updateState();
+      };
 
   // --- TEXT FILL GROUP ---
-  auto *fillForm = new QFormLayout();
-  fillForm->setContentsMargins(0, 0, 0, 0);
-  fillForm->setSpacing(8);
+  fillForm_ = new QFormLayout();
+  fillForm_->setContentsMargins(0, 0, 0, 0);
+  fillForm_->setSpacing(8);
 
   fillTypeCombo_ = new QComboBox(container);
   fillTypeCombo_->addItems(
       {tr("Solid"), tr("Linear Gradient"), tr("Texture Image")});
-  fillForm->addRow(tr("Fill Type"), fillTypeCombo_);
+  fillForm_->addRow(tr("Fill Type"), fillTypeCombo_);
 
   fillColorBtn_ = new ColorButton(container);
-  fillForm->addRow(tr("Color"), fillColorBtn_);
+  fillForm_->addRow(tr("Color"), fillColorBtn_);
 
   fillColor2Btn_ = new ColorButton(container);
-  fillForm->addRow(tr("Gradient 2"), fillColor2Btn_);
+  fillForm_->addRow(tr("Gradient 2"), fillColor2Btn_);
 
   auto *angleContainer = new QWidget(container);
   auto *angleLayout = new QHBoxLayout(angleContainer);
@@ -874,7 +968,7 @@ QWidget *SubtitleListPanel::createCustomStylePanel() {
   fillAngleSpin_->setRange(0, 360);
   angleLayout->addWidget(fillAngleSlider_);
   angleLayout->addWidget(fillAngleSpin_);
-  fillForm->addRow(tr("Angle"), angleContainer);
+  fillForm_->addRow(tr("Angle"), angleContainer);
 
   auto *textureContainer = new QWidget(container);
   auto *textureLayout = new QHBoxLayout(textureContainer);
@@ -886,24 +980,22 @@ QWidget *SubtitleListPanel::createCustomStylePanel() {
   fillTextureBrowse_->setFixedWidth(60);
   textureLayout->addWidget(fillTextureEdit_);
   textureLayout->addWidget(fillTextureBrowse_);
-  fillForm->addRow(tr("Image"), textureContainer);
+  fillForm_->addRow(tr("Image"), textureContainer);
 
   fillTextureTileCheck_ = new QCheckBox(tr("Tile Image"), container);
-  fillForm->addRow(QString(), fillTextureTileCheck_);
+  fillForm_->addRow(QString(), fillTextureTileCheck_);
 
   textOpacitySlider_ = new QSlider(Qt::Horizontal, container);
   textOpacitySlider_->setRange(0, 100);
-  fillForm->addRow(tr("Opacity"), textOpacitySlider_);
+  fillForm_->addRow(tr("Opacity"), textOpacitySlider_);
 
-  layout->addWidget(createGroup(tr("Fill"), fillForm));
+  fillEnableCheck_ = new QCheckBox(container);
+  createCollapsibleGroup(tr("Fill"), fillForm_, fillEnableCheck_, true);
 
   // --- OUTLINE GROUP ---
   auto *strokeForm = new QFormLayout();
   strokeForm->setContentsMargins(0, 0, 0, 0);
   strokeForm->setSpacing(8);
-
-  strokeEnableCheck_ = new QCheckBox(tr("Enabled"), container);
-  strokeForm->addRow(QString(), strokeEnableCheck_);
 
   strokeColorBtn_ = new ColorButton(container);
   strokeForm->addRow(tr("Color"), strokeColorBtn_);
@@ -916,15 +1008,13 @@ QWidget *SubtitleListPanel::createCustomStylePanel() {
   strokeOpacitySlider_->setRange(0, 100);
   strokeForm->addRow(tr("Opacity"), strokeOpacitySlider_);
 
-  layout->addWidget(createGroup(tr("Outline"), strokeForm));
+  strokeEnableCheck_ = new QCheckBox(container);
+  createCollapsibleGroup(tr("Outline"), strokeForm, strokeEnableCheck_, false);
 
   // --- SHADOW GROUP ---
   auto *shadowForm = new QFormLayout();
   shadowForm->setContentsMargins(0, 0, 0, 0);
   shadowForm->setSpacing(8);
-
-  shadowEnableCheck_ = new QCheckBox(tr("Enabled"), container);
-  shadowForm->addRow(QString(), shadowEnableCheck_);
 
   shadowColorBtn_ = new ColorButton(container);
   shadowForm->addRow(tr("Color"), shadowColorBtn_);
@@ -951,27 +1041,24 @@ QWidget *SubtitleListPanel::createCustomStylePanel() {
   shadowOpacitySlider_->setRange(0, 100);
   shadowForm->addRow(tr("Opacity"), shadowOpacitySlider_);
 
-  layout->addWidget(createGroup(tr("Shadow"), shadowForm));
+  shadowEnableCheck_ = new QCheckBox(container);
+  createCollapsibleGroup(tr("Shadow"), shadowForm, shadowEnableCheck_, false);
 
   // --- BACKGROUND GROUP ---
-  auto *bgForm = new QFormLayout();
-  bgForm->setContentsMargins(0, 0, 0, 0);
-  bgForm->setSpacing(8);
-
-  bgTypeCombo_ = new QComboBox(container);
-  bgTypeCombo_->addItems({tr("None"), tr("Solid Box"), tr("Custom Image")});
-  bgForm->addRow(tr("Type"), bgTypeCombo_);
+  bgForm_ = new QFormLayout();
+  bgForm_->setContentsMargins(0, 0, 0, 0);
+  bgForm_->setSpacing(8);
 
   bgColorBtn_ = new ColorButton(container);
-  bgForm->addRow(tr("Color"), bgColorBtn_);
+  bgForm_->addRow(tr("Color"), bgColorBtn_);
 
   bgOpacitySlider_ = new QSlider(Qt::Horizontal, container);
   bgOpacitySlider_->setRange(0, 100);
-  bgForm->addRow(tr("Opacity"), bgOpacitySlider_);
+  bgForm_->addRow(tr("Opacity"), bgOpacitySlider_);
 
   bgRoundnessSlider_ = new QSlider(Qt::Horizontal, container);
   bgRoundnessSlider_->setRange(0, 50);
-  bgForm->addRow(tr("Roundness"), bgRoundnessSlider_);
+  bgForm_->addRow(tr("Roundness"), bgRoundnessSlider_);
 
   auto *paddingContainer = new QWidget(container);
   auto *paddingLayout = new QHBoxLayout(paddingContainer);
@@ -985,24 +1072,73 @@ QWidget *SubtitleListPanel::createCustomStylePanel() {
   paddingLayout->addWidget(bgPaddingXSlider_);
   paddingLayout->addWidget(new QLabel("Y:", paddingContainer));
   paddingLayout->addWidget(bgPaddingYSlider_);
-  bgForm->addRow(tr("Padding"), paddingContainer);
+  bgForm_->addRow(tr("Padding"), paddingContainer);
 
-  auto *bgImageContainer = new QWidget(container);
-  auto *bgImageLayout = new QHBoxLayout(bgImageContainer);
-  bgImageLayout->setContentsMargins(0, 0, 0, 0);
-  bgImageLayout->setSpacing(4);
-  bgImagePathEdit_ = new QLineEdit(bgImageContainer);
-  bgImagePathEdit_->setReadOnly(true);
-  bgImageBrowse_ = new QPushButton(tr("Browse"), bgImageContainer);
-  bgImageBrowse_->setFixedWidth(60);
-  bgImageLayout->addWidget(bgImagePathEdit_);
-  bgImageLayout->addWidget(bgImageBrowse_);
-  bgForm->addRow(tr("Image"), bgImageContainer);
+  // 新增背景的上下/左右偏移设置
+  auto *bgOffsetContainer = new QWidget(container);
+  auto *bgOffsetLayout = new QHBoxLayout(bgOffsetContainer);
+  bgOffsetLayout->setContentsMargins(0, 0, 0, 0);
+  bgOffsetLayout->setSpacing(8);
+  bgOffsetXSpin_ = new QSpinBox(bgOffsetContainer);
+  bgOffsetXSpin_->setRange(-200, 200);
+  bgOffsetYSpin_ = new QSpinBox(bgOffsetContainer);
+  bgOffsetYSpin_->setRange(-200, 200);
+  bgOffsetLayout->addWidget(new QLabel("X:", bgOffsetContainer));
+  bgOffsetLayout->addWidget(bgOffsetXSpin_);
+  bgOffsetLayout->addWidget(new QLabel("Y:", bgOffsetContainer));
+  bgOffsetLayout->addWidget(bgOffsetYSpin_);
+  bgForm_->addRow(tr("Offset"), bgOffsetContainer);
 
-  bgImage9PatchCheck_ = new QCheckBox(tr("Nine-Patch"), container);
-  bgForm->addRow(QString(), bgImage9PatchCheck_);
+  bgEnableCheck_ = new QCheckBox(container);
+  createCollapsibleGroup(tr("Background"), bgForm_, bgEnableCheck_, false);
 
-  layout->addWidget(createGroup(tr("Background"), bgForm));
+  // --- BUBBLE GROUP ---
+  auto *bubbleForm = new QFormLayout();
+  bubbleForm->setContentsMargins(0, 0, 0, 0);
+  bubbleForm->setSpacing(8);
+
+  auto *bubbleImageContainer = new QWidget(container);
+  auto *bubbleImageLayout = new QHBoxLayout(bubbleImageContainer);
+  bubbleImageLayout->setContentsMargins(0, 0, 0, 0);
+  bubbleImageLayout->setSpacing(4);
+  bubbleImagePathEdit_ = new QLineEdit(bubbleImageContainer);
+  bubbleImagePathEdit_->setReadOnly(true);
+  bubbleImageBrowse_ = new QPushButton(tr("Browse"), bubbleImageContainer);
+  bubbleImageBrowse_->setFixedWidth(60);
+  bubbleImageLayout->addWidget(bubbleImagePathEdit_);
+  bubbleImageLayout->addWidget(bubbleImageBrowse_);
+  bubbleForm->addRow(tr("Image"), bubbleImageContainer);
+
+  auto *lrPaddingContainer = new QWidget(container);
+  auto *lrPaddingLayout = new QHBoxLayout(lrPaddingContainer);
+  lrPaddingLayout->setContentsMargins(0, 0, 0, 0);
+  lrPaddingLayout->setSpacing(8);
+  bubblePaddingLeftSpin_ = new QSpinBox(lrPaddingContainer);
+  bubblePaddingLeftSpin_->setRange(0, 200);
+  bubblePaddingRightSpin_ = new QSpinBox(lrPaddingContainer);
+  bubblePaddingRightSpin_->setRange(0, 200);
+  lrPaddingLayout->addWidget(new QLabel("L:", lrPaddingContainer));
+  lrPaddingLayout->addWidget(bubblePaddingLeftSpin_);
+  lrPaddingLayout->addWidget(new QLabel("R:", lrPaddingContainer));
+  lrPaddingLayout->addWidget(bubblePaddingRightSpin_);
+  bubbleForm->addRow(tr("L/R Padding"), lrPaddingContainer);
+
+  auto *tbPaddingContainer = new QWidget(container);
+  auto *tbPaddingLayout = new QHBoxLayout(tbPaddingContainer);
+  tbPaddingLayout->setContentsMargins(0, 0, 0, 0);
+  tbPaddingLayout->setSpacing(8);
+  bubblePaddingTopSpin_ = new QSpinBox(tbPaddingContainer);
+  bubblePaddingTopSpin_->setRange(0, 200);
+  bubblePaddingBottomSpin_ = new QSpinBox(tbPaddingContainer);
+  bubblePaddingBottomSpin_->setRange(0, 200);
+  tbPaddingLayout->addWidget(new QLabel("T:", tbPaddingContainer));
+  tbPaddingLayout->addWidget(bubblePaddingTopSpin_);
+  tbPaddingLayout->addWidget(new QLabel("B:", tbPaddingContainer));
+  tbPaddingLayout->addWidget(bubblePaddingBottomSpin_);
+  bubbleForm->addRow(tr("T/B Padding"), tbPaddingContainer);
+
+  bubbleEnableCheck_ = new QCheckBox(container);
+  createCollapsibleGroup(tr("Bubble"), bubbleForm, bubbleEnableCheck_, false);
 
   // Connect Slider and Spinbox for Angle
   connect(fillAngleSlider_, &QSlider::valueChanged, fillAngleSpin_,
@@ -1021,12 +1157,12 @@ QWidget *SubtitleListPanel::createCustomStylePanel() {
     }
   });
 
-  connect(bgImageBrowse_, &QPushButton::clicked, this, [this]() {
-    QString path = QFileDialog::getOpenFileName(
-        this, tr("Select Background Image"), QString(),
-        tr("Images (*.png *.jpg *.jpeg)"));
+  connect(bubbleImageBrowse_, &QPushButton::clicked, this, [this]() {
+    QString path =
+        QFileDialog::getOpenFileName(this, tr("Select Bubble Image"), QString(),
+                                     tr("Images (*.png *.jpg *.jpeg)"));
     if (!path.isEmpty()) {
-      bgImagePathEdit_->setText(path);
+      bubbleImagePathEdit_->setText(path);
       applyCustomStyleToActiveItem();
     }
   });
@@ -1035,8 +1171,12 @@ QWidget *SubtitleListPanel::createCustomStylePanel() {
   auto triggerUpdate = [this]() { applyCustomStyleToActiveItem(); };
 
   // Connect interactive controls
+  connect(fillEnableCheck_, &QCheckBox::stateChanged, this, triggerUpdate);
   connect(fillTypeCombo_, QOverload<int>::of(&QComboBox::currentIndexChanged),
-          this, triggerUpdate);
+          this, [this, triggerUpdate]() {
+            updateFillTypeFields();
+            triggerUpdate();
+          });
   connect(fillColorBtn_, &ColorButton::colorChanged, this, triggerUpdate);
   connect(fillColor2Btn_, &ColorButton::colorChanged, this, triggerUpdate);
   connect(fillAngleSlider_, &QSlider::valueChanged, this, triggerUpdate);
@@ -1056,18 +1196,30 @@ QWidget *SubtitleListPanel::createCustomStylePanel() {
   connect(shadowOffsetYSpin_, QOverload<int>::of(&QSpinBox::valueChanged), this,
           triggerUpdate);
   connect(shadowBlurSlider_, &QSlider::valueChanged, this, triggerUpdate);
-  connect(shadowOpacitySlider_, &QSlider::valueChanged, this, triggerUpdate);
+  connect(shadowOpacitySlider_, &QSlider::sliderReleased, this, triggerUpdate);
 
-  connect(bgTypeCombo_, QOverload<int>::of(&QComboBox::currentIndexChanged),
-          this, triggerUpdate);
+  connect(bgEnableCheck_, &QCheckBox::stateChanged, this, triggerUpdate);
   connect(bgColorBtn_, &ColorButton::colorChanged, this, triggerUpdate);
   connect(bgOpacitySlider_, &QSlider::valueChanged, this, triggerUpdate);
   connect(bgRoundnessSlider_, &QSlider::valueChanged, this, triggerUpdate);
   connect(bgPaddingXSlider_, &QSlider::valueChanged, this, triggerUpdate);
   connect(bgPaddingYSlider_, &QSlider::valueChanged, this, triggerUpdate);
-  connect(bgImage9PatchCheck_, &QCheckBox::stateChanged, this, triggerUpdate);
+  connect(bgOffsetXSpin_, QOverload<int>::of(&QSpinBox::valueChanged), this,
+          triggerUpdate);
+  connect(bgOffsetYSpin_, QOverload<int>::of(&QSpinBox::valueChanged), this,
+          triggerUpdate);
 
-  // Undo support on slider release
+  connect(bubbleEnableCheck_, &QCheckBox::stateChanged, this, triggerUpdate);
+  connect(bubblePaddingLeftSpin_, QOverload<int>::of(&QSpinBox::valueChanged),
+          this, triggerUpdate);
+  connect(bubblePaddingRightSpin_, QOverload<int>::of(&QSpinBox::valueChanged),
+          this, triggerUpdate);
+  connect(bubblePaddingTopSpin_, QOverload<int>::of(&QSpinBox::valueChanged),
+          this, triggerUpdate);
+  connect(bubblePaddingBottomSpin_, QOverload<int>::of(&QSpinBox::valueChanged),
+          this, triggerUpdate);
+
+  // Undo support on slider release / spinbox edit finished
   auto recordUndoState = [this]() {
     if (track_ && !currentSelectedId_.isEmpty()) {
       SubtitleItem item;
@@ -1078,7 +1230,8 @@ QWidget *SubtitleListPanel::createCustomStylePanel() {
         }
       }
 
-      item.fillType = fillTypeCombo_->currentIndex();
+      item.fillType =
+          fillEnableCheck_->isChecked() ? fillTypeCombo_->currentIndex() : -1;
       item.fillColor = fillColorBtn_->color().name();
       item.fillColor2 = fillColor2Btn_->color().name();
       item.fillAngle = fillAngleSlider_->value();
@@ -1098,14 +1251,21 @@ QWidget *SubtitleListPanel::createCustomStylePanel() {
       item.shadowBlur = shadowBlurSlider_->value();
       item.shadowOpacity = shadowOpacitySlider_->value() / 100.0;
 
-      item.bgType = bgTypeCombo_->currentIndex();
+      item.bgType = bgEnableCheck_->isChecked() ? 1 : 0;
       item.bgColor = bgColorBtn_->color().name();
       item.bgOpacity = bgOpacitySlider_->value() / 100.0;
       item.bgRoundness = bgRoundnessSlider_->value();
       item.bgPaddingX = bgPaddingXSlider_->value();
       item.bgPaddingY = bgPaddingYSlider_->value();
-      item.bgImagePath = bgImagePathEdit_->text();
-      item.bgImage9Patch = bgImage9PatchCheck_->isChecked();
+      item.bgOffsetX = bgOffsetXSpin_->value();
+      item.bgOffsetY = bgOffsetYSpin_->value();
+
+      item.bubbleEnabled = bubbleEnableCheck_->isChecked();
+      item.bubbleImagePath = bubbleImagePathEdit_->text();
+      item.bubblePaddingLeft = bubblePaddingLeftSpin_->value();
+      item.bubblePaddingRight = bubblePaddingRightSpin_->value();
+      item.bubblePaddingTop = bubblePaddingTopSpin_->value();
+      item.bubblePaddingBottom = bubblePaddingBottomSpin_->value();
 
       track_->updateItem(currentSelectedId_, item);
     }
@@ -1123,18 +1283,36 @@ QWidget *SubtitleListPanel::createCustomStylePanel() {
   connect(bgPaddingXSlider_, &QSlider::sliderReleased, this, recordUndoState);
   connect(bgPaddingYSlider_, &QSlider::sliderReleased, this, recordUndoState);
 
+  connect(bgOffsetXSpin_, &QSpinBox::editingFinished, this, recordUndoState);
+  connect(bgOffsetYSpin_, &QSpinBox::editingFinished, this, recordUndoState);
+  connect(bubblePaddingLeftSpin_, &QSpinBox::editingFinished, this,
+          recordUndoState);
+  connect(bubblePaddingRightSpin_, &QSpinBox::editingFinished, this,
+          recordUndoState);
+  connect(bubblePaddingTopSpin_, &QSpinBox::editingFinished, this,
+          recordUndoState);
+  connect(bubblePaddingBottomSpin_, &QSpinBox::editingFinished, this,
+          recordUndoState);
+
+  // 添加拉伸弹簧，确保多余空间由底部弹簧吸收，从而使各展开组高度固定，不被强制拉伸
+  layout->addStretch();
+
   scrollArea->setWidget(container);
   mainLayout->addWidget(scrollArea);
+
+  // 初始化显隐状态
+  updateFillTypeFields();
 
   // 保存当前样式为预设的按钮
   savePresetBtn_ = new QPushButton(tr("+ Save Current Style"), mainContainer);
   savePresetBtn_->setObjectName("SavePresetBtn");
+  savePresetBtn_->setFixedWidth(160);
   savePresetBtn_->setStyleSheet(
       "QPushButton { background-color: #2c2c2c; border: 1px solid #444; "
-      "border-radius: 4px; padding: 8px 12px; min-height: 28px; color: #eee; "
-      "margin: 12px; }"
+      "border-radius: 4px; padding: 5px 10px; min-height: 24px; color: #eee; "
+      "margin: 8px 12px; font-size: 11px; }"
       "QPushButton:hover { background-color: #3c3c3c; border-color: #555; }");
-  mainLayout->addWidget(savePresetBtn_);
+  mainLayout->addWidget(savePresetBtn_, 0, Qt::AlignCenter);
 
   // 保存为预设点击逻辑
   connect(savePresetBtn_, &QPushButton::clicked, this, [this]() {
@@ -1196,8 +1374,15 @@ QWidget *SubtitleListPanel::createCustomStylePanel() {
     styleObj["bgRoundness"] = item.bgRoundness;
     styleObj["bgPaddingX"] = item.bgPaddingX;
     styleObj["bgPaddingY"] = item.bgPaddingY;
-    styleObj["bgImagePath"] = item.bgImagePath;
-    styleObj["bgImage9Patch"] = item.bgImage9Patch;
+    styleObj["bgOffsetX"] = item.bgOffsetX;
+    styleObj["bgOffsetY"] = item.bgOffsetY;
+
+    styleObj["bubbleEnabled"] = item.bubbleEnabled;
+    styleObj["bubbleImagePath"] = item.bubbleImagePath;
+    styleObj["bubblePaddingLeft"] = item.bubblePaddingLeft;
+    styleObj["bubblePaddingRight"] = item.bubblePaddingRight;
+    styleObj["bubblePaddingTop"] = item.bubblePaddingTop;
+    styleObj["bubblePaddingBottom"] = item.bubblePaddingBottom;
 
     presetObj["style"] = styleObj;
     array.append(presetObj);
@@ -1292,14 +1477,26 @@ QString SubtitleListPanel::generateSvgForPreset(const SubtitleItem &style) {
     strokeAttr = " stroke=\"none\"";
   }
 
-  // 3. 背景底框
+  // 3. 背景底框与气泡
+  if (style.bubbleEnabled && !style.bubbleImagePath.isEmpty()) {
+    bgRect += QString("  <rect x=\"4\" y=\"12\" width=\"72\" height=\"56\" "
+                      "rx=\"6\" ry=\"6\" fill=\"#555555\" fill-opacity=\"0.4\" "
+                      "stroke=\"#888888\" stroke-width=\"1.5\" "
+                      "stroke-dasharray=\"3,3\" />\n");
+  }
+
   if (style.bgType == 1) {
     double rx = qMin(15.0, style.bgRoundness * 0.5);
-    bgRect = QString("  <rect x=\"8\" y=\"16\" width=\"64\" height=\"48\" "
-                     "rx=\"%1\" ry=\"%1\" fill=\"%2\" fill-opacity=\"%3\" />\n")
-                 .arg(rx)
-                 .arg(style.bgColor)
-                 .arg(style.bgOpacity);
+    double bx = 8.0 + style.bgOffsetX * 0.2;
+    double by = 16.0 + style.bgOffsetY * 0.2;
+    bgRect +=
+        QString("  <rect x=\"%1\" y=\"%2\" width=\"64\" height=\"48\" "
+                "rx=\"%3\" ry=\"%3\" fill=\"%4\" fill-opacity=\"%5\" />\n")
+            .arg(bx)
+            .arg(by)
+            .arg(rx)
+            .arg(style.bgColor)
+            .arg(style.bgOpacity);
   }
 
   // 4. 手动阴影路径 (规避 Qt SVG 对 filter 阴影支持不佳的问题)
@@ -1495,8 +1692,16 @@ QWidget *SubtitleListPanel::createPresetStylePanel() {
             style.bgRoundness = styleObj["bgRoundness"].toInt(4);
             style.bgPaddingX = styleObj["bgPaddingX"].toInt(15);
             style.bgPaddingY = styleObj["bgPaddingY"].toInt(10);
-            style.bgImagePath = styleObj["bgImagePath"].toString();
-            style.bgImage9Patch = styleObj["bgImage9Patch"].toBool(true);
+            style.bgOffsetX = styleObj["bgOffsetX"].toInt(0);
+            style.bgOffsetY = styleObj["bgOffsetY"].toInt(0);
+
+            style.bubbleEnabled = styleObj["bubbleEnabled"].toBool(false);
+            style.bubbleImagePath = styleObj["bubbleImagePath"].toString();
+            style.bubblePaddingLeft = styleObj["bubblePaddingLeft"].toInt(15);
+            style.bubblePaddingRight = styleObj["bubblePaddingRight"].toInt(15);
+            style.bubblePaddingTop = styleObj["bubblePaddingTop"].toInt(10);
+            style.bubblePaddingBottom =
+                styleObj["bubblePaddingBottom"].toInt(10);
 
             if (!currentSelectedId_.isEmpty()) {
               SubtitleItem item;
@@ -1532,8 +1737,15 @@ QWidget *SubtitleListPanel::createPresetStylePanel() {
               item.bgRoundness = style.bgRoundness;
               item.bgPaddingX = style.bgPaddingX;
               item.bgPaddingY = style.bgPaddingY;
-              item.bgImagePath = style.bgImagePath;
-              item.bgImage9Patch = style.bgImage9Patch;
+              item.bgOffsetX = style.bgOffsetX;
+              item.bgOffsetY = style.bgOffsetY;
+
+              item.bubbleEnabled = style.bubbleEnabled;
+              item.bubbleImagePath = style.bubbleImagePath;
+              item.bubblePaddingLeft = style.bubblePaddingLeft;
+              item.bubblePaddingRight = style.bubblePaddingRight;
+              item.bubblePaddingTop = style.bubblePaddingTop;
+              item.bubblePaddingBottom = style.bubblePaddingBottom;
 
               track_->updateItem(currentSelectedId_, item);
               loadStyleFromItem(item);
@@ -1565,8 +1777,15 @@ QWidget *SubtitleListPanel::createPresetStylePanel() {
               item.bgRoundness = style.bgRoundness;
               item.bgPaddingX = style.bgPaddingX;
               item.bgPaddingY = style.bgPaddingY;
-              item.bgImagePath = style.bgImagePath;
-              item.bgImage9Patch = style.bgImage9Patch;
+              item.bgOffsetX = style.bgOffsetX;
+              item.bgOffsetY = style.bgOffsetY;
+
+              item.bubbleEnabled = style.bubbleEnabled;
+              item.bubbleImagePath = style.bubbleImagePath;
+              item.bubblePaddingLeft = style.bubblePaddingLeft;
+              item.bubblePaddingRight = style.bubblePaddingRight;
+              item.bubblePaddingTop = style.bubblePaddingTop;
+              item.bubblePaddingBottom = style.bubblePaddingBottom;
 
               track_->setDefaultStyleItem(item);
               loadStyleFromItem(item);
@@ -1596,8 +1815,12 @@ QWidget *SubtitleListPanel::createPresetStylePanel() {
 void SubtitleListPanel::loadStyleFromItem(const SubtitleItem &item) {
   isUpdatingControls_ = true;
 
-  if (fillTypeCombo_)
-    fillTypeCombo_->setCurrentIndex(item.fillType);
+  if (fillEnableCheck_)
+    fillEnableCheck_->setChecked(item.fillType >= 0);
+  if (fillTypeCombo_) {
+    int idx = (item.fillType >= 0) ? item.fillType : 0;
+    fillTypeCombo_->setCurrentIndex(idx);
+  }
   if (fillColorBtn_)
     fillColorBtn_->setColor(QColor(item.fillColor));
   if (fillColor2Btn_)
@@ -1635,8 +1858,8 @@ void SubtitleListPanel::loadStyleFromItem(const SubtitleItem &item) {
   if (shadowOpacitySlider_)
     shadowOpacitySlider_->setValue(qRound(item.shadowOpacity * 100.0));
 
-  if (bgTypeCombo_)
-    bgTypeCombo_->setCurrentIndex(item.bgType);
+  if (bgEnableCheck_)
+    bgEnableCheck_->setChecked(item.bgType > 0);
   if (bgColorBtn_)
     bgColorBtn_->setColor(QColor(item.bgColor));
   if (bgOpacitySlider_)
@@ -1647,12 +1870,27 @@ void SubtitleListPanel::loadStyleFromItem(const SubtitleItem &item) {
     bgPaddingXSlider_->setValue(item.bgPaddingX);
   if (bgPaddingYSlider_)
     bgPaddingYSlider_->setValue(item.bgPaddingY);
-  if (bgImagePathEdit_)
-    bgImagePathEdit_->setText(item.bgImagePath);
-  if (bgImage9PatchCheck_)
-    bgImage9PatchCheck_->setChecked(item.bgImage9Patch);
+  if (bgOffsetXSpin_)
+    bgOffsetXSpin_->setValue(item.bgOffsetX);
+  if (bgOffsetYSpin_)
+    bgOffsetYSpin_->setValue(item.bgOffsetY);
+
+  if (bubbleEnableCheck_)
+    bubbleEnableCheck_->setChecked(item.bubbleEnabled);
+  if (bubbleImagePathEdit_)
+    bubbleImagePathEdit_->setText(item.bubbleImagePath);
+  if (bubblePaddingLeftSpin_)
+    bubblePaddingLeftSpin_->setValue(item.bubblePaddingLeft);
+  if (bubblePaddingRightSpin_)
+    bubblePaddingRightSpin_->setValue(item.bubblePaddingRight);
+  if (bubblePaddingTopSpin_)
+    bubblePaddingTopSpin_->setValue(item.bubblePaddingTop);
+  if (bubblePaddingBottomSpin_)
+    bubblePaddingBottomSpin_->setValue(item.bubblePaddingBottom);
 
   isUpdatingControls_ = false;
+
+  updateFillTypeFields();
 }
 
 void SubtitleListPanel::applyCustomStyleToActiveItem() {
@@ -1678,7 +1916,8 @@ void SubtitleListPanel::applyCustomStyleToActiveItem() {
     item = track_->defaultStyleItem();
   }
 
-  item.fillType = fillTypeCombo_->currentIndex();
+  item.fillType =
+      fillEnableCheck_->isChecked() ? fillTypeCombo_->currentIndex() : -1;
   item.fillColor = fillColorBtn_->color().name();
   item.fillColor2 = fillColor2Btn_->color().name();
   item.fillAngle = fillAngleSlider_->value();
@@ -1698,14 +1937,21 @@ void SubtitleListPanel::applyCustomStyleToActiveItem() {
   item.shadowBlur = shadowBlurSlider_->value();
   item.shadowOpacity = shadowOpacitySlider_->value() / 100.0;
 
-  item.bgType = bgTypeCombo_->currentIndex();
+  item.bgType = bgEnableCheck_->isChecked() ? 1 : 0;
   item.bgColor = bgColorBtn_->color().name();
   item.bgOpacity = bgOpacitySlider_->value() / 100.0;
   item.bgRoundness = bgRoundnessSlider_->value();
   item.bgPaddingX = bgPaddingXSlider_->value();
   item.bgPaddingY = bgPaddingYSlider_->value();
-  item.bgImagePath = bgImagePathEdit_->text();
-  item.bgImage9Patch = bgImage9PatchCheck_->isChecked();
+  item.bgOffsetX = bgOffsetXSpin_->value();
+  item.bgOffsetY = bgOffsetYSpin_->value();
+
+  item.bubbleEnabled = bubbleEnableCheck_->isChecked();
+  item.bubbleImagePath = bubbleImagePathEdit_->text();
+  item.bubblePaddingLeft = bubblePaddingLeftSpin_->value();
+  item.bubblePaddingRight = bubblePaddingRightSpin_->value();
+  item.bubblePaddingTop = bubblePaddingTopSpin_->value();
+  item.bubblePaddingBottom = bubblePaddingBottomSpin_->value();
 
   if (found) {
     track_->updateItemDirect(activeId, item);
@@ -1758,8 +2004,15 @@ void SubtitleListPanel::loadCustomPresets() {
     item.bgRoundness = styleObj["bgRoundness"].toInt(4);
     item.bgPaddingX = styleObj["bgPaddingX"].toInt(15);
     item.bgPaddingY = styleObj["bgPaddingY"].toInt(10);
-    item.bgImagePath = styleObj["bgImagePath"].toString();
-    item.bgImage9Patch = styleObj["bgImage9Patch"].toBool(true);
+    item.bgOffsetX = styleObj["bgOffsetX"].toInt(0);
+    item.bgOffsetY = styleObj["bgOffsetY"].toInt(0);
+
+    item.bubbleEnabled = styleObj["bubbleEnabled"].toBool(false);
+    item.bubbleImagePath = styleObj["bubbleImagePath"].toString();
+    item.bubblePaddingLeft = styleObj["bubblePaddingLeft"].toInt(15);
+    item.bubblePaddingRight = styleObj["bubblePaddingRight"].toInt(15);
+    item.bubblePaddingTop = styleObj["bubblePaddingTop"].toInt(10);
+    item.bubblePaddingBottom = styleObj["bubblePaddingBottom"].toInt(10);
 
     addPresetCard(name, item, true, i);
   }
@@ -1830,8 +2083,15 @@ void SubtitleListPanel::addPresetCard(const QString &name,
   styleObj["bgRoundness"] = style.bgRoundness;
   styleObj["bgPaddingX"] = style.bgPaddingX;
   styleObj["bgPaddingY"] = style.bgPaddingY;
-  styleObj["bgImagePath"] = style.bgImagePath;
-  styleObj["bgImage9Patch"] = style.bgImage9Patch;
+  styleObj["bgOffsetX"] = style.bgOffsetX;
+  styleObj["bgOffsetY"] = style.bgOffsetY;
+
+  styleObj["bubbleEnabled"] = style.bubbleEnabled;
+  styleObj["bubbleImagePath"] = style.bubbleImagePath;
+  styleObj["bubblePaddingLeft"] = style.bubblePaddingLeft;
+  styleObj["bubblePaddingRight"] = style.bubblePaddingRight;
+  styleObj["bubblePaddingTop"] = style.bubblePaddingTop;
+  styleObj["bubblePaddingBottom"] = style.bubblePaddingBottom;
 
   QJsonDocument doc(styleObj);
   item->setData(Qt::UserRole, doc.toJson(QJsonDocument::Compact));
@@ -1939,6 +2199,34 @@ void SubtitleListPanel::populatePresets() {
   } else {
     loadCustomPresets();
   }
+}
+
+void SubtitleListPanel::updateFillTypeFields() {
+  if (!fillTypeCombo_ || !fillForm_)
+    return;
+
+  auto setRowVisible = [](QFormLayout *form, int row, bool visible) {
+    auto *item = form->itemAt(row, QFormLayout::FieldRole);
+    if (!item)
+      return;
+    auto *widget = item->widget();
+    if (widget) {
+      widget->setVisible(visible);
+      auto *label = form->labelForField(widget);
+      if (label)
+        label->setVisible(visible);
+    }
+  };
+
+  int idx =
+      fillTypeCombo_->currentIndex(); // 0 = Solid, 1 = Gradient, 2 = Texture
+
+  setRowVisible(fillForm_, 1, idx == 0 || idx == 1);
+  setRowVisible(fillForm_, 2, idx == 1);
+  setRowVisible(fillForm_, 3, idx == 1);
+  setRowVisible(fillForm_, 4, idx == 2);
+  setRowVisible(fillForm_, 5, idx == 2);
+  setRowVisible(fillForm_, 6, true);
 }
 
 #include "SubtitleListPanel.moc"
