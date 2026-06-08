@@ -1,4 +1,5 @@
 #include "SubtitleListPanel.h"
+#include "AppMessageBox.h"
 #include "ConfigManager.h"
 #include "SpeakerManagerDialog.h"
 #include "SubtitleListDelegate.h"
@@ -6,9 +7,12 @@
 #include "SubtitleTrack.h"
 #include "ThemeManager.h"
 #include "TranslationManager.h"
+#include <QBrush>
 #include <QCheckBox>
 #include <QColorDialog>
 #include <QComboBox>
+#include <QDir>
+#include <QFile>
 #include <QFileDialog>
 #include <QFormLayout>
 #include <QGridLayout>
@@ -17,10 +21,14 @@
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QMenu>
+#include <QPainter>
+#include <QPainterPath>
+#include <QPen>
 #include <QScrollArea>
 #include <QSlider>
 #include <QSpinBox>
 #include <QStackedWidget>
+#include <QSvgRenderer>
 
 #include <QCoreApplication>
 #include <QFrame>
@@ -172,6 +180,22 @@ void SubtitleListPanel::retranslateUi() {
     headerText_->setText(tr("Subtitle"));
   if (headerAction_)
     headerAction_->setText(tr("Action"));
+
+  if (presetTypeCombo_) {
+    // 临时阻止信号，避免更新文本时触发 index 更改
+    bool old = presetTypeCombo_->signalsBlocked();
+    presetTypeCombo_->blockSignals(true);
+    int idx = presetTypeCombo_->currentIndex();
+    presetTypeCombo_->clear();
+    presetTypeCombo_->addItem(tr("System Presets"), 0);
+    presetTypeCombo_->addItem(tr("Custom Presets"), 1);
+    presetTypeCombo_->setCurrentIndex(idx);
+    presetTypeCombo_->blockSignals(old);
+  }
+  if (savePresetBtn_) {
+    savePresetBtn_->setText(tr("+ Save Current Style"));
+  }
+  populatePresets();
 }
 
 void SubtitleListPanel::setupUi() {
@@ -461,11 +485,25 @@ void SubtitleListPanel::setupUi() {
   stackedWidget_->setObjectName("SubtitlePanelStackedWidget");
   stackedWidget_->addWidget(panelContent);
 
+  auto *presetWrapper = new QFrame(this);
+  presetWrapper->setObjectName("SubtitlePanelContent");
+  presetWrapper->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
+  auto *presetWrapperLayout = new QVBoxLayout(presetWrapper);
+  presetWrapperLayout->setContentsMargins(12, 12, 12, 12);
+  presetWrapperLayout->setSpacing(0);
   QWidget *presetPanel = createPresetStylePanel();
-  stackedWidget_->addWidget(presetPanel);
+  presetWrapperLayout->addWidget(presetPanel);
+  stackedWidget_->addWidget(presetWrapper);
 
+  auto *customWrapper = new QFrame(this);
+  customWrapper->setObjectName("SubtitlePanelContent");
+  customWrapper->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
+  auto *customWrapperLayout = new QVBoxLayout(customWrapper);
+  customWrapperLayout->setContentsMargins(12, 12, 12, 12);
+  customWrapperLayout->setSpacing(0);
   QWidget *customPanel = createCustomStylePanel();
-  stackedWidget_->addWidget(customPanel);
+  customWrapperLayout->addWidget(customPanel);
+  stackedWidget_->addWidget(customWrapper);
 
   layout->addWidget(stackedWidget_);
 
@@ -780,7 +818,13 @@ void SubtitleListPanel::showSpeakerMenu(const QModelIndex &index,
 }
 
 QWidget *SubtitleListPanel::createCustomStylePanel() {
-  auto *scrollArea = new QScrollArea(this);
+  auto *mainContainer = new QWidget(this);
+  mainContainer->setObjectName("CustomStyleMainContainer");
+  auto *mainLayout = new QVBoxLayout(mainContainer);
+  mainLayout->setContentsMargins(0, 0, 0, 0);
+  mainLayout->setSpacing(0);
+
+  auto *scrollArea = new QScrollArea(mainContainer);
   scrollArea->setWidgetResizable(true);
   scrollArea->setFrameShape(QFrame::NoFrame);
   scrollArea->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
@@ -1080,143 +1124,20 @@ QWidget *SubtitleListPanel::createCustomStylePanel() {
   connect(bgPaddingYSlider_, &QSlider::sliderReleased, this, recordUndoState);
 
   scrollArea->setWidget(container);
-  return scrollArea;
-}
+  mainLayout->addWidget(scrollArea);
 
-QWidget *SubtitleListPanel::createPresetStylePanel() {
-  auto *scrollArea = new QScrollArea(this);
-  scrollArea->setWidgetResizable(true);
-  scrollArea->setFrameShape(QFrame::NoFrame);
-  scrollArea->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
-  scrollArea->setVerticalScrollBarPolicy(Qt::ScrollBarAsNeeded);
-
-  auto *container = new QWidget(scrollArea);
-  container->setObjectName("PresetStyleContainer");
-  auto *layout = new QVBoxLayout(container);
-  layout->setContentsMargins(12, 12, 12, 12);
-  layout->setSpacing(12);
-
-  auto *gridLayout = new QGridLayout();
-  gridLayout->setSpacing(12);
-
-  // 1. Default White (默认白)
-  SubtitleItem p1;
-  p1.fillType = 0;
-  p1.fillColor = "#FFFFFF";
-  p1.textOpacity = 1.0;
-  p1.strokeEnabled = true;
-  p1.strokeWidth = 2;
-  p1.strokeColor = "#000000";
-  p1.strokeOpacity = 1.0;
-  p1.shadowEnabled = false;
-  p1.bgType = 0;
-
-  // 2. Classic Yellow (经典黄)
-  SubtitleItem p2;
-  p2.fillType = 0;
-  p2.fillColor = "#FFCC00";
-  p2.textOpacity = 1.0;
-  p2.strokeEnabled = true;
-  p2.strokeWidth = 2;
-  p2.strokeColor = "#000000";
-  p2.strokeOpacity = 1.0;
-  p2.shadowEnabled = false;
-  p2.bgType = 0;
-
-  // 3. Soft Shadow (柔和阴影)
-  SubtitleItem p3;
-  p3.fillType = 0;
-  p3.fillColor = "#FFFFFF";
-  p3.textOpacity = 1.0;
-  p3.strokeEnabled = false;
-  p3.shadowEnabled = true;
-  p3.shadowColor = "#000000";
-  p3.shadowOffsetX = 2;
-  p3.shadowOffsetY = 2;
-  p3.shadowBlur = 5;
-  p3.shadowOpacity = 0.6;
-  p3.bgType = 0;
-
-  // 4. Neon Glow (霓虹光)
-  SubtitleItem p4;
-  p4.fillType = 0;
-  p4.fillColor = "#00FFFF";
-  p4.textOpacity = 1.0;
-  p4.strokeEnabled = true;
-  p4.strokeColor = "#FF00FF";
-  p4.strokeWidth = 4;
-  p4.strokeOpacity = 0.8;
-  p4.shadowEnabled = true;
-  p4.shadowColor = "#FF00FF";
-  p4.shadowOffsetX = 0;
-  p4.shadowOffsetY = 0;
-  p4.shadowBlur = 10;
-  p4.shadowOpacity = 0.9;
-  p4.bgType = 0;
-
-  // 5. Translucent Box (半透背景)
-  SubtitleItem p5;
-  p5.fillType = 0;
-  p5.fillColor = "#FFFFFF";
-  p5.textOpacity = 1.0;
-  p5.strokeEnabled = false;
-  p5.shadowEnabled = false;
-  p5.bgType = 1;
-  p5.bgColor = "#000000";
-  p5.bgOpacity = 0.6;
-  p5.bgRoundness = 4;
-  p5.bgPaddingX = 15;
-  p5.bgPaddingY = 10;
-
-  // 6. Silver Gradient (银渐变)
-  SubtitleItem p6;
-  p6.fillType = 1;
-  p6.fillColor = "#FFFFFF";
-  p6.fillColor2 = "#AAAAAA";
-  p6.fillAngle = 90;
-  p6.textOpacity = 1.0;
-  p6.strokeEnabled = true;
-  p6.strokeColor = "#111111";
-  p6.strokeWidth = 2;
-  p6.strokeOpacity = 1.0;
-  p6.shadowEnabled = false;
-  p6.bgType = 0;
-
-  addPresetCard(tr("Default White"), p1, gridLayout, 0, 0);
-  addPresetCard(tr("Classic Yellow"), p2, gridLayout, 0, 1);
-  addPresetCard(tr("Soft Shadow"), p3, gridLayout, 1, 0);
-  addPresetCard(tr("Neon Glow"), p4, gridLayout, 1, 1);
-  addPresetCard(tr("Translucent Box"), p5, gridLayout, 2, 0);
-  addPresetCard(tr("Silver Gradient"), p6, gridLayout, 2, 1);
-
-  layout->addLayout(gridLayout);
-
-  auto *separator = new QFrame(container);
-  separator->setFrameShape(QFrame::HLine);
-  separator->setStyleSheet(
-      "background-color: #333; margin-top: 10px; margin-bottom: 10px;");
-  layout->addWidget(separator);
-
-  auto *customTitle = new QLabel(tr("Custom Presets"), container);
-  customTitle->setStyleSheet(
-      "font-weight: bold; font-size: 13px; color: #aaa;");
-  layout->addWidget(customTitle);
-
-  presetGridContainer_ = new QFrame(container);
-  auto *pgLayout = new QGridLayout(presetGridContainer_);
-  pgLayout->setContentsMargins(0, 0, 0, 0);
-  pgLayout->setSpacing(12);
-  layout->addWidget(presetGridContainer_);
-
-  auto *saveBtn = new QPushButton(tr("+ Save Current Style"), container);
-  saveBtn->setObjectName("SavePresetBtn");
-  saveBtn->setStyleSheet(
+  // 保存当前样式为预设的按钮
+  savePresetBtn_ = new QPushButton(tr("+ Save Current Style"), mainContainer);
+  savePresetBtn_->setObjectName("SavePresetBtn");
+  savePresetBtn_->setStyleSheet(
       "QPushButton { background-color: #2c2c2c; border: 1px solid #444; "
-      "border-radius: 4px; padding: 6px 12px; min-height: 28px; }"
+      "border-radius: 4px; padding: 8px 12px; min-height: 28px; color: #eee; "
+      "margin: 12px; }"
       "QPushButton:hover { background-color: #3c3c3c; border-color: #555; }");
-  layout->addWidget(saveBtn);
+  mainLayout->addWidget(savePresetBtn_);
 
-  connect(saveBtn, &QPushButton::clicked, this, [this]() {
+  // 保存为预设点击逻辑
+  connect(savePresetBtn_, &QPushButton::clicked, this, [this]() {
     if (!track_)
       return;
 
@@ -1285,15 +1206,391 @@ QWidget *SubtitleListPanel::createPresetStylePanel() {
         key, "data", QJsonDocument(array).toJson(QJsonDocument::Compact));
     ConfigManager::instance().sync();
 
-    loadCustomPresets();
+    // 自动切换到自定义预设页并更新显示
+    if (presetTypeCombo_) {
+      presetTypeCombo_->setCurrentIndex(1);
+    }
+    populatePresets();
+
+    // 切换到预设 tab 页，让用户直观地看到新保存的预设
+    if (tabPreset_) {
+      tabPreset_->click();
+    }
   });
 
-  layout->addStretch();
+  return mainContainer;
+}
 
-  loadCustomPresets();
+QIcon SubtitleListPanel::createPresetIcon(const SubtitleItem &style,
+                                          const QSize &size) {
+  QString svgContent = generateSvgForPreset(style);
+  QByteArray svgData = svgContent.toUtf8();
+  QSvgRenderer renderer(svgData);
 
-  scrollArea->setWidget(container);
-  return scrollArea;
+  qreal dpr = devicePixelRatio();
+  QImage image(size * dpr, QImage::Format_ARGB32_Premultiplied);
+  image.setDevicePixelRatio(dpr);
+  image.fill(Qt::transparent);
+
+  QPainter painter(&image);
+  painter.setRenderHint(QPainter::Antialiasing, true);
+  painter.setRenderHint(QPainter::SmoothPixmapTransform, true);
+
+  renderer.render(&painter, QRectF(0, 0, size.width(), size.height()));
+
+  return QIcon(QPixmap::fromImage(image));
+}
+
+QString SubtitleListPanel::generateSvgForPreset(const SubtitleItem &style) {
+  QString defs;
+  QString fillAttr;
+  QString strokeAttr;
+  QString bgRect;
+  QString paths;
+
+  // 1. 填充渐变或纯色
+  if (style.fillType == 1) {
+    // 线性渐变角度处理
+    double rad = (90 - style.fillAngle) * 3.14159265358979323846 / 180.0;
+    double x1 = 50 - 50 * cos(rad);
+    double y1 = 50 - 50 * sin(rad);
+    double x2 = 50 + 50 * cos(rad);
+    double y2 = 50 + 50 * sin(rad);
+
+    defs += QString("    <linearGradient id=\"grad\" x1=\"%1%\" y1=\"%2%\" "
+                    "x2=\"%3%\" y2=\"%4%\">\n"
+                    "      <stop offset=\"0%\" stop-color=\"%5\" "
+                    "stop-opacity=\"%6\" />\n"
+                    "      <stop offset=\"100%\" stop-color=\"%7\" "
+                    "stop-opacity=\"%8\" />\n"
+                    "    </linearGradient>\n")
+                .arg(x1)
+                .arg(y1)
+                .arg(x2)
+                .arg(y2)
+                .arg(style.fillColor)
+                .arg(style.textOpacity)
+                .arg(style.fillColor2)
+                .arg(style.textOpacity);
+
+    fillAttr = "url(#grad)";
+  } else {
+    fillAttr = style.fillColor;
+  }
+
+  // 2. 描边属性
+  if (style.strokeEnabled && style.strokeWidth > 0) {
+    // 为 80x80 画布缩放描边粗细
+    double sw = qMax(1.0, style.strokeWidth * 0.5);
+    strokeAttr =
+        QString(" stroke=\"%1\" stroke-width=\"%2\" stroke-opacity=\"%3\" "
+                "stroke-linejoin=\"round\" stroke-linecap=\"round\"")
+            .arg(style.strokeColor)
+            .arg(sw)
+            .arg(style.strokeOpacity);
+  } else {
+    strokeAttr = " stroke=\"none\"";
+  }
+
+  // 3. 背景底框
+  if (style.bgType == 1) {
+    double rx = qMin(15.0, style.bgRoundness * 0.5);
+    bgRect = QString("  <rect x=\"8\" y=\"16\" width=\"64\" height=\"48\" "
+                     "rx=\"%1\" ry=\"%1\" fill=\"%2\" fill-opacity=\"%3\" />\n")
+                 .arg(rx)
+                 .arg(style.bgColor)
+                 .arg(style.bgOpacity);
+  }
+
+  // 4. 手动阴影路径 (规避 Qt SVG 对 filter 阴影支持不佳的问题)
+  // 字母 "A" 的基本矢量路径
+  QString pathD = "M 25,60 L 37,20 L 43,20 L 55,60 L 47,60 L 44,48 L 36,48 L "
+                  "33,60 Z M 37,43 L 43,43 L 40,32 Z";
+
+  if (style.shadowEnabled && style.shadowOpacity > 0.0) {
+    // 缩放阴影位移，在 80x80 图标上稍微放大一点以获得更明显的视觉反馈
+    double dx = style.shadowOffsetX * 1.5;
+    double dy = style.shadowOffsetY * 1.5;
+    QString shColor = style.shadowColor;
+    double opacity = style.shadowOpacity;
+    double blur = qMax(1.0, style.shadowBlur * 0.8);
+
+    // 三层叠加来模拟软模糊边缘效果
+    // 外层极虚化投影
+    paths += QString("  <path d=\"%1\" fill=\"%2\" fill-opacity=\"%3\" "
+                     "stroke=\"%2\" stroke-width=\"%4\" stroke-opacity=\"%3\" "
+                     "stroke-linejoin=\"round\" stroke-linecap=\"round\" "
+                     "transform=\"translate(%5, %6)\" />\n")
+                 .arg(pathD)
+                 .arg(shColor)
+                 .arg(opacity * 0.25)
+                 .arg(blur * 1.5)
+                 .arg(dx)
+                 .arg(dy);
+
+    // 中间虚化投影
+    paths += QString("  <path d=\"%1\" fill=\"%2\" fill-opacity=\"%3\" "
+                     "stroke=\"%2\" stroke-width=\"%4\" stroke-opacity=\"%3\" "
+                     "stroke-linejoin=\"round\" stroke-linecap=\"round\" "
+                     "transform=\"translate(%5, %6)\" />\n")
+                 .arg(pathD)
+                 .arg(shColor)
+                 .arg(opacity * 0.5)
+                 .arg(blur * 0.8)
+                 .arg(dx)
+                 .arg(dy);
+
+    // 内层实体投影
+    paths += QString("  <path d=\"%1\" fill=\"%2\" fill-opacity=\"%3\" "
+                     "stroke=\"%2\" stroke-width=\"%4\" stroke-opacity=\"%3\" "
+                     "stroke-linejoin=\"round\" stroke-linecap=\"round\" "
+                     "transform=\"translate(%5, %6)\" />\n")
+                 .arg(pathD)
+                 .arg(shColor)
+                 .arg(opacity * 0.8)
+                 .arg(blur * 0.3)
+                 .arg(dx)
+                 .arg(dy);
+  }
+
+  // 5. 主体路径 "A"
+  paths += QString("  <path d=\"%1\" fill=\"%2\" fill-opacity=\"%3\"%4 />\n")
+               .arg(pathD)
+               .arg(fillAttr)
+               .arg(style.fillType == 1 ? 1.0 : style.textOpacity)
+               .arg(strokeAttr);
+
+  QString svg =
+      QString("<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"80\" "
+              "height=\"80\" viewBox=\"0 0 80 80\">\n"
+              "  <defs>\n"
+              "%1"
+              "  </defs>\n"
+              "%2"
+              "%3"
+              "</svg>")
+          .arg(defs)
+          .arg(bgRect)
+          .arg(paths);
+
+  return svg;
+}
+
+QString SubtitleListPanel::writeSvgPresetFile(const QString &name,
+                                              const SubtitleItem &style) {
+  QString svg = generateSvgForPreset(style);
+  QString filename = QString("preset_%1.svg").arg(name);
+  filename.replace(" ", "_");
+  QString path = QDir::tempPath() + "/" + filename;
+  QFile file(path);
+  if (file.open(QIODevice::WriteOnly | QIODevice::Text)) {
+    file.write(svg.toUtf8());
+    file.close();
+  }
+  return path;
+}
+
+QWidget *SubtitleListPanel::createPresetStylePanel() {
+  auto *container = new QWidget(this);
+  container->setObjectName("PresetStyleContainer");
+  auto *layout = new QVBoxLayout(container);
+  layout->setContentsMargins(12, 12, 12, 12);
+  layout->setSpacing(12);
+
+  // 下拉选择框：切换系统预设与自定义预设
+  presetTypeCombo_ = new QComboBox(container);
+  presetTypeCombo_->addItem(tr("System Presets"), 0);
+  presetTypeCombo_->addItem(tr("Custom Presets"), 1);
+  presetTypeCombo_->setStyleSheet(
+      "QComboBox { background-color: #2c2c2c; border: 1px solid #444; "
+      "border-radius: 4px; padding: 4px 8px; color: #eee; }"
+      "QComboBox::drop-down { border: none; }"
+      "QComboBox QAbstractItemView { background-color: #2c2c2c; "
+      "selection-background-color: #0088cc; }");
+  layout->addWidget(presetTypeCombo_);
+
+  // 列表容器：提供与字幕列表一致的背景色和边框
+  auto *listContainer = new QFrame(container);
+  listContainer->setObjectName("SubtitleListContainer");
+  listContainer->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
+  auto *lcLayout = new QVBoxLayout(listContainer);
+  lcLayout->setContentsMargins(6, 6, 6, 6);
+  lcLayout->setSpacing(0);
+
+  // 流式布局的 QListWidget
+  presetListWidget_ = new QListWidget(listContainer);
+  presetListWidget_->setObjectName("PresetListWidget");
+  presetListWidget_->setViewMode(QListView::IconMode);
+  presetListWidget_->setResizeMode(QListView::Adjust);
+  presetListWidget_->setMovement(QListView::Static);
+  presetListWidget_->setFlow(QListView::LeftToRight);
+  presetListWidget_->setWrapping(true);
+  presetListWidget_->setSpacing(8);
+  presetListWidget_->setUniformItemSizes(true);
+  presetListWidget_->setGridSize(QSize(76, 76));
+  presetListWidget_->setIconSize(QSize(60, 60));
+  presetListWidget_->setVerticalScrollBarPolicy(Qt::ScrollBarAsNeeded);
+  presetListWidget_->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+  presetListWidget_->setContextMenuPolicy(Qt::CustomContextMenu);
+
+  presetListWidget_->setStyleSheet(
+      "QListWidget#PresetListWidget {"
+      "  background-color: transparent;"
+      "  border: none;"
+      "}"
+      "QListWidget#PresetListWidget::item {"
+      "  background-color: #242424;"
+      "  border: 1px solid #3c3c3c;"
+      "  border-radius: 6px;"
+      "}"
+      "QListWidget#PresetListWidget::item:hover {"
+      "  background-color: #2e2e2e;"
+      "  border-color: #0088cc;"
+      "}"
+      "QListWidget#PresetListWidget::item:selected {"
+      "  background-color: #2e2e2e;"
+      "  border-color: #0088cc;"
+      "}");
+
+  lcLayout->addWidget(presetListWidget_);
+  layout->addWidget(listContainer);
+
+  // 切换类型连接
+  connect(presetTypeCombo_, QOverload<int>::of(&QComboBox::currentIndexChanged),
+          this, &SubtitleListPanel::populatePresets);
+
+  // 点击应用预设
+  connect(presetListWidget_, &QListWidget::itemClicked, this,
+          [this](QListWidgetItem *item) {
+            if (!item || !track_)
+              return;
+            QString jsonStr = item->data(Qt::UserRole).toString();
+            QJsonObject styleObj =
+                QJsonDocument::fromJson(jsonStr.toUtf8()).object();
+
+            SubtitleItem style;
+            style.fillType = styleObj["fillType"].toInt(0);
+            style.fillColor = styleObj["fillColor"].toString("#FFFFFF");
+            style.fillColor2 = styleObj["fillColor2"].toString("#FFFFFF");
+            style.fillAngle = styleObj["fillAngle"].toInt(90);
+            style.fillTexturePath = styleObj["fillTexturePath"].toString();
+            style.fillTextureTile = styleObj["fillTextureTile"].toBool(true);
+            style.textOpacity = styleObj["textOpacity"].toDouble(1.0);
+
+            style.strokeEnabled = styleObj["strokeEnabled"].toBool(false);
+            style.strokeWidth = styleObj["strokeWidth"].toInt(2);
+            style.strokeColor = styleObj["strokeColor"].toString("#000000");
+            style.strokeOpacity = styleObj["strokeOpacity"].toDouble(1.0);
+
+            style.shadowEnabled = styleObj["shadowEnabled"].toBool(false);
+            style.shadowOffsetX = styleObj["shadowOffsetX"].toInt(3);
+            style.shadowOffsetY = styleObj["shadowOffsetY"].toInt(3);
+            style.shadowBlur = styleObj["shadowBlur"].toInt(5);
+            style.shadowColor = styleObj["shadowColor"].toString("#000000");
+            style.shadowOpacity = styleObj["shadowOpacity"].toDouble(0.5);
+
+            style.bgType = styleObj["bgType"].toInt(0);
+            style.bgColor = styleObj["bgColor"].toString("#000000");
+            style.bgOpacity = styleObj["bgOpacity"].toDouble(0.6);
+            style.bgRoundness = styleObj["bgRoundness"].toInt(4);
+            style.bgPaddingX = styleObj["bgPaddingX"].toInt(15);
+            style.bgPaddingY = styleObj["bgPaddingY"].toInt(10);
+            style.bgImagePath = styleObj["bgImagePath"].toString();
+            style.bgImage9Patch = styleObj["bgImage9Patch"].toBool(true);
+
+            if (!currentSelectedId_.isEmpty()) {
+              SubtitleItem item;
+              for (const auto &it : track_->items()) {
+                if (it.id == currentSelectedId_) {
+                  item = it;
+                  break;
+                }
+              }
+              item.fillType = style.fillType;
+              item.fillColor = style.fillColor;
+              item.fillColor2 = style.fillColor2;
+              item.fillAngle = style.fillAngle;
+              item.fillTexturePath = style.fillTexturePath;
+              item.fillTextureTile = style.fillTextureTile;
+              item.textOpacity = style.textOpacity;
+
+              item.strokeEnabled = style.strokeEnabled;
+              item.strokeWidth = style.strokeWidth;
+              item.strokeColor = style.strokeColor;
+              item.strokeOpacity = style.strokeOpacity;
+
+              item.shadowEnabled = style.shadowEnabled;
+              item.shadowOffsetX = style.shadowOffsetX;
+              item.shadowOffsetY = style.shadowOffsetY;
+              item.shadowBlur = style.shadowBlur;
+              item.shadowColor = style.shadowColor;
+              item.shadowOpacity = style.shadowOpacity;
+
+              item.bgType = style.bgType;
+              item.bgColor = style.bgColor;
+              item.bgOpacity = style.bgOpacity;
+              item.bgRoundness = style.bgRoundness;
+              item.bgPaddingX = style.bgPaddingX;
+              item.bgPaddingY = style.bgPaddingY;
+              item.bgImagePath = style.bgImagePath;
+              item.bgImage9Patch = style.bgImage9Patch;
+
+              track_->updateItem(currentSelectedId_, item);
+              loadStyleFromItem(item);
+            } else {
+              SubtitleItem item = track_->defaultStyleItem();
+              item.fillType = style.fillType;
+              item.fillColor = style.fillColor;
+              item.fillColor2 = style.fillColor2;
+              item.fillAngle = style.fillAngle;
+              item.fillTexturePath = style.fillTexturePath;
+              item.fillTextureTile = style.fillTextureTile;
+              item.textOpacity = style.textOpacity;
+
+              item.strokeEnabled = style.strokeEnabled;
+              item.strokeWidth = style.strokeWidth;
+              item.strokeColor = style.strokeColor;
+              item.strokeOpacity = style.strokeOpacity;
+
+              item.shadowEnabled = style.shadowEnabled;
+              item.shadowOffsetX = style.shadowOffsetX;
+              item.shadowOffsetY = style.shadowOffsetY;
+              item.shadowBlur = style.shadowBlur;
+              item.shadowColor = style.shadowColor;
+              item.shadowOpacity = style.shadowOpacity;
+
+              item.bgType = style.bgType;
+              item.bgColor = style.bgColor;
+              item.bgOpacity = style.bgOpacity;
+              item.bgRoundness = style.bgRoundness;
+              item.bgPaddingX = style.bgPaddingX;
+              item.bgPaddingY = style.bgPaddingY;
+              item.bgImagePath = style.bgImagePath;
+              item.bgImage9Patch = style.bgImage9Patch;
+
+              track_->setDefaultStyleItem(item);
+              loadStyleFromItem(item);
+            }
+          });
+
+  // 右键菜单删除自定义预设
+  connect(presetListWidget_, &QListWidget::customContextMenuRequested, this,
+          [this](const QPoint &pos) {
+            QListWidgetItem *item = presetListWidget_->itemAt(pos);
+            if (!item)
+              return;
+            bool isCustom = item->data(Qt::UserRole + 1).toBool();
+            int customIndex = item->data(Qt::UserRole + 2).toInt();
+            if (isCustom) {
+              showPresetContextMenu(customIndex,
+                                    presetListWidget_->mapToGlobal(pos));
+            }
+          });
+
+  // 初始化填充预设数据
+  populatePresets();
+
+  return container;
 }
 
 void SubtitleListPanel::loadStyleFromItem(const SubtitleItem &item) {
@@ -1418,23 +1715,10 @@ void SubtitleListPanel::applyCustomStyleToActiveItem() {
 }
 
 void SubtitleListPanel::loadCustomPresets() {
-  if (!presetGridContainer_)
+  if (!presetListWidget_)
     return;
 
-  QLayout *l = presetGridContainer_->layout();
-  if (l) {
-    QLayoutItem *child;
-    while ((child = l->takeAt(0)) != nullptr) {
-      if (child->widget()) {
-        child->widget()->deleteLater();
-      }
-      delete child;
-    }
-  }
-
-  auto *layout = qobject_cast<QGridLayout *>(l);
-  if (!layout)
-    return;
+  presetListWidget_->clear();
 
   QString key = "Custom Presets";
   QString existingRaw = ConfigManager::instance().getString(key, "data");
@@ -1477,124 +1761,184 @@ void SubtitleListPanel::loadCustomPresets() {
     item.bgImagePath = styleObj["bgImagePath"].toString();
     item.bgImage9Patch = styleObj["bgImage9Patch"].toBool(true);
 
-    int row = i / 2;
-    int col = i % 2;
-    addPresetCard(name, item, layout, row, col);
+    addPresetCard(name, item, true, i);
+  }
+}
+
+void SubtitleListPanel::showPresetContextMenu(int idx, const QPoint &pos) {
+  QMenu menu(this);
+  QAction *deleteAct = menu.addAction(tr("Delete"));
+  QAction *chosen = menu.exec(pos);
+  if (chosen == deleteAct) {
+    int result = AppMessageBox::question(
+        this, tr("Delete Preset"),
+        tr("Are you sure you want to delete this preset?"),
+        AppMessageBox::Yes | AppMessageBox::No);
+    if (result == AppMessageBox::Yes) {
+      QString key = "Custom Presets";
+      QJsonArray array;
+      QString existingRaw = ConfigManager::instance().getString(key, "data");
+      if (!existingRaw.isEmpty()) {
+        array = QJsonDocument::fromJson(existingRaw.toUtf8()).array();
+      }
+      if (idx >= 0 && idx < array.size()) {
+        array.removeAt(idx);
+        ConfigManager::instance().setValue(
+            key, "data", QJsonDocument(array).toJson(QJsonDocument::Compact));
+        ConfigManager::instance().sync();
+        loadCustomPresets();
+      }
+    }
   }
 }
 
 void SubtitleListPanel::addPresetCard(const QString &name,
-                                      const SubtitleItem &style,
-                                      QGridLayout *layout, int row, int col) {
-  auto *btn = new QPushButton(
-      name, presetGridContainer_ ? (QWidget *)presetGridContainer_ : this);
-  btn->setObjectName("PresetCardBtn");
+                                      const SubtitleItem &style, bool isCustom,
+                                      int customIndex) {
+  if (!presetListWidget_)
+    return;
 
-  QString colorStyle;
-  if (style.fillType == 0 || style.fillType == 1) {
-    colorStyle = QString("color: %1;").arg(style.fillColor);
-  }
+  auto *item = new QListWidgetItem(presetListWidget_);
+  item->setIcon(createPresetIcon(style, QSize(60, 60)));
+  item->setToolTip(name);
 
-  QString bgStyle;
-  if (style.bgType == 1) {
-    QColor bg(style.bgColor);
-    bg.setAlphaF(style.bgOpacity);
-    bgStyle = QString("background-color: rgba(%1, %2, %3, %4);")
-                  .arg(bg.red())
-                  .arg(bg.green())
-                  .arg(bg.blue())
-                  .arg(bg.alpha());
+  // 序列化样式为 JSON 并存储到 UserRole 中
+  QJsonObject styleObj;
+  styleObj["fillType"] = style.fillType;
+  styleObj["fillColor"] = style.fillColor;
+  styleObj["fillColor2"] = style.fillColor2;
+  styleObj["fillAngle"] = style.fillAngle;
+  styleObj["fillTexturePath"] = style.fillTexturePath;
+  styleObj["fillTextureTile"] = style.fillTextureTile;
+  styleObj["textOpacity"] = style.textOpacity;
+
+  styleObj["strokeEnabled"] = style.strokeEnabled;
+  styleObj["strokeWidth"] = style.strokeWidth;
+  styleObj["strokeColor"] = style.strokeColor;
+  styleObj["strokeOpacity"] = style.strokeOpacity;
+
+  styleObj["shadowEnabled"] = style.shadowEnabled;
+  styleObj["shadowOffsetX"] = style.shadowOffsetX;
+  styleObj["shadowOffsetY"] = style.shadowOffsetY;
+  styleObj["shadowBlur"] = style.shadowBlur;
+  styleObj["shadowColor"] = style.shadowColor;
+  styleObj["shadowOpacity"] = style.shadowOpacity;
+
+  styleObj["bgType"] = style.bgType;
+  styleObj["bgColor"] = style.bgColor;
+  styleObj["bgOpacity"] = style.bgOpacity;
+  styleObj["bgRoundness"] = style.bgRoundness;
+  styleObj["bgPaddingX"] = style.bgPaddingX;
+  styleObj["bgPaddingY"] = style.bgPaddingY;
+  styleObj["bgImagePath"] = style.bgImagePath;
+  styleObj["bgImage9Patch"] = style.bgImage9Patch;
+
+  QJsonDocument doc(styleObj);
+  item->setData(Qt::UserRole, doc.toJson(QJsonDocument::Compact));
+  item->setData(Qt::UserRole + 1, isCustom);
+  item->setData(Qt::UserRole + 2, customIndex);
+}
+
+void SubtitleListPanel::populatePresets() {
+  if (!presetListWidget_)
+    return;
+
+  presetListWidget_->clear();
+
+  int type = presetTypeCombo_ ? presetTypeCombo_->currentIndex() : 0;
+  if (type == 0) {
+    // 1. Default White (默认白)
+    SubtitleItem p1;
+    p1.fillType = 0;
+    p1.fillColor = "#FFFFFF";
+    p1.textOpacity = 1.0;
+    p1.strokeEnabled = true;
+    p1.strokeWidth = 2;
+    p1.strokeColor = "#000000";
+    p1.strokeOpacity = 1.0;
+    p1.shadowEnabled = false;
+    p1.bgType = 0;
+
+    // 2. Classic Yellow (经典黄)
+    SubtitleItem p2;
+    p2.fillType = 0;
+    p2.fillColor = "#FFCC00";
+    p2.textOpacity = 1.0;
+    p2.strokeEnabled = true;
+    p2.strokeWidth = 2;
+    p2.strokeColor = "#000000";
+    p2.strokeOpacity = 1.0;
+    p2.shadowEnabled = false;
+    p2.bgType = 0;
+
+    // 3. Soft Shadow (柔和阴影)
+    SubtitleItem p3;
+    p3.fillType = 0;
+    p3.fillColor = "#FFFFFF";
+    p3.textOpacity = 1.0;
+    p3.strokeEnabled = false;
+    p3.shadowEnabled = true;
+    p3.shadowColor = "#000000";
+    p3.shadowOffsetX = 2;
+    p3.shadowOffsetY = 2;
+    p3.shadowBlur = 5;
+    p3.shadowOpacity = 0.6;
+    p3.bgType = 0;
+
+    // 4. Neon Glow (霓虹光)
+    SubtitleItem p4;
+    p4.fillType = 0;
+    p4.fillColor = "#00FFFF";
+    p4.textOpacity = 1.0;
+    p4.strokeEnabled = true;
+    p4.strokeColor = "#FF00FF";
+    p4.strokeWidth = 4;
+    p4.strokeOpacity = 0.8;
+    p4.shadowEnabled = true;
+    p4.shadowColor = "#FF00FF";
+    p4.shadowOffsetX = 0;
+    p4.shadowOffsetY = 0;
+    p4.shadowBlur = 10;
+    p4.shadowOpacity = 0.9;
+    p4.bgType = 0;
+
+    // 5. Translucent Box (半透背景)
+    SubtitleItem p5;
+    p5.fillType = 0;
+    p5.fillColor = "#FFFFFF";
+    p5.textOpacity = 1.0;
+    p5.strokeEnabled = false;
+    p5.shadowEnabled = false;
+    p5.bgType = 1;
+    p5.bgColor = "#000000";
+    p5.bgOpacity = 0.6;
+    p5.bgRoundness = 4;
+    p5.bgPaddingX = 15;
+    p5.bgPaddingY = 10;
+
+    // 6. Silver Gradient (银渐变)
+    SubtitleItem p6;
+    p6.fillType = 1;
+    p6.fillColor = "#FFFFFF";
+    p6.fillColor2 = "#AAAAAA";
+    p6.fillAngle = 90;
+    p6.textOpacity = 1.0;
+    p6.strokeEnabled = true;
+    p6.strokeColor = "#111111";
+    p6.strokeWidth = 2;
+    p6.strokeOpacity = 1.0;
+    p6.shadowEnabled = false;
+    p6.bgType = 0;
+
+    addPresetCard(tr("Default White"), p1, false);
+    addPresetCard(tr("Classic Yellow"), p2, false);
+    addPresetCard(tr("Soft Shadow"), p3, false);
+    addPresetCard(tr("Neon Glow"), p4, false);
+    addPresetCard(tr("Translucent Box"), p5, false);
+    addPresetCard(tr("Silver Gradient"), p6, false);
   } else {
-    bgStyle = "background-color: #242424;";
+    loadCustomPresets();
   }
-
-  btn->setStyleSheet(
-      QString("QPushButton { %1 %2 border: 1px solid #444; border-radius: 6px; "
-              "min-height: 48px; font-weight: bold; }"
-              "QPushButton:hover { border-color: #0088cc; }")
-          .arg(colorStyle)
-          .arg(bgStyle));
-
-  connect(btn, &QPushButton::clicked, this, [this, style]() {
-    if (!track_)
-      return;
-
-    if (!currentSelectedId_.isEmpty()) {
-      SubtitleItem item;
-      for (const auto &it : track_->items()) {
-        if (it.id == currentSelectedId_) {
-          item = it;
-          break;
-        }
-      }
-      item.fillType = style.fillType;
-      item.fillColor = style.fillColor;
-      item.fillColor2 = style.fillColor2;
-      item.fillAngle = style.fillAngle;
-      item.fillTexturePath = style.fillTexturePath;
-      item.fillTextureTile = style.fillTextureTile;
-      item.textOpacity = style.textOpacity;
-
-      item.strokeEnabled = style.strokeEnabled;
-      item.strokeWidth = style.strokeWidth;
-      item.strokeColor = style.strokeColor;
-      item.strokeOpacity = style.strokeOpacity;
-
-      item.shadowEnabled = style.shadowEnabled;
-      item.shadowOffsetX = style.shadowOffsetX;
-      item.shadowOffsetY = style.shadowOffsetY;
-      item.shadowBlur = style.shadowBlur;
-      item.shadowColor = style.shadowColor;
-      item.shadowOpacity = style.shadowOpacity;
-
-      item.bgType = style.bgType;
-      item.bgColor = style.bgColor;
-      item.bgOpacity = style.bgOpacity;
-      item.bgRoundness = style.bgRoundness;
-      item.bgPaddingX = style.bgPaddingX;
-      item.bgPaddingY = style.bgPaddingY;
-      item.bgImagePath = style.bgImagePath;
-      item.bgImage9Patch = style.bgImage9Patch;
-
-      track_->updateItem(currentSelectedId_, item);
-      loadStyleFromItem(item);
-    } else {
-      SubtitleItem item = track_->defaultStyleItem();
-      item.fillType = style.fillType;
-      item.fillColor = style.fillColor;
-      item.fillColor2 = style.fillColor2;
-      item.fillAngle = style.fillAngle;
-      item.fillTexturePath = style.fillTexturePath;
-      item.fillTextureTile = style.fillTextureTile;
-      item.textOpacity = style.textOpacity;
-
-      item.strokeEnabled = style.strokeEnabled;
-      item.strokeWidth = style.strokeWidth;
-      item.strokeColor = style.strokeColor;
-      item.strokeOpacity = style.strokeOpacity;
-
-      item.shadowEnabled = style.shadowEnabled;
-      item.shadowOffsetX = style.shadowOffsetX;
-      item.shadowOffsetY = style.shadowOffsetY;
-      item.shadowBlur = style.shadowBlur;
-      item.shadowColor = style.shadowColor;
-      item.shadowOpacity = style.shadowOpacity;
-
-      item.bgType = style.bgType;
-      item.bgColor = style.bgColor;
-      item.bgOpacity = style.bgOpacity;
-      item.bgRoundness = style.bgRoundness;
-      item.bgPaddingX = style.bgPaddingX;
-      item.bgPaddingY = style.bgPaddingY;
-      item.bgImagePath = style.bgImagePath;
-      item.bgImage9Patch = style.bgImage9Patch;
-
-      track_->setDefaultStyleItem(item);
-      loadStyleFromItem(item);
-    }
-  });
-
-  layout->addWidget(btn, row, col);
 }
 
 #include "SubtitleListPanel.moc"

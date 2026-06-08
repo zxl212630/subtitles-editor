@@ -5,7 +5,9 @@
 #include <QColorDialog>
 #include <QComboBox>
 #include <QGridLayout>
+#include <QIcon>
 #include <QLineEdit>
+#include <QListWidget>
 #include <QPushButton>
 #include <QSlider>
 #include <QSpinBox>
@@ -141,14 +143,20 @@ private:
   QPushButton *bgImageBrowse_ = nullptr;
   QCheckBox *bgImage9PatchCheck_ = nullptr;
 
-  // Custom presets widget list
-  QFrame *presetGridContainer_ = nullptr;
+  QComboBox *presetTypeCombo_ = nullptr;
+  QListWidget *presetListWidget_ = nullptr;
+  QPushButton *savePresetBtn_ = nullptr;
 
+  QIcon createPresetIcon(const SubtitleItem &style, const QSize &size);
+  QString generateSvgForPreset(const SubtitleItem &style);
+  QString writeSvgPresetFile(const QString &name, const SubtitleItem &style);
+  void populatePresets();
   QWidget *createCustomStylePanel();
   QWidget *createPresetStylePanel();
   void loadStyleFromItem(const SubtitleItem &item);
   void applyCustomStyleToActiveItem();
   void loadCustomPresets();
+  void showPresetContextMenu(int idx, const QPoint &pos);
   void addPresetCard(const QString &name, const SubtitleItem &style,
-                     QGridLayout *layout, int row, int col);
+                     bool isCustom = false, int customIndex = -1);
 };
