@@ -34,7 +34,7 @@ public:
   void setOutputSize(QSize size);
 
   // 发起 Seek 请求（线程安全，支持高频调用，自动合并）
-  void requestSeek(qint64 targetMs);
+  void requestSeek(qint64 targetMs, bool precise = true);
 
   // 停止并退出线程
   void shutdown();
@@ -48,7 +48,7 @@ protected:
 
 private:
   // 执行 Seek 和帧读取，直到找到最接近 targetMs 且 >= targetMs 的视频帧
-  DecodedVideoFrame decodeOneFrame(qint64 targetMs);
+  DecodedVideoFrame decodeOneFrame(qint64 targetMs, bool precise);
 
   // 格式转换 (YUV -> RGBA) 并且进行降分辨率处理
   DecodedVideoFrame convertFrame(AVFrame *frame, qint64 ptsMs);
@@ -72,6 +72,7 @@ private:
 
   // 接收的 Seek 请求时间戳及请求计数版本号
   std::atomic<qint64> requestedMs_{-1};
+  std::atomic<bool> precise_{true};
   std::atomic<int> seekGeneration_{0};
   int lastProcessedGeneration_ = 0;
 

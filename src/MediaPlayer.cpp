@@ -32,7 +32,7 @@ MediaPlayer::MediaPlayer(QObject *parent)
 
   seekCoalesceTimer_ = new QTimer(this);
   seekCoalesceTimer_->setSingleShot(true);
-  seekCoalesceTimer_->setInterval(8); // 8ms 合并延迟窗口
+  seekCoalesceTimer_->setInterval(15); // 15ms 合并延迟窗口
 
   connect(decoder_, &FFmpegDecoder::decodeError, this,
           &MediaPlayer::onDecoderError);
@@ -405,7 +405,7 @@ void MediaPlayer::executePendingSeek() {
   seekTargetMs_ = pendingSeekMs_;
 
   if (seekDecoder_ && seekDecoder_->isRunning()) {
-    seekDecoder_->requestSeek(pendingSeekMs_);
+    seekDecoder_->requestSeek(pendingSeekMs_, true); // 恢复精确 Seek（解码 P 帧）
   }
 }
 
@@ -416,6 +416,7 @@ void MediaPlayer::onSeekFrameReady(DecodedVideoFrame frame) {
   if (videoRenderer_) {
     videoRenderer_->renderFrame(frame);
   }
+  emit previewFrameRendered(frame.ptsMs, frame.targetMs);
 
   if (!isPreviewDragging_) {
     seekPreviewMode_ = false;

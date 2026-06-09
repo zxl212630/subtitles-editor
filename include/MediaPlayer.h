@@ -71,6 +71,7 @@ signals:
   void volumeChanged(qreal volume, bool muted);
   void loadFinished(const QString &path, bool decoderOk, bool seekDecoderOk,
                     int generation);
+  void previewFrameRendered(qint64 ptsMs, qint64 targetMs);
 
 private slots:
   void onPlaybackTimer();

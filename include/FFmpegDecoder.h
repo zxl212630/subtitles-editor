@@ -23,6 +23,7 @@ extern "C" {
 
 struct DecodedVideoFrame {
   qint64 ptsMs = 0;
+  qint64 targetMs = 0;
   int width = 0;
   int height = 0;
   QByteArray rgbaData;

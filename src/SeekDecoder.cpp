@@ -11,6 +11,8 @@ extern "C" {
 #include <libswscale/swscale.h>
 }
 
+#define PROFILE_TIMING 1
+
 #define LOG_SEEK_info(msg) qInfo() << "[SeekDecoder]" << msg
 #define LOG_SEEK_warning(msg) qWarning() << "[SeekDecoder]" << msg
 #define LOG_SEEK_critical(msg) qCritical() << "[SeekDecoder]" << msg
@@ -156,8 +158,9 @@ void SeekDecoder::setOutputSize(QSize size) {
   outputSize_ = size;
 }
 
-void SeekDecoder::requestSeek(qint64 targetMs) {
+void SeekDecoder::requestSeek(qint64 targetMs, bool precise) {
   requestedMs_.store(targetMs);
+  precise_.store(precise);
   seekGeneration_.fetch_add(1);
 
   QMutexLocker locker(&wakeMutex_);
@@ -180,6 +183,7 @@ void SeekDecoder::run() {
   while (running_.load()) {
     int gen = 0;
     qint64 targetMs = -1;
+    bool precise = true;
 
     {
       QMutexLocker locker(&wakeMutex_);
@@ -192,6 +196,7 @@ void SeekDecoder::run() {
       }
       gen = seekGeneration_.load();
       targetMs = requestedMs_.load();
+      precise = precise_.load();
       lastProcessedGeneration_ = gen;
     }
 
@@ -204,19 +209,20 @@ void SeekDecoder::run() {
     totalTimer.start();
 #endif
 
-    DecodedVideoFrame frame = decodeOneFrame(targetMs);
+    DecodedVideoFrame frame = decodeOneFrame(targetMs, precise);
 
     // 线程被更新的请求中断，或者退出
-    if (seekGeneration_.load() != gen || !running_.load()) {
+    if (!running_.load()) {
       continue;
     }
 
     if (frame.width > 0 && !frame.rgbaData.isEmpty()) {
 #if PROFILE_TIMING
       qint64 elapsedUs = totalTimer.nsecsElapsed() / 1000;
-      qDebug() << "[TIMING:SeekDecoder] decoded frame at" << frame.ptsMs
+      qInfo() << "[TIMING:SeekDecoder] decoded frame at" << frame.ptsMs
                << "ms for target" << targetMs << "ms, cost"
-               << (elapsedUs / 1000.0) << "ms";
+               << (elapsedUs / 1000.0) << "ms"
+               << "precise=" << precise;
 #endif
       emit frameReady(std::move(frame));
     }
@@ -225,7 +231,7 @@ void SeekDecoder::run() {
   LOG_SEEK(info, "Seek thread stopped");
 }
 
-DecodedVideoFrame SeekDecoder::decodeOneFrame(qint64 targetMs) {
+DecodedVideoFrame SeekDecoder::decodeOneFrame(qint64 targetMs, bool precise) {
   DecodedVideoFrame result;
   if (!fmtCtx_ || !videoCodecCtx_) {
     return result;
@@ -236,7 +242,8 @@ DecodedVideoFrame SeekDecoder::decodeOneFrame(qint64 targetMs) {
 
   // 智能 Seek：如果当前目标时间戳位于上一次解码帧时间戳前方且距离较近（<2秒），
   // 则不需要 flush 解码器状态，可以直接继续向前读包解码。
-  if (lastDecodedPtsMs_ >= 0 && targetMs > lastDecodedPtsMs_ &&
+  // 注意：快速关键帧预览模式下不执行顺序追帧，直接进行关键帧定位。
+  if (precise && lastDecodedPtsMs_ >= 0 && targetMs > lastDecodedPtsMs_ &&
       targetMs - lastDecodedPtsMs_ < 2000) {
     needFullSeek = false;
   }
@@ -253,9 +260,13 @@ DecodedVideoFrame SeekDecoder::decodeOneFrame(qint64 targetMs) {
     }
     avcodec_flush_buffers(videoCodecCtx_);
 
-    // 丢帧优化：为了极其快速地追赶到 Seek 目标帧，开启 AVDISCARD_NONREF。
-    // 这命令解码器跳过所有 B 帧，只解关键帧（I帧）和 P 帧，极大减少计算量。
-    videoCodecCtx_->skip_frame = AVDISCARD_NONREF;
+    if (precise) {
+      // 精确寻道模式下不丢弃任何帧（包括 B 帧），以确保帧精确度
+      videoCodecCtx_->skip_frame = AVDISCARD_DEFAULT;
+    } else {
+      // 极速预览模式下只解关键帧，丢弃所有非关键帧
+      videoCodecCtx_->skip_frame = AVDISCARD_NONKEY;
+    }
   }
 
   AVPacket *packet = av_packet_alloc();
@@ -265,8 +276,8 @@ DecodedVideoFrame SeekDecoder::decodeOneFrame(qint64 targetMs) {
   int readRet = 0;
 
   while ((readRet = av_read_frame(fmtCtx_, packet)) >= 0) {
-    // 每次读取后检查是否有更新的 Seek 请求。如果有，立即中止当前过时的解码。
-    if (seekGeneration_.load() != gen || !running_.load()) {
+    // 每次读取后检查线程是否需要退出。不再在此中断以避免高频拖动下解码器频繁重置导致的黑屏。
+    if (!running_.load()) {
       break;
     }
 
@@ -288,16 +299,22 @@ DecodedVideoFrame SeekDecoder::decodeOneFrame(qint64 targetMs) {
 
       lastDecodedPtsMs_ = ptsMs;
 
-      // 如果当前解出来的帧 PTS 大于等于我们 Seek 要求的 pts，代表已追赶上
-      if (ptsMs >= targetMs) {
-        // 精确定位完毕后，恢复普通的解码模式，避免影响后续操作
-        videoCodecCtx_->skip_frame = AVDISCARD_DEFAULT;
-
+      if (!precise) {
+        // 极速预览：获得最近的关键帧即返回，无需继续解码后续帧
         result = convertFrame(frame, ptsMs);
         lastSeekTargetMs_ = targetMs;
         found = true;
         av_frame_unref(frame);
         break;
+      } else {
+        // 精确寻道：如果当前解出来的帧 PTS 大于等于我们 Seek 要求的 pts，代表已追赶上
+        if (ptsMs >= targetMs) {
+          result = convertFrame(frame, ptsMs);
+          lastSeekTargetMs_ = targetMs;
+          found = true;
+          av_frame_unref(frame);
+          break;
+        }
       }
       av_frame_unref(frame);
     }
@@ -314,6 +331,7 @@ DecodedVideoFrame SeekDecoder::decodeOneFrame(qint64 targetMs) {
   // 如果遇到 EOF 或异常导致无法精确定位，重置 discard 模式
   videoCodecCtx_->skip_frame = AVDISCARD_DEFAULT;
 
+  result.targetMs = targetMs;
   return result;
 }
 
