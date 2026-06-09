@@ -134,7 +134,6 @@ private:
   QPushButton *acBtn_ = nullptr;
   QPushButton *arBtn_ = nullptr;
   QPushButton *ajBtn_ = nullptr;
-  QPushButton *applyToAllBtn_ = nullptr;
 
   bool isPlaying_ = false;
   qint64 totalDurationMs_ = 0;

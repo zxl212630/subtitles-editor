@@ -676,58 +676,6 @@ void SubtitleTrack::loadGlobalSettings() {
   int right = cfg.getInt("speaker", "marginRight", 15);
   int bottom = cfg.getInt("speaker", "marginBottom", 15);
   unifiedBorderMargins_ = QMargins(left, top, right, bottom);
-
-  defaultFontFamily_ = cfg.getString("subtitle", "fontFamily", "Arial");
-  defaultFontSize_ = cfg.getInt("subtitle", "fontSize", 24);
-  defaultBold_ = cfg.getBool("subtitle", "bold", false);
-  defaultItalic_ = cfg.getBool("subtitle", "italic", false);
-  defaultUnderline_ = cfg.getBool("subtitle", "underline", false);
-  defaultAlignment_ = cfg.getInt("subtitle", "alignment", 0x84);
-
-  double rx = cfg.getDouble("subtitle", "rectX", 0.1);
-  double ry = cfg.getDouble("subtitle", "rectY", 0.75);
-  double rw = cfg.getDouble("subtitle", "rectW", 0.8);
-  double rh = cfg.getDouble("subtitle", "rectH", 0.2);
-  defaultSubtitleRect_ = QRectF(rx, ry, rw, rh);
-  defaultRotation_ = cfg.getDouble("subtitle", "rotation", 0.0);
-
-  // Load advanced styling defaults
-  defaultFillType_ = cfg.getInt("subtitle", "fillType", 0);
-  defaultFillColor_ = cfg.getString("subtitle", "fillColor", "#FFFFFF");
-  defaultFillColor2_ = cfg.getString("subtitle", "fillColor2", "#FFFFFF");
-  defaultFillAngle_ = cfg.getInt("subtitle", "fillAngle", 90);
-  defaultFillTexturePath_ = cfg.getString("subtitle", "fillTexturePath", "");
-  defaultFillTextureTile_ = cfg.getBool("subtitle", "fillTextureTile", true);
-  defaultTextOpacity_ = cfg.getDouble("subtitle", "textOpacity", 1.0);
-
-  defaultStrokeEnabled_ = cfg.getBool("subtitle", "strokeEnabled", false);
-  defaultStrokeWidth_ = cfg.getInt("subtitle", "strokeWidth", 2);
-  defaultStrokeColor_ = cfg.getString("subtitle", "strokeColor", "#000000");
-  defaultStrokeOpacity_ = cfg.getDouble("subtitle", "strokeOpacity", 1.0);
-
-  defaultShadowEnabled_ = cfg.getBool("subtitle", "shadowEnabled", false);
-  defaultShadowOffsetX_ = cfg.getInt("subtitle", "shadowOffsetX", 3);
-  defaultShadowOffsetY_ = cfg.getInt("subtitle", "shadowOffsetY", 3);
-  defaultShadowBlur_ = cfg.getInt("subtitle", "shadowBlur", 5);
-  defaultShadowColor_ = cfg.getString("subtitle", "shadowColor", "#000000");
-  defaultShadowOpacity_ = cfg.getDouble("subtitle", "shadowOpacity", 0.5);
-
-  defaultBgType_ = cfg.getInt("subtitle", "bgType", 0);
-  defaultBgColor_ = cfg.getString("subtitle", "bgColor", "#000000");
-  defaultBgOpacity_ = cfg.getDouble("subtitle", "bgOpacity", 0.6);
-  defaultBgRoundness_ = cfg.getInt("subtitle", "bgRoundness", 4);
-  defaultBgPaddingX_ = cfg.getInt("subtitle", "bgPaddingX", 15);
-  defaultBgPaddingY_ = cfg.getInt("subtitle", "bgPaddingY", 10);
-  defaultBgImagePath_ = cfg.getString("subtitle", "bgImagePath", "");
-  defaultBgImage9Patch_ = cfg.getBool("subtitle", "bgImage9Patch", true);
-  defaultBgOffsetX_ = cfg.getInt("subtitle", "bgOffsetX", 0);
-  defaultBgOffsetY_ = cfg.getInt("subtitle", "bgOffsetY", 0);
-  defaultBubbleEnabled_ = cfg.getBool("subtitle", "bubbleEnabled", false);
-  defaultBubbleImagePath_ = cfg.getString("subtitle", "bubbleImagePath", "");
-  defaultBubblePaddingLeft_ = cfg.getInt("subtitle", "bubblePaddingLeft", 15);
-  defaultBubblePaddingRight_ = cfg.getInt("subtitle", "bubblePaddingRight", 15);
-  defaultBubblePaddingTop_ = cfg.getInt("subtitle", "bubblePaddingTop", 10);
-  defaultBubblePaddingBottom_ = cfg.getInt("subtitle", "bubblePaddingBottom", 10);
 }
 
 void SubtitleTrack::saveGlobalSettings() {
@@ -737,57 +685,6 @@ void SubtitleTrack::saveGlobalSettings() {
   cfg.setValue("speaker", "marginTop", unifiedBorderMargins_.top());
   cfg.setValue("speaker", "marginRight", unifiedBorderMargins_.right());
   cfg.setValue("speaker", "marginBottom", unifiedBorderMargins_.bottom());
-
-  cfg.setValue("subtitle", "fontFamily", defaultFontFamily_);
-  cfg.setValue("subtitle", "fontSize", defaultFontSize_);
-  cfg.setValue("subtitle", "bold", defaultBold_);
-  cfg.setValue("subtitle", "italic", defaultItalic_);
-  cfg.setValue("subtitle", "underline", defaultUnderline_);
-  cfg.setValue("subtitle", "alignment", defaultAlignment_);
-
-  cfg.setValue("subtitle", "rectX", defaultSubtitleRect_.x());
-  cfg.setValue("subtitle", "rectY", defaultSubtitleRect_.y());
-  cfg.setValue("subtitle", "rectW", defaultSubtitleRect_.width());
-  cfg.setValue("subtitle", "rectH", defaultSubtitleRect_.height());
-  cfg.setValue("subtitle", "rotation", defaultRotation_);
-
-  // Save advanced styling defaults
-  cfg.setValue("subtitle", "fillType", defaultFillType_);
-  cfg.setValue("subtitle", "fillColor", defaultFillColor_);
-  cfg.setValue("subtitle", "fillColor2", defaultFillColor2_);
-  cfg.setValue("subtitle", "fillAngle", defaultFillAngle_);
-  cfg.setValue("subtitle", "fillTexturePath", defaultFillTexturePath_);
-  cfg.setValue("subtitle", "fillTextureTile", defaultFillTextureTile_);
-  cfg.setValue("subtitle", "textOpacity", defaultTextOpacity_);
-
-  cfg.setValue("subtitle", "strokeEnabled", defaultStrokeEnabled_);
-  cfg.setValue("subtitle", "strokeWidth", defaultStrokeWidth_);
-  cfg.setValue("subtitle", "strokeColor", defaultStrokeColor_);
-  cfg.setValue("subtitle", "strokeOpacity", defaultStrokeOpacity_);
-
-  cfg.setValue("subtitle", "shadowEnabled", defaultShadowEnabled_);
-  cfg.setValue("subtitle", "shadowOffsetX", defaultShadowOffsetX_);
-  cfg.setValue("subtitle", "shadowOffsetY", defaultShadowOffsetY_);
-  cfg.setValue("subtitle", "shadowBlur", defaultShadowBlur_);
-  cfg.setValue("subtitle", "shadowColor", defaultShadowColor_);
-  cfg.setValue("subtitle", "shadowOpacity", defaultShadowOpacity_);
-
-  cfg.setValue("subtitle", "bgType", defaultBgType_);
-  cfg.setValue("subtitle", "bgColor", defaultBgColor_);
-  cfg.setValue("subtitle", "bgOpacity", defaultBgOpacity_);
-  cfg.setValue("subtitle", "bgRoundness", defaultBgRoundness_);
-  cfg.setValue("subtitle", "bgPaddingX", defaultBgPaddingX_);
-  cfg.setValue("subtitle", "bgPaddingY", defaultBgPaddingY_);
-  cfg.setValue("subtitle", "bgImagePath", defaultBgImagePath_);
-  cfg.setValue("subtitle", "bgImage9Patch", defaultBgImage9Patch_);
-  cfg.setValue("subtitle", "bgOffsetX", defaultBgOffsetX_);
-  cfg.setValue("subtitle", "bgOffsetY", defaultBgOffsetY_);
-  cfg.setValue("subtitle", "bubbleEnabled", defaultBubbleEnabled_);
-  cfg.setValue("subtitle", "bubbleImagePath", defaultBubbleImagePath_);
-  cfg.setValue("subtitle", "bubblePaddingLeft", defaultBubblePaddingLeft_);
-  cfg.setValue("subtitle", "bubblePaddingRight", defaultBubblePaddingRight_);
-  cfg.setValue("subtitle", "bubblePaddingTop", defaultBubblePaddingTop_);
-  cfg.setValue("subtitle", "bubblePaddingBottom", defaultBubblePaddingBottom_);
 
   cfg.sync();
 }

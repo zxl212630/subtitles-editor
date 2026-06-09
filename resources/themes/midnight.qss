@@ -137,10 +137,18 @@ QLineEdit, QComboBox, QSpinBox, QDoubleSpinBox {
     background-color: @bg_panel;
     border: 1px solid @border_color;
     border-radius: 6px;
-    padding: 4px 12px;
+    padding: 3px 12px;
     color: @text_normal;
     font-size: 13px;
     selection-background-color: @border_color;
+    min-height: 22px;
+    max-height: 22px;
+}
+
+QLineEdit:disabled, QComboBox:disabled, QSpinBox:disabled, QDoubleSpinBox:disabled {
+    background-color: @bg_lighter;
+    color: @text_muted;
+    border: 1px solid @border_dark;
 }
 
 QLineEdit:focus, QComboBox:focus, QComboBox:on, QSpinBox:focus, QDoubleSpinBox:focus {
@@ -647,6 +655,38 @@ QPushButton#SpeakerBrowseButton:hover {
 
 QPushButton#SpeakerBrowseButton:pressed {
     background-color: rgba(255, 255, 255, 0.01);
+}
+
+QLineEdit#BubbleImagePathEdit {
+    border-radius: 6px;
+    min-height: 22px;
+    max-height: 22px;
+}
+
+QPushButton#BubbleImageBrowseBtn {
+    background-color: @bg_panel;
+    border: 1px solid @border_color;
+    border-radius: 6px;
+    color: @text_normal;
+    padding: 3px 12px;
+    font-size: 13px;
+    min-height: 22px;
+    max-height: 22px;
+}
+
+QPushButton#BubbleImageBrowseBtn:hover {
+    background-color: rgba(255, 255, 255, 0.05);
+    border-color: @text_muted;
+}
+
+QPushButton#BubbleImageBrowseBtn:pressed {
+    background-color: rgba(255, 255, 255, 0.01);
+}
+
+QPushButton#BubbleImageBrowseBtn:disabled {
+    background-color: @bg_lighter;
+    color: @text_muted;
+    border: 1px solid @border_dark;
 }
 
 QPushButton#SpeakerAddButton, QPushButton#SpeakerRemoveButton {

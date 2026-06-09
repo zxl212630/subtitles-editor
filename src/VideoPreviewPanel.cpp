@@ -575,13 +575,6 @@ void VideoPreviewPanel::setupUi() {
 
   tbLayout->addWidget(btnGroup);
 
-  // 一键应用样式到全部按钮，文案改为“全部应用”，样式改为明显的主色按钮
-  applyToAllBtn_ = createTextBtn(toolbar, tr("全部应用"), 76, 28);
-  applyToAllBtn_->setObjectName("SubtitleActionBtn");
-  applyToAllBtn_->setToolTip(
-      tr("将当前字幕的字体、字号、样式和位置应用到所有字幕项"));
-  tbLayout->addWidget(applyToAllBtn_);
-
   // 连接样式按钮的槽函数
   connect(bBtn_, &QPushButton::clicked, this, [this](bool checked) {
     updateCurrentItemStyle(
@@ -601,15 +594,6 @@ void VideoPreviewPanel::setupUi() {
   connect(alignGroup, &QButtonGroup::idClicked, this, [this](int id) {
     updateCurrentItemStyle([id](SubtitleItem &item) { item.alignment = id; });
     updateSubtitleOverlay();
-  });
-  connect(applyToAllBtn_, &QPushButton::clicked, this, [this]() {
-    if (subtitleTrack_) {
-      const SubtitleItem *sel = subtitleTrack_->selectedItem();
-      if (sel) {
-        subtitleTrack_->applyStyleToAll(sel->id);
-        updateSubtitleOverlay();
-      }
-    }
   });
 
   layout->addWidget(toolbar);
@@ -785,9 +769,6 @@ void VideoPreviewPanel::retranslateUi() {
   acBtn_->setToolTip(tr("居中对齐"));
   arBtn_->setToolTip(tr("右对齐"));
   ajBtn_->setToolTip(tr("分散对齐"));
-  applyToAllBtn_->setText(tr("全部应用"));
-  applyToAllBtn_->setToolTip(
-      tr("将当前字幕的字体、字号、样式和位置应用到所有字幕项"));
   volBtn_->setToolTip(tr("音量 / 静音"));
 }
 
@@ -866,7 +847,6 @@ void VideoPreviewPanel::setSubtitleTrack(SubtitleTrack *track) {
                 else
                   acBtn_->setChecked(true);
 
-                applyToAllBtn_->setEnabled(true);
               } else {
                 // 使用全局默认模板样式
                 int fontIdx =
@@ -888,8 +868,6 @@ void VideoPreviewPanel::setSubtitleTrack(SubtitleTrack *track) {
                   ajBtn_->setChecked(true);
                 else
                   acBtn_->setChecked(true);
-
-                applyToAllBtn_->setEnabled(false);
               }
 
               fontCombo_->blockSignals(false);
@@ -909,7 +887,6 @@ void VideoPreviewPanel::setSubtitleTrack(SubtitleTrack *track) {
     if (subtitleTrack_->selectedItem()) {
       emit subtitleTrack_->itemSelected(subtitleTrack_->selectedItem()->id);
     } else {
-      applyToAllBtn_->setEnabled(false);
     }
   }
 }

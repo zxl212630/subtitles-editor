@@ -50,8 +50,8 @@ private:
 
   void updateButton() {
     setStyleSheet(
-        QString("background-color: %1; border: 1px solid #555; border-radius: "
-                "4px; min-height: 20px; max-height: 20px;")
+        QString("QPushButton { background-color: %1; border: 1px solid #555; border-radius: 4px; min-height: 22px; max-height: 22px; }"
+                "QPushButton:disabled { background-color: rgba(128, 128, 128, 0.2); border: 1px solid #444; }")
             .arg(color_.name()));
   }
 
@@ -119,9 +119,6 @@ private:
   ColorButton *fillColor2Btn_ = nullptr;
   QSlider *fillAngleSlider_ = nullptr;
   QSpinBox *fillAngleSpin_ = nullptr;
-  QLineEdit *fillTextureEdit_ = nullptr;
-  QPushButton *fillTextureBrowse_ = nullptr;
-  QCheckBox *fillTextureTileCheck_ = nullptr;
   QSlider *textOpacitySlider_ = nullptr;
 
   QCheckBox *strokeEnableCheck_ = nullptr;
@@ -157,6 +154,7 @@ private:
   QComboBox *presetTypeCombo_ = nullptr;
   QListWidget *presetListWidget_ = nullptr;
   QPushButton *savePresetBtn_ = nullptr;
+  QPushButton *applyToAllBtn_ = nullptr;
 
   QIcon createPresetIcon(const SubtitleItem &style, const QSize &size);
   QString generateSvgForPreset(const SubtitleItem &style);

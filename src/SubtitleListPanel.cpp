@@ -195,6 +195,89 @@ void SubtitleListPanel::retranslateUi() {
   if (savePresetBtn_) {
     savePresetBtn_->setText(tr("+ Save Current Style"));
   }
+  if (applyToAllBtn_) {
+    applyToAllBtn_->setText(tr("Apply All"));
+  }
+  if (bubbleImageBrowse_) {
+    bubbleImageBrowse_->setText(tr("Browse..."));
+  }
+
+  if (fillTypeCombo_) {
+    bool old = fillTypeCombo_->signalsBlocked();
+    fillTypeCombo_->blockSignals(true);
+    int idx = fillTypeCombo_->currentIndex();
+    fillTypeCombo_->clear();
+    fillTypeCombo_->addItems({tr("Color Fill"), tr("Gradient Fill")});
+    fillTypeCombo_->setCurrentIndex(idx);
+    fillTypeCombo_->blockSignals(old);
+  }
+
+  if (auto *lbl = findChild<QLabel *>("FillHeaderLabel"))
+    lbl->setText(tr("Fill"));
+  if (auto *lbl = findChild<QLabel *>("OutlineHeaderLabel"))
+    lbl->setText(tr("Outline"));
+  if (auto *lbl = findChild<QLabel *>("ShadowHeaderLabel"))
+    lbl->setText(tr("Shadow"));
+  if (auto *lbl = findChild<QLabel *>("BackgroundHeaderLabel"))
+    lbl->setText(tr("Background"));
+  if (auto *lbl = findChild<QLabel *>("BubbleHeaderLabel"))
+    lbl->setText(tr("Bubble"));
+
+  if (auto *lbl = findChild<QLabel *>("lblFillType"))
+    lbl->setText(tr("Type"));
+  if (auto *lbl = findChild<QLabel *>("lblFillColor"))
+    lbl->setText(tr("Color 1"));
+  if (auto *lbl = findChild<QLabel *>("lblFillColor2"))
+    lbl->setText(tr("Color 2"));
+  if (auto *lbl = findChild<QLabel *>("lblFillAngle"))
+    lbl->setText(tr("Angle"));
+  if (auto *lbl = findChild<QLabel *>("lblFillOpacity"))
+    lbl->setText(tr("Opacity"));
+
+  if (auto *lbl = findChild<QLabel *>("lblStrokeColor"))
+    lbl->setText(tr("Color"));
+  if (auto *lbl = findChild<QLabel *>("lblStrokeThickness"))
+    lbl->setText(tr("Thickness"));
+  if (auto *lbl = findChild<QLabel *>("lblStrokeOpacity"))
+    lbl->setText(tr("Opacity"));
+
+  if (auto *lbl = findChild<QLabel *>("lblShadowColor"))
+    lbl->setText(tr("Color"));
+  if (auto *lbl = findChild<QLabel *>("lblShadowOffsetX"))
+    lbl->setText(tr("L/R Offset"));
+  if (auto *lbl = findChild<QLabel *>("lblShadowOffsetY"))
+    lbl->setText(tr("T/B Offset"));
+  if (auto *lbl = findChild<QLabel *>("lblShadowBlur"))
+    lbl->setText(tr("Blur"));
+  if (auto *lbl = findChild<QLabel *>("lblShadowOpacity"))
+    lbl->setText(tr("Opacity"));
+
+  if (auto *lbl = findChild<QLabel *>("lblBgColor"))
+    lbl->setText(tr("Color"));
+  if (auto *lbl = findChild<QLabel *>("lblBgOpacity"))
+    lbl->setText(tr("Opacity"));
+  if (auto *lbl = findChild<QLabel *>("lblBgRoundness"))
+    lbl->setText(tr("Roundness"));
+  if (auto *lbl = findChild<QLabel *>("lblBgPaddingX"))
+    lbl->setText(tr("L/R Padding"));
+  if (auto *lbl = findChild<QLabel *>("lblBgPaddingY"))
+    lbl->setText(tr("T/B Padding"));
+  if (auto *lbl = findChild<QLabel *>("lblBgOffsetX"))
+    lbl->setText(tr("L/R Offset"));
+  if (auto *lbl = findChild<QLabel *>("lblBgOffsetY"))
+    lbl->setText(tr("T/B Offset"));
+
+  if (auto *lbl = findChild<QLabel *>("lblBubbleImage"))
+    lbl->setText(tr("Image"));
+  if (auto *lbl = findChild<QLabel *>("lblBubblePaddingLeft"))
+    lbl->setText(tr("Left Padding"));
+  if (auto *lbl = findChild<QLabel *>("lblBubblePaddingRight"))
+    lbl->setText(tr("Right Padding"));
+  if (auto *lbl = findChild<QLabel *>("lblBubblePaddingTop"))
+    lbl->setText(tr("Top Padding"));
+  if (auto *lbl = findChild<QLabel *>("lblBubblePaddingBottom"))
+    lbl->setText(tr("Bottom Padding"));
+
   populatePresets();
 }
 
@@ -839,12 +922,23 @@ QWidget *SubtitleListPanel::createCustomStylePanel() {
                            "  background: #3c3c3c;"
                            "  border-radius: 2px;"
                            "}"
+                           "QSlider::groove:horizontal:disabled {"
+                           "  background: #252525;"
+                           "}"
                            "QSlider::sub-page:horizontal {"
                            "  background: palette(highlight);"
                            "  border-radius: 2px;"
                            "}"
+                           "QSlider::sub-page:horizontal:disabled {"
+                           "  background: #555555;"
+                           "  border-radius: 2px;"
+                           "}"
                            "QSlider::add-page:horizontal {"
                            "  background: #3c3c3c;"
+                           "  border-radius: 2px;"
+                           "}"
+                           "QSlider::add-page:horizontal:disabled {"
+                           "  background: #252525;"
                            "  border-radius: 2px;"
                            "}"
                            "QSlider::handle:horizontal {"
@@ -857,6 +951,9 @@ QWidget *SubtitleListPanel::createCustomStylePanel() {
                            "}"
                            "QSlider::handle:horizontal:hover {"
                            "  background: #ffffff;"
+                           "}"
+                           "QSlider::handle:horizontal:disabled {"
+                           "  background: #555555;"
                            "}");
 
   auto *layout = new QVBoxLayout(container);
@@ -872,8 +969,8 @@ QWidget *SubtitleListPanel::createCustomStylePanel() {
 
   // Helper for collapsible section frame
   auto createCollapsibleGroup =
-      [&](const QString &title, QFormLayout *formLayout, QCheckBox *toggleCheck,
-          bool defaultExpanded) {
+      [&](const QString &title, const QString &objName, QFormLayout *formLayout,
+          QCheckBox *toggleCheck, bool defaultExpanded) {
         auto *contentFrame = new QFrame(container);
         // 去除额外白框与背景颜色，直接平铺融入面板中
         contentFrame->setStyleSheet(
@@ -894,6 +991,7 @@ QWidget *SubtitleListPanel::createCustomStylePanel() {
         headerInnerLayout->setSpacing(6);
 
         auto *headerLabel = new QLabel(title, headerButton);
+        headerLabel->setObjectName(objName + "HeaderLabel");
         headerLabel->setStyleSheet(
             "font-weight: bold; font-size: 13px; color: palette(text);");
 
@@ -942,21 +1040,27 @@ QWidget *SubtitleListPanel::createCustomStylePanel() {
         updateState();
       };
 
+  auto addFormRow = [&](QFormLayout *form, const QString &text,
+                        const QString &objName, QWidget *field) {
+    auto *label = new QLabel(text, container);
+    label->setObjectName(objName);
+    form->addRow(label, field);
+  };
+
   // --- TEXT FILL GROUP ---
   fillForm_ = new QFormLayout();
   fillForm_->setContentsMargins(0, 0, 0, 0);
   fillForm_->setSpacing(8);
 
   fillTypeCombo_ = new QComboBox(container);
-  fillTypeCombo_->addItems(
-      {tr("Solid"), tr("Linear Gradient"), tr("Texture Image")});
-  fillForm_->addRow(tr("Fill Type"), fillTypeCombo_);
+  fillTypeCombo_->addItems({tr("Color Fill"), tr("Gradient Fill")});
+  addFormRow(fillForm_, tr("Type"), "lblFillType", fillTypeCombo_);
 
   fillColorBtn_ = new ColorButton(container);
-  fillForm_->addRow(tr("Color"), fillColorBtn_);
+  addFormRow(fillForm_, tr("Color 1"), "lblFillColor", fillColorBtn_);
 
   fillColor2Btn_ = new ColorButton(container);
-  fillForm_->addRow(tr("Gradient 2"), fillColor2Btn_);
+  addFormRow(fillForm_, tr("Color 2"), "lblFillColor2", fillColor2Btn_);
 
   auto *angleContainer = new QWidget(container);
   auto *angleLayout = new QHBoxLayout(angleContainer);
@@ -968,29 +1072,14 @@ QWidget *SubtitleListPanel::createCustomStylePanel() {
   fillAngleSpin_->setRange(0, 360);
   angleLayout->addWidget(fillAngleSlider_);
   angleLayout->addWidget(fillAngleSpin_);
-  fillForm_->addRow(tr("Angle"), angleContainer);
-
-  auto *textureContainer = new QWidget(container);
-  auto *textureLayout = new QHBoxLayout(textureContainer);
-  textureLayout->setContentsMargins(0, 0, 0, 0);
-  textureLayout->setSpacing(4);
-  fillTextureEdit_ = new QLineEdit(textureContainer);
-  fillTextureEdit_->setReadOnly(true);
-  fillTextureBrowse_ = new QPushButton(tr("Browse"), textureContainer);
-  fillTextureBrowse_->setFixedWidth(60);
-  textureLayout->addWidget(fillTextureEdit_);
-  textureLayout->addWidget(fillTextureBrowse_);
-  fillForm_->addRow(tr("Image"), textureContainer);
-
-  fillTextureTileCheck_ = new QCheckBox(tr("Tile Image"), container);
-  fillForm_->addRow(QString(), fillTextureTileCheck_);
+  addFormRow(fillForm_, tr("Angle"), "lblFillAngle", angleContainer);
 
   textOpacitySlider_ = new QSlider(Qt::Horizontal, container);
   textOpacitySlider_->setRange(0, 100);
-  fillForm_->addRow(tr("Opacity"), textOpacitySlider_);
+  addFormRow(fillForm_, tr("Opacity"), "lblFillOpacity", textOpacitySlider_);
 
   fillEnableCheck_ = new QCheckBox(container);
-  createCollapsibleGroup(tr("Fill"), fillForm_, fillEnableCheck_, true);
+  createCollapsibleGroup(tr("Fill"), "Fill", fillForm_, fillEnableCheck_, true);
 
   // --- OUTLINE GROUP ---
   auto *strokeForm = new QFormLayout();
@@ -998,18 +1087,21 @@ QWidget *SubtitleListPanel::createCustomStylePanel() {
   strokeForm->setSpacing(8);
 
   strokeColorBtn_ = new ColorButton(container);
-  strokeForm->addRow(tr("Color"), strokeColorBtn_);
+  addFormRow(strokeForm, tr("Color"), "lblStrokeColor", strokeColorBtn_);
 
   strokeWidthSpin_ = new QSpinBox(container);
   strokeWidthSpin_->setRange(1, 20);
-  strokeForm->addRow(tr("Thickness"), strokeWidthSpin_);
+  addFormRow(strokeForm, tr("Thickness"), "lblStrokeThickness",
+             strokeWidthSpin_);
 
   strokeOpacitySlider_ = new QSlider(Qt::Horizontal, container);
   strokeOpacitySlider_->setRange(0, 100);
-  strokeForm->addRow(tr("Opacity"), strokeOpacitySlider_);
+  addFormRow(strokeForm, tr("Opacity"), "lblStrokeOpacity",
+             strokeOpacitySlider_);
 
   strokeEnableCheck_ = new QCheckBox(container);
-  createCollapsibleGroup(tr("Outline"), strokeForm, strokeEnableCheck_, false);
+  createCollapsibleGroup(tr("Outline"), "Outline", strokeForm,
+                         strokeEnableCheck_, false);
 
   // --- SHADOW GROUP ---
   auto *shadowForm = new QFormLayout();
@@ -1017,32 +1109,30 @@ QWidget *SubtitleListPanel::createCustomStylePanel() {
   shadowForm->setSpacing(8);
 
   shadowColorBtn_ = new ColorButton(container);
-  shadowForm->addRow(tr("Color"), shadowColorBtn_);
+  addFormRow(shadowForm, tr("Color"), "lblShadowColor", shadowColorBtn_);
 
-  auto *offsetContainer = new QWidget(container);
-  auto *offsetLayout = new QHBoxLayout(offsetContainer);
-  offsetLayout->setContentsMargins(0, 0, 0, 0);
-  offsetLayout->setSpacing(8);
-  shadowOffsetXSpin_ = new QSpinBox(offsetContainer);
+  shadowOffsetXSpin_ = new QSpinBox(container);
   shadowOffsetXSpin_->setRange(-30, 30);
-  shadowOffsetYSpin_ = new QSpinBox(offsetContainer);
+  addFormRow(shadowForm, tr("L/R Offset"), "lblShadowOffsetX",
+             shadowOffsetXSpin_);
+
+  shadowOffsetYSpin_ = new QSpinBox(container);
   shadowOffsetYSpin_->setRange(-30, 30);
-  offsetLayout->addWidget(new QLabel("X:", offsetContainer));
-  offsetLayout->addWidget(shadowOffsetXSpin_);
-  offsetLayout->addWidget(new QLabel("Y:", offsetContainer));
-  offsetLayout->addWidget(shadowOffsetYSpin_);
-  shadowForm->addRow(tr("Offset"), offsetContainer);
+  addFormRow(shadowForm, tr("T/B Offset"), "lblShadowOffsetY",
+             shadowOffsetYSpin_);
 
   shadowBlurSlider_ = new QSlider(Qt::Horizontal, container);
   shadowBlurSlider_->setRange(0, 20);
-  shadowForm->addRow(tr("Blur"), shadowBlurSlider_);
+  addFormRow(shadowForm, tr("Blur"), "lblShadowBlur", shadowBlurSlider_);
 
   shadowOpacitySlider_ = new QSlider(Qt::Horizontal, container);
   shadowOpacitySlider_->setRange(0, 100);
-  shadowForm->addRow(tr("Opacity"), shadowOpacitySlider_);
+  addFormRow(shadowForm, tr("Opacity"), "lblShadowOpacity",
+             shadowOpacitySlider_);
 
   shadowEnableCheck_ = new QCheckBox(container);
-  createCollapsibleGroup(tr("Shadow"), shadowForm, shadowEnableCheck_, false);
+  createCollapsibleGroup(tr("Shadow"), "Shadow", shadowForm, shadowEnableCheck_,
+                         false);
 
   // --- BACKGROUND GROUP ---
   bgForm_ = new QFormLayout();
@@ -1050,47 +1140,35 @@ QWidget *SubtitleListPanel::createCustomStylePanel() {
   bgForm_->setSpacing(8);
 
   bgColorBtn_ = new ColorButton(container);
-  bgForm_->addRow(tr("Color"), bgColorBtn_);
+  addFormRow(bgForm_, tr("Color"), "lblBgColor", bgColorBtn_);
 
   bgOpacitySlider_ = new QSlider(Qt::Horizontal, container);
   bgOpacitySlider_->setRange(0, 100);
-  bgForm_->addRow(tr("Opacity"), bgOpacitySlider_);
+  addFormRow(bgForm_, tr("Opacity"), "lblBgOpacity", bgOpacitySlider_);
 
   bgRoundnessSlider_ = new QSlider(Qt::Horizontal, container);
   bgRoundnessSlider_->setRange(0, 50);
-  bgForm_->addRow(tr("Roundness"), bgRoundnessSlider_);
+  addFormRow(bgForm_, tr("Roundness"), "lblBgRoundness", bgRoundnessSlider_);
 
-  auto *paddingContainer = new QWidget(container);
-  auto *paddingLayout = new QHBoxLayout(paddingContainer);
-  paddingLayout->setContentsMargins(0, 0, 0, 0);
-  paddingLayout->setSpacing(8);
-  bgPaddingXSlider_ = new QSlider(Qt::Horizontal, paddingContainer);
+  bgPaddingXSlider_ = new QSlider(Qt::Horizontal, container);
   bgPaddingXSlider_->setRange(0, 50);
-  bgPaddingYSlider_ = new QSlider(Qt::Horizontal, paddingContainer);
-  bgPaddingYSlider_->setRange(0, 50);
-  paddingLayout->addWidget(new QLabel("X:", paddingContainer));
-  paddingLayout->addWidget(bgPaddingXSlider_);
-  paddingLayout->addWidget(new QLabel("Y:", paddingContainer));
-  paddingLayout->addWidget(bgPaddingYSlider_);
-  bgForm_->addRow(tr("Padding"), paddingContainer);
+  addFormRow(bgForm_, tr("L/R Padding"), "lblBgPaddingX", bgPaddingXSlider_);
 
-  // 新增背景的上下/左右偏移设置
-  auto *bgOffsetContainer = new QWidget(container);
-  auto *bgOffsetLayout = new QHBoxLayout(bgOffsetContainer);
-  bgOffsetLayout->setContentsMargins(0, 0, 0, 0);
-  bgOffsetLayout->setSpacing(8);
-  bgOffsetXSpin_ = new QSpinBox(bgOffsetContainer);
+  bgPaddingYSlider_ = new QSlider(Qt::Horizontal, container);
+  bgPaddingYSlider_->setRange(0, 50);
+  addFormRow(bgForm_, tr("T/B Padding"), "lblBgPaddingY", bgPaddingYSlider_);
+
+  bgOffsetXSpin_ = new QSpinBox(container);
   bgOffsetXSpin_->setRange(-200, 200);
-  bgOffsetYSpin_ = new QSpinBox(bgOffsetContainer);
+  addFormRow(bgForm_, tr("L/R Offset"), "lblBgOffsetX", bgOffsetXSpin_);
+
+  bgOffsetYSpin_ = new QSpinBox(container);
   bgOffsetYSpin_->setRange(-200, 200);
-  bgOffsetLayout->addWidget(new QLabel("X:", bgOffsetContainer));
-  bgOffsetLayout->addWidget(bgOffsetXSpin_);
-  bgOffsetLayout->addWidget(new QLabel("Y:", bgOffsetContainer));
-  bgOffsetLayout->addWidget(bgOffsetYSpin_);
-  bgForm_->addRow(tr("Offset"), bgOffsetContainer);
+  addFormRow(bgForm_, tr("T/B Offset"), "lblBgOffsetY", bgOffsetYSpin_);
 
   bgEnableCheck_ = new QCheckBox(container);
-  createCollapsibleGroup(tr("Background"), bgForm_, bgEnableCheck_, false);
+  createCollapsibleGroup(tr("Background"), "Background", bgForm_,
+                         bgEnableCheck_, false);
 
   // --- BUBBLE GROUP ---
   auto *bubbleForm = new QFormLayout();
@@ -1102,60 +1180,62 @@ QWidget *SubtitleListPanel::createCustomStylePanel() {
   bubbleImageLayout->setContentsMargins(0, 0, 0, 0);
   bubbleImageLayout->setSpacing(4);
   bubbleImagePathEdit_ = new QLineEdit(bubbleImageContainer);
+  bubbleImagePathEdit_->setObjectName("BubbleImagePathEdit");
   bubbleImagePathEdit_->setReadOnly(true);
-  bubbleImageBrowse_ = new QPushButton(tr("Browse"), bubbleImageContainer);
-  bubbleImageBrowse_->setFixedWidth(60);
+  bubbleImageBrowse_ = new QPushButton(tr("Browse..."), bubbleImageContainer);
+  bubbleImageBrowse_->setObjectName("BubbleImageBrowseBtn");
+  bubbleImageBrowse_->setFixedWidth(80);
   bubbleImageLayout->addWidget(bubbleImagePathEdit_);
   bubbleImageLayout->addWidget(bubbleImageBrowse_);
-  bubbleForm->addRow(tr("Image"), bubbleImageContainer);
+  addFormRow(bubbleForm, tr("Image"), "lblBubbleImage", bubbleImageContainer);
 
-  auto *lrPaddingContainer = new QWidget(container);
-  auto *lrPaddingLayout = new QHBoxLayout(lrPaddingContainer);
-  lrPaddingLayout->setContentsMargins(0, 0, 0, 0);
-  lrPaddingLayout->setSpacing(8);
-  bubblePaddingLeftSpin_ = new QSpinBox(lrPaddingContainer);
+  auto *lrContainer = new QWidget(container);
+  auto *lrLayout = new QHBoxLayout(lrContainer);
+  lrLayout->setContentsMargins(0, 0, 0, 0);
+  lrLayout->setSpacing(8);
+  bubblePaddingLeftSpin_ = new QSpinBox(lrContainer);
   bubblePaddingLeftSpin_->setRange(0, 200);
-  bubblePaddingRightSpin_ = new QSpinBox(lrPaddingContainer);
+  bubblePaddingRightSpin_ = new QSpinBox(lrContainer);
   bubblePaddingRightSpin_->setRange(0, 200);
-  lrPaddingLayout->addWidget(new QLabel("L:", lrPaddingContainer));
-  lrPaddingLayout->addWidget(bubblePaddingLeftSpin_);
-  lrPaddingLayout->addWidget(new QLabel("R:", lrPaddingContainer));
-  lrPaddingLayout->addWidget(bubblePaddingRightSpin_);
-  bubbleForm->addRow(tr("L/R Padding"), lrPaddingContainer);
+  auto *lblBubblePaddingLeft = new QLabel(tr("Left Padding"), lrContainer);
+  lblBubblePaddingLeft->setObjectName("lblBubblePaddingLeft");
+  auto *lblBubblePaddingRight = new QLabel(tr("Right Padding"), lrContainer);
+  lblBubblePaddingRight->setObjectName("lblBubblePaddingRight");
+  lrLayout->addWidget(lblBubblePaddingLeft);
+  lrLayout->addWidget(bubblePaddingLeftSpin_, 1);
+  lrLayout->addSpacing(16);
+  lrLayout->addWidget(lblBubblePaddingRight);
+  lrLayout->addWidget(bubblePaddingRightSpin_, 1);
+  bubbleForm->addRow(lrContainer);
 
-  auto *tbPaddingContainer = new QWidget(container);
-  auto *tbPaddingLayout = new QHBoxLayout(tbPaddingContainer);
-  tbPaddingLayout->setContentsMargins(0, 0, 0, 0);
-  tbPaddingLayout->setSpacing(8);
-  bubblePaddingTopSpin_ = new QSpinBox(tbPaddingContainer);
+  auto *tbContainer = new QWidget(container);
+  auto *tbLayout = new QHBoxLayout(tbContainer);
+  tbLayout->setContentsMargins(0, 0, 0, 0);
+  tbLayout->setSpacing(8);
+  bubblePaddingTopSpin_ = new QSpinBox(tbContainer);
   bubblePaddingTopSpin_->setRange(0, 200);
-  bubblePaddingBottomSpin_ = new QSpinBox(tbPaddingContainer);
+  bubblePaddingBottomSpin_ = new QSpinBox(tbContainer);
   bubblePaddingBottomSpin_->setRange(0, 200);
-  tbPaddingLayout->addWidget(new QLabel("T:", tbPaddingContainer));
-  tbPaddingLayout->addWidget(bubblePaddingTopSpin_);
-  tbPaddingLayout->addWidget(new QLabel("B:", tbPaddingContainer));
-  tbPaddingLayout->addWidget(bubblePaddingBottomSpin_);
-  bubbleForm->addRow(tr("T/B Padding"), tbPaddingContainer);
+  auto *lblBubblePaddingTop = new QLabel(tr("Top Padding"), tbContainer);
+  lblBubblePaddingTop->setObjectName("lblBubblePaddingTop");
+  auto *lblBubblePaddingBottom = new QLabel(tr("Bottom Padding"), tbContainer);
+  lblBubblePaddingBottom->setObjectName("lblBubblePaddingBottom");
+  tbLayout->addWidget(lblBubblePaddingTop);
+  tbLayout->addWidget(bubblePaddingTopSpin_, 1);
+  tbLayout->addSpacing(16);
+  tbLayout->addWidget(lblBubblePaddingBottom);
+  tbLayout->addWidget(bubblePaddingBottomSpin_, 1);
+  bubbleForm->addRow(tbContainer);
 
   bubbleEnableCheck_ = new QCheckBox(container);
-  createCollapsibleGroup(tr("Bubble"), bubbleForm, bubbleEnableCheck_, false);
+  createCollapsibleGroup(tr("Bubble"), "Bubble", bubbleForm, bubbleEnableCheck_,
+                         false);
 
   // Connect Slider and Spinbox for Angle
   connect(fillAngleSlider_, &QSlider::valueChanged, fillAngleSpin_,
           &QSpinBox::setValue);
   connect(fillAngleSpin_, QOverload<int>::of(&QSpinBox::valueChanged),
           fillAngleSlider_, &QSlider::setValue);
-
-  // File Browsers
-  connect(fillTextureBrowse_, &QPushButton::clicked, this, [this]() {
-    QString path = QFileDialog::getOpenFileName(
-        this, tr("Select Texture Image"), QString(),
-        tr("Images (*.png *.jpg *.jpeg)"));
-    if (!path.isEmpty()) {
-      fillTextureEdit_->setText(path);
-      applyCustomStyleToActiveItem();
-    }
-  });
 
   connect(bubbleImageBrowse_, &QPushButton::clicked, this, [this]() {
     QString path =
@@ -1180,7 +1260,6 @@ QWidget *SubtitleListPanel::createCustomStylePanel() {
   connect(fillColorBtn_, &ColorButton::colorChanged, this, triggerUpdate);
   connect(fillColor2Btn_, &ColorButton::colorChanged, this, triggerUpdate);
   connect(fillAngleSlider_, &QSlider::valueChanged, this, triggerUpdate);
-  connect(fillTextureTileCheck_, &QCheckBox::stateChanged, this, triggerUpdate);
   connect(textOpacitySlider_, &QSlider::valueChanged, this, triggerUpdate);
 
   connect(strokeEnableCheck_, &QCheckBox::stateChanged, this, triggerUpdate);
@@ -1235,8 +1314,8 @@ QWidget *SubtitleListPanel::createCustomStylePanel() {
       item.fillColor = fillColorBtn_->color().name();
       item.fillColor2 = fillColor2Btn_->color().name();
       item.fillAngle = fillAngleSlider_->value();
-      item.fillTexturePath = fillTextureEdit_->text();
-      item.fillTextureTile = fillTextureTileCheck_->isChecked();
+      item.fillTexturePath = "";
+      item.fillTextureTile = true;
       item.textOpacity = textOpacitySlider_->value() / 100.0;
 
       item.strokeEnabled = strokeEnableCheck_->isChecked();
@@ -1303,16 +1382,42 @@ QWidget *SubtitleListPanel::createCustomStylePanel() {
   // 初始化显隐状态
   updateFillTypeFields();
 
-  // 保存当前样式为预设的按钮
-  savePresetBtn_ = new QPushButton(tr("+ Save Current Style"), mainContainer);
+  // 两个按钮并排水平放置，宽度都和原全部应用按钮一致（76px宽，28px高）
+  auto *btnContainer = new QWidget(mainContainer);
+  auto *btnLayout = new QHBoxLayout(btnContainer);
+  btnLayout->setContentsMargins(12, 8, 12, 12);
+  btnLayout->setSpacing(8);
+  btnLayout->setAlignment(Qt::AlignCenter);
+
+  savePresetBtn_ = new QPushButton(tr("+ Save Current Style"), btnContainer);
   savePresetBtn_->setObjectName("SavePresetBtn");
-  savePresetBtn_->setFixedWidth(160);
+  savePresetBtn_->setFixedSize(76, 28);
   savePresetBtn_->setStyleSheet(
       "QPushButton { background-color: #2c2c2c; border: 1px solid #444; "
-      "border-radius: 4px; padding: 5px 10px; min-height: 24px; color: #eee; "
-      "margin: 8px 12px; font-size: 11px; }"
+      "border-radius: 4px; color: #eee; font-size: 11px; }"
       "QPushButton:hover { background-color: #3c3c3c; border-color: #555; }");
-  mainLayout->addWidget(savePresetBtn_, 0, Qt::AlignCenter);
+
+  applyToAllBtn_ = new QPushButton(tr("Apply All"), btnContainer);
+  applyToAllBtn_->setObjectName("ApplyAllBtn");
+  applyToAllBtn_->setFixedSize(76, 28);
+  applyToAllBtn_->setEnabled(false);
+  applyToAllBtn_->setStyleSheet(
+      "QPushButton { background-color: palette(highlight); border: none; "
+      "border-radius: 4px; color: white; font-size: 11px; font-weight: bold; }"
+      "QPushButton:hover { background-color: #f472b6; }"
+      "QPushButton:disabled { background-color: #3c3c3c; color: #888; }");
+
+  btnLayout->addWidget(savePresetBtn_);
+  btnLayout->addWidget(applyToAllBtn_);
+
+  mainLayout->addWidget(btnContainer);
+
+  // 全部应用点击逻辑
+  connect(applyToAllBtn_, &QPushButton::clicked, this, [this]() {
+    if (track_ && !currentSelectedId_.isEmpty()) {
+      track_->applyStyleToAll(currentSelectedId_);
+    }
+  });
 
   // 保存为预设点击逻辑
   connect(savePresetBtn_, &QPushButton::clicked, this, [this]() {
@@ -1819,6 +1924,8 @@ void SubtitleListPanel::loadStyleFromItem(const SubtitleItem &item) {
     fillEnableCheck_->setChecked(item.fillType >= 0);
   if (fillTypeCombo_) {
     int idx = (item.fillType >= 0) ? item.fillType : 0;
+    if (idx > 1)
+      idx = 0;
     fillTypeCombo_->setCurrentIndex(idx);
   }
   if (fillColorBtn_)
@@ -1829,10 +1936,6 @@ void SubtitleListPanel::loadStyleFromItem(const SubtitleItem &item) {
     fillAngleSlider_->setValue(item.fillAngle);
   if (fillAngleSpin_)
     fillAngleSpin_->setValue(item.fillAngle);
-  if (fillTextureEdit_)
-    fillTextureEdit_->setText(item.fillTexturePath);
-  if (fillTextureTileCheck_)
-    fillTextureTileCheck_->setChecked(item.fillTextureTile);
   if (textOpacitySlider_)
     textOpacitySlider_->setValue(qRound(item.textOpacity * 100.0));
 
@@ -1890,6 +1993,10 @@ void SubtitleListPanel::loadStyleFromItem(const SubtitleItem &item) {
 
   isUpdatingControls_ = false;
 
+  if (applyToAllBtn_) {
+    applyToAllBtn_->setEnabled(track_ && !currentSelectedId_.isEmpty());
+  }
+
   updateFillTypeFields();
 }
 
@@ -1921,8 +2028,8 @@ void SubtitleListPanel::applyCustomStyleToActiveItem() {
   item.fillColor = fillColorBtn_->color().name();
   item.fillColor2 = fillColor2Btn_->color().name();
   item.fillAngle = fillAngleSlider_->value();
-  item.fillTexturePath = fillTextureEdit_->text();
-  item.fillTextureTile = fillTextureTileCheck_->isChecked();
+  item.fillTexturePath = "";
+  item.fillTextureTile = true;
   item.textOpacity = textOpacitySlider_->value() / 100.0;
 
   item.strokeEnabled = strokeEnableCheck_->isChecked();
@@ -2218,15 +2325,12 @@ void SubtitleListPanel::updateFillTypeFields() {
     }
   };
 
-  int idx =
-      fillTypeCombo_->currentIndex(); // 0 = Solid, 1 = Gradient, 2 = Texture
+  int idx = fillTypeCombo_->currentIndex(); // 0 = Solid, 1 = Gradient
 
-  setRowVisible(fillForm_, 1, idx == 0 || idx == 1);
-  setRowVisible(fillForm_, 2, idx == 1);
-  setRowVisible(fillForm_, 3, idx == 1);
-  setRowVisible(fillForm_, 4, idx == 2);
-  setRowVisible(fillForm_, 5, idx == 2);
-  setRowVisible(fillForm_, 6, true);
+  setRowVisible(fillForm_, 1, true);     // Color
+  setRowVisible(fillForm_, 2, idx == 1); // Gradient 2
+  setRowVisible(fillForm_, 3, idx == 1); // Angle
+  setRowVisible(fillForm_, 4, true);     // Opacity
 }
 
 #include "SubtitleListPanel.moc"

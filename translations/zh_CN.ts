@@ -1801,6 +1801,206 @@
         <source>⚙️ Manage Speakers...</source>
         <translation>⚙️ 管理说话人...</translation>
     </message>
+    <message>
+        <source>Fill</source>
+        <translation>填充</translation>
+    </message>
+    <message>
+        <source>Outline</source>
+        <translation>描边</translation>
+    </message>
+    <message>
+        <source>Shadow</source>
+        <translation>阴影</translation>
+    </message>
+    <message>
+        <source>Background</source>
+        <translation>背景</translation>
+    </message>
+    <message>
+        <source>Bubble</source>
+        <translation>气泡</translation>
+    </message>
+    <message>
+        <source>Fill Type</source>
+        <translation>填充类型</translation>
+    </message>
+    <message>
+        <source>Solid</source>
+        <translation>纯色</translation>
+    </message>
+    <message>
+        <source>Linear Gradient</source>
+        <translation>线性渐变</translation>
+    </message>
+    <message>
+        <source>Texture Image</source>
+        <translation>贴图图片</translation>
+    </message>
+    <message>
+        <source>Color</source>
+        <translation>颜色</translation>
+    </message>
+    <message>
+        <source>Gradient 2</source>
+        <translation>渐变色 2</translation>
+    </message>
+    <message>
+        <source>Angle</source>
+        <translation>角度</translation>
+    </message>
+    <message>
+        <source>Image</source>
+        <translation>贴图</translation>
+    </message>
+    <message>
+        <source>Browse</source>
+        <translation>浏览</translation>
+    </message>
+    <message>
+        <source>Tile Image</source>
+        <translation>平铺图片</translation>
+    </message>
+    <message>
+        <source>Opacity</source>
+        <translation>不透明度</translation>
+    </message>
+    <message>
+        <source>Thickness</source>
+        <translation>粗细</translation>
+    </message>
+    <message>
+        <source>Offset</source>
+        <translation>偏移</translation>
+    </message>
+    <message>
+        <source>Blur</source>
+        <translation>模糊</translation>
+    </message>
+    <message>
+        <source>Roundness</source>
+        <translation>圆角</translation>
+    </message>
+    <message>
+        <source>Padding</source>
+        <translation>边距</translation>
+    </message>
+    <message>
+        <source>L/R Padding</source>
+        <translation>左右边距</translation>
+    </message>
+    <message>
+        <source>T/B Padding</source>
+        <translation>上下边距</translation>
+    </message>
+    <message>
+        <source>+ Save Current Style</source>
+        <translation>+ 保存为预设</translation>
+    </message>
+    <message>
+        <source>Apply All</source>
+        <translation>全部应用</translation>
+    </message>
+    <message>
+        <source>System Presets</source>
+        <translation>系统预设</translation>
+    </message>
+    <message>
+        <source>Custom Presets</source>
+        <translation>自定义预设</translation>
+    </message>
+    <message>
+        <source>Type</source>
+        <translation>类型</translation>
+    </message>
+    <message>
+        <source>Color Fill</source>
+        <translation>颜色填充</translation>
+    </message>
+    <message>
+        <source>Gradient Fill</source>
+        <translation>渐变填充</translation>
+    </message>
+    <message>
+        <source>Left Padding</source>
+        <translation>左边距</translation>
+    </message>
+    <message>
+        <source>Right Padding</source>
+        <translation>右边距</translation>
+    </message>
+    <message>
+        <source>Top Padding</source>
+        <translation>上边距</translation>
+    </message>
+    <message>
+        <source>Bottom Padding</source>
+        <translation>下边距</translation>
+    </message>
+    <message>
+        <source>Color 1</source>
+        <translation>颜色1</translation>
+    </message>
+    <message>
+        <source>Color 2</source>
+        <translation>颜色2</translation>
+    </message>
+    <message>
+        <source>L/R Offset</source>
+        <translation>左右偏移</translation>
+    </message>
+    <message>
+        <source>T/B Offset</source>
+        <translation>上下偏移</translation>
+    </message>
+    <message>
+        <source>Browse...</source>
+        <translation>浏览...</translation>
+    </message>
+    <message>
+        <source>Default White</source>
+        <translation>默认白</translation>
+    </message>
+    <message>
+        <source>Classic Yellow</source>
+        <translation>经典黄</translation>
+    </message>
+    <message>
+        <source>Soft Shadow</source>
+        <translation>柔和阴影</translation>
+    </message>
+    <message>
+        <source>Neon Glow</source>
+        <translation>霓虹光</translation>
+    </message>
+    <message>
+        <source>Translucent Box</source>
+        <translation>半透背景</translation>
+    </message>
+    <message>
+        <source>Silver Gradient</source>
+        <translation>银渐变</translation>
+    </message>
+    <message>
+        <source>Select Bubble Image</source>
+        <translation>选择气泡图片</translation>
+    </message>
+    <message>
+        <source>Images (*.png *.jpg *.jpeg)</source>
+        <translation>图片文件 (*.png *.jpg *.jpeg)</translation>
+    </message>
+    <message>
+        <source>Delete</source>
+        <translation>删除</translation>
+    </message>
+    <message>
+        <source>Delete Preset</source>
+        <translation>删除预设</translation>
+    </message>
+    <message>
+        <source>Are you sure you want to delete this preset?</source>
+        <translation>您确定要删除这个预设吗？</translation>
+    </message>
 </context>
 <context>
     <name>SubtitleTrack</name>

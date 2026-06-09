@@ -30,25 +30,25 @@ struct SubtitleItem {
 
   // 描边属性
   bool strokeEnabled = false;
-  int strokeWidth = 2;
+  int strokeWidth = 1;
   QString strokeColor = "#000000";
   double strokeOpacity = 1.0;
 
   // 阴影属性
   bool shadowEnabled = false;
-  int shadowOffsetX = 3;
-  int shadowOffsetY = 3;
-  int shadowBlur = 5;
+  int shadowOffsetX = 0;
+  int shadowOffsetY = 0;
+  int shadowBlur = 0;
   QString shadowColor = "#000000";
-  double shadowOpacity = 0.5;
+  double shadowOpacity = 1.0;
 
   // 背景属性
   int bgType = 0; // 0 = 无背景, 1 = 单色底框, 2 = 图片底框
   QString bgColor = "#000000";
-  double bgOpacity = 0.6;
-  int bgRoundness = 4;
-  int bgPaddingX = 15;
-  int bgPaddingY = 10;
+  double bgOpacity = 1.0;
+  int bgRoundness = 10;
+  int bgPaddingX = 0;
+  int bgPaddingY = 0;
   QString bgImagePath;
   bool bgImage9Patch = true;
   int bgOffsetX = 0;
@@ -57,8 +57,8 @@ struct SubtitleItem {
   // 气泡属性
   bool bubbleEnabled = false;
   QString bubbleImagePath;
-  int bubblePaddingLeft = 15;
-  int bubblePaddingRight = 15;
+  int bubblePaddingLeft = 10;
+  int bubblePaddingRight = 10;
   int bubblePaddingTop = 10;
   int bubblePaddingBottom = 10;
 
