@@ -125,4 +125,8 @@ private:
   std::mutex loadMutex_;
   bool loadDone_ = false;
   int loadGeneration_ = 0;
+
+  QString currentPath_;
+  qint64 audioSessionStartUSecs_ = 0;
+  void ensureSeekDecoderOpen();
 };

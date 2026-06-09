@@ -79,6 +79,23 @@ void MediaPlayer::setVideoRenderer(SoftwareVideoRenderer *renderer) {
   videoRenderer_ = renderer;
 }
 
+void MediaPlayer::ensureSeekDecoderOpen() {
+  if (currentPath_.isEmpty())
+    return;
+  if (seekDecoder_ && !seekDecoder_->isRunning()) {
+    LOG_MP(info, "ensureSeekDecoderOpen() lazy loading SeekDecoder path=" << currentPath_);
+    bool ok = seekDecoder_->open(currentPath_);
+    if (ok) {
+      if (videoRenderer_) {
+        seekDecoder_->setOutputSize(videoRenderer_->size());
+      }
+      LOG_MP(info, "ensureSeekDecoderOpen() lazy loaded successfully");
+    } else {
+      LOG_MP(warning, "ensureSeekDecoderOpen() lazy load failed");
+    }
+  }
+}
+
 void MediaPlayer::load(const QString &path) {
   // If a previous async load is still running, interrupt it first to avoid
   // blocking the main thread
@@ -120,19 +137,10 @@ void MediaPlayer::load(const QString &path) {
   // Capture generation before starting thread
   int gen = loadGeneration_;
 
-  // Launch background thread: opens both decoders in parallel
+  // Launch background thread: opens main decoder (lazy loading seekDecoder)
   loadThread_ = std::thread([this, path, gen]() {
-    bool decoderOk = false;
+    bool decoderOk = decoder_->open(path);
     bool seekDecoderOk = false;
-
-    std::thread decoderThread(
-        [this, &path, &decoderOk]() { decoderOk = decoder_->open(path); });
-    std::thread seekThread([this, &path, &seekDecoderOk]() {
-      seekDecoderOk = seekDecoder_->open(path);
-    });
-
-    decoderThread.join();
-    seekThread.join();
 
     // Mark thread as done before emitting signal
     {
@@ -170,8 +178,10 @@ void MediaPlayer::onLoadFinished(const QString &path, bool decoderOk,
     return;
   }
 
+  currentPath_ = path;
+
   if (!seekDecoderOk) {
-    LOG_MP(warning, "SeekDecoder open failed, seek preview disabled");
+    LOG_MP(info, "SeekDecoder is not opened yet, will be lazy loaded on demand");
   }
 
   if (decoder_->hasAudio()) {
@@ -219,7 +229,10 @@ void MediaPlayer::play() {
     playbackTimerRunning_ = true;
     driftStartMs_ = -1;
     playbackTimer_->start(16);
-    audioOutput_->resume();
+    if (audioOutput_) {
+      audioSessionStartUSecs_ = audioOutput_->playedUSecs();
+      audioOutput_->resume();
+    }
     LOG_MP(info, "play() state=Playing startTime=" << playbackStartTimeMs_);
   }
 }
@@ -293,6 +306,8 @@ void MediaPlayer::clear() {
   hasPendingSeek_ = false;
   seekCoalesceTimer_->stop();
   driftStartMs_ = -1;
+  currentPath_.clear();
+  audioSessionStartUSecs_ = 0;
 
   if (decoder_) {
     decoder_->close();
@@ -356,12 +371,16 @@ void MediaPlayer::seek(qint64 ms) {
   isPreviewDragging_ = false;
 
   seekPreviewMode_ = true;
+  ensureSeekDecoderOpen();
   if (seekDecoder_) {
     seekDecoder_->requestSeek(ms);
   }
   if (decoder_) {
     decoder_->requestSeek(ms);
     decoder_->clearAllQueues();
+  }
+  if (audioOutput_) {
+    audioOutput_->flush();
   }
 
   emit timeChanged(currentTimeMs_);
@@ -391,6 +410,8 @@ void MediaPlayer::previewSeek(qint64 ms) {
     LOG_MP(info, "previewSeek() drag started target=" << ms);
   }
 
+  ensureSeekDecoderOpen();
+
   pendingSeekMs_ = ms;
   hasPendingSeek_ = true;
   if (!seekCoalesceTimer_->isActive()) {
@@ -404,6 +425,7 @@ void MediaPlayer::executePendingSeek() {
   hasPendingSeek_ = false;
   seekTargetMs_ = pendingSeekMs_;
 
+  ensureSeekDecoderOpen();
   if (seekDecoder_ && seekDecoder_->isRunning()) {
     seekDecoder_->requestSeek(pendingSeekMs_, true); // 恢复精确 Seek（解码 P 帧）
   }
@@ -435,6 +457,9 @@ void MediaPlayer::stopPreviewDragging() {
   decoder_->requestSeek(currentTimeMs_);
   decoder_->clearAllQueues();
   pendingVideoFrame_ = std::nullopt;
+  if (audioOutput_) {
+    audioOutput_->flush();
+  }
 
   if (playbackTimerRunning_) {
     playbackTimer_->stop();
@@ -521,11 +546,16 @@ void MediaPlayer::onPlaybackTimer() {
     audioOutput_->write(aframe->pcmData.constData(), aframe->pcmData.size());
   }
 
-  // 2. Calculate playback clock based on elapsed real time
+  // 2. Calculate playback clock based on audio master clock or elapsed real time
   double audioClock = 0.0;
   if (playbackTimerRunning_) {
-    audioClock =
-        (playbackStartTimeMs_ + playbackElapsedTimer_.elapsed()) / 1000.0;
+    if (decoder_->hasAudio() && audioOutput_ && audioOutput_->isOpen()) {
+      qint64 sessionPlayedMs = qMax(0LL, audioOutput_->playedUSecs() - audioSessionStartUSecs_) / 1000;
+      audioClock = (playbackStartTimeMs_ + sessionPlayedMs) / 1000.0;
+    } else {
+      audioClock =
+          (playbackStartTimeMs_ + playbackElapsedTimer_.elapsed()) / 1000.0;
+    }
   } else {
     audioClock = currentTimeMs_ / 1000.0;
   }
