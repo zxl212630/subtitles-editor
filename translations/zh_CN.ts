@@ -2396,6 +2396,22 @@
         <source>音量 / 静音</source>
         <translation>音量 / 静音</translation>
     </message>
+    <message>
+        <source>全画质</source>
+        <translation>全画质</translation>
+    </message>
+    <message>
+        <source>3/4 画质</source>
+        <translation>3/4 画质</translation>
+    </message>
+    <message>
+        <source>1/2 画质</source>
+        <translation>1/2 画质</translation>
+    </message>
+    <message>
+        <source>1/4 画质</source>
+        <translation>1/4 画质</translation>
+    </message>
 </context>
 <context>
     <name>VideoPropertyDialog</name>

@@ -2198,6 +2198,26 @@ A simple and easy-to-use video subtitle editing tool.</translation>
         <source>音量 / 静音</source>
         <translation>Volume / Mute</translation>
     </message>
+    <message>
+        <source>原画</source>
+        <translation>Full</translation>
+    </message>
+    <message>
+        <source>全画质</source>
+        <translation>Full Quality</translation>
+    </message>
+    <message>
+        <source>3/4 画质</source>
+        <translation>3/4 Quality</translation>
+    </message>
+    <message>
+        <source>1/2 画质</source>
+        <translation>1/2 Quality</translation>
+    </message>
+    <message>
+        <source>1/4 画质</source>
+        <translation>1/4 Quality</translation>
+    </message>
 </context>
 <context>
     <name>VideoPropertyDialog</name>

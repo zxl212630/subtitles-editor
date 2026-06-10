@@ -261,7 +261,23 @@ void FFmpegDecoder::close() {
   audioBitDepth_ = 0;
   mediaCreationTime_.clear();
 
+  lastSwsW_ = -1;
+  lastSwsH_ = -1;
+  lastDstW_ = -1;
+  lastDstH_ = -1;
+  lastSwsFormat_ = -1;
+
   LOG_DEC(info, "close() complete");
+}
+
+void FFmpegDecoder::setVideoQuality(double scale) {
+  QMutexLocker locker(&metadataMutex_);
+  qualityScale_ = qBound(0.1, scale, 1.0);
+}
+
+double FFmpegDecoder::videoQuality() const {
+  QMutexLocker locker(&metadataMutex_);
+  return qualityScale_;
 }
 
 void FFmpegDecoder::requestSeek(qint64 targetMs) {
@@ -572,16 +588,35 @@ bool FFmpegDecoder::decodeVideoPacket(AVPacket *packet) {
     int w = f->width;
     int h = f->height;
 
+    double qScale = 1.0;
     {
       QMutexLocker locker(&metadataMutex_);
-      if (!swsCtx_ || videoSize_.width() != w || videoSize_.height() != h) {
+      qScale = qualityScale_;
+    }
+
+    int dstW = w;
+    int dstH = h;
+    if (qScale < 1.0) {
+      dstW = static_cast<int>(w * qScale) & ~1;
+      dstH = static_cast<int>(h * qScale) & ~1;
+      if (dstW < 4) dstW = 4;
+      if (dstH < 4) dstH = 4;
+    }
+
+    {
+      QMutexLocker locker(&metadataMutex_);
+      if (!swsCtx_ || lastSwsW_ != w || lastSwsH_ != h || lastDstW_ != dstW || lastDstH_ != dstH || lastSwsFormat_ != f->format) {
         if (swsCtx_) {
           sws_freeContext(swsCtx_);
         }
-        swsCtx_ = sws_getContext(w, h, static_cast<AVPixelFormat>(f->format), w,
-                                 h, AV_PIX_FMT_RGBA, SWS_BILINEAR, nullptr,
+        swsCtx_ = sws_getContext(w, h, static_cast<AVPixelFormat>(f->format), dstW,
+                                 dstH, AV_PIX_FMT_RGBA, SWS_BILINEAR, nullptr,
                                  nullptr, nullptr);
-        videoSize_ = QSize(w, h);
+        lastSwsW_ = w;
+        lastSwsH_ = h;
+        lastDstW_ = dstW;
+        lastDstH_ = dstH;
+        lastSwsFormat_ = f->format;
       }
     }
 
@@ -591,12 +626,12 @@ bool FFmpegDecoder::decodeVideoPacket(AVPacket *packet) {
 #endif
 
     // Allocate local RGBA buffer and transfer ownership using std::move to avoid COW copies
-    int bufSize = w * h * 4;
+    int bufSize = dstW * dstH * 4;
     QByteArray rgbaData(bufSize, Qt::Uninitialized);
     uint8_t *dstData[4] = {
         reinterpret_cast<uint8_t *>(rgbaData.data()), nullptr,
         nullptr, nullptr};
-    int dstLinesize[4] = {w * 4, 0, 0, 0};
+    int dstLinesize[4] = {dstW * 4, 0, 0, 0};
     sws_scale(swsCtx_, f->data, f->linesize, 0, h, dstData, dstLinesize);
 
 #if PROFILE_TIMING
@@ -605,8 +640,8 @@ bool FFmpegDecoder::decodeVideoPacket(AVPacket *packet) {
 
     DecodedVideoFrame vf;
     vf.ptsMs = ptsMs;
-    vf.width = w;
-    vf.height = h;
+    vf.width = dstW;
+    vf.height = dstH;
     vf.rgbaData = std::move(rgbaData);
 
     QMutexLocker locker(&videoQueueMutex_);

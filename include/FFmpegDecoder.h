@@ -46,6 +46,8 @@ public:
   bool open(const QString &path);
   void close();
   void setCancelOpen(bool cancel);
+  void setVideoQuality(double scale);
+  double videoQuality() const;
 
   void requestSeek(qint64 targetMs);
   void setPlaying(bool playing);
@@ -146,6 +148,13 @@ private:
 
   bool discardBeforeTarget_ = false;
   qint64 lastEnqueuedVideoPts_ = -1;
+
+  double qualityScale_ = 1.0;
+  int lastSwsW_ = -1;
+  int lastSwsH_ = -1;
+  int lastDstW_ = -1;
+  int lastDstH_ = -1;
+  int lastSwsFormat_ = -1;
 
   static constexpr int MAX_VIDEO_QUEUE_MS = 500;
   static constexpr int MAX_AUDIO_QUEUE_MS = 500;

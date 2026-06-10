@@ -90,6 +90,7 @@ void MediaPlayer::ensureSeekDecoderOpen() {
       if (videoRenderer_) {
         seekDecoder_->setOutputSize(videoRenderer_->size());
       }
+      seekDecoder_->setVideoQuality(qualityScale_);
       LOG_MP(info, "ensureSeekDecoderOpen() lazy loaded successfully");
     } else {
       LOG_MP(warning, "ensureSeekDecoderOpen() lazy load failed");
@@ -197,6 +198,13 @@ void MediaPlayer::onLoadFinished(const QString &path, bool decoderOk,
 
   if (decoder_->hasAudio()) {
     audioOutput_->open(decoder_->audioSampleRate(), decoder_->audioChannels());
+  }
+
+  if (decoder_) {
+    decoder_->setVideoQuality(qualityScale_);
+  }
+  if (seekDecoder_) {
+    seekDecoder_->setVideoQuality(qualityScale_);
   }
 
   if (decoder_->hasVideo()) {
@@ -747,4 +755,23 @@ void MediaPlayer::setMuted(bool muted) {
     audioOutput_->setVolume(isMuted_ ? 0.0 : volume_);
   }
   emit volumeChanged(volume_, isMuted_);
+}
+
+void MediaPlayer::setVideoQuality(double quality) {
+  quality = qBound(0.1, quality, 1.0);
+  if (qFuzzyCompare(qualityScale_, quality))
+    return;
+  qualityScale_ = quality;
+
+  if (decoder_) {
+    decoder_->setVideoQuality(qualityScale_);
+  }
+  if (seekDecoder_) {
+    seekDecoder_->setVideoQuality(qualityScale_);
+  }
+
+  // Force re-decoding of current frame if paused/stopped/ready
+  if (state_ == Paused || state_ == Ready || state_ == Stopped) {
+    seek(currentTimeMs_);
+  }
 }

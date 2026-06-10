@@ -151,11 +151,17 @@ void SeekDecoder::close() {
   lastDstW_ = -1;
   lastDstH_ = -1;
   lastFormat_ = -1;
+  qualityScale_ = 1.0;
 }
 
 void SeekDecoder::setOutputSize(QSize size) {
   QMutexLocker locker(&outputSizeMutex_);
   outputSize_ = size;
+}
+
+void SeekDecoder::setVideoQuality(double scale) {
+  QMutexLocker locker(&outputSizeMutex_);
+  qualityScale_ = qBound(0.1, scale, 1.0);
 }
 
 void SeekDecoder::requestSeek(qint64 targetMs, bool precise) {
@@ -341,22 +347,27 @@ DecodedVideoFrame SeekDecoder::convertFrame(AVFrame *frame, qint64 ptsMs) {
   int srcH = frame->height;
 
   QSize outSize;
+  double qScale = 1.0;
   {
     QMutexLocker locker(&outputSizeMutex_);
     outSize = outputSize_;
+    qScale = qualityScale_;
   }
 
   // 等比例计算降分辨率输出尺寸
   int dstW = srcW;
   int dstH = srcH;
+  double finalScale = qScale;
   if (outSize.isValid() && !outSize.isEmpty()) {
-    double scale = qMin(static_cast<double>(outSize.width()) / srcW,
-                        static_cast<double>(outSize.height()) / srcH);
-    // 只在显示区域小于原始画面时才进行降分辨率，不进行拉伸放大
-    if (scale < 1.0) {
-      dstW = static_cast<int>(srcW * scale) & ~1; // 对齐到 2 像素边界
-      dstH = static_cast<int>(srcH * scale) & ~1;
-    }
+    double widgetScale = qMin(static_cast<double>(outSize.width()) / srcW,
+                              static_cast<double>(outSize.height()) / srcH);
+    finalScale = qMin(finalScale, widgetScale);
+  }
+  if (finalScale < 1.0) {
+    dstW = static_cast<int>(srcW * finalScale) & ~1; // 对齐到 2 像素边界
+    dstH = static_cast<int>(srcH * finalScale) & ~1;
+    if (dstW < 4) dstW = 4;
+    if (dstH < 4) dstH = 4;
   }
 
   // 如果尺寸或格式改变，重建 sws 上下文

@@ -111,6 +111,7 @@ private:
 
   QComboBox *fontCombo_ = nullptr;
   QComboBox *sizeCombo_ = nullptr;
+  QComboBox *qualityCombo_ = nullptr;
   QFrame *videoArea_ = nullptr;
   QList<QFrame *> handles_;
 

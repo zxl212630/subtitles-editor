@@ -26,6 +26,26 @@
 #include <QValidator>
 
 #include "ThemeManager.h"
+#include <QStyledItemDelegate>
+#include <QCoreApplication>
+
+class QualityDelegate : public QStyledItemDelegate {
+public:
+  using QStyledItemDelegate::QStyledItemDelegate;
+  QString displayText(const QVariant &value, const QLocale &locale) const override {
+    QString text = value.toString();
+    if (text == "原画" || text == "Full") {
+      return QCoreApplication::translate("VideoPreviewPanel", "全画质");
+    } else if (text == "3/4") {
+      return QCoreApplication::translate("VideoPreviewPanel", "3/4 画质");
+    } else if (text == "1/2") {
+      return QCoreApplication::translate("VideoPreviewPanel", "1/2 画质");
+    } else if (text == "1/4") {
+      return QCoreApplication::translate("VideoPreviewPanel", "1/4 画质");
+    }
+    return QStyledItemDelegate::displayText(value, locale);
+  }
+};
 
 #define LOG_SUB_debug(msg) qDebug() << "[SubtitleOverlay]" << msg
 #define LOG_SUB(level, msg) LOG_SUB_##level(msg)
@@ -432,6 +452,9 @@ VideoPreviewPanel::VideoPreviewPanel(QWidget *parent) : QWidget(parent) {
       }
       fontCombo_->hidePopup();
       sizeCombo_->hidePopup();
+      if (qualityCombo_) {
+        qualityCombo_->hidePopup();
+      }
     });
   }
 }
@@ -660,6 +683,32 @@ void VideoPreviewPanel::setupUi() {
   currentTimeLabel_->setAlignment(Qt::AlignCenter);
   cbLayout->addWidget(currentTimeLabel_);
 
+  // Quality combo
+  qualityCombo_ = new QComboBox(controlBar);
+  qualityCombo_->setObjectName("PreviewQualityCombo");
+  qualityCombo_->setFocusPolicy(Qt::NoFocus);
+  qualityCombo_->setItemDelegate(new QualityDelegate(qualityCombo_));
+  qualityCombo_->setFixedWidth(56);
+  qualityCombo_->setFixedHeight(24);
+  if (auto *view = qualityCombo_->view()) {
+    view->setMinimumWidth(96);
+    if (QWidget *w = view->window()) {
+      w->setWindowFlags(Qt::Popup | Qt::FramelessWindowHint |
+                        Qt::NoDropShadowWindowHint);
+      w->setAttribute(Qt::WA_TranslucentBackground);
+    }
+  }
+  cbLayout->addWidget(qualityCombo_);
+
+  connect(qualityCombo_, QOverload<int>::of(&QComboBox::currentIndexChanged), this,
+          [this](int index) {
+            if (index < 0) return;
+            double quality = qualityCombo_->itemData(index).toDouble();
+            if (mediaPlayer_) {
+              mediaPlayer_->setVideoQuality(quality);
+            }
+          });
+
   volBtn_ = new VolumeButton(controlBar);
   volBtn_->setObjectName("PreviewIconBtn");
   volBtn_->setFixedSize(24, 24);
@@ -684,6 +733,7 @@ void VideoPreviewPanel::setupUi() {
           });
 
   layout->addWidget(controlBar);
+  retranslateUi();
 }
 
 void VideoPreviewPanel::populateFontCombo() {
@@ -770,6 +820,21 @@ void VideoPreviewPanel::retranslateUi() {
   arBtn_->setToolTip(tr("右对齐"));
   ajBtn_->setToolTip(tr("分散对齐"));
   volBtn_->setToolTip(tr("音量 / 静音"));
+
+  if (qualityCombo_) {
+    int currentIdx = qualityCombo_->currentIndex();
+    if (currentIdx < 0) {
+      currentIdx = 0;
+    }
+    qualityCombo_->blockSignals(true);
+    qualityCombo_->clear();
+    qualityCombo_->addItem(tr("原画"), 1.0);
+    qualityCombo_->addItem("3/4", 0.75);
+    qualityCombo_->addItem("1/2", 0.5);
+    qualityCombo_->addItem("1/4", 0.25);
+    qualityCombo_->setCurrentIndex(currentIdx);
+    qualityCombo_->blockSignals(false);
+  }
 }
 
 void VideoPreviewPanel::resizeEvent(QResizeEvent *event) {
@@ -803,6 +868,12 @@ void VideoPreviewPanel::setMediaPlayer(MediaPlayer *player) {
     }
     if (sliderWidget_) {
       sliderWidget_->setVolume(mediaPlayer_->volume(), mediaPlayer_->isMuted());
+    }
+    if (qualityCombo_) {
+      int idx = qualityCombo_->currentIndex();
+      if (idx >= 0) {
+        mediaPlayer_->setVideoQuality(qualityCombo_->itemData(idx).toDouble());
+      }
     }
   }
 }

@@ -32,6 +32,7 @@ public:
 
   // 设置预览输出的限宽限高尺寸（降分辨率缩放提高 sws_scale 效率）
   void setOutputSize(QSize size);
+  void setVideoQuality(double scale);
 
   // 发起 Seek 请求（线程安全，支持高频调用，自动合并）
   void requestSeek(qint64 targetMs, bool precise = true);
@@ -68,6 +69,7 @@ private:
 
   QSize outputSize_;
   QSize nativeSize_;
+  double qualityScale_ = 1.0;
   mutable QMutex outputSizeMutex_;
 
   // 接收的 Seek 请求时间戳及请求计数版本号

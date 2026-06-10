@@ -46,6 +46,8 @@ public:
   qreal volume() const { return volume_; }
   void setMuted(bool muted);
   bool isMuted() const { return isMuted_; }
+  void setVideoQuality(double quality);
+  double videoQuality() const { return qualityScale_; }
 
   State state() const { return state_; }
   bool isLoading() const { return isLoading_.load(); }
@@ -118,6 +120,7 @@ private:
   qreal volume_ = 1.0;
   bool isMuted_ = false;
   qint64 totalDurationLimitMs_ = 0;
+  double qualityScale_ = 1.0;
 
   std::atomic<bool> isLoading_{false};
   std::thread loadThread_;
