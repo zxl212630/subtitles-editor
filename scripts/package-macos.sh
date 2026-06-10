@@ -347,6 +347,10 @@ echo "=== Signing bundle ==="
 codesign --force --deep --sign - "$APP_BUNDLE"
 
 echo "=== Creating DMG ==="
+# 杀死残留的 diskimages-help 进程，避免 "Resource busy" 错误
+pkill -f diskimages-help 2>/dev/null || true
+sleep 1
+
 STAGING_DIR=$(mktemp -d)
 cp -a "$APP_BUNDLE" "$STAGING_DIR/"
 ln -sf /Applications "$STAGING_DIR/Applications"
