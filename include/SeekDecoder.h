@@ -82,9 +82,6 @@ private:
   QMutex wakeMutex_;
   QWaitCondition wakeCondition_;
 
-  // 用于小范围智能 seek 的状态记录
   qint64 lastSeekTargetMs_ = -1;
   qint64 lastDecodedPtsMs_ = -1;
-
-  QByteArray reusableRgbaBuffer_;
 };

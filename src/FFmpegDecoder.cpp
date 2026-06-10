@@ -590,13 +590,11 @@ bool FFmpegDecoder::decodeVideoPacket(AVPacket *packet) {
     scaleTimer.start();
 #endif
 
-    // Reuse pre-allocated RGBA buffer
+    // Allocate local RGBA buffer and transfer ownership using std::move to avoid COW copies
     int bufSize = w * h * 4;
-    if (reusableRgbaBuffer_.size() != bufSize) {
-      reusableRgbaBuffer_.resize(bufSize);
-    }
+    QByteArray rgbaData(bufSize, Qt::Uninitialized);
     uint8_t *dstData[4] = {
-        reinterpret_cast<uint8_t *>(reusableRgbaBuffer_.data()), nullptr,
+        reinterpret_cast<uint8_t *>(rgbaData.data()), nullptr,
         nullptr, nullptr};
     int dstLinesize[4] = {w * 4, 0, 0, 0};
     sws_scale(swsCtx_, f->data, f->linesize, 0, h, dstData, dstLinesize);
@@ -609,8 +607,7 @@ bool FFmpegDecoder::decodeVideoPacket(AVPacket *packet) {
     vf.ptsMs = ptsMs;
     vf.width = w;
     vf.height = h;
-    vf.rgbaData =
-        reusableRgbaBuffer_; // QByteArray is implicitly shared (copy-on-write)
+    vf.rgbaData = std::move(rgbaData);
 
     QMutexLocker locker(&videoQueueMutex_);
     videoQueue_.enqueue(std::move(vf));

@@ -378,12 +378,10 @@ DecodedVideoFrame SeekDecoder::convertFrame(AVFrame *frame, qint64 ptsMs) {
   }
 
   int bufSize = dstW * dstH * 4;
-  if (reusableRgbaBuffer_.size() != bufSize) {
-    reusableRgbaBuffer_.resize(bufSize);
-  }
+  QByteArray rgbaData(bufSize, Qt::Uninitialized);
 
   uint8_t *dstData[4] = {
-      reinterpret_cast<uint8_t *>(reusableRgbaBuffer_.data()), nullptr, nullptr,
+      reinterpret_cast<uint8_t *>(rgbaData.data()), nullptr, nullptr,
       nullptr};
   int dstLinesize[4] = {dstW * 4, 0, 0, 0};
 
@@ -393,7 +391,7 @@ DecodedVideoFrame SeekDecoder::convertFrame(AVFrame *frame, qint64 ptsMs) {
   vf.ptsMs = ptsMs;
   vf.width = dstW;
   vf.height = dstH;
-  vf.rgbaData = reusableRgbaBuffer_; // QByteArray 隐式共享拷贝
+  vf.rgbaData = std::move(rgbaData);
 
   return vf;
 }

@@ -140,7 +140,6 @@ private:
 
   // Reusable decode buffers (decoder thread only)
   AVFrame *reusableFrame_ = nullptr;
-  QByteArray reusableRgbaBuffer_;
 
   QMutex queueFullMutex_;
   QWaitCondition queueNotFull_;
