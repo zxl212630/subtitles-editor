@@ -53,6 +53,7 @@ public:
 
   void splitItem(const QString &id, int cursorPosition = -1,
                  const QString &currentText = QString());
+  void splitItemAtTime(const QString &id, qint64 splitMs);
   void mergeItems(const QString &id1, const QString &id2);
   void addGapItem(qint64 startMs, qint64 endMs);
 
@@ -137,6 +138,7 @@ private:
   void updateItemsDirect(const QList<SubtitleItem> &newItems);
   void splitItemDirect(const QString &id, int cursorPosition,
                        const QString &currentText);
+  void splitItemAtTimeDirect(const QString &id, qint64 splitMs);
   void mergeItemsDirect(const QString &id1, const QString &id2);
   void addGapItemDirect(qint64 startMs, qint64 endMs);
   void setSpeakerInfoDirect(int id, const SpeakerInfo &info);

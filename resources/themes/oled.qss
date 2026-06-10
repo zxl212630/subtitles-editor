@@ -850,3 +850,58 @@ QFrame#TitleBarSeparator {
     border: none;
 }
 
+/* Timeline Toolbar Styles */
+QFrame#TimelineToolbar {
+    background-color: @bg_lighter;
+    border-bottom: 1px solid @border_dark;
+}
+
+QToolButton#TimelineToolbarBtn {
+    background-color: transparent;
+    border: none;
+    border-radius: 4px;
+    padding: 4px;
+    margin: 2px;
+}
+
+QToolButton#TimelineToolbarBtn:hover {
+    background-color: @border_dark;
+}
+
+QToolButton#TimelineToolbarBtn:pressed {
+    background-color: @border_color;
+}
+
+QToolButton#TimelineToolbarBtn:disabled {
+    background-color: transparent;
+}
+
+QToolButton#TimelineToolbarBtn[checked="true"] {
+    background-color: @primary_color;
+}
+
+/* Horizontal zoom slider */
+QSlider#TimelineZoomSlider::groove:horizontal {
+    border: none;
+    height: 4px;
+    background: @border_dark;
+    border-radius: 2px;
+}
+
+QSlider#TimelineZoomSlider::sub-page:horizontal {
+    background: @primary_color;
+    border-radius: 2px;
+}
+
+QSlider#TimelineZoomSlider::handle:horizontal {
+    background: @text_normal;
+    width: 12px;
+    height: 12px;
+    margin-top: -4px;
+    margin-bottom: -4px;
+    border-radius: 6px;
+}
+
+QSlider#TimelineZoomSlider::handle:horizontal:hover {
+    background: @primary_hover;
+}

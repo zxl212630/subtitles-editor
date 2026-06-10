@@ -12,6 +12,10 @@
 #include <QFile>
 #include <QSvgRenderer>
 #include <QUndoStack>
+#include <QFrame>
+#include <QToolButton>
+#include <QSlider>
+#include <QHBoxLayout>
 
 #include <QApplication>
 #include <QContextMenuEvent>
@@ -72,6 +76,52 @@ TimelinePanel::TimelinePanel(QWidget *parent) : QWidget(parent) {
   setMouseTracking(true);
   setFocusPolicy(Qt::StrongFocus);
 
+  // 1. Create and layout toolbar
+  toolbar_ = new QFrame(this);
+  toolbar_->setObjectName("TimelineToolbar");
+  toolbar_->setFixedHeight(36);
+
+  QHBoxLayout *tbLayout = new QHBoxLayout(toolbar_);
+  tbLayout->setContentsMargins(6, 0, 6, 0);
+  tbLayout->setSpacing(6);
+
+  auto createToolBtn = [this, tbLayout](QToolButton *&btn, const QString &objName) {
+    btn = new QToolButton(toolbar_);
+    btn->setObjectName(objName);
+    btn->setIconSize(QSize(16, 16));
+    btn->setCursor(Qt::PointingHandCursor);
+    tbLayout->addWidget(btn);
+  };
+
+  createToolBtn(selectAllBtn_, "TimelineToolbarBtn");
+  createToolBtn(deselectBtn_, "TimelineToolbarBtn");
+  createToolBtn(undoBtn_, "TimelineToolbarBtn");
+  createToolBtn(redoBtn_, "TimelineToolbarBtn");
+
+  tbLayout->addSpacing(4);
+
+  createToolBtn(addBtn_, "TimelineToolbarBtn");
+  createToolBtn(splitBtn_, "TimelineToolbarBtn");
+  createToolBtn(deleteBtn_, "TimelineToolbarBtn");
+
+  tbLayout->addStretch();
+
+  createToolBtn(snapBtn_, "TimelineToolbarBtn");
+  snapBtn_->setCheckable(true);
+  snapBtn_->setChecked(snapEnabled_);
+
+  createToolBtn(fitBtn_, "TimelineToolbarBtn");
+  createToolBtn(zoomOutBtn_, "TimelineToolbarBtn");
+
+  zoomSlider_ = new QSlider(Qt::Horizontal, toolbar_);
+  zoomSlider_->setObjectName("TimelineZoomSlider");
+  zoomSlider_->setFixedWidth(100);
+  zoomSlider_->setRange(0, 100);
+  tbLayout->addWidget(zoomSlider_);
+
+  createToolBtn(zoomInBtn_, "TimelineToolbarBtn");
+
+  // 2. Create Canvas and Scrollbar
   canvas_ = new TimelineCanvas(this, this);
 
   hScrollBar_ = new QScrollBar(Qt::Horizontal, this);
@@ -82,12 +132,164 @@ TimelinePanel::TimelinePanel(QWidget *parent) : QWidget(parent) {
     canvas_->update();
   });
 
+  // 3. Connect slots
+  connect(selectAllBtn_, &QToolButton::clicked, this, [this]() {
+    if (track_) {
+      QSet<QString> allIds;
+      for (const auto &item : track_->items()) {
+        allIds.insert(item.id);
+      }
+      track_->setSelectedItems(allIds);
+    }
+  });
+
+  connect(deselectBtn_, &QToolButton::clicked, this, [this]() {
+    if (track_) {
+      track_->clearSelection();
+    }
+  });
+
+  connect(undoBtn_, &QToolButton::clicked, this, [this]() {
+    if (track_ && track_->undoStack()) {
+      track_->undoStack()->undo();
+    }
+  });
+
+  connect(redoBtn_, &QToolButton::clicked, this, [this]() {
+    if (track_ && track_->undoStack()) {
+      track_->undoStack()->redo();
+    }
+  });
+
+  connect(addBtn_, &QToolButton::clicked, this, [this]() {
+    if (!track_) return;
+    
+    bool hasSub = false;
+    for (const auto &item : track_->items()) {
+      if (item.startMs <= currentTimeMs_ && currentTimeMs_ < item.endMs) {
+        hasSub = true;
+        break;
+      }
+    }
+    if (hasSub) return;
+
+    qint64 durationMs = 10000;
+    qint64 nextStartMs = -1;
+    for (const auto &item : track_->items()) {
+      if (item.startMs > currentTimeMs_) {
+        if (nextStartMs < 0 || item.startMs < nextStartMs) {
+          nextStartMs = item.startMs;
+        }
+      }
+    }
+
+    if (nextStartMs >= 0) {
+      qint64 diff = nextStartMs - currentTimeMs_;
+      if (diff < durationMs) {
+        durationMs = diff;
+      }
+    }
+
+    if (totalDurationMs_ > 0) {
+      durationMs = qMin(durationMs, totalDurationMs_ - currentTimeMs_);
+    }
+
+    if (durationMs > 0) {
+      SubtitleItem newItem = track_->defaultStyleItem();
+      newItem.id = QUuid::createUuid().toString(QUuid::WithoutBraces);
+      newItem.text = tr("新字幕");
+      newItem.startMs = currentTimeMs_;
+      newItem.endMs = currentTimeMs_ + durationMs;
+      newItem.selected = true;
+      track_->addItem(newItem);
+      track_->selectItem(newItem.id);
+    }
+  });
+
+  connect(splitBtn_, &QToolButton::clicked, this, [this]() {
+    if (!track_) return;
+    const SubtitleItem *target = nullptr;
+    for (const auto &item : track_->items()) {
+      if (item.startMs < currentTimeMs_ && currentTimeMs_ < item.endMs) {
+        target = &item;
+        break;
+      }
+    }
+    if (target) {
+      track_->splitItemAtTime(target->id, currentTimeMs_);
+    }
+  });
+
+  connect(deleteBtn_, &QToolButton::clicked, this, [this]() {
+    if (!track_) return;
+    QList<QString> selectedIds;
+    for (const auto &item : track_->items()) {
+      if (item.selected) {
+        selectedIds.append(item.id);
+      }
+    }
+    if (!selectedIds.isEmpty()) {
+      track_->executeBatchAction(tr("删除选中字幕"), [this, selectedIds]() {
+        for (const auto &id : selectedIds) {
+          track_->removeItem(id);
+        }
+      });
+    }
+  });
+
+  connect(snapBtn_, &QToolButton::toggled, this, [this](bool checked) {
+    snapEnabled_ = checked;
+  });
+
+  connect(fitBtn_, &QToolButton::clicked, this, [this]() {
+    if (totalDurationMs_ <= 0) return;
+    int viewportWidth = canvas_->width() - TRACK_HEAD_WIDTH - PANEL_RIGHT_MARGIN;
+    if (viewportWidth <= 0) return;
+    
+    double targetPps = (viewportWidth * 0.95) * 1000.0 / totalDurationMs_;
+    double minPps, maxPps;
+    getZoomBounds(minPps, maxPps);
+    pixelsPerSecond_ = qBound(minPps, targetPps, maxPps);
+    
+    scrollOffsetX_ = 0;
+    updateScrollBar();
+    updateZoomControls();
+    canvas_->update();
+  });
+
+  connect(zoomOutBtn_, &QToolButton::clicked, this, [this]() {
+    double minPps, maxPps;
+    getZoomBounds(minPps, maxPps);
+    double newPps = pixelsPerSecond_ * 0.8;
+    pixelsPerSecond_ = qBound(minPps, newPps, maxPps);
+    
+    updateScrollBar();
+    updateZoomControls();
+    canvas_->update();
+  });
+
+  connect(zoomInBtn_, &QToolButton::clicked, this, [this]() {
+    double minPps, maxPps;
+    getZoomBounds(minPps, maxPps);
+    double newPps = pixelsPerSecond_ * 1.25;
+    pixelsPerSecond_ = qBound(minPps, newPps, maxPps);
+    
+    updateScrollBar();
+    updateZoomControls();
+    canvas_->update();
+  });
+
+  connect(zoomSlider_, &QSlider::valueChanged, this, &TimelinePanel::onZoomSliderChanged);
+
+  retranslateUi();
   updateIcons();
-  connect(&ThemeManager::instance(), &ThemeManager::themeChanged, this,
-          [this]() {
-            updateIcons();
-            canvas_->update();
-          });
+  updateZoomControls();
+  updateToolbarStates();
+
+  connect(&ThemeManager::instance(), &ThemeManager::themeChanged, this, [this]() {
+    updateIcons();
+    canvas_->update();
+  });
 }
 
 int TimelinePanel::timeToX(qint64 ms) const {
@@ -144,6 +346,8 @@ void TimelinePanel::setTrack(SubtitleTrack *track) {
                QOverload<>::of(&TimelineCanvas::update));
     disconnect(track_, &SubtitleTrack::itemSelected, canvas_,
                QOverload<>::of(&TimelineCanvas::update));
+    disconnect(track_, &SubtitleTrack::dataChanged, this, &TimelinePanel::updateToolbarStates);
+    disconnect(track_, &SubtitleTrack::itemSelected, this, &TimelinePanel::updateToolbarStates);
   }
   track_ = track;
   if (track_) {
@@ -151,7 +355,10 @@ void TimelinePanel::setTrack(SubtitleTrack *track) {
             QOverload<>::of(&TimelineCanvas::update));
     connect(track_, &SubtitleTrack::itemSelected, canvas_,
             QOverload<>::of(&TimelineCanvas::update));
+    connect(track_, &SubtitleTrack::dataChanged, this, &TimelinePanel::updateToolbarStates);
+    connect(track_, &SubtitleTrack::itemSelected, this, &TimelinePanel::updateToolbarStates);
   }
+  updateToolbarStates();
   canvas_->update();
 }
 
@@ -218,6 +425,7 @@ void TimelinePanel::setCurrentTime(qint64 ms) {
     }
   }
 
+  updateToolbarStates();
   canvas_->update();
 }
 
@@ -245,11 +453,14 @@ void TimelinePanel::setTotalDuration(qint64 ms) {
   totalDurationMs_ = ms;
   clampScrollOffset();
   updateScrollBar();
+  updateZoomControls();
+  updateToolbarStates();
   canvas_->update();
 }
 
 void TimelinePanel::setVideoDuration(qint64 ms) {
   videoDurationMs_ = ms;
+  updateZoomControls();
   canvas_->update();
 }
 
@@ -267,6 +478,8 @@ void TimelinePanel::clear() {
     hScrollBar_->setRange(0, 0);
     hScrollBar_->blockSignals(false);
   }
+  updateZoomControls();
+  updateToolbarStates();
   canvas_->update();
 }
 
@@ -914,6 +1127,24 @@ void TimelinePanel::mousePressEvent(QMouseEvent *event) {
   }
 }
 
+static qint64 snapTime(qint64 targetTimeMs, const QList<qint64> &refs, qint64 thresholdMs, bool *snapped = nullptr) {
+  if (snapped) *snapped = false;
+  qint64 closestRef = -1;
+  qint64 minDiff = thresholdMs + 1;
+  for (qint64 ref : refs) {
+    qint64 diff = qAbs(targetTimeMs - ref);
+    if (diff < minDiff) {
+      minDiff = diff;
+      closestRef = ref;
+    }
+  }
+  if (closestRef >= 0) {
+    if (snapped) *snapped = true;
+    return closestRef;
+  }
+  return targetTimeMs;
+}
+
 void TimelinePanel::mouseMoveEvent(QMouseEvent *event) {
   // Update cursor when not dragging
   if (!mousePressed_) {
@@ -963,8 +1194,62 @@ void TimelinePanel::mouseMoveEvent(QMouseEvent *event) {
     // --- Clip drag/resize ---
     qint64 mouseMs = xToTime(event->x());
 
+    // Compile snap references if enabled
+    QList<qint64> snapRefs;
+    if (snapEnabled_) {
+      snapRefs.append(0);
+      if (totalDurationMs_ > 0) {
+        snapRefs.append(totalDurationMs_);
+      }
+      snapRefs.append(currentTimeMs_);
+
+      QSet<QString> draggedIds;
+      for (const auto &dc : dragClips_) {
+        draggedIds.insert(dc.id);
+      }
+      if (track_) {
+        for (const auto &item : track_->items()) {
+          if (!draggedIds.contains(item.id)) {
+            snapRefs.append(item.startMs);
+            snapRefs.append(item.endMs);
+          }
+        }
+      }
+
+      for (const auto &dc : dragClips_) {
+        snapRefs.append(dc.origStartMs);
+        snapRefs.append(dc.origEndMs);
+      }
+    }
+
     if (clipMode_ == ClipInteractionMode::ClipMove) {
       qint64 deltaMs = mouseMs - xToTime(dragStartX_);
+
+      if (snapEnabled_) {
+        qint64 thresholdMs = static_cast<qint64>(10.0 * 1000.0 / pixelsPerSecond_);
+        qint64 targetStart = dragOrigStartMs_ + deltaMs;
+        qint64 targetEnd = dragOrigEndMs_ + deltaMs;
+
+        bool startSnapped = false;
+        qint64 snappedStart = snapTime(targetStart, snapRefs, thresholdMs, &startSnapped);
+
+        bool endSnapped = false;
+        qint64 snappedEnd = snapTime(targetEnd, snapRefs, thresholdMs, &endSnapped);
+
+        if (startSnapped && endSnapped) {
+          qint64 startDiff = qAbs(snappedStart - targetStart);
+          qint64 endDiff = qAbs(snappedEnd - targetEnd);
+          if (startDiff <= endDiff) {
+            deltaMs = snappedStart - dragOrigStartMs_;
+          } else {
+            deltaMs = snappedEnd - dragOrigEndMs_;
+          }
+        } else if (startSnapped) {
+          deltaMs = snappedStart - dragOrigStartMs_;
+        } else if (endSnapped) {
+          deltaMs = snappedEnd - dragOrigEndMs_;
+        }
+      }
 
       qint64 minDelta = -10000000000LL;
       qint64 maxDelta = 10000000000LL;
@@ -1038,6 +1323,11 @@ void TimelinePanel::mouseMoveEvent(QMouseEvent *event) {
     } else if (clipMode_ == ClipInteractionMode::ClipResizeLeft) {
       qint64 newStart = xToTime(event->x());
 
+      if (snapEnabled_) {
+        qint64 thresholdMs = static_cast<qint64>(10.0 * 1000.0 / pixelsPerSecond_);
+        newStart = snapTime(newStart, snapRefs, thresholdMs);
+      }
+
       qint64 prevEnd = -1;
       for (const auto &item : track_->items()) {
         if (item.id == dragTargetId_)
@@ -1069,6 +1359,11 @@ void TimelinePanel::mouseMoveEvent(QMouseEvent *event) {
 
     } else if (clipMode_ == ClipInteractionMode::ClipResizeRight) {
       qint64 newEnd = xToTime(event->x());
+
+      if (snapEnabled_) {
+        qint64 thresholdMs = static_cast<qint64>(10.0 * 1000.0 / pixelsPerSecond_);
+        newEnd = snapTime(newEnd, snapRefs, thresholdMs);
+      }
 
       qint64 nextStart = -1;
       for (const auto &item : track_->items()) {
@@ -1348,13 +1643,10 @@ void TimelinePanel::startAsrPipeline(const QString &localPath,
 }
 
 void TimelinePanel::wheelEvent(QWheelEvent *event) {
-  // On macOS event->modifiers() may be empty for trackpad gestures,
-  // so also query the application-wide keyboard state.
   bool zoomPressed = (event->modifiers() & Qt::MetaModifier) ||
                      (QApplication::keyboardModifiers() & Qt::MetaModifier);
 
   if (zoomPressed) {
-    // Zoom
     QPoint pos = event->position().toPoint();
     qint64 t = xToTime(pos.x());
 
@@ -1365,8 +1657,9 @@ void TimelinePanel::wheelEvent(QWheelEvent *event) {
       delta = event->pixelDelta().y();
 
     double factor = (delta > 0) ? 1.25 : 0.8;
-    double newPps = pixelsPerSecond_ * factor;
-    newPps = qBound(1.0, newPps, 1000.0);
+    double minPps, maxPps;
+    getZoomBounds(minPps, maxPps);
+    double newPps = qBound(minPps, pixelsPerSecond_ * factor, maxPps);
 
     // Adjust scroll so the time under cursor stays at the same screen X
     int cursorRelX = pos.x() - TRACK_HEAD_WIDTH;
@@ -1376,11 +1669,11 @@ void TimelinePanel::wheelEvent(QWheelEvent *event) {
     pixelsPerSecond_ = newPps;
     clampScrollOffset();
     updateScrollBar();
+    updateZoomControls();
     canvas_->update();
   } else {
     // Horizontal scroll
     int delta = event->angleDelta().y();
-    // Support horizontal wheel / trackpad
     if (delta == 0)
       delta = event->angleDelta().x();
     if (delta == 0)
@@ -1395,16 +1688,22 @@ void TimelinePanel::wheelEvent(QWheelEvent *event) {
 
 void TimelinePanel::resizeEvent(QResizeEvent * /*event*/) {
   int sbHeight = 12;
-  // Canvas covers the full panel
-  canvas_->setGeometry(0, 0, width(), height());
-  // Scrollbar sits on top of the canvas; keep vertical center unchanged
-  // old center = height - 14/2 = height - 7
+  
+  if (toolbar_) {
+    toolbar_->setGeometry(0, 0, width(), 36);
+  }
+  if (canvas_) {
+    canvas_->setGeometry(0, 36, width(), height() - 36);
+  }
+  
   int sbTop = height() - 7 - sbHeight / 2;
   hScrollBar_->setGeometry(TRACK_HEAD_WIDTH, sbTop,
                            width() - TRACK_HEAD_WIDTH - PANEL_RIGHT_MARGIN,
                            sbHeight);
   hScrollBar_->raise();
+  
   updateScrollBar();
+  updateZoomControls();
 }
 
 void TimelinePanel::contextMenuEvent(QContextMenuEvent *event) {
@@ -1412,20 +1711,17 @@ void TimelinePanel::contextMenuEvent(QContextMenuEvent *event) {
   if (x < TRACK_HEAD_WIDTH)
     return;
 
-  // If there is video total duration, prevent clicking beyond the active video
-  // timeline
   if (totalDurationMs_ > 0) {
     if (x > timeToX(totalDurationMs_)) {
       return;
     }
   }
 
-  int y = event->pos().y();
+  int y = event->pos().y() - 36;
   int subtitleTrackY = RULER_HEIGHT;
   int videoTrackY = RULER_HEIGHT + SUBTITLE_TRACK_HEIGHT;
 
   if (y >= subtitleTrackY && y < videoTrackY) {
-    // 右键点击在字幕轨道上
     if (!track_ || track_->items().isEmpty())
       return;
 
@@ -1449,7 +1745,6 @@ void TimelinePanel::contextMenuEvent(QContextMenuEvent *event) {
   }
 
   if (y >= videoTrackY && y < videoTrackY + VIDEO_TRACK_HEIGHT) {
-    // 右键点击在视频轨道上
     if (totalDurationMs_ <= 0 || mediaFilePath_.isEmpty())
       return;
 
@@ -1472,21 +1767,19 @@ void TimelinePanel::contextMenuEvent(QContextMenuEvent *event) {
 
 void TimelinePanel::changeEvent(QEvent *event) {
   if (event->type() == QEvent::LanguageChange) {
-    if (canvas_) {
-      canvas_->update();
-    }
+    retranslateUi();
   }
   QWidget::changeEvent(event);
 }
 
 void TimelinePanel::updateIcons() {
+  QColor textNormal = ThemeManager::instance().getTextNormalColor();
   QColor textMuted = ThemeManager::instance().getTextMutedColor();
   qreal dpr = this->devicePixelRatioF();
 
   auto renderSvgToPixmap = [dpr](const QString &path, const QColor &color,
                                  int size) -> QPixmap {
     QIcon icon(path);
-    // 直接传入逻辑尺寸，QIcon 内部会自动处理高分屏 DPR 缩放
     QPixmap pixmap = icon.pixmap(size, size);
     if (pixmap.isNull())
       return QPixmap();
@@ -1499,14 +1792,149 @@ void TimelinePanel::updateIcons() {
     tp.fillRect(pixmap.rect(), color);
     tp.end();
 
-    // 重新设回 DPR，确保其 devicePixelRatio 属性不被 QPainter::end() 篡改
     pixmap.setDevicePixelRatio(dpr);
-
     return pixmap;
   };
+
+  auto renderSvgToIcon = [renderSvgToPixmap](const QString &path, const QColor &color, int size) -> QIcon {
+    return QIcon(renderSvgToPixmap(path, color, size));
+  };
+
+  selectAllBtn_->setIcon(renderSvgToIcon(":/icons/select-all.svg", textNormal, 16));
+  deselectBtn_->setIcon(renderSvgToIcon(":/icons/deselect.svg", textNormal, 16));
+  undoBtn_->setIcon(renderSvgToIcon(":/icons/undo.svg", textNormal, 16));
+  redoBtn_->setIcon(renderSvgToIcon(":/icons/redo.svg", textNormal, 16));
+  addBtn_->setIcon(renderSvgToIcon(":/icons/add.svg", textNormal, 16));
+  splitBtn_->setIcon(renderSvgToIcon(":/icons/scissors.svg", textNormal, 16));
+  deleteBtn_->setIcon(renderSvgToIcon(":/icons/delete-subtitle.svg", textNormal, 16));
+  snapBtn_->setIcon(renderSvgToIcon(":/icons/snap.svg", textNormal, 16));
+  fitBtn_->setIcon(renderSvgToIcon(":/icons/fit.svg", textNormal, 16));
+  zoomOutBtn_->setIcon(renderSvgToIcon(":/icons/zoom-out.svg", textNormal, 16));
+  zoomInBtn_->setIcon(renderSvgToIcon(":/icons/zoom-in.svg", textNormal, 16));
 
   subIconPixmap_ =
       renderSvgToPixmap(":/icons/track_subtitle.svg", textMuted, 14);
   videoIconPixmap_ =
       renderSvgToPixmap(":/icons/track_video.svg", textMuted, 14);
+}
+
+void TimelinePanel::retranslateUi() {
+  selectAllBtn_->setToolTip(tr("全选"));
+  deselectBtn_->setToolTip(tr("取消选择"));
+  undoBtn_->setToolTip(tr("撤销"));
+  redoBtn_->setToolTip(tr("恢复"));
+  addBtn_->setToolTip(tr("添加字幕"));
+  splitBtn_->setToolTip(tr("切割字幕"));
+  deleteBtn_->setToolTip(tr("删除字幕"));
+  snapBtn_->setToolTip(tr("自动吸附"));
+  fitBtn_->setToolTip(tr("自适应"));
+  zoomOutBtn_->setToolTip(tr("缩小"));
+  zoomInBtn_->setToolTip(tr("放大"));
+  zoomSlider_->setToolTip(tr("滑动以缩放"));
+  if (canvas_) {
+    canvas_->update();
+  }
+}
+
+void TimelinePanel::updateToolbarStates() {
+  if (!track_) {
+    selectAllBtn_->setEnabled(false);
+    deselectBtn_->setEnabled(false);
+    undoBtn_->setEnabled(false);
+    redoBtn_->setEnabled(false);
+    addBtn_->setEnabled(false);
+    splitBtn_->setEnabled(false);
+    deleteBtn_->setEnabled(false);
+    return;
+  }
+
+  QUndoStack *stack = track_->undoStack();
+  if (stack) {
+    disconnect(stack, &QUndoStack::canUndoChanged, undoBtn_, &QToolButton::setEnabled);
+    disconnect(stack, &QUndoStack::canRedoChanged, redoBtn_, &QToolButton::setEnabled);
+    
+    connect(stack, &QUndoStack::canUndoChanged, undoBtn_, &QToolButton::setEnabled);
+    connect(stack, &QUndoStack::canRedoChanged, redoBtn_, &QToolButton::setEnabled);
+    
+    undoBtn_->setEnabled(stack->canUndo());
+    redoBtn_->setEnabled(stack->canRedo());
+  } else {
+    undoBtn_->setEnabled(false);
+    redoBtn_->setEnabled(false);
+  }
+
+  const auto &items = track_->items();
+  selectAllBtn_->setEnabled(!items.isEmpty());
+
+  bool hasSelection = false;
+  for (const auto &item : items) {
+    if (item.selected) {
+      hasSelection = true;
+      break;
+    }
+  }
+  deselectBtn_->setEnabled(hasSelection);
+  deleteBtn_->setEnabled(hasSelection);
+
+  bool hasSubUnderPlayhead = false;
+  for (const auto &item : items) {
+    if (item.startMs <= currentTimeMs_ && currentTimeMs_ < item.endMs) {
+      hasSubUnderPlayhead = true;
+      break;
+    }
+  }
+  addBtn_->setEnabled(!hasSubUnderPlayhead && totalDurationMs_ > 0 && currentTimeMs_ < totalDurationMs_);
+
+  bool canSplit = false;
+  for (const auto &item : items) {
+    if (item.startMs < currentTimeMs_ && currentTimeMs_ < item.endMs) {
+      canSplit = true;
+      break;
+    }
+  }
+  splitBtn_->setEnabled(canSplit);
+}
+
+void TimelinePanel::updateZoomControls() {
+  double minPps, maxPps;
+  getZoomBounds(minPps, maxPps);
+  
+  double logMin = std::log(minPps);
+  double logMax = std::log(maxPps);
+  
+  int sliderVal = 0;
+  if (logMax > logMin) {
+    sliderVal = qBound(0, qRound(100.0 * (std::log(pixelsPerSecond_) - logMin) / (logMax - logMin)), 100);
+  }
+  
+  zoomSlider_->blockSignals(true);
+  zoomSlider_->setValue(sliderVal);
+  zoomSlider_->blockSignals(false);
+}
+
+void TimelinePanel::getZoomBounds(double &outMinPps, double &outMaxPps) const {
+  int viewportWidth = canvas_->width() - TRACK_HEAD_WIDTH - PANEL_RIGHT_MARGIN;
+  if (viewportWidth <= 0) viewportWidth = 800;
+
+  outMinPps = 1.0;
+  if (totalDurationMs_ > 0) {
+    outMinPps = (viewportWidth * 0.95) * 1000.0 / totalDurationMs_;
+    outMinPps = qBound(0.0001, outMinPps, 100.0);
+  }
+
+  outMaxPps = qMax(100.0, 20.0 * videoFps_);
+}
+
+void TimelinePanel::onZoomSliderChanged(int value) {
+  double minPps, maxPps;
+  getZoomBounds(minPps, maxPps);
+  
+  double logMin = std::log(minPps);
+  double logMax = std::log(maxPps);
+  
+  double newPps = std::exp(logMin + (logMax - logMin) * (value / 100.0));
+  pixelsPerSecond_ = qBound(minPps, newPps, maxPps);
+  
+  updateScrollBar();
+  canvas_->update();
 }

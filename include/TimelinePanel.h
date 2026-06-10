@@ -10,6 +10,9 @@ class QScrollBar;
 class QWheelEvent;
 class SubtitleTrack;
 class TimelineCanvas;
+class QFrame;
+class QToolButton;
+class QSlider;
 
 class TimelinePanel : public QWidget {
   Q_OBJECT
@@ -147,4 +150,27 @@ private:
   QPixmap subIconPixmap_;
   QPixmap videoIconPixmap_;
   void updateIcons();
+
+  // Toolbar widgets
+  QFrame *toolbar_ = nullptr;
+  QToolButton *selectAllBtn_ = nullptr;
+  QToolButton *deselectBtn_ = nullptr;
+  QToolButton *undoBtn_ = nullptr;
+  QToolButton *redoBtn_ = nullptr;
+  QToolButton *addBtn_ = nullptr;
+  QToolButton *splitBtn_ = nullptr;
+  QToolButton *deleteBtn_ = nullptr;
+  QToolButton *snapBtn_ = nullptr;
+  QToolButton *fitBtn_ = nullptr;
+  QToolButton *zoomOutBtn_ = nullptr;
+  QSlider *zoomSlider_ = nullptr;
+  QToolButton *zoomInBtn_ = nullptr;
+
+  bool snapEnabled_ = true;
+
+  void retranslateUi();
+  void updateToolbarStates();
+  void updateZoomControls();
+  void getZoomBounds(double &outMinPps, double &outMaxPps) const;
+  void onZoomSliderChanged(int value);
 };

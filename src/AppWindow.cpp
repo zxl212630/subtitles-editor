@@ -512,9 +512,9 @@ void AppWindow::setupSplitterLayout() {
   d->verticalSplitter->setHandleWidth(10);
   d->verticalSplitter->setCollapsible(0, false);
   d->verticalSplitter->setCollapsible(1, false);
-  d->timelinePanel->setMinimumHeight(180);
-  d->timelinePanel->setMaximumHeight(400);
-  d->verticalSplitter->setSizes({720, 180});
+  d->timelinePanel->setMinimumHeight(220);
+  d->timelinePanel->setMaximumHeight(450);
+  d->verticalSplitter->setSizes({680, 220});
 
   // Set central widget
   auto *central = new QWidget(this);

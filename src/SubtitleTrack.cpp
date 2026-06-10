@@ -156,6 +156,17 @@ void SubtitleTrack::splitItem(const QString &id, int cursorPosition,
   }
 }
 
+void SubtitleTrack::splitItemAtTime(const QString &id, qint64 splitMs) {
+  if (undoStack_ && !isPerformingUndoRedo_) {
+    undoStack_->push(new SubtitleTrackCommand(
+        this, tr("分割字幕"), [this, id, splitMs]() {
+          splitItemAtTimeDirect(id, splitMs);
+        }));
+  } else {
+    splitItemAtTimeDirect(id, splitMs);
+  }
+}
+
 void SubtitleTrack::mergeItems(const QString &id1, const QString &id2) {
   if (undoStack_ && !isPerformingUndoRedo_) {
     undoStack_->push(
@@ -285,6 +296,40 @@ void SubtitleTrack::splitItemDirect(const QString &id, int cursorPosition,
         text2 = original.text.mid(mid);
         splitMs = original.startMs + (original.endMs - original.startMs) / 2;
       }
+
+      items_[i].text = text1;
+      items_[i].endMs = splitMs;
+
+      SubtitleItem newItem = original;
+      newItem.id = QUuid::createUuid().toString(QUuid::WithoutBraces);
+      newItem.text = text2;
+      newItem.startMs = splitMs;
+      newItem.endMs = original.endMs;
+      newItem.selected = false;
+
+      items_.insert(i + 1, newItem);
+
+      emit itemUpdated(original.id);
+      emit itemAdded(newItem);
+      emit dataChanged();
+      return;
+    }
+  }
+}
+
+void SubtitleTrack::splitItemAtTimeDirect(const QString &id, qint64 splitMs) {
+  for (int i = 0; i < items_.size(); ++i) {
+    if (items_[i].id == id) {
+      SubtitleItem original = items_[i];
+      if (splitMs <= original.startMs || splitMs >= original.endMs)
+        return; // Invalid split point
+
+      double ratio = static_cast<double>(splitMs - original.startMs) / (original.endMs - original.startMs);
+      int textLen = original.text.length();
+      int cursorPosition = qRound(textLen * ratio);
+
+      QString text1 = original.text.left(cursorPosition);
+      QString text2 = original.text.mid(cursorPosition);
 
       items_[i].text = text1;
       items_[i].endMs = splitMs;
