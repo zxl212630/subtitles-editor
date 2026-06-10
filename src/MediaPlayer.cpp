@@ -83,7 +83,8 @@ void MediaPlayer::ensureSeekDecoderOpen() {
   if (currentPath_.isEmpty())
     return;
   if (seekDecoder_ && !seekDecoder_->isRunning()) {
-    LOG_MP(info, "ensureSeekDecoderOpen() lazy loading SeekDecoder path=" << currentPath_);
+    LOG_MP(info, "ensureSeekDecoderOpen() lazy loading SeekDecoder path="
+                     << currentPath_);
     bool ok = seekDecoder_->open(currentPath_);
     if (ok) {
       if (videoRenderer_) {
@@ -137,10 +138,19 @@ void MediaPlayer::load(const QString &path) {
   // Capture generation before starting thread
   int gen = loadGeneration_;
 
-  // Launch background thread: opens main decoder (lazy loading seekDecoder)
+  // Launch background thread: opens both decoders in parallel
   loadThread_ = std::thread([this, path, gen]() {
-    bool decoderOk = decoder_->open(path);
+    bool decoderOk = false;
     bool seekDecoderOk = false;
+
+    std::thread decoderThread(
+        [this, &path, &decoderOk]() { decoderOk = decoder_->open(path); });
+    std::thread seekThread([this, &path, &seekDecoderOk]() {
+      seekDecoderOk = seekDecoder_->open(path);
+    });
+
+    decoderThread.join();
+    seekThread.join();
 
     // Mark thread as done before emitting signal
     {
@@ -181,7 +191,8 @@ void MediaPlayer::onLoadFinished(const QString &path, bool decoderOk,
   currentPath_ = path;
 
   if (!seekDecoderOk) {
-    LOG_MP(info, "SeekDecoder is not opened yet, will be lazy loaded on demand");
+    LOG_MP(info,
+           "SeekDecoder is not opened yet, will be lazy loaded on demand");
   }
 
   if (decoder_->hasAudio()) {
@@ -230,7 +241,7 @@ void MediaPlayer::play() {
     driftStartMs_ = -1;
     playbackTimer_->start(16);
     if (audioOutput_) {
-      audioSessionStartUSecs_ = audioOutput_->playedUSecs();
+      audioSessionStartUSecs_ = -1;
       audioOutput_->resume();
     }
     LOG_MP(info, "play() state=Playing startTime=" << playbackStartTimeMs_);
@@ -373,7 +384,7 @@ void MediaPlayer::seek(qint64 ms) {
   seekPreviewMode_ = true;
   ensureSeekDecoderOpen();
   if (seekDecoder_) {
-    seekDecoder_->requestSeek(ms);
+    seekDecoder_->requestSeek(ms, true);
   }
   if (decoder_) {
     decoder_->requestSeek(ms);
@@ -427,11 +438,16 @@ void MediaPlayer::executePendingSeek() {
 
   ensureSeekDecoderOpen();
   if (seekDecoder_ && seekDecoder_->isRunning()) {
-    seekDecoder_->requestSeek(pendingSeekMs_, true); // 恢复精确 Seek（解码 P 帧）
+    seekDecoder_->requestSeek(pendingSeekMs_,
+                              true); // 恢复精确 Seek（解码 P 帧）
   }
 }
 
 void MediaPlayer::onSeekFrameReady(DecodedVideoFrame frame) {
+  if (!isPreviewDragging_ && frame.targetMs != seekTargetMs_) {
+    return;
+  }
+
   if (!isPreviewDragging_ && !seekPreviewMode_)
     return;
 
@@ -451,20 +467,10 @@ void MediaPlayer::stopPreviewDragging() {
 
   seekCoalesceTimer_->stop();
   hasPendingSeek_ = false;
-  isPreviewDragging_ = false;
-  seekPreviewMode_ = false;
 
-  decoder_->requestSeek(currentTimeMs_);
-  decoder_->clearAllQueues();
-  pendingVideoFrame_ = std::nullopt;
-  if (audioOutput_) {
-    audioOutput_->flush();
-  }
-
-  if (playbackTimerRunning_) {
-    playbackTimer_->stop();
-    playbackTimerRunning_ = false;
-  }
+  // Perform a full exact seek to ensure the final frame is accurately rendered.
+  // The seek() method will also safely reset isPreviewDragging_.
+  seek(currentTimeMs_);
 }
 
 double MediaPlayer::decoderFps() const {
@@ -546,11 +552,17 @@ void MediaPlayer::onPlaybackTimer() {
     audioOutput_->write(aframe->pcmData.constData(), aframe->pcmData.size());
   }
 
-  // 2. Calculate playback clock based on audio master clock or elapsed real time
+  // 2. Calculate playback clock based on audio master clock or elapsed real
+  // time
   double audioClock = 0.0;
   if (playbackTimerRunning_) {
     if (decoder_->hasAudio() && audioOutput_ && audioOutput_->isOpen()) {
-      qint64 sessionPlayedMs = qMax(0LL, audioOutput_->playedUSecs() - audioSessionStartUSecs_) / 1000;
+      if (audioSessionStartUSecs_ < 0) {
+        audioSessionStartUSecs_ = audioOutput_->playedUSecs();
+      }
+      qint64 sessionPlayedMs =
+          qMax(0LL, audioOutput_->playedUSecs() - audioSessionStartUSecs_) /
+          1000;
       audioClock = (playbackStartTimeMs_ + sessionPlayedMs) / 1000.0;
     } else {
       audioClock =
@@ -564,6 +576,14 @@ void MediaPlayer::onPlaybackTimer() {
   if (!pendingVideoFrame_) {
     pendingVideoFrame_ = decoder_->dequeueVideoFrame();
   }
+
+  // Filter out any video frames that are strictly older than the playback start
+  // time to prevent backward visual jumps after an exact seek.
+  while (pendingVideoFrame_ &&
+         pendingVideoFrame_->ptsMs < playbackStartTimeMs_) {
+    pendingVideoFrame_ = decoder_->dequeueVideoFrame();
+  }
+
   if (!pendingVideoFrame_) {
     // Check for end of stream
     if (decoder_->videoQueueSize() == 0 && decoder_->audioQueueSize() == 0 &&

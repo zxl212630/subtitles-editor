@@ -146,6 +146,7 @@ private:
   QWaitCondition queueNotFull_;
 
   bool discardBeforeTarget_ = false;
+  qint64 lastEnqueuedVideoPts_ = -1;
 
   static constexpr int MAX_VIDEO_QUEUE_MS = 500;
   static constexpr int MAX_AUDIO_QUEUE_MS = 500;

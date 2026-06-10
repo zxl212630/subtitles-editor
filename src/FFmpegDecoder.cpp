@@ -503,6 +503,7 @@ void FFmpegDecoder::performSeek(qint64 targetMs) {
   }
   clearAllQueues();
   discardBeforeTarget_ = true;
+  lastEnqueuedVideoPts_ = -1;
 
 #if PROFILE_TIMING
   qint64 elapsed = seekTimer.nsecsElapsed() / 1000;
@@ -552,12 +553,20 @@ bool FFmpegDecoder::decodeVideoPacket(AVPacket *packet) {
     }
     qint64 ptsMs = static_cast<qint64>(pts * av_q2d(videoTimeBase_) * 1000.0);
 
+    // Global protection against multi-threaded decode out-of-order frames
+    if (lastEnqueuedVideoPts_ >= 0 && ptsMs <= lastEnqueuedVideoPts_) {
+      return;
+    }
+
     // Seek frame filtering: discard frames before target timestamp
     if (discardBeforeTarget_) {
-      if (ptsMs < seekTargetMs_.load() - 50) {
+      if (ptsMs < seekTargetMs_.load()) {
         return;
       }
+      lastEnqueuedVideoPts_ = ptsMs;
       discardBeforeTarget_ = false;
+    } else {
+      lastEnqueuedVideoPts_ = ptsMs;
     }
 
     int w = f->width;
@@ -656,6 +665,12 @@ bool FFmpegDecoder::decodeAudioPacket(AVPacket *packet) {
   auto processFrame = [&](AVFrame *f) {
     DecodedAudioFrame aframe;
     convertAudioFrame(f, aframe);
+
+    // Discard audio frames before seek target timestamp to avoid queue pile-up
+    if (aframe.ptsMs < seekTargetMs_.load()) {
+      av_frame_unref(f);
+      return;
+    }
 
     {
       QMutexLocker locker(&audioQueueMutex_);
