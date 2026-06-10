@@ -40,6 +40,15 @@
         <file>icons/align-right.svg</file>
         <file>icons/align-justify.svg</file>
         <file>icons/rotate.svg</file>
+        <file>icons/select-all.svg</file>
+        <file>icons/deselect.svg</file>
+        <file>icons/undo.svg</file>
+        <file>icons/redo.svg</file>
+        <file>icons/delete-subtitle.svg</file>
+        <file>icons/snap.svg</file>
+        <file>icons/fit.svg</file>
+        <file>icons/zoom-out.svg</file>
+        <file>icons/zoom-in.svg</file>
         <file>themes/dark.qss</file>
         <file>themes/midnight.qss</file>
         <file>themes/oled.qss</file>
