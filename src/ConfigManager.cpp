@@ -265,3 +265,12 @@ void ConfigManager::setMuted(bool muted) {
   setValue("audio", "muted", muted ? "true" : "false");
   sync();
 }
+
+bool ConfigManager::snapEnabled() const {
+  return getBool("timeline", "snap_enabled", true);
+}
+
+void ConfigManager::setSnapEnabled(bool enabled) {
+  setValue("timeline", "snap_enabled", enabled ? "true" : "false");
+  sync();
+}

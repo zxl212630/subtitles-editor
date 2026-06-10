@@ -60,6 +60,9 @@ public:
   bool muted() const;
   void setMuted(bool muted);
 
+  bool snapEnabled() const;
+  void setSnapEnabled(bool enabled);
+
 private:
   ConfigManager();
   ~ConfigManager() = default;

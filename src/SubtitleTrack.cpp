@@ -1,5 +1,6 @@
 #include "SubtitleTrack.h"
 #include "ConfigManager.h"
+#include <algorithm>
 #include <QDebug>
 #include <QJsonArray>
 #include <QJsonDocument>
@@ -222,6 +223,7 @@ void SubtitleTrack::applyStyleToAll(const QString &sourceId) {
 
 void SubtitleTrack::addItemDirect(const SubtitleItem &item) {
   items_.append(item);
+  sortItems();
   emit itemAdded(item);
   emit dataChanged();
 }
@@ -246,6 +248,7 @@ void SubtitleTrack::updateItemDirect(const QString &id,
     if (items_[i].id == id) {
       items_[i] = newItem;
       items_[i].id = id; // preserve id
+      sortItems();
       emit itemUpdated(id);
       emit dataChanged();
       return;
@@ -266,6 +269,7 @@ void SubtitleTrack::updateItemsDirect(const QList<SubtitleItem> &newItems) {
     }
   }
   if (changed) {
+    sortItems();
     emit dataChanged();
   }
 }
@@ -311,6 +315,7 @@ void SubtitleTrack::splitItemDirect(const QString &id, int cursorPosition,
 
       emit itemUpdated(original.id);
       emit itemAdded(newItem);
+      sortItems();
       emit dataChanged();
       return;
     }
@@ -345,6 +350,7 @@ void SubtitleTrack::splitItemAtTimeDirect(const QString &id, qint64 splitMs) {
 
       emit itemUpdated(original.id);
       emit itemAdded(newItem);
+      sortItems();
       emit dataChanged();
       return;
     }
@@ -374,6 +380,7 @@ void SubtitleTrack::mergeItemsDirect(const QString &id1, const QString &id2) {
 
     emit itemUpdated(items_[idx1].id);
     emit itemRemoved(removedId);
+    sortItems();
     emit dataChanged();
   }
 }
@@ -397,6 +404,7 @@ void SubtitleTrack::addGapItemDirect(qint64 startMs, qint64 endMs) {
   items_.insert(insertIdx, newItem);
 
   emit itemAdded(newItem);
+  sortItems();
   emit dataChanged();
 }
 
@@ -904,4 +912,13 @@ void SubtitleTrack::fromJsonObject(const QJsonObject &obj) {
   }
 
   isPerformingUndoRedo_ = false;
+}
+
+void SubtitleTrack::sortItems() {
+  std::sort(items_.begin(), items_.end(), [](const SubtitleItem &a, const SubtitleItem &b) {
+    if (a.startMs != b.startMs) {
+      return a.startMs < b.startMs;
+    }
+    return a.endMs < b.endMs;
+  });
 }

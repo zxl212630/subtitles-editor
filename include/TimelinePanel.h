@@ -39,6 +39,7 @@ public:
   void setVideoFps(double fps);
   void setMediaFilePath(const QString &path);
   void clear();
+  void retranslateUi();
 
   qint64 totalDuration() const { return totalDurationMs_; }
   QString mediaFilePath() const { return mediaFilePath_; }
@@ -62,9 +63,6 @@ signals:
   void openFileLocationRequested();
 
 protected:
-  void mousePressEvent(QMouseEvent *event) override;
-  void mouseMoveEvent(QMouseEvent *event) override;
-  void mouseReleaseEvent(QMouseEvent *event) override;
   void keyPressEvent(QKeyEvent *event) override;
   void dragEnterEvent(QDragEnterEvent *event) override;
   void dropEvent(QDropEvent *event) override;
@@ -91,6 +89,9 @@ private:
 protected:
   friend class TimelineCanvas;
   void drawOnCanvas(QPainter &painter);
+  void handleCanvasPress(QMouseEvent *event);
+  void handleCanvasMove(QMouseEvent *event);
+  void handleCanvasRelease(QMouseEvent *event);
 
 private:
   SubtitleTrack *track_ = nullptr;
@@ -101,6 +102,7 @@ private:
   static constexpr int SUBTITLE_TRACK_HEIGHT = 48;
   static constexpr int VIDEO_TRACK_HEIGHT = 80;
   static constexpr int TRACK_HEAD_WIDTH = 120;
+  static constexpr int TOOLBAR_HEIGHT = 36;
   static constexpr int PANEL_RIGHT_MARGIN = 8;
 
   double pixelsPerSecond_ = 100.0;
@@ -167,10 +169,13 @@ private:
   QToolButton *zoomInBtn_ = nullptr;
 
   bool snapEnabled_ = true;
+  bool pendingAutoFit_ = false;
 
-  void retranslateUi();
+
   void updateToolbarStates();
   void updateZoomControls();
   void getZoomBounds(double &outMinPps, double &outMaxPps) const;
   void onZoomSliderChanged(int value);
+  void triggerAutoFit();
+  void applyZoomWithAnchor(double newPps);
 };

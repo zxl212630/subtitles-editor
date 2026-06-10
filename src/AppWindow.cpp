@@ -965,6 +965,8 @@ void AppWindow::retranslateUi() {
     d->settingsBtn->setToolTip(tr("设置"));
   if (d->videoPreviewPanel)
     d->videoPreviewPanel->retranslateUi();
+  if (d->timelinePanel)
+    d->timelinePanel->retranslateUi();
 
   // 菜单栏
   if (d->fileMenu)

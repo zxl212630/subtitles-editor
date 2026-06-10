@@ -144,6 +144,7 @@ private:
   void setSpeakerInfoDirect(int id, const SpeakerInfo &info);
   void clearSpeakersDirect();
   void applyStyleToAllDirect(const QString &sourceId);
+  void sortItems();
 
   QList<SubtitleItem> items_;
   QString selectedId_;

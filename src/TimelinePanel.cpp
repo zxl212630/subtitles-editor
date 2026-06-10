@@ -9,6 +9,7 @@
 #include "SubtitleTrack.h"
 #include "TencentAsrService.h"
 #include "ThemeManager.h"
+#include "TranslationManager.h"
 #include <QFile>
 #include <QSvgRenderer>
 #include <QUndoStack>
@@ -56,13 +57,13 @@ protected:
   }
 
   void mousePressEvent(QMouseEvent *event) override {
-    panel_->mousePressEvent(event);
+    panel_->handleCanvasPress(event);
   }
   void mouseMoveEvent(QMouseEvent *event) override {
-    panel_->mouseMoveEvent(event);
+    panel_->handleCanvasMove(event);
   }
   void mouseReleaseEvent(QMouseEvent *event) override {
-    panel_->mouseReleaseEvent(event);
+    panel_->handleCanvasRelease(event);
   }
 
 private:
@@ -76,10 +77,12 @@ TimelinePanel::TimelinePanel(QWidget *parent) : QWidget(parent) {
   setMouseTracking(true);
   setFocusPolicy(Qt::StrongFocus);
 
+  snapEnabled_ = ConfigManager::instance().snapEnabled();
+
   // 1. Create and layout toolbar
   toolbar_ = new QFrame(this);
   toolbar_->setObjectName("TimelineToolbar");
-  toolbar_->setFixedHeight(36);
+  toolbar_->setFixedHeight(TOOLBAR_HEIGHT);
 
   QHBoxLayout *tbLayout = new QHBoxLayout(toolbar_);
   tbLayout->setContentsMargins(6, 0, 6, 0);
@@ -239,44 +242,20 @@ TimelinePanel::TimelinePanel(QWidget *parent) : QWidget(parent) {
 
   connect(snapBtn_, &QToolButton::toggled, this, [this](bool checked) {
     snapEnabled_ = checked;
+    ConfigManager::instance().setSnapEnabled(checked);
   });
 
   connect(fitBtn_, &QToolButton::clicked, this, [this]() {
-    if (totalDurationMs_ <= 0) return;
-    int viewportWidth = canvas_->width() - TRACK_HEAD_WIDTH - PANEL_RIGHT_MARGIN;
-    if (viewportWidth <= 0) return;
-    
-    double targetPps = (viewportWidth * 0.95) * 1000.0 / totalDurationMs_;
-    double minPps, maxPps;
-    getZoomBounds(minPps, maxPps);
-    pixelsPerSecond_ = qBound(minPps, targetPps, maxPps);
-    
-    scrollOffsetX_ = 0;
-    updateScrollBar();
-    updateZoomControls();
-    canvas_->update();
+    pendingAutoFit_ = true;
+    triggerAutoFit();
   });
 
   connect(zoomOutBtn_, &QToolButton::clicked, this, [this]() {
-    double minPps, maxPps;
-    getZoomBounds(minPps, maxPps);
-    double newPps = pixelsPerSecond_ * 0.8;
-    pixelsPerSecond_ = qBound(minPps, newPps, maxPps);
-    
-    updateScrollBar();
-    updateZoomControls();
-    canvas_->update();
+    applyZoomWithAnchor(pixelsPerSecond_ * 0.8);
   });
 
   connect(zoomInBtn_, &QToolButton::clicked, this, [this]() {
-    double minPps, maxPps;
-    getZoomBounds(minPps, maxPps);
-    double newPps = pixelsPerSecond_ * 1.25;
-    pixelsPerSecond_ = qBound(minPps, newPps, maxPps);
-    
-    updateScrollBar();
-    updateZoomControls();
-    canvas_->update();
+    applyZoomWithAnchor(pixelsPerSecond_ * 1.25);
   });
 
   connect(zoomSlider_, &QSlider::valueChanged, this, &TimelinePanel::onZoomSliderChanged);
@@ -290,6 +269,9 @@ TimelinePanel::TimelinePanel(QWidget *parent) : QWidget(parent) {
     updateIcons();
     canvas_->update();
   });
+
+  connect(&TranslationManager::instance(), &TranslationManager::languageChanged,
+          this, [this]() { retranslateUi(); });
 }
 
 int TimelinePanel::timeToX(qint64 ms) const {
@@ -447,15 +429,22 @@ void TimelinePanel::setMediaFilePath(const QString &path) {
   if (mediaFileName_.isEmpty())
     mediaFileName_ = path;
   canvas_->update();
+  pendingAutoFit_ = true; // Set flag to trigger auto-fit zoom when video duration is updated
 }
 
 void TimelinePanel::setTotalDuration(qint64 ms) {
+  bool isNewDuration = (totalDurationMs_ != ms && ms > 0);
   totalDurationMs_ = ms;
   clampScrollOffset();
   updateScrollBar();
   updateZoomControls();
   updateToolbarStates();
   canvas_->update();
+
+  if (isNewDuration || pendingAutoFit_) {
+    pendingAutoFit_ = true;
+    triggerAutoFit();
+  }
 }
 
 void TimelinePanel::setVideoDuration(qint64 ms) {
@@ -543,9 +532,22 @@ void TimelinePanel::drawOnCanvas(QPainter &painter) {
     updateIcons();
   }
 
-  // Clip to rounded rect so the panel corners stay rounded
+  // Clip so that top-left and top-right are square (seamless with toolbar), while bottom-left and bottom-right are rounded (10px)
   QPainterPath clipPath;
-  clipPath.addRoundedRect(canvas_->rect().adjusted(1, 1, -1, -1), 10, 10);
+  QRectF r = canvas_->rect().adjusted(1, 0, -1, -1);
+  qreal x = r.x();
+  qreal y = r.y();
+  qreal w = r.width();
+  qreal h = r.height();
+  qreal radius = 10.0;
+
+  clipPath.moveTo(x, y);
+  clipPath.lineTo(x + w, y);
+  clipPath.lineTo(x + w, y + h - radius);
+  clipPath.arcTo(x + w - 2 * radius, y + h - 2 * radius, 2 * radius, 2 * radius, 0, -90);
+  clipPath.lineTo(x + radius, y + h);
+  clipPath.arcTo(x, y + h - 2 * radius, 2 * radius, 2 * radius, 270, -90);
+  clipPath.closeSubpath();
   painter.setClipPath(clipPath);
 
   // Background
@@ -566,8 +568,8 @@ void TimelinePanel::drawOnCanvas(QPainter &painter) {
     // Track heads only (no content background or separators)
     painter.setPen(Qt::NoPen);
     painter.fillRect(0, subY, TRACK_HEAD_WIDTH, SUBTITLE_TRACK_HEIGHT,
-                     bgLighter);
-    painter.fillRect(0, vidY, TRACK_HEAD_WIDTH, VIDEO_TRACK_HEIGHT, bgLighter);
+                     bgPanel);
+    painter.fillRect(0, vidY, TRACK_HEAD_WIDTH, VIDEO_TRACK_HEIGHT, bgPanel);
 
     painter.setPen(textMuted);
     QFont font = painter.font();
@@ -643,13 +645,13 @@ void TimelinePanel::drawRuler(QPainter &painter) {
   painter.save();
   int contentWidth = canvas_->width() - TRACK_HEAD_WIDTH - PANEL_RIGHT_MARGIN;
 
-  QColor bgLighter = ThemeManager::instance().getBgLighterColor();
+  QColor bgPanel = ThemeManager::instance().getBgPanelColor();
   QColor textMuted = ThemeManager::instance().getTextMutedColor();
   QColor borderDark = ThemeManager::instance().getBorderDarkColor();
 
   // Background for ruler
   painter.fillRect(canvas_->rect().left(), 0, canvas_->rect().width(),
-                   RULER_HEIGHT, bgLighter);
+                   RULER_HEIGHT, bgPanel);
 
   painter.setClipRect(TRACK_HEAD_WIDTH, 0, contentWidth, RULER_HEIGHT);
 
@@ -748,7 +750,7 @@ void TimelinePanel::drawRuler(QPainter &painter) {
 void TimelinePanel::drawSubtitleTrack(QPainter &painter, int y) {
   int contentWidth = canvas_->width() - TRACK_HEAD_WIDTH - PANEL_RIGHT_MARGIN;
   QColor bgBase = ThemeManager::instance().getBgBaseColor();
-  QColor bgLighter = ThemeManager::instance().getBgLighterColor();
+  QColor bgPanel = ThemeManager::instance().getBgPanelColor();
   QColor textMuted = ThemeManager::instance().getTextMutedColor();
   QColor borderDark = ThemeManager::instance().getBorderDarkColor();
 
@@ -758,7 +760,7 @@ void TimelinePanel::drawSubtitleTrack(QPainter &painter, int y) {
 
   // Track head
   painter.setPen(Qt::NoPen);
-  painter.fillRect(0, y, TRACK_HEAD_WIDTH, SUBTITLE_TRACK_HEIGHT, bgLighter);
+  painter.fillRect(0, y, TRACK_HEAD_WIDTH, SUBTITLE_TRACK_HEIGHT, bgPanel);
   painter.setPen(textMuted);
   QFont font = painter.font();
   font.setPointSize(11);
@@ -850,14 +852,15 @@ void TimelinePanel::drawSubtitleTrack(QPainter &painter, int y) {
 void TimelinePanel::drawVideoTrack(QPainter &painter, int y) {
   int contentWidth = canvas_->width() - TRACK_HEAD_WIDTH - PANEL_RIGHT_MARGIN;
   QColor bgBase = ThemeManager::instance().getBgBaseColor();
-  QColor bgLighter = ThemeManager::instance().getBgLighterColor();
+  QColor bgPanel = ThemeManager::instance().getBgPanelColor();
   QColor textMuted = ThemeManager::instance().getTextMutedColor();
 
   painter.fillRect(TRACK_HEAD_WIDTH, y, contentWidth, VIDEO_TRACK_HEIGHT,
                    bgBase);
 
+  // Track head
   painter.setPen(Qt::NoPen);
-  painter.fillRect(0, y, TRACK_HEAD_WIDTH, VIDEO_TRACK_HEIGHT, bgLighter);
+  painter.fillRect(0, y, TRACK_HEAD_WIDTH, VIDEO_TRACK_HEIGHT, bgPanel);
   painter.setPen(textMuted);
   QFont font = painter.font();
   font.setPointSize(11);
@@ -984,7 +987,7 @@ void TimelinePanel::drawPlayhead(QPainter &painter) {
     painter.drawLine(x, triangleTip, x, lineBottom);
 }
 
-void TimelinePanel::mousePressEvent(QMouseEvent *event) {
+void TimelinePanel::handleCanvasPress(QMouseEvent *event) {
   if (event->button() != Qt::LeftButton)
     return;
 
@@ -1145,7 +1148,7 @@ static qint64 snapTime(qint64 targetTimeMs, const QList<qint64> &refs, qint64 th
   return targetTimeMs;
 }
 
-void TimelinePanel::mouseMoveEvent(QMouseEvent *event) {
+void TimelinePanel::handleCanvasMove(QMouseEvent *event) {
   // Update cursor when not dragging
   if (!mousePressed_) {
     updateClipCursor(event->x(), event->y());
@@ -1226,7 +1229,7 @@ void TimelinePanel::mouseMoveEvent(QMouseEvent *event) {
       qint64 deltaMs = mouseMs - xToTime(dragStartX_);
 
       if (snapEnabled_) {
-        qint64 thresholdMs = static_cast<qint64>(10.0 * 1000.0 / pixelsPerSecond_);
+        qint64 thresholdMs = static_cast<qint64>(6.0 * 1000.0 / pixelsPerSecond_);
         qint64 targetStart = dragOrigStartMs_ + deltaMs;
         qint64 targetEnd = dragOrigEndMs_ + deltaMs;
 
@@ -1324,7 +1327,7 @@ void TimelinePanel::mouseMoveEvent(QMouseEvent *event) {
       qint64 newStart = xToTime(event->x());
 
       if (snapEnabled_) {
-        qint64 thresholdMs = static_cast<qint64>(10.0 * 1000.0 / pixelsPerSecond_);
+        qint64 thresholdMs = static_cast<qint64>(6.0 * 1000.0 / pixelsPerSecond_);
         newStart = snapTime(newStart, snapRefs, thresholdMs);
       }
 
@@ -1361,7 +1364,7 @@ void TimelinePanel::mouseMoveEvent(QMouseEvent *event) {
       qint64 newEnd = xToTime(event->x());
 
       if (snapEnabled_) {
-        qint64 thresholdMs = static_cast<qint64>(10.0 * 1000.0 / pixelsPerSecond_);
+        qint64 thresholdMs = static_cast<qint64>(6.0 * 1000.0 / pixelsPerSecond_);
         newEnd = snapTime(newEnd, snapRefs, thresholdMs);
       }
 
@@ -1417,7 +1420,7 @@ void TimelinePanel::mouseMoveEvent(QMouseEvent *event) {
   }
 }
 
-void TimelinePanel::mouseReleaseEvent(QMouseEvent *event) {
+void TimelinePanel::handleCanvasRelease(QMouseEvent *event) {
   if (event->button() != Qt::LeftButton)
     return;
 
@@ -1690,10 +1693,10 @@ void TimelinePanel::resizeEvent(QResizeEvent * /*event*/) {
   int sbHeight = 12;
   
   if (toolbar_) {
-    toolbar_->setGeometry(0, 0, width(), 36);
+    toolbar_->setGeometry(0, 0, width(), TOOLBAR_HEIGHT);
   }
   if (canvas_) {
-    canvas_->setGeometry(0, 36, width(), height() - 36);
+    canvas_->setGeometry(0, TOOLBAR_HEIGHT, width(), height() - TOOLBAR_HEIGHT);
   }
   
   int sbTop = height() - 7 - sbHeight / 2;
@@ -1704,6 +1707,7 @@ void TimelinePanel::resizeEvent(QResizeEvent * /*event*/) {
   
   updateScrollBar();
   updateZoomControls();
+  triggerAutoFit();
 }
 
 void TimelinePanel::contextMenuEvent(QContextMenuEvent *event) {
@@ -1717,7 +1721,7 @@ void TimelinePanel::contextMenuEvent(QContextMenuEvent *event) {
     }
   }
 
-  int y = event->pos().y() - 36;
+  int y = event->pos().y() - TOOLBAR_HEIGHT;
   int subtitleTrackY = RULER_HEIGHT;
   int videoTrackY = RULER_HEIGHT + SUBTITLE_TRACK_HEIGHT;
 
@@ -1797,7 +1801,16 @@ void TimelinePanel::updateIcons() {
   };
 
   auto renderSvgToIcon = [renderSvgToPixmap](const QString &path, const QColor &color, int size) -> QIcon {
-    return QIcon(renderSvgToPixmap(path, color, size));
+    QIcon icon;
+    QPixmap normalPixmap = renderSvgToPixmap(path, color, size);
+    icon.addPixmap(normalPixmap, QIcon::Normal, QIcon::Off);
+    icon.addPixmap(normalPixmap, QIcon::Normal, QIcon::On);
+
+    QColor disabledColor(color.red(), color.green(), color.blue(), 70);
+    QPixmap disabledPixmap = renderSvgToPixmap(path, disabledColor, size);
+    icon.addPixmap(disabledPixmap, QIcon::Disabled, QIcon::Off);
+    icon.addPixmap(disabledPixmap, QIcon::Disabled, QIcon::On);
+    return icon;
   };
 
   selectAllBtn_->setIcon(renderSvgToIcon(":/icons/select-all.svg", textNormal, 16));
@@ -1933,8 +1946,41 @@ void TimelinePanel::onZoomSliderChanged(int value) {
   double logMax = std::log(maxPps);
   
   double newPps = std::exp(logMin + (logMax - logMin) * (value / 100.0));
-  pixelsPerSecond_ = qBound(minPps, newPps, maxPps);
-  
+  applyZoomWithAnchor(newPps);
+}
+
+void TimelinePanel::applyZoomWithAnchor(double newPps) {
+  double minPps, maxPps;
+  getZoomBounds(minPps, maxPps);
+  newPps = qBound(minPps, newPps, maxPps);
+
+  double oldPps = pixelsPerSecond_;
+  double timeSec = currentTimeMs_ / 1000.0;
+  double ppsDiff = newPps - oldPps;
+
+  scrollOffsetX_ = qRound(scrollOffsetX_ + timeSec * ppsDiff);
+  pixelsPerSecond_ = newPps;
+
+  clampScrollOffset();
   updateScrollBar();
+  updateZoomControls();
+  canvas_->update();
+}
+
+void TimelinePanel::triggerAutoFit() {
+  if (!pendingAutoFit_ || totalDurationMs_ <= 0) return;
+  int viewportWidth = canvas_->width() - TRACK_HEAD_WIDTH - PANEL_RIGHT_MARGIN;
+  if (viewportWidth <= 0) return;
+  pendingAutoFit_ = false;
+
+  double targetPps = (viewportWidth * 0.95) * 1000.0 / totalDurationMs_;
+  double minPps, maxPps;
+  getZoomBounds(minPps, maxPps);
+  pixelsPerSecond_ = qBound(minPps, targetPps, maxPps);
+
+  scrollOffsetX_ = 0;
+  clampScrollOffset();
+  updateScrollBar();
+  updateZoomControls();
   canvas_->update();
 }
