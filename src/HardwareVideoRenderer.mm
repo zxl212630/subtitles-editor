@@ -63,10 +63,11 @@ static QCursor getRotateCursor() {
 
 HardwareVideoRenderer::HardwareVideoRenderer(QWidget *parent)
     : QOpenGLWidget(parent), videoSize_(1920, 1080) {
-  // 强制请求 OpenGL Compatibility Profile 2.1，以完美兼容 macOS 的固定管线渲染
+  // 强制请求 OpenGL Compatibility Profile 2.1，并开启 4x 多重采样抗锯齿
   QSurfaceFormat fmt;
   fmt.setProfile(QSurfaceFormat::CompatibilityProfile);
   fmt.setVersion(2, 1);
+  fmt.setSamples(4);
   setFormat(fmt);
 
   signals_ = new VideoRendererSignals(this);
@@ -479,9 +480,13 @@ void HardwareVideoRenderer::renderHwFrameOpenGL(CVPixelBufferRef cvBuf, int w, i
           lastTexH_ = h;
         }
 
-        // 2. 将 CIImage 渲染至该 OpenGL 纹理中（在 GPU 上零拷贝执行格式转换）
+        // 2. 将 CIImage 缩放到目标大小，并渲染至该 OpenGL 纹理中（在 GPU 上零拷贝执行缩放与格式转换）
+        double scaleX = (double)w / [ciImage extent].size.width;
+        double scaleY = (double)h / [ciImage extent].size.height;
+        CIImage *scaledImage = [ciImage imageByApplyingTransform:CGAffineTransformMakeScale(scaleX, scaleY)];
+
         CGColorSpaceRef cs = CGColorSpaceCreateDeviceRGB();
-        [context render:ciImage toTexture:textureId_ bounds:CGRectMake(0, 0, w, h) colorSpace:cs];
+        [context render:scaledImage toTexture:textureId_ bounds:CGRectMake(0, 0, w, h) colorSpace:cs];
         CGColorSpaceRelease(cs);
 
         // 3. 使用标准固定管线绘制纹理贴图 Quad，完美兼容各种 OpenGL 上下文环境
@@ -667,151 +672,168 @@ void HardwareVideoRenderer::drawSubtitlesOverlay(QPainter &painter,
       drawFont.setPixelSize(scaledSize);
     }
 
-    if (isEditing_ && editor_) {
-      painter.save();
-      painter.setClipRect(targetRect);
-      QTransform trans = getSubtitleTransform();
-      painter.setTransform(trans, true);
-      QColor bgColor = ThemeManager::instance().getPrimaryColor();
-      bgColor.setAlpha(30);
-      painter.fillRect(textRect, bgColor);
-      painter.restore();
+    // 创建透明缓冲图片以支持软件高精度抗锯齿（高DPI屏下使用物理像素大小以消除模糊）
+    double dpr = devicePixelRatioF();
+    QImage overlayImage(rect().size() * dpr, QImage::Format_ARGB32_Premultiplied);
+    overlayImage.setDevicePixelRatio(dpr);
+    overlayImage.fill(Qt::transparent);
+    {
+      QPainter imgPainter(&overlayImage);
+      imgPainter.setRenderHint(QPainter::Antialiasing, true);
+      imgPainter.setRenderHint(QPainter::TextAntialiasing, true);
+      imgPainter.setRenderHint(QPainter::SmoothPixmapTransform, true);
+
+      if (isEditing_ && editor_) {
+        imgPainter.save();
+        QTransform trans = getSubtitleTransform();
+        imgPainter.setTransform(trans, true);
+        QColor bgColor = ThemeManager::instance().getPrimaryColor();
+        bgColor.setAlpha(30);
+        imgPainter.fillRect(textRect, bgColor);
+        imgPainter.restore();
+      }
+
+      imgPainter.save();
+      // 不设置剪裁，允许超出视频边界绘制
+      SubtitleRenderer::renderSubtitle(imgPainter, textToDraw, drawFont, activeStyle,
+                                       textRect, subtitleRotation_, bgPath,
+                                       is9Patch, bgMargins);
+      imgPainter.restore();
+
+      if (isEditing_ && editor_) {
+        imgPainter.save();
+        imgPainter.setRenderHint(QPainter::Antialiasing, true);
+        QTransform trans = getSubtitleTransform();
+        imgPainter.setTransform(trans, true);
+
+        QFontMetrics fm(drawFont);
+        QStringList lines = editor_->text().split('\n');
+
+        int alignFlags = subtitleAlignment_ | Qt::AlignVCenter;
+        QRect br = fm.boundingRect(textRect, alignFlags, editor_->text());
+        int blockTop = br.top();
+
+        int cursorPos = editor_->cursorPosition();
+        int currentPos = 0;
+        int lineIndex = 0;
+        int posInLine = 0;
+        for (int i = 0; i < lines.size(); ++i) {
+          int len = lines[i].length() + 1;
+          if (currentPos + len > cursorPos || i == lines.size() - 1) {
+            lineIndex = i;
+            posInLine = cursorPos - currentPos;
+            break;
+          }
+          currentPos += len;
+        }
+
+        int lineY = blockTop + lineIndex * fm.lineSpacing();
+        int cursorYTop = lineY;
+        int cursorYBottom = lineY + fm.height();
+
+        int lineW = fm.horizontalAdvance(lines[lineIndex]);
+        int startX = textRect.left();
+        if (subtitleAlignment_ & Qt::AlignHCenter) {
+          startX = textRect.center().x() - lineW / 2;
+        } else if (subtitleAlignment_ & Qt::AlignRight) {
+          startX = textRect.right() - lineW;
+        }
+
+        if (editor_->hasSelectedText()) {
+          int selStart = editor_->selectionStart();
+          int selLength = editor_->selectionLength();
+          int selEnd = selStart + selLength;
+
+          int drawPos = 0;
+          for (int i = 0; i < lines.size(); ++i) {
+            int lineLen = lines[i].length();
+            int lineStart = drawPos;
+            int lineEnd = drawPos + lineLen;
+
+            if (selEnd > lineStart && selStart <= lineEnd) {
+              int s = qMax(lineStart, selStart) - lineStart;
+              int e = qMin(lineEnd, selEnd) - lineStart;
+
+              int lw = fm.horizontalAdvance(lines[i]);
+              int lx = textRect.left();
+              if (subtitleAlignment_ & Qt::AlignHCenter)
+                lx = textRect.center().x() - lw / 2;
+              else if (subtitleAlignment_ & Qt::AlignRight)
+                lx = textRect.right() - lw;
+
+              int selX = lx + fm.horizontalAdvance(lines[i].left(s));
+              int selW = fm.horizontalAdvance(lines[i].mid(s, e - s));
+              QRect selRect(selX, blockTop + i * fm.lineSpacing(), selW,
+                            fm.height());
+              QColor primary = ThemeManager::instance().getPrimaryColor();
+              primary.setAlpha(100);
+              imgPainter.fillRect(selRect, primary);
+            }
+            drawPos += lineLen + 1;
+          }
+        }
+
+        if (cursorVisible_) {
+          QString textBeforeCursor = lines[lineIndex].left(posInLine);
+          int cursorX = startX + fm.horizontalAdvance(textBeforeCursor);
+
+          QColor primary = ThemeManager::instance().getPrimaryColor();
+          imgPainter.setPen(QPen(primary, 2));
+          imgPainter.drawLine(cursorX, cursorYTop, cursorX, cursorYBottom);
+        }
+
+        imgPainter.restore();
+      }
+
+      if (showEditFrame_) {
+        imgPainter.save();
+        imgPainter.setRenderHint(QPainter::Antialiasing, true);
+
+        QTransform trans = getSubtitleTransform();
+        imgPainter.setTransform(trans, true);
+
+        QColor primaryColor = ThemeManager::instance().getPrimaryColor();
+
+        imgPainter.setPen(QPen(primaryColor, 1, Qt::DashLine));
+        imgPainter.setBrush(Qt::NoBrush);
+        imgPainter.drawRect(textRect);
+
+        QPoint tmPt =
+            QPoint(textRect.left() + textRect.width() / 2, textRect.top());
+        QPoint rotPt(tmPt.x(), tmPt.y() - 25);
+
+        imgPainter.setPen(QPen(primaryColor, 1, Qt::DashLine));
+        imgPainter.drawLine(tmPt, rotPt);
+
+        imgPainter.setPen(QPen(Qt::white, 1));
+        imgPainter.setBrush(primaryColor);
+        imgPainter.drawEllipse(rotPt, 5, 5);
+
+        QList<QPoint> handlePoints = {
+            textRect.topLeft(),
+            tmPt,
+            textRect.topRight(),
+            QPoint(textRect.left(), textRect.top() + textRect.height() / 2),
+            QPoint(textRect.right(), textRect.top() + textRect.height() / 2),
+            textRect.bottomLeft(),
+            QPoint(textRect.left() + textRect.width() / 2, textRect.bottom()),
+            textRect.bottomRight()};
+
+        imgPainter.setPen(QPen(Qt::white, 1));
+        imgPainter.setBrush(primaryColor);
+        int hs = 6;
+        for (const QPoint &pt : handlePoints) {
+          imgPainter.drawRect(pt.x() - hs / 2, pt.y() - hs / 2, hs, hs);
+        }
+        imgPainter.restore();
+      }
     }
 
     painter.save();
-    painter.setClipRect(targetRect);
-    SubtitleRenderer::renderSubtitle(painter, textToDraw, drawFont, activeStyle,
-                                     textRect, subtitleRotation_, bgPath,
-                                     is9Patch, bgMargins);
+    painter.setRenderHint(QPainter::Antialiasing, true);
+    painter.setRenderHint(QPainter::SmoothPixmapTransform, true);
+    painter.drawImage(0, 0, overlayImage);
     painter.restore();
-
-    if (isEditing_ && editor_) {
-      painter.save();
-      painter.setRenderHint(QPainter::Antialiasing, true);
-      QTransform trans = getSubtitleTransform();
-      painter.setTransform(trans, true);
-
-      QFontMetrics fm(drawFont);
-      QStringList lines = editor_->text().split('\n');
-
-      int alignFlags = subtitleAlignment_ | Qt::AlignVCenter;
-      QRect br = fm.boundingRect(textRect, alignFlags, editor_->text());
-      int blockTop = br.top();
-
-      int cursorPos = editor_->cursorPosition();
-      int currentPos = 0;
-      int lineIndex = 0;
-      int posInLine = 0;
-      for (int i = 0; i < lines.size(); ++i) {
-        int len = lines[i].length() + 1;
-        if (currentPos + len > cursorPos || i == lines.size() - 1) {
-          lineIndex = i;
-          posInLine = cursorPos - currentPos;
-          break;
-        }
-        currentPos += len;
-      }
-
-      int lineY = blockTop + lineIndex * fm.lineSpacing();
-      int cursorYTop = lineY;
-      int cursorYBottom = lineY + fm.height();
-
-      int lineW = fm.horizontalAdvance(lines[lineIndex]);
-      int startX = textRect.left();
-      if (subtitleAlignment_ & Qt::AlignHCenter) {
-        startX = textRect.center().x() - lineW / 2;
-      } else if (subtitleAlignment_ & Qt::AlignRight) {
-        startX = textRect.right() - lineW;
-      }
-
-      if (editor_->hasSelectedText()) {
-        int selStart = editor_->selectionStart();
-        int selLength = editor_->selectionLength();
-        int selEnd = selStart + selLength;
-
-        int drawPos = 0;
-        for (int i = 0; i < lines.size(); ++i) {
-          int lineLen = lines[i].length();
-          int lineStart = drawPos;
-          int lineEnd = drawPos + lineLen;
-
-          if (selEnd > lineStart && selStart <= lineEnd) {
-            int s = qMax(lineStart, selStart) - lineStart;
-            int e = qMin(lineEnd, selEnd) - lineStart;
-
-            int lw = fm.horizontalAdvance(lines[i]);
-            int lx = textRect.left();
-            if (subtitleAlignment_ & Qt::AlignHCenter)
-              lx = textRect.center().x() - lw / 2;
-            else if (subtitleAlignment_ & Qt::AlignRight)
-              lx = textRect.right() - lw;
-
-            int selX = lx + fm.horizontalAdvance(lines[i].left(s));
-            int selW = fm.horizontalAdvance(lines[i].mid(s, e - s));
-            QRect selRect(selX, blockTop + i * fm.lineSpacing(), selW,
-                          fm.height());
-            QColor primary = ThemeManager::instance().getPrimaryColor();
-            primary.setAlpha(100);
-            painter.fillRect(selRect, primary);
-          }
-          drawPos += lineLen + 1;
-        }
-      }
-
-      if (cursorVisible_) {
-        QString textBeforeCursor = lines[lineIndex].left(posInLine);
-        int cursorX = startX + fm.horizontalAdvance(textBeforeCursor);
-
-        QColor primary = ThemeManager::instance().getPrimaryColor();
-        painter.setPen(QPen(primary, 2));
-        painter.drawLine(cursorX, cursorYTop, cursorX, cursorYBottom);
-      }
-
-      painter.restore();
-    }
-
-    if (showEditFrame_) {
-      painter.save();
-      painter.setRenderHint(QPainter::Antialiasing, true);
-
-      QTransform trans = getSubtitleTransform();
-      painter.setTransform(trans, true);
-
-      QColor primaryColor = ThemeManager::instance().getPrimaryColor();
-
-      painter.setPen(QPen(primaryColor, 1, Qt::DashLine));
-      painter.setBrush(Qt::NoBrush);
-      painter.drawRect(textRect);
-
-      QPoint tmPt =
-          QPoint(textRect.left() + textRect.width() / 2, textRect.top());
-      QPoint rotPt(tmPt.x(), tmPt.y() - 25);
-
-      painter.setPen(QPen(primaryColor, 1, Qt::DashLine));
-      painter.drawLine(tmPt, rotPt);
-
-      painter.setPen(QPen(Qt::white, 1));
-      painter.setBrush(primaryColor);
-      painter.drawEllipse(rotPt, 5, 5);
-
-      QList<QPoint> handlePoints = {
-          textRect.topLeft(),
-          tmPt,
-          textRect.topRight(),
-          QPoint(textRect.left(), textRect.top() + textRect.height() / 2),
-          QPoint(textRect.right(), textRect.top() + textRect.height() / 2),
-          textRect.bottomLeft(),
-          QPoint(textRect.left() + textRect.width() / 2, textRect.bottom()),
-          textRect.bottomRight()};
-
-      painter.setPen(QPen(Qt::white, 1));
-      painter.setBrush(primaryColor);
-      int hs = 6;
-      for (const QPoint &pt : handlePoints) {
-        painter.drawRect(pt.x() - hs / 2, pt.y() - hs / 2, hs, hs);
-      }
-      painter.restore();
-    }
   }
 }
 
@@ -1206,9 +1228,6 @@ void HardwareVideoRenderer::mouseMoveEvent(QMouseEvent *event) {
       double rx = dragStartNormalizedRect_.x() + dx;
       double ry = dragStartNormalizedRect_.y() + dy;
 
-      rx = qBound(0.0, rx, 1.0 - dragStartNormalizedRect_.width());
-      ry = qBound(0.0, ry, 1.0 - dragStartNormalizedRect_.height());
-
       subtitleNormalizedRect_.moveLeft(rx);
       subtitleNormalizedRect_.moveTop(ry);
       update();
@@ -1287,12 +1306,32 @@ void HardwareVideoRenderer::mouseMoveEvent(QMouseEvent *event) {
         break;
       }
 
-      double finalLeft = qBound(0.0, left, 1.0);
-      double finalTop = qBound(0.0, top, 1.0);
-      double finalW = qBound(minW, right - finalLeft, 1.0 - finalLeft);
-      double finalH = qBound(minH, bottom - finalTop, 1.0 - finalTop);
+      double w1 = right - left;
+      double h1 = bottom - top;
 
-      subtitleNormalizedRect_ = QRectF(finalLeft, finalTop, finalW, finalH);
+      double localCenterX = left + w1 / 2.0;
+      double localCenterY = top + h1 / 2.0;
+
+      double startCenterX = dragStartNormalizedRect_.left() + dragStartNormalizedRect_.width() / 2.0;
+      double startCenterY = dragStartNormalizedRect_.top() + dragStartNormalizedRect_.height() / 2.0;
+
+      double angleRad = subtitleRotation_ * M_PI / 180.0;
+      double cosAngle = std::cos(angleRad);
+      double sinAngle = std::sin(angleRad);
+
+      double localDeltaX = localCenterX - startCenterX;
+      double localDeltaY = localCenterY - startCenterY;
+
+      double worldDeltaX = cosAngle * localDeltaX - sinAngle * localDeltaY;
+      double worldDeltaY = sinAngle * localDeltaX + cosAngle * localDeltaY;
+
+      double newCenterX = startCenterX + worldDeltaX;
+      double newCenterY = startCenterY + worldDeltaY;
+
+      double newLeft = newCenterX - w1 / 2.0;
+      double newTop = newCenterY - h1 / 2.0;
+
+      subtitleNormalizedRect_ = QRectF(newLeft, newTop, w1, h1);
 
       double scaleChange =
           subtitleNormalizedRect_.height() / dragStartNormalizedRect_.height();

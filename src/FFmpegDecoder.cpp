@@ -625,25 +625,6 @@ bool FFmpegDecoder::decodeVideoPacket(AVPacket *packet) {
       lastEnqueuedVideoPts_ = ptsMs;
     }
 
-#ifdef Q_OS_MAC
-    if (f->format == AV_PIX_FMT_VIDEOTOOLBOX) {
-      CVPixelBufferRef cvBuf = reinterpret_cast<CVPixelBufferRef>(f->data[3]);
-      if (cvBuf) {
-        CVPixelBufferRetain(cvBuf);
-        DecodedVideoFrame vf;
-        vf.ptsMs = ptsMs;
-        vf.width = f->width;
-        vf.height = f->height;
-        vf.hwFrame = cvBuf;
-
-        QMutexLocker locker(&videoQueueMutex_);
-        videoQueue_.enqueue(std::move(vf));
-        queueNotFull_.wakeAll();
-        return;
-      }
-    }
-#endif
-
     int w = f->width;
     int h = f->height;
 
@@ -661,6 +642,7 @@ bool FFmpegDecoder::decodeVideoPacket(AVPacket *packet) {
     if (outSize.isValid() && !outSize.isEmpty()) {
       double widgetScale = qMin(static_cast<double>(outSize.width()) / w,
                                 static_cast<double>(outSize.height()) / h);
+      widgetScale = qMin(1.0, widgetScale); // Never upscale decoding resolution beyond native size
       finalScale = widgetScale * qScale;
     }
     if (finalScale < 1.0) {
@@ -671,6 +653,25 @@ bool FFmpegDecoder::decodeVideoPacket(AVPacket *packet) {
       if (dstH < 4)
         dstH = 4;
     }
+
+#ifdef Q_OS_MAC
+    if (f->format == AV_PIX_FMT_VIDEOTOOLBOX) {
+      CVPixelBufferRef cvBuf = reinterpret_cast<CVPixelBufferRef>(f->data[3]);
+      if (cvBuf) {
+        CVPixelBufferRetain(cvBuf);
+        DecodedVideoFrame vf;
+        vf.ptsMs = ptsMs;
+        vf.width = dstW;
+        vf.height = dstH;
+        vf.hwFrame = cvBuf;
+
+        QMutexLocker locker(&videoQueueMutex_);
+        videoQueue_.enqueue(std::move(vf));
+        queueNotFull_.wakeAll();
+        return;
+      }
+    }
+#endif
 
     {
       QMutexLocker locker(&metadataMutex_);

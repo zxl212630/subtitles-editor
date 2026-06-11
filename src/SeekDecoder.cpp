@@ -377,22 +377,6 @@ DecodedVideoFrame SeekDecoder::decodeOneFrame(qint64 targetMs, bool precise) {
 }
 
 DecodedVideoFrame SeekDecoder::convertFrame(AVFrame *frame, qint64 ptsMs) {
-#ifdef Q_OS_MAC
-  if (frame->format == AV_PIX_FMT_VIDEOTOOLBOX) {
-    CVPixelBufferRef cvBuf = reinterpret_cast<CVPixelBufferRef>(frame->data[3]);
-    if (cvBuf) {
-      CVPixelBufferRetain(cvBuf);
-      DecodedVideoFrame vf;
-      vf.ptsMs = ptsMs;
-      vf.width = frame->width;
-      vf.height = frame->height;
-      vf.hwFrame = cvBuf;
-      return vf;
-    }
-  }
-#endif
-
-  DecodedVideoFrame vf;
   int srcW = frame->width;
   int srcH = frame->height;
 
@@ -411,6 +395,7 @@ DecodedVideoFrame SeekDecoder::convertFrame(AVFrame *frame, qint64 ptsMs) {
   if (outSize.isValid() && !outSize.isEmpty()) {
     double widgetScale = qMin(static_cast<double>(outSize.width()) / srcW,
                               static_cast<double>(outSize.height()) / srcH);
+    widgetScale = qMin(1.0, widgetScale); // Never upscale decoding resolution beyond native size
     finalScale = widgetScale * qScale;
   }
   if (finalScale < 1.0) {
@@ -421,6 +406,23 @@ DecodedVideoFrame SeekDecoder::convertFrame(AVFrame *frame, qint64 ptsMs) {
     if (dstH < 4)
       dstH = 4;
   }
+
+#ifdef Q_OS_MAC
+  if (frame->format == AV_PIX_FMT_VIDEOTOOLBOX) {
+    CVPixelBufferRef cvBuf = reinterpret_cast<CVPixelBufferRef>(frame->data[3]);
+    if (cvBuf) {
+      CVPixelBufferRetain(cvBuf);
+      DecodedVideoFrame vf;
+      vf.ptsMs = ptsMs;
+      vf.width = dstW;
+      vf.height = dstH;
+      vf.hwFrame = cvBuf;
+      return vf;
+    }
+  }
+#endif
+
+  DecodedVideoFrame vf;
 
   // 如果尺寸或格式改变，重建 sws 上下文
   if (!swsCtx_ || lastSrcW_ != srcW || lastSrcH_ != srcH || lastDstW_ != dstW ||

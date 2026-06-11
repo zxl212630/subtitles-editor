@@ -720,6 +720,10 @@ void VideoPreviewPanel::setupUi() {
             double quality = qualityCombo_->itemData(index).toDouble();
             if (mediaPlayer_) {
               mediaPlayer_->setVideoQuality(quality);
+              if (mediaPlayer_->state() == MediaPlayer::Paused ||
+                  mediaPlayer_->state() == MediaPlayer::Ready) {
+                mediaPlayer_->previewSeek(mediaPlayer_->currentTimeMs());
+              }
             }
           });
 

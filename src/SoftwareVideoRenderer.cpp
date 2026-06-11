@@ -416,7 +416,6 @@ void SoftwareVideoRenderer::paintEvent(QPaintEvent *event) {
     // 0. 如果处于编辑状态，绘制半透明背景以区分编辑状态
     if (isEditing_ && editor_) {
       painter.save();
-      painter.setClipRect(targetRect);
       QTransform trans = getSubtitleTransform();
       painter.setTransform(trans, true);
       QColor bgColor = ThemeManager::instance().getPrimaryColor();
@@ -427,7 +426,6 @@ void SoftwareVideoRenderer::paintEvent(QPaintEvent *event) {
 
     // 1. 调用通用的 SubtitleRenderer 渲染字幕及其背景
     painter.save();
-    painter.setClipRect(targetRect);
     SubtitleRenderer::renderSubtitle(painter, textToDraw, drawFont, activeStyle,
                                      textRect, subtitleRotation_, bgPath,
                                      is9Patch, bgMargins);
@@ -1132,70 +1130,90 @@ void SoftwareVideoRenderer::mouseMoveEvent(QMouseEvent *event) {
       double minW = 40.0 / targetRect.width();
       double minH = 20.0 / targetRect.height();
 
+      double left = dragStartNormalizedRect_.left();
+      double top = dragStartNormalizedRect_.top();
+      double right = dragStartNormalizedRect_.right();
+      double bottom = dragStartNormalizedRect_.bottom();
+
       switch (dragMode_) {
       case DragResizeTL: {
-        double newLeft = qMin(dragStartNormalizedRect_.left() + dx,
-                              dragStartNormalizedRect_.right() - minW);
-        double newTop = qMin(dragStartNormalizedRect_.top() + dy,
-                             dragStartNormalizedRect_.bottom() - minH);
-        newRect.setLeft(newLeft);
-        newRect.setTop(newTop);
+        left = qMin(dragStartNormalizedRect_.left() + dx,
+                    dragStartNormalizedRect_.right() - minW);
+        top = qMin(dragStartNormalizedRect_.top() + dy,
+                   dragStartNormalizedRect_.bottom() - minH);
         break;
       }
       case DragResizeTM: {
-        double newTop = qMin(dragStartNormalizedRect_.top() + dy,
-                             dragStartNormalizedRect_.bottom() - minH);
-        newRect.setTop(newTop);
+        top = qMin(dragStartNormalizedRect_.top() + dy,
+                   dragStartNormalizedRect_.bottom() - minH);
         break;
       }
       case DragResizeTR: {
-        double newRight = qMax(dragStartNormalizedRect_.left() + minW,
-                               dragStartNormalizedRect_.right() + dx);
-        double newTop = qMin(dragStartNormalizedRect_.top() + dy,
-                             dragStartNormalizedRect_.bottom() - minH);
-        newRect.setRight(newRight);
-        newRect.setTop(newTop);
+        right = qMax(dragStartNormalizedRect_.left() + minW,
+                     dragStartNormalizedRect_.right() + dx);
+        top = qMin(dragStartNormalizedRect_.top() + dy,
+                   dragStartNormalizedRect_.bottom() - minH);
         break;
       }
       case DragResizeML: {
-        double newLeft = qMin(dragStartNormalizedRect_.left() + dx,
-                              dragStartNormalizedRect_.right() - minW);
-        newRect.setLeft(newLeft);
+        left = qMin(dragStartNormalizedRect_.left() + dx,
+                    dragStartNormalizedRect_.right() - minW);
         break;
       }
       case DragResizeMR: {
-        double newRight = qMax(dragStartNormalizedRect_.left() + minW,
-                               dragStartNormalizedRect_.right() + dx);
-        newRect.setRight(newRight);
+        right = qMax(dragStartNormalizedRect_.left() + minW,
+                     dragStartNormalizedRect_.right() + dx);
         break;
       }
       case DragResizeBL: {
-        double newLeft = qMin(dragStartNormalizedRect_.left() + dx,
-                              dragStartNormalizedRect_.right() - minW);
-        double newBottom = qMax(dragStartNormalizedRect_.top() + minH,
-                                dragStartNormalizedRect_.bottom() + dy);
-        newRect.setLeft(newLeft);
-        newRect.setBottom(newBottom);
+        left = qMin(dragStartNormalizedRect_.left() + dx,
+                    dragStartNormalizedRect_.right() - minW);
+        bottom = qMax(dragStartNormalizedRect_.top() + minH,
+                      dragStartNormalizedRect_.bottom() + dy);
         break;
       }
       case DragResizeBM: {
-        double newBottom = qMax(dragStartNormalizedRect_.top() + minH,
-                                dragStartNormalizedRect_.bottom() + dy);
-        newRect.setBottom(newBottom);
+        bottom = qMax(dragStartNormalizedRect_.top() + minH,
+                      dragStartNormalizedRect_.bottom() + dy);
         break;
       }
       case DragResizeBR: {
-        double newRight = qMax(dragStartNormalizedRect_.left() + minW,
-                               dragStartNormalizedRect_.right() + dx);
-        double newBottom = qMax(dragStartNormalizedRect_.top() + minH,
-                                dragStartNormalizedRect_.bottom() + dy);
-        newRect.setRight(newRight);
-        newRect.setBottom(newBottom);
+        right = qMax(dragStartNormalizedRect_.left() + minW,
+                     dragStartNormalizedRect_.right() + dx);
+        bottom = qMax(dragStartNormalizedRect_.top() + minH,
+                      dragStartNormalizedRect_.bottom() + dy);
         break;
       }
       default:
         break;
       }
+
+      double w1 = right - left;
+      double h1 = bottom - top;
+
+      double localCenterX = left + w1 / 2.0;
+      double localCenterY = top + h1 / 2.0;
+
+      double startCenterX = dragStartNormalizedRect_.left() + dragStartNormalizedRect_.width() / 2.0;
+      double startCenterY = dragStartNormalizedRect_.top() + dragStartNormalizedRect_.height() / 2.0;
+
+      double angleRad = subtitleRotation_ * M_PI / 180.0;
+      double cosAngle = std::cos(angleRad);
+      double sinAngle = std::sin(angleRad);
+
+      double localDeltaX = localCenterX - startCenterX;
+      double localDeltaY = localCenterY - startCenterY;
+
+      double worldDeltaX = cosAngle * localDeltaX - sinAngle * localDeltaY;
+      double worldDeltaY = sinAngle * localDeltaX + cosAngle * localDeltaY;
+
+      double newCenterX = startCenterX + worldDeltaX;
+      double newCenterY = startCenterY + worldDeltaY;
+
+      double newLeft = newCenterX - w1 / 2.0;
+      double newTop = newCenterY - h1 / 2.0;
+
+      newRect = QRectF(newLeft, newTop, w1, h1);
 
       // 不再在拖拽时修改字体大小，只修改包围框
       currentDragFontSize_ = dragStartFontSize_;
