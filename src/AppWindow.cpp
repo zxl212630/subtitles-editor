@@ -35,7 +35,9 @@
 #include <QMouseEvent>
 #include <QProcess>
 #include <QPushButton>
+#include <QResizeEvent>
 #include <QScrollBar>
+#include <QShowEvent>
 #include <QSplitter>
 #include <QStatusBar>
 #include <QTime>
@@ -207,6 +209,39 @@ void AppWindow::changeEvent(QEvent *event) {
   }
 #endif
   QMainWindow::changeEvent(event);
+}
+
+void AppWindow::resizeEvent(QResizeEvent *event) {
+  QMainWindow::resizeEvent(event);
+  if (d->topSplitter && d->subtitleListPanel) {
+    QList<int> sizes = d->topSplitter->sizes();
+    if (sizes.size() == 2) {
+      int totalW = sizes[0] + sizes[1];
+      int minW = totalW * 0.20;
+      int maxW = totalW * 0.40;
+      int currentW = sizes[1];
+      int newW = qBound(minW, currentW, maxW);
+      if (newW != currentW) {
+        sizes[0] = totalW - newW;
+        sizes[1] = newW;
+        d->topSplitter->setSizes(sizes);
+      }
+    }
+  }
+}
+
+void AppWindow::showEvent(QShowEvent *event) {
+  QMainWindow::showEvent(event);
+  if (d->topSplitter && d->subtitleListPanel) {
+    QList<int> sizes = d->topSplitter->sizes();
+    if (sizes.size() == 2) {
+      int totalW = sizes[0] + sizes[1];
+      int targetW = totalW * 0.30;
+      sizes[0] = totalW - targetW;
+      sizes[1] = targetW;
+      d->topSplitter->setSizes(sizes);
+    }
+  }
 }
 
 void AppWindow::setupTitleBar() {
@@ -499,9 +534,25 @@ void AppWindow::setupSplitterLayout() {
   d->topSplitter->setHandleWidth(10);
   d->topSplitter->setCollapsible(0, false);
   d->topSplitter->setCollapsible(1, false);
-  d->subtitleListPanel->setMinimumWidth(300);
-  d->videoPreviewPanel->setMinimumWidth(400);
-  d->topSplitter->setSizes({852, 558});
+  d->topSplitter->setSizes({987, 423});
+
+  // 限制拖动分割条时，字幕列表面板宽度在窗口总宽度的 20% 到 40% 之间
+  connect(d->topSplitter, &QSplitter::splitterMoved, this,
+          [this](int pos, int index) {
+            QList<int> sizes = d->topSplitter->sizes();
+            if (sizes.size() == 2) {
+              int totalW = sizes[0] + sizes[1];
+              int minW = totalW * 0.20;
+              int maxW = totalW * 0.40;
+              int currentW = sizes[1];
+              int newW = qBound(minW, currentW, maxW);
+              if (newW != currentW) {
+                sizes[0] = totalW - newW;
+                sizes[1] = newW;
+                d->topSplitter->setSizes(sizes);
+              }
+            }
+          });
 
   // Vertical splitter
   d->verticalSplitter = new QSplitter(Qt::Vertical, this);

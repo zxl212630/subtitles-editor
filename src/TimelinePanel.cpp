@@ -992,23 +992,25 @@ void TimelinePanel::drawEmptyState(QPainter &painter) {
 
 void TimelinePanel::drawPlayhead(QPainter &painter) {
   int x = timeToX(currentTimeMs_);
-  const int triangleTop = 19;
+  const int triangleTop = 16;
   const int triangleTip = 31;
 
   // Only draw if within visible area
   if (x < TRACK_HEAD_WIDTH || x > canvas_->width())
     return;
 
-  // Triangle pointer below time labels
+  // Tag pointer below time labels (pentagon: flat top, vertical sides,
+  // triangular bottom)
   painter.setPen(Qt::NoPen);
   painter.setBrush(QColor("#f59e0b"));
-  QPointF triangle[3] = {QPointF(x - 7, triangleTop),
-                         QPointF(x + 7, triangleTop), QPointF(x, triangleTip)};
-  painter.drawPolygon(triangle, 3);
+  QPointF tag[5] = {QPointF(x - 6, triangleTop), QPointF(x + 6, triangleTop),
+                    QPointF(x + 6, 24), QPointF(x, triangleTip),
+                    QPointF(x - 6, 24)};
+  painter.drawPolygon(tag, 5);
 
   // Vertical line stops above the scrollbar area
   painter.setPen(QColor("#f59e0b"));
-  int lineBottom = canvas_->height() - 24;
+  int lineBottom = canvas_->height() - 18;
   if (lineBottom > triangleTip)
     painter.drawLine(x, triangleTip, x, lineBottom);
 }
