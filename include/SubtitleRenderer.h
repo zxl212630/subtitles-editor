@@ -32,7 +32,8 @@ public:
                                  const QSize &videoSize);
 
   // 根据当前渲染视频区域高度缩放并构建出最终的 QFont
-  static QFont buildFont(const SubtitleItem &item, const QSize &videoSize);
+  static QFont buildFont(const SubtitleItem &item, const QSize &videoSize,
+                         double refHeight = 1080.0);
 
   // 底层通用绘制方法，解耦具体数据模型，可供预览渲染器和导出渲染器底层共同调用
   static void renderSubtitle(QPainter &painter, const QString &text,

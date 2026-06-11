@@ -360,6 +360,31 @@ bool VideoExporter::initVideoEncoder() {
   // 编码像素格式，VideoToolbox 和 libx264 都很好地支持 YUV420P
   videoEncCtx_->pix_fmt = AV_PIX_FMT_YUV420P;
 
+  // 复制/设置色彩参数（保障 1080P/HD
+  // 等高清视频播放时不会发生亮度和色度错位导致的虚边和重影）
+  AVColorSpace colorspace = videoDecCtx_->colorspace;
+  AVColorRange colorRange = videoDecCtx_->color_range;
+  AVColorPrimaries colorPrimaries = videoDecCtx_->color_primaries;
+  AVColorTransferCharacteristic colorTrc = videoDecCtx_->color_trc;
+
+  if (colorspace == AVCOL_SPC_UNSPECIFIED) {
+    colorspace = (outHeight >= 720) ? AVCOL_SPC_BT709 : AVCOL_SPC_BT470BG;
+  }
+  if (colorRange == AVCOL_RANGE_UNSPECIFIED) {
+    colorRange = AVCOL_RANGE_MPEG;
+  }
+  if (colorPrimaries == AVCOL_PRI_UNSPECIFIED) {
+    colorPrimaries = (outHeight >= 720) ? AVCOL_PRI_BT709 : AVCOL_PRI_BT470BG;
+  }
+  if (colorTrc == AVCOL_TRC_UNSPECIFIED) {
+    colorTrc = (outHeight >= 720) ? AVCOL_TRC_BT709 : AVCOL_TRC_SMPTE170M;
+  }
+
+  videoEncCtx_->colorspace = colorspace;
+  videoEncCtx_->color_range = colorRange;
+  videoEncCtx_->color_primaries = colorPrimaries;
+  videoEncCtx_->color_trc = colorTrc;
+
   // 帧率设置
   double outFps = config_.outputFps > 0.0
                       ? config_.outputFps
@@ -459,14 +484,39 @@ bool VideoExporter::initVideoEncoder() {
                      videoDecCtx_->pix_fmt, outWidth, outHeight,
                      AV_PIX_FMT_RGBA, SWS_BICUBIC, nullptr, nullptr, nullptr);
 
-  swsFromRgb_ = sws_getContext(outWidth, outHeight, AV_PIX_FMT_RGBA, outWidth,
-                               outHeight, videoEncCtx_->pix_fmt, SWS_BICUBIC,
-                               nullptr, nullptr, nullptr);
+  swsFromRgb_ =
+      sws_getContext(outWidth, outHeight, AV_PIX_FMT_RGBA, outWidth, outHeight,
+                     videoEncCtx_->pix_fmt,
+                     SWS_BICUBIC | SWS_ACCURATE_RND | SWS_FULL_CHR_H_INT,
+                     nullptr, nullptr, nullptr);
 
   if (!swsToRgb_ || !swsFromRgb_) {
     emit exportFailed(tr("分配图像缩放与格式转换上下文失败。"));
     return false;
   }
+
+  // 显式指定 RGB 和 YUV
+  // 的色彩转换矩阵，避免红蓝（蓝紫色）高饱和度字体转换时发生渗色和模糊
+  int srcColorspace = videoDecCtx_->colorspace;
+  if (srcColorspace == AVCOL_SPC_UNSPECIFIED) {
+    srcColorspace =
+        (videoDecCtx_->height >= 720) ? AVCOL_SPC_BT709 : AVCOL_SPC_BT470BG;
+  }
+  int dstColorspace = videoEncCtx_->colorspace;
+
+  const int *srcCoefs = sws_getCoefficients(srcColorspace);
+  const int *dstCoefs = sws_getCoefficients(dstColorspace);
+
+  int srcRange = (videoDecCtx_->color_range == AVCOL_RANGE_JPEG) ? 1 : 0;
+  int dstRange = (videoEncCtx_->color_range == AVCOL_RANGE_JPEG) ? 1 : 0;
+
+  // swsToRgb_: YUV (MPEG/JPEG) -> RGBA (Full Range = 1)
+  sws_setColorspaceDetails(swsToRgb_, srcCoefs, srcRange, srcCoefs, 1, 0,
+                           1 << 16, 1 << 16);
+
+  // swsFromRgb_: RGBA (Full Range = 1) -> YUV (MPEG/JPEG)
+  sws_setColorspaceDetails(swsFromRgb_, dstCoefs, 1, dstCoefs, dstRange, 0,
+                           1 << 16, 1 << 16);
 
   return true;
 }

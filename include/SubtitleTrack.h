@@ -71,6 +71,12 @@ public:
   void setUnifiedBorderMargins(const QMargins &margins);
 
   // --- 全局默认样式设置 ---
+  int refHeight() const { return refHeight_; }
+  void setRefHeight(int h) {
+    if (h > 0)
+      refHeight_ = h;
+  }
+
   QString defaultFontFamily() const { return defaultFontFamily_; }
   void setDefaultFontFamily(const QString &family) {
     defaultFontFamily_ = family;
@@ -196,6 +202,8 @@ private:
   int defaultBubblePaddingRight_ = 10;
   int defaultBubblePaddingTop_ = 10;
   int defaultBubblePaddingBottom_ = 10;
+
+  int refHeight_ = 1080;
 
   QUndoStack *undoStack_ = nullptr;
   bool isPerformingUndoRedo_ = false;

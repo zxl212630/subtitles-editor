@@ -103,9 +103,8 @@ QRect SubtitleRenderer::calculateItemRect(const SubtitleItem &item,
 }
 
 QFont SubtitleRenderer::buildFont(const SubtitleItem &item,
-                                  const QSize &videoSize) {
+                                  const QSize &videoSize, double refHeight) {
   QFont font(item.fontFamily);
-  double refHeight = 1080.0;
   double scale =
       (videoSize.height() > 0) ? (videoSize.height() / refHeight) : 1.0;
   int scaledSize = qRound(item.fontSize * scale);
@@ -131,6 +130,17 @@ void SubtitleRenderer::renderSubtitle(QPainter &painter, const QString &text,
     return;
 
   painter.save();
+
+  double scale = 1.0;
+  if (style.fontSize > 0) {
+    int curPixelSize = font.pixelSize();
+    if (curPixelSize <= 0) {
+      curPixelSize = font.pointSize();
+    }
+    if (curPixelSize > 0) {
+      scale = static_cast<double>(curPixelSize) / style.fontSize;
+    }
+  }
 
   painter.setRenderHint(QPainter::Antialiasing, true);
   painter.setRenderHint(QPainter::TextAntialiasing, true);
@@ -197,11 +207,15 @@ void SubtitleRenderer::renderSubtitle(QPainter &painter, const QString &text,
     }
 
     if (!bgImage.isNull()) {
-      QRect bgRect =
-          textBounding.adjusted(-bgMargins.left(), -bgMargins.top(),
-                                bgMargins.right(), bgMargins.bottom());
+      QRect bgRect = textBounding.adjusted(
+          -bgMargins.left() * scale, -bgMargins.top() * scale,
+          bgMargins.right() * scale, bgMargins.bottom() * scale);
       if (bgIs9Patch) {
-        drawNinePatch(painter, bgImage, bgRect, bgMargins);
+        QMargins scaledBgMargins(qRound(bgMargins.left() * scale),
+                                 qRound(bgMargins.top() * scale),
+                                 qRound(bgMargins.right() * scale),
+                                 qRound(bgMargins.bottom() * scale));
+        drawNinePatch(painter, bgImage, bgRect, scaledBgMargins);
       } else {
         int imgX = textBounding.center().x() - bgImage.width() / 2;
         int imgY = textBounding.center().y() - bgImage.height() / 2;
@@ -228,51 +242,48 @@ void SubtitleRenderer::renderSubtitle(QPainter &painter, const QString &text,
     }
 
     if (!bubbleImage.isNull()) {
-      // 气泡框的外扩大小在切片大小的基础上加上 5
-      // 像素的呼吸缓冲，确保文本始终安全地装在中央拉伸区域中
-      QRect bubbleRect = textBounding.adjusted(
-          -style.bubblePaddingLeft - 5, -style.bubblePaddingTop - 5,
-          style.bubblePaddingRight + 5, style.bubblePaddingBottom + 5);
+      int padLeft = qRound(style.bubblePaddingLeft * scale);
+      int padTop = qRound(style.bubblePaddingTop * scale);
+      int padRight = qRound(style.bubblePaddingRight * scale);
+      int padBottom = qRound(style.bubblePaddingBottom * scale);
+      int buffer = qRound(5.0 * scale);
+      if (buffer < 1)
+        buffer = 1;
+
+      QRect bubbleRect =
+          textBounding.adjusted(-padLeft - buffer, -padTop - buffer,
+                                padRight + buffer, padBottom + buffer);
 
       int tw = bubbleRect.width();
       int th = bubbleRect.height();
       int sw = bubbleImage.width();
       int sh = bubbleImage.height();
 
-      QMargins bubbleMargins(style.bubblePaddingLeft, style.bubblePaddingTop,
-                             style.bubblePaddingRight,
-                             style.bubblePaddingBottom);
+      QMargins bubbleMargins(padLeft, padTop, padRight, padBottom);
 
       if (tw < sw && th < sh) {
-        // 1.
-        // 宽高都小于气泡原图：进行等比例缩小并在居中位置绘制，以防止切片重叠及形变
-        double scale = qMin((double)tw / sw, (double)th / sh);
-        int nw = qRound(sw * scale);
-        int nh = qRound(sh * scale);
+        double imgScale = qMin((double)tw / sw, (double)th / sh);
+        int nw = qRound(sw * imgScale);
+        int nh = qRound(sh * imgScale);
         QRect drawRect(bubbleRect.x() + (tw - nw) / 2,
                        bubbleRect.y() + (th - nh) / 2, nw, nh);
         painter.drawImage(drawRect, bubbleImage);
       } else if (tw >= sw && th >= sh) {
-        // 2. 宽高都放得下：进行标准双向九宫格拉伸
         drawNinePatch(painter, bubbleImage, bubbleRect, bubbleMargins);
       } else if (tw >= sw && th < sh) {
-        // 3.
-        // 宽度放得下但高度太矮：将高度整体等比缩放到目标高度，宽度方向进行九宫格拉伸
         QImage scaledSrc =
             bubbleImage.scaledToHeight(th, Qt::SmoothTransformation);
         double ratio = (double)th / sh;
-        int ml = qMax(1, qRound(style.bubblePaddingLeft * ratio));
-        int mr = qMax(1, qRound(style.bubblePaddingRight * ratio));
+        int ml = qMax(1, qRound(style.bubblePaddingLeft * ratio * scale));
+        int mr = qMax(1, qRound(style.bubblePaddingRight * ratio * scale));
         QMargins scaledMargins(ml, 0, mr, 0);
         drawNinePatch(painter, scaledSrc, bubbleRect, scaledMargins);
       } else {
-        // 4.
-        // 高度放得下但宽度太窄：将宽度整体等比缩放到目标宽度，高度方向进行九宫格拉伸
         QImage scaledSrc =
             bubbleImage.scaledToWidth(tw, Qt::SmoothTransformation);
         double ratio = (double)tw / sw;
-        int mt = qMax(1, qRound(style.bubblePaddingTop * ratio));
-        int mb = qMax(1, qRound(style.bubblePaddingBottom * ratio));
+        int mt = qMax(1, qRound(style.bubblePaddingTop * ratio * scale));
+        int mb = qMax(1, qRound(style.bubblePaddingBottom * ratio * scale));
         QMargins scaledMargins(0, mt, 0, mb);
         drawNinePatch(painter, scaledSrc, bubbleRect, scaledMargins);
       }
@@ -282,9 +293,14 @@ void SubtitleRenderer::renderSubtitle(QPainter &painter, const QString &text,
   // Draw custom background box if general style background is enabled and no
   // speaker bg was drawn
   if (!bgDrawn && style.bgType > 0) {
-    QRect bgRect = textBounding.adjusted(-style.bgPaddingX, -style.bgPaddingY,
-                                         style.bgPaddingX, style.bgPaddingY);
-    bgRect.translate(style.bgOffsetX, style.bgOffsetY);
+    int padX = qRound(style.bgPaddingX * scale);
+    int padY = qRound(style.bgPaddingY * scale);
+    int offX = qRound(style.bgOffsetX * scale);
+    int offY = qRound(style.bgOffsetY * scale);
+    int roundness = qRound(style.bgRoundness * scale);
+
+    QRect bgRect = textBounding.adjusted(-padX, -padY, padX, padY);
+    bgRect.translate(offX, offY);
 
     painter.save();
     painter.setRenderHint(QPainter::Antialiasing, true);
@@ -292,7 +308,7 @@ void SubtitleRenderer::renderSubtitle(QPainter &painter, const QString &text,
     bgColor.setAlphaF(style.bgOpacity);
     painter.setBrush(bgColor);
     painter.setPen(Qt::NoPen);
-    painter.drawRoundedRect(bgRect, style.bgRoundness, style.bgRoundness);
+    painter.drawRoundedRect(bgRect, roundness, roundness);
     painter.restore();
   }
 
@@ -337,21 +353,22 @@ void SubtitleRenderer::renderSubtitle(QPainter &painter, const QString &text,
     painter.setPen(Qt::NoPen);
 
     QTransform shadowTrans;
-    shadowTrans.translate(style.shadowOffsetX, style.shadowOffsetY);
+    shadowTrans.translate(style.shadowOffsetX * scale,
+                          style.shadowOffsetY * scale);
     QPainterPath shadowPath = shadowTrans.map(textPath);
 
     if (style.shadowBlur > 0) {
       // Approximate soft shadows by drawing offset paths at reduced opacity
-      int passes = qMin(5, style.shadowBlur);
-      double stepOpacity = style.shadowOpacity / passes;
+      int passes = qMin(5, qRound(style.shadowBlur * scale));
+      double stepOpacity = style.shadowOpacity / qMax(1, passes);
       for (int p = 1; p <= passes; ++p) {
         QColor blurColor = QColor(style.shadowColor);
         blurColor.setAlphaF(stepOpacity);
         painter.setBrush(blurColor);
 
         QTransform blurTrans;
-        double radius =
-            static_cast<double>(p) * style.shadowBlur / passes / 2.0;
+        double radius = static_cast<double>(p) * (style.shadowBlur * scale) /
+                        qMax(1, passes) / 2.0;
         blurTrans.translate(radius, radius);
         painter.fillPath(blurTrans.map(shadowPath), blurColor);
         blurTrans.reset();
@@ -369,7 +386,10 @@ void SubtitleRenderer::renderSubtitle(QPainter &painter, const QString &text,
     painter.save();
     QColor strColor = QColor(style.strokeColor);
     strColor.setAlphaF(style.strokeOpacity);
-    QPen strokePen(strColor, style.strokeWidth, Qt::SolidLine, Qt::RoundCap,
+    double scaledStrokeWidth = style.strokeWidth * scale;
+    if (scaledStrokeWidth < 0.1)
+      scaledStrokeWidth = 0.1;
+    QPen strokePen(strColor, scaledStrokeWidth, Qt::SolidLine, Qt::RoundCap,
                    Qt::RoundJoin);
     painter.setPen(strokePen);
     painter.setBrush(Qt::NoBrush);
@@ -455,7 +475,7 @@ void SubtitleRenderer::renderItem(QPainter &painter, const SubtitleItem &item,
     return;
 
   // 1. 构建字体
-  QFont font = buildFont(item, videoSize);
+  QFont font = buildFont(item, videoSize, track.refHeight());
 
   // 2. 计算排版像素位置
   QRect textRect = calculateItemRect(item, videoSize);

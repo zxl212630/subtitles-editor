@@ -1405,6 +1405,9 @@ void AppWindow::updateTotalDuration(bool resetPlayback) {
       QSize videoSize = (d->mediaPlayer && d->mediaPlayer->durationMs() > 0)
                             ? d->mediaPlayer->videoSize()
                             : QSize();
+      if (d->subtitleTrack && videoSize.isValid() && videoSize.height() > 0) {
+        d->subtitleTrack->setRefHeight(videoSize.height());
+      }
       d->videoPreviewPanel->onMediaLoaded(totalDuration, videoSize);
     } else {
       d->videoPreviewPanel->setTotalDuration(totalDuration);
