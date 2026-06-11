@@ -226,9 +226,9 @@ void SeekDecoder::run() {
 #if PROFILE_TIMING
       qint64 elapsedUs = totalTimer.nsecsElapsed() / 1000;
       qInfo() << "[TIMING:SeekDecoder] decoded frame at" << frame.ptsMs
-               << "ms for target" << targetMs << "ms, cost"
-               << (elapsedUs / 1000.0) << "ms"
-               << "precise=" << precise;
+              << "ms for target" << targetMs << "ms, cost"
+              << (elapsedUs / 1000.0) << "ms"
+              << "precise=" << precise;
 #endif
       emit frameReady(std::move(frame));
     }
@@ -313,7 +313,8 @@ DecodedVideoFrame SeekDecoder::decodeOneFrame(qint64 targetMs, bool precise) {
         av_frame_unref(frame);
         break;
       } else {
-        // 精确寻道：如果当前解出来的帧 PTS 大于等于我们 Seek 要求的 pts，代表已追赶上
+        // 精确寻道：如果当前解出来的帧 PTS 大于等于我们 Seek 要求的
+        // pts，代表已追赶上
         if (ptsMs >= targetMs) {
           result = convertFrame(frame, ptsMs);
           lastSeekTargetMs_ = targetMs;
@@ -361,13 +362,15 @@ DecodedVideoFrame SeekDecoder::convertFrame(AVFrame *frame, qint64 ptsMs) {
   if (outSize.isValid() && !outSize.isEmpty()) {
     double widgetScale = qMin(static_cast<double>(outSize.width()) / srcW,
                               static_cast<double>(outSize.height()) / srcH);
-    finalScale = qMin(finalScale, widgetScale);
+    finalScale = widgetScale * qScale;
   }
   if (finalScale < 1.0) {
     dstW = static_cast<int>(srcW * finalScale) & ~1; // 对齐到 2 像素边界
     dstH = static_cast<int>(srcH * finalScale) & ~1;
-    if (dstW < 4) dstW = 4;
-    if (dstH < 4) dstH = 4;
+    if (dstW < 4)
+      dstW = 4;
+    if (dstH < 4)
+      dstH = 4;
   }
 
   // 如果尺寸或格式改变，重建 sws 上下文
@@ -391,9 +394,8 @@ DecodedVideoFrame SeekDecoder::convertFrame(AVFrame *frame, qint64 ptsMs) {
   int bufSize = dstW * dstH * 4;
   QByteArray rgbaData(bufSize, Qt::Uninitialized);
 
-  uint8_t *dstData[4] = {
-      reinterpret_cast<uint8_t *>(rgbaData.data()), nullptr, nullptr,
-      nullptr};
+  uint8_t *dstData[4] = {reinterpret_cast<uint8_t *>(rgbaData.data()), nullptr,
+                         nullptr, nullptr};
   int dstLinesize[4] = {dstW * 4, 0, 0, 0};
 
   sws_scale(swsCtx_, frame->data, frame->linesize, 0, srcH, dstData,

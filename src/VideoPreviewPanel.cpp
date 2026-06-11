@@ -4,6 +4,7 @@
 #include "MediaPlayer.h"
 #include "SoftwareVideoRenderer.h"
 #include "SubtitleTrack.h"
+#include "ToolTipEventFilter.h"
 
 #include "SubtitleItem.h"
 #include <QAbstractItemView>
@@ -26,13 +27,14 @@
 #include <QValidator>
 
 #include "ThemeManager.h"
-#include <QStyledItemDelegate>
 #include <QCoreApplication>
+#include <QStyledItemDelegate>
 
 class QualityDelegate : public QStyledItemDelegate {
 public:
   using QStyledItemDelegate::QStyledItemDelegate;
-  QString displayText(const QVariant &value, const QLocale &locale) const override {
+  QString displayText(const QVariant &value,
+                      const QLocale &locale) const override {
     QString text = value.toString();
     if (text == "原画" || text == "Full") {
       return QCoreApplication::translate("VideoPreviewPanel", "全画质");
@@ -700,9 +702,10 @@ void VideoPreviewPanel::setupUi() {
   }
   cbLayout->addWidget(qualityCombo_);
 
-  connect(qualityCombo_, QOverload<int>::of(&QComboBox::currentIndexChanged), this,
-          [this](int index) {
-            if (index < 0) return;
+  connect(qualityCombo_, QOverload<int>::of(&QComboBox::currentIndexChanged),
+          this, [this](int index) {
+            if (index < 0)
+              return;
             double quality = qualityCombo_->itemData(index).toDouble();
             if (mediaPlayer_) {
               mediaPlayer_->setVideoQuality(quality);
@@ -731,6 +734,15 @@ void VideoPreviewPanel::setupUi() {
               mediaPlayer_->setVolume(vol);
             }
           });
+
+  bBtn_->installEventFilter(ToolTipEventFilter::instance());
+  iBtn_->installEventFilter(ToolTipEventFilter::instance());
+  uBtn_->installEventFilter(ToolTipEventFilter::instance());
+  alBtn_->installEventFilter(ToolTipEventFilter::instance());
+  acBtn_->installEventFilter(ToolTipEventFilter::instance());
+  arBtn_->installEventFilter(ToolTipEventFilter::instance());
+  ajBtn_->installEventFilter(ToolTipEventFilter::instance());
+  volBtn_->installEventFilter(ToolTipEventFilter::instance());
 
   layout->addWidget(controlBar);
   retranslateUi();
@@ -840,6 +852,11 @@ void VideoPreviewPanel::retranslateUi() {
 void VideoPreviewPanel::resizeEvent(QResizeEvent *event) {
   QWidget::resizeEvent(event);
   updateHandlePositions();
+  if (mediaPlayer_ && videoRenderer_) {
+    QSize physicalSize =
+        videoRenderer_->size() * videoRenderer_->devicePixelRatioF();
+    mediaPlayer_->updateVideoOutputSize(physicalSize);
+  }
 }
 
 void VideoPreviewPanel::setMediaPlayer(MediaPlayer *player) {
@@ -1001,7 +1018,6 @@ void VideoPreviewPanel::updateCurrentItemStyle(
     subtitleTrack_->setDefaultSubtitleRect(
         QRectF(dummy.rectX, dummy.rectY, dummy.rectW, dummy.rectH));
     subtitleTrack_->setDefaultRotation(dummy.rotation);
-    subtitleTrack_->saveGlobalSettings();
   }
 }
 

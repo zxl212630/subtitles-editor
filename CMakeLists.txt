@@ -106,6 +106,7 @@ find_path(SWRESAMPLE_INCLUDE_DIR libswresample/swresample.h PATHS "${FFMPEG_INCL
 # ============================================================
 set(SOURCES
     src/BaseDialog.cpp
+    src/ToolTipEventFilter.cpp
     src/SubtitleProject.cpp
     src/ProjectManager.cpp
     src/main.cpp
@@ -142,6 +143,7 @@ set(SOURCES
 
 set(HEADERS
     include/BaseDialog.h
+    include/ToolTipEventFilter.h
     include/SubtitleProject.h
     include/ProjectManager.h
     include/AppWindow.h

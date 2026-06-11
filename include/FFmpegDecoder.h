@@ -48,6 +48,7 @@ public:
   void setCancelOpen(bool cancel);
   void setVideoQuality(double scale);
   double videoQuality() const;
+  void setOutputSize(const QSize &size);
 
   void requestSeek(qint64 targetMs);
   void setPlaying(bool playing);
@@ -150,6 +151,7 @@ private:
   qint64 lastEnqueuedVideoPts_ = -1;
 
   double qualityScale_ = 1.0;
+  QSize outputSize_;
   int lastSwsW_ = -1;
   int lastSwsH_ = -1;
   int lastDstW_ = -1;

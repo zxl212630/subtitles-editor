@@ -88,7 +88,8 @@ void MediaPlayer::ensureSeekDecoderOpen() {
     bool ok = seekDecoder_->open(currentPath_);
     if (ok) {
       if (videoRenderer_) {
-        seekDecoder_->setOutputSize(videoRenderer_->size());
+        seekDecoder_->setOutputSize(videoRenderer_->size() *
+                                    videoRenderer_->devicePixelRatioF());
       }
       seekDecoder_->setVideoQuality(qualityScale_);
       LOG_MP(info, "ensureSeekDecoderOpen() lazy loaded successfully");
@@ -209,8 +210,13 @@ void MediaPlayer::onLoadFinished(const QString &path, bool decoderOk,
 
   if (decoder_->hasVideo()) {
     videoRenderer_->clear();
-    if (seekDecoderOk && videoRenderer_) {
-      seekDecoder_->setOutputSize(videoRenderer_->size());
+    if (videoRenderer_) {
+      QSize physicalSize =
+          videoRenderer_->size() * videoRenderer_->devicePixelRatioF();
+      if (seekDecoderOk) {
+        seekDecoder_->setOutputSize(physicalSize);
+      }
+      decoder_->setOutputSize(physicalSize);
     }
   }
 
@@ -773,5 +779,14 @@ void MediaPlayer::setVideoQuality(double quality) {
   // Force re-decoding of current frame if paused/stopped/ready
   if (state_ == Paused || state_ == Ready || state_ == Stopped) {
     seek(currentTimeMs_);
+  }
+}
+
+void MediaPlayer::updateVideoOutputSize(const QSize &size) {
+  if (decoder_) {
+    decoder_->setOutputSize(size);
+  }
+  if (seekDecoder_) {
+    seekDecoder_->setOutputSize(size);
   }
 }

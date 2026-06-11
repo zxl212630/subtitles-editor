@@ -247,6 +247,7 @@ void FFmpegDecoder::close() {
   durationMs_ = 0;
   fps_ = 0.0;
   videoSize_ = QSize();
+  outputSize_ = QSize();
   audioSampleRate_ = 0;
   audioChannels_ = 0;
   swrSampleRate_ = 0;
@@ -278,6 +279,11 @@ void FFmpegDecoder::setVideoQuality(double scale) {
 double FFmpegDecoder::videoQuality() const {
   QMutexLocker locker(&metadataMutex_);
   return qualityScale_;
+}
+
+void FFmpegDecoder::setOutputSize(const QSize &size) {
+  QMutexLocker locker(&metadataMutex_);
+  outputSize_ = size;
 }
 
 void FFmpegDecoder::requestSeek(qint64 targetMs) {
@@ -589,29 +595,40 @@ bool FFmpegDecoder::decodeVideoPacket(AVPacket *packet) {
     int h = f->height;
 
     double qScale = 1.0;
+    QSize outSize;
     {
       QMutexLocker locker(&metadataMutex_);
       qScale = qualityScale_;
+      outSize = outputSize_;
     }
 
     int dstW = w;
     int dstH = h;
-    if (qScale < 1.0) {
-      dstW = static_cast<int>(w * qScale) & ~1;
-      dstH = static_cast<int>(h * qScale) & ~1;
-      if (dstW < 4) dstW = 4;
-      if (dstH < 4) dstH = 4;
+    double finalScale = qScale;
+    if (outSize.isValid() && !outSize.isEmpty()) {
+      double widgetScale = qMin(static_cast<double>(outSize.width()) / w,
+                                static_cast<double>(outSize.height()) / h);
+      finalScale = widgetScale * qScale;
+    }
+    if (finalScale < 1.0) {
+      dstW = static_cast<int>(w * finalScale) & ~1;
+      dstH = static_cast<int>(h * finalScale) & ~1;
+      if (dstW < 4)
+        dstW = 4;
+      if (dstH < 4)
+        dstH = 4;
     }
 
     {
       QMutexLocker locker(&metadataMutex_);
-      if (!swsCtx_ || lastSwsW_ != w || lastSwsH_ != h || lastDstW_ != dstW || lastDstH_ != dstH || lastSwsFormat_ != f->format) {
+      if (!swsCtx_ || lastSwsW_ != w || lastSwsH_ != h || lastDstW_ != dstW ||
+          lastDstH_ != dstH || lastSwsFormat_ != f->format) {
         if (swsCtx_) {
           sws_freeContext(swsCtx_);
         }
-        swsCtx_ = sws_getContext(w, h, static_cast<AVPixelFormat>(f->format), dstW,
-                                 dstH, AV_PIX_FMT_RGBA, SWS_BILINEAR, nullptr,
-                                 nullptr, nullptr);
+        swsCtx_ = sws_getContext(w, h, static_cast<AVPixelFormat>(f->format),
+                                 dstW, dstH, AV_PIX_FMT_RGBA, SWS_BILINEAR,
+                                 nullptr, nullptr, nullptr);
         lastSwsW_ = w;
         lastSwsH_ = h;
         lastDstW_ = dstW;
@@ -625,12 +642,12 @@ bool FFmpegDecoder::decodeVideoPacket(AVPacket *packet) {
     scaleTimer.start();
 #endif
 
-    // Allocate local RGBA buffer and transfer ownership using std::move to avoid COW copies
+    // Allocate local RGBA buffer and transfer ownership using std::move to
+    // avoid COW copies
     int bufSize = dstW * dstH * 4;
     QByteArray rgbaData(bufSize, Qt::Uninitialized);
-    uint8_t *dstData[4] = {
-        reinterpret_cast<uint8_t *>(rgbaData.data()), nullptr,
-        nullptr, nullptr};
+    uint8_t *dstData[4] = {reinterpret_cast<uint8_t *>(rgbaData.data()),
+                           nullptr, nullptr, nullptr};
     int dstLinesize[4] = {dstW * 4, 0, 0, 0};
     sws_scale(swsCtx_, f->data, f->linesize, 0, h, dstData, dstLinesize);
 

@@ -915,6 +915,7 @@ QWidget *SubtitleListPanel::createCustomStylePanel() {
 
   auto *container = new QWidget(scrollArea);
   container->setObjectName("CustomStyleContainer");
+  customStyleContainer_ = container;
 
   // 美化水平滑块为播放器类似的小圆形指针并适配高亮主题色
   container->setStyleSheet("QSlider::groove:horizontal {"
@@ -1995,6 +1996,12 @@ void SubtitleListPanel::loadStyleFromItem(const SubtitleItem &item) {
 
   if (applyToAllBtn_) {
     applyToAllBtn_->setEnabled(track_ && !currentSelectedId_.isEmpty());
+  }
+  if (customStyleContainer_) {
+    customStyleContainer_->setEnabled(!currentSelectedId_.isEmpty());
+  }
+  if (savePresetBtn_) {
+    savePresetBtn_->setEnabled(!currentSelectedId_.isEmpty());
   }
 
   updateFillTypeFields();

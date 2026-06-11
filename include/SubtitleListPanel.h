@@ -50,8 +50,10 @@ private:
 
   void updateButton() {
     setStyleSheet(
-        QString("QPushButton { background-color: %1; border: 1px solid #555; border-radius: 4px; min-height: 22px; max-height: 22px; }"
-                "QPushButton:disabled { background-color: rgba(128, 128, 128, 0.2); border: 1px solid #444; }")
+        QString("QPushButton { background-color: %1; border: 1px solid #555; "
+                "border-radius: 4px; min-height: 22px; max-height: 22px; }"
+                "QPushButton:disabled { background-color: rgba(128, 128, 128, "
+                "0.2); border: 1px solid #444; }")
             .arg(color_.name()));
   }
 
@@ -109,6 +111,7 @@ private:
   QStackedWidget *stackedWidget_ = nullptr;
   QString currentSelectedId_;
   bool isUpdatingControls_ = false;
+  QWidget *customStyleContainer_ = nullptr;
 
   // Custom styling controls
   QCheckBox *fillEnableCheck_ = nullptr;

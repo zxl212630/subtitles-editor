@@ -1,6 +1,5 @@
 #include "SubtitleTrack.h"
 #include "ConfigManager.h"
-#include <algorithm>
 #include <QDebug>
 #include <QJsonArray>
 #include <QJsonDocument>
@@ -9,6 +8,7 @@
 #include <QUndoCommand>
 #include <QUndoStack>
 #include <QUuid>
+#include <algorithm>
 
 // 状态快照撤销命令
 class SubtitleTrackCommand : public QUndoCommand {
@@ -159,8 +159,8 @@ void SubtitleTrack::splitItem(const QString &id, int cursorPosition,
 
 void SubtitleTrack::splitItemAtTime(const QString &id, qint64 splitMs) {
   if (undoStack_ && !isPerformingUndoRedo_) {
-    undoStack_->push(new SubtitleTrackCommand(
-        this, tr("分割字幕"), [this, id, splitMs]() {
+    undoStack_->push(
+        new SubtitleTrackCommand(this, tr("分割字幕"), [this, id, splitMs]() {
           splitItemAtTimeDirect(id, splitMs);
         }));
   } else {
@@ -329,7 +329,8 @@ void SubtitleTrack::splitItemAtTimeDirect(const QString &id, qint64 splitMs) {
       if (splitMs <= original.startMs || splitMs >= original.endMs)
         return; // Invalid split point
 
-      double ratio = static_cast<double>(splitMs - original.startMs) / (original.endMs - original.startMs);
+      double ratio = static_cast<double>(splitMs - original.startMs) /
+                     (original.endMs - original.startMs);
       int textLen = original.text.length();
       int cursorPosition = qRound(textLen * ratio);
 
@@ -717,8 +718,6 @@ void SubtitleTrack::setDefaultStyleItem(const SubtitleItem &item) {
   defaultBubblePaddingRight_ = item.bubblePaddingRight;
   defaultBubblePaddingTop_ = item.bubblePaddingTop;
   defaultBubblePaddingBottom_ = item.bubblePaddingBottom;
-
-  saveGlobalSettings();
 }
 
 void SubtitleTrack::loadGlobalSettings() {
@@ -729,6 +728,59 @@ void SubtitleTrack::loadGlobalSettings() {
   int right = cfg.getInt("speaker", "marginRight", 15);
   int bottom = cfg.getInt("speaker", "marginBottom", 15);
   unifiedBorderMargins_ = QMargins(left, top, right, bottom);
+
+  // 加载 subtitle 分组下的默认样式设置
+  defaultFontFamily_ = cfg.getString("subtitle", "fontFamily", "Arial");
+  defaultFontSize_ = cfg.getInt("subtitle", "fontSize", 24);
+  defaultBold_ = cfg.getBool("subtitle", "bold", false);
+  defaultItalic_ = cfg.getBool("subtitle", "italic", false);
+  defaultUnderline_ = cfg.getBool("subtitle", "underline", false);
+  defaultAlignment_ = cfg.getInt("subtitle", "alignment", 0x84);
+  double rx = cfg.getDouble("subtitle", "rectX", 0.1);
+  double ry = cfg.getDouble("subtitle", "rectY", 0.75);
+  double rw = cfg.getDouble("subtitle", "rectW", 0.8);
+  double rh = cfg.getDouble("subtitle", "rectH", 0.2);
+  defaultSubtitleRect_ = QRectF(rx, ry, rw, rh);
+  defaultRotation_ = cfg.getDouble("subtitle", "rotation", 0.0);
+
+  defaultFillType_ = cfg.getInt("subtitle", "fillType", 0);
+  defaultFillColor_ = cfg.getString("subtitle", "fillColor", "#FFFFFF");
+  defaultFillColor2_ = cfg.getString("subtitle", "fillColor2", "#FFFFFF");
+  defaultFillAngle_ = cfg.getInt("subtitle", "fillAngle", 90);
+  defaultFillTexturePath_ = cfg.getString("subtitle", "fillTexturePath", "");
+  defaultFillTextureTile_ = cfg.getBool("subtitle", "fillTextureTile", true);
+  defaultTextOpacity_ = cfg.getDouble("subtitle", "textOpacity", 1.0);
+
+  defaultStrokeEnabled_ = cfg.getBool("subtitle", "strokeEnabled", false);
+  defaultStrokeWidth_ = cfg.getInt("subtitle", "strokeWidth", 1);
+  defaultStrokeColor_ = cfg.getString("subtitle", "strokeColor", "#000000");
+  defaultStrokeOpacity_ = cfg.getDouble("subtitle", "strokeOpacity", 1.0);
+
+  defaultShadowEnabled_ = cfg.getBool("subtitle", "shadowEnabled", false);
+  defaultShadowOffsetX_ = cfg.getInt("subtitle", "shadowOffsetX", 0);
+  defaultShadowOffsetY_ = cfg.getInt("subtitle", "shadowOffsetY", 0);
+  defaultShadowBlur_ = cfg.getInt("subtitle", "shadowBlur", 0);
+  defaultShadowColor_ = cfg.getString("subtitle", "shadowColor", "#000000");
+  defaultShadowOpacity_ = cfg.getDouble("subtitle", "shadowOpacity", 1.0);
+
+  defaultBgType_ = cfg.getInt("subtitle", "bgType", 0);
+  defaultBgColor_ = cfg.getString("subtitle", "bgColor", "#000000");
+  defaultBgOpacity_ = cfg.getDouble("subtitle", "bgOpacity", 1.0);
+  defaultBgRoundness_ = cfg.getInt("subtitle", "bgRoundness", 10);
+  defaultBgPaddingX_ = cfg.getInt("subtitle", "bgPaddingX", 0);
+  defaultBgPaddingY_ = cfg.getInt("subtitle", "bgPaddingY", 0);
+  defaultBgImagePath_ = cfg.getString("subtitle", "bgImagePath", "");
+  defaultBgImage9Patch_ = cfg.getBool("subtitle", "bgImage9Patch", true);
+  defaultBgOffsetX_ = cfg.getInt("subtitle", "bgOffsetX", 0);
+  defaultBgOffsetY_ = cfg.getInt("subtitle", "bgOffsetY", 0);
+
+  defaultBubbleEnabled_ = cfg.getBool("subtitle", "bubbleEnabled", false);
+  defaultBubbleImagePath_ = cfg.getString("subtitle", "bubbleImagePath", "");
+  defaultBubblePaddingLeft_ = cfg.getInt("subtitle", "bubblePaddingLeft", 10);
+  defaultBubblePaddingRight_ = cfg.getInt("subtitle", "bubblePaddingRight", 10);
+  defaultBubblePaddingTop_ = cfg.getInt("subtitle", "bubblePaddingTop", 10);
+  defaultBubblePaddingBottom_ =
+      cfg.getInt("subtitle", "bubblePaddingBottom", 10);
 }
 
 void SubtitleTrack::saveGlobalSettings() {
@@ -738,6 +790,57 @@ void SubtitleTrack::saveGlobalSettings() {
   cfg.setValue("speaker", "marginTop", unifiedBorderMargins_.top());
   cfg.setValue("speaker", "marginRight", unifiedBorderMargins_.right());
   cfg.setValue("speaker", "marginBottom", unifiedBorderMargins_.bottom());
+
+  // 保存到 subtitle 分组
+  cfg.setValue("subtitle", "fontFamily", defaultFontFamily_);
+  cfg.setValue("subtitle", "fontSize", defaultFontSize_);
+  cfg.setValue("subtitle", "bold", defaultBold_);
+  cfg.setValue("subtitle", "italic", defaultItalic_);
+  cfg.setValue("subtitle", "underline", defaultUnderline_);
+  cfg.setValue("subtitle", "alignment", defaultAlignment_);
+  cfg.setValue("subtitle", "rectX", defaultSubtitleRect_.x());
+  cfg.setValue("subtitle", "rectY", defaultSubtitleRect_.y());
+  cfg.setValue("subtitle", "rectW", defaultSubtitleRect_.width());
+  cfg.setValue("subtitle", "rectH", defaultSubtitleRect_.height());
+  cfg.setValue("subtitle", "rotation", defaultRotation_);
+
+  cfg.setValue("subtitle", "fillType", defaultFillType_);
+  cfg.setValue("subtitle", "fillColor", defaultFillColor_);
+  cfg.setValue("subtitle", "fillColor2", defaultFillColor2_);
+  cfg.setValue("subtitle", "fillAngle", defaultFillAngle_);
+  cfg.setValue("subtitle", "fillTexturePath", defaultFillTexturePath_);
+  cfg.setValue("subtitle", "fillTextureTile", defaultFillTextureTile_);
+  cfg.setValue("subtitle", "textOpacity", defaultTextOpacity_);
+
+  cfg.setValue("subtitle", "strokeEnabled", defaultStrokeEnabled_);
+  cfg.setValue("subtitle", "strokeWidth", defaultStrokeWidth_);
+  cfg.setValue("subtitle", "strokeColor", defaultStrokeColor_);
+  cfg.setValue("subtitle", "strokeOpacity", defaultStrokeOpacity_);
+
+  cfg.setValue("subtitle", "shadowEnabled", defaultShadowEnabled_);
+  cfg.setValue("subtitle", "shadowOffsetX", defaultShadowOffsetX_);
+  cfg.setValue("subtitle", "shadowOffsetY", defaultShadowOffsetY_);
+  cfg.setValue("subtitle", "shadowBlur", defaultShadowBlur_);
+  cfg.setValue("subtitle", "shadowColor", defaultShadowColor_);
+  cfg.setValue("subtitle", "shadowOpacity", defaultShadowOpacity_);
+
+  cfg.setValue("subtitle", "bgType", defaultBgType_);
+  cfg.setValue("subtitle", "bgColor", defaultBgColor_);
+  cfg.setValue("subtitle", "bgOpacity", defaultBgOpacity_);
+  cfg.setValue("subtitle", "bgRoundness", defaultBgRoundness_);
+  cfg.setValue("subtitle", "bgPaddingX", defaultBgPaddingX_);
+  cfg.setValue("subtitle", "bgPaddingY", defaultBgPaddingY_);
+  cfg.setValue("subtitle", "bgImagePath", defaultBgImagePath_);
+  cfg.setValue("subtitle", "bgImage9Patch", defaultBgImage9Patch_);
+  cfg.setValue("subtitle", "bgOffsetX", defaultBgOffsetX_);
+  cfg.setValue("subtitle", "bgOffsetY", defaultBgOffsetY_);
+
+  cfg.setValue("subtitle", "bubbleEnabled", defaultBubbleEnabled_);
+  cfg.setValue("subtitle", "bubbleImagePath", defaultBubbleImagePath_);
+  cfg.setValue("subtitle", "bubblePaddingLeft", defaultBubblePaddingLeft_);
+  cfg.setValue("subtitle", "bubblePaddingRight", defaultBubblePaddingRight_);
+  cfg.setValue("subtitle", "bubblePaddingTop", defaultBubblePaddingTop_);
+  cfg.setValue("subtitle", "bubblePaddingBottom", defaultBubblePaddingBottom_);
 
   cfg.sync();
 }
@@ -845,57 +948,70 @@ void SubtitleTrack::fromJsonObject(const QJsonObject &obj) {
     item.speakerId = itemObj["speakerId"].toInt(-1);
 
     QJsonObject styleObj = itemObj["style"].toObject();
-    item.fontFamily = styleObj["fontFamily"].toString("Arial");
-    item.fontSize = styleObj["fontSize"].toInt(24);
-    item.bold = styleObj["bold"].toBool(false);
-    item.italic = styleObj["italic"].toBool(false);
-    item.underline = styleObj["underline"].toBool(false);
-    item.alignment = styleObj["alignment"].toInt(0x84);
+    item.fontFamily = styleObj["fontFamily"].toString(defaultFontFamily_);
+    item.fontSize = styleObj["fontSize"].toInt(defaultFontSize_);
+    item.bold = styleObj["bold"].toBool(defaultBold_);
+    item.italic = styleObj["italic"].toBool(defaultItalic_);
+    item.underline = styleObj["underline"].toBool(defaultUnderline_);
+    item.alignment = styleObj["alignment"].toInt(defaultAlignment_);
 
     // Advanced style attributes
-    item.fillType = styleObj["fillType"].toInt(0);
-    item.fillColor = styleObj["fillColor"].toString("#FFFFFF");
-    item.fillColor2 = styleObj["fillColor2"].toString("#FFFFFF");
-    item.fillAngle = styleObj["fillAngle"].toInt(90);
-    item.fillTexturePath = styleObj["fillTexturePath"].toString();
-    item.fillTextureTile = styleObj["fillTextureTile"].toBool(true);
-    item.textOpacity = styleObj["textOpacity"].toDouble(1.0);
+    item.fillType = styleObj["fillType"].toInt(defaultFillType_);
+    item.fillColor = styleObj["fillColor"].toString(defaultFillColor_);
+    item.fillColor2 = styleObj["fillColor2"].toString(defaultFillColor2_);
+    item.fillAngle = styleObj["fillAngle"].toInt(defaultFillAngle_);
+    item.fillTexturePath =
+        styleObj["fillTexturePath"].toString(defaultFillTexturePath_);
+    item.fillTextureTile =
+        styleObj["fillTextureTile"].toBool(defaultFillTextureTile_);
+    item.textOpacity = styleObj["textOpacity"].toDouble(defaultTextOpacity_);
 
-    item.strokeEnabled = styleObj["strokeEnabled"].toBool(false);
-    item.strokeWidth = styleObj["strokeWidth"].toInt(2);
-    item.strokeColor = styleObj["strokeColor"].toString("#000000");
-    item.strokeOpacity = styleObj["strokeOpacity"].toDouble(1.0);
+    item.strokeEnabled =
+        styleObj["strokeEnabled"].toBool(defaultStrokeEnabled_);
+    item.strokeWidth = styleObj["strokeWidth"].toInt(defaultStrokeWidth_);
+    item.strokeColor = styleObj["strokeColor"].toString(defaultStrokeColor_);
+    item.strokeOpacity =
+        styleObj["strokeOpacity"].toDouble(defaultStrokeOpacity_);
 
-    item.shadowEnabled = styleObj["shadowEnabled"].toBool(false);
-    item.shadowOffsetX = styleObj["shadowOffsetX"].toInt(3);
-    item.shadowOffsetY = styleObj["shadowOffsetY"].toInt(3);
-    item.shadowBlur = styleObj["shadowBlur"].toInt(5);
-    item.shadowColor = styleObj["shadowColor"].toString("#000000");
-    item.shadowOpacity = styleObj["shadowOpacity"].toDouble(0.5);
+    item.shadowEnabled =
+        styleObj["shadowEnabled"].toBool(defaultShadowEnabled_);
+    item.shadowOffsetX = styleObj["shadowOffsetX"].toInt(defaultShadowOffsetX_);
+    item.shadowOffsetY = styleObj["shadowOffsetY"].toInt(defaultShadowOffsetY_);
+    item.shadowBlur = styleObj["shadowBlur"].toInt(defaultShadowBlur_);
+    item.shadowColor = styleObj["shadowColor"].toString(defaultShadowColor_);
+    item.shadowOpacity =
+        styleObj["shadowOpacity"].toDouble(defaultShadowOpacity_);
 
-    item.bgType = styleObj["bgType"].toInt(0);
-    item.bgColor = styleObj["bgColor"].toString("#000000");
-    item.bgOpacity = styleObj["bgOpacity"].toDouble(0.6);
-    item.bgRoundness = styleObj["bgRoundness"].toInt(4);
-    item.bgPaddingX = styleObj["bgPaddingX"].toInt(15);
-    item.bgPaddingY = styleObj["bgPaddingY"].toInt(10);
-    item.bgImagePath = styleObj["bgImagePath"].toString();
-    item.bgImage9Patch = styleObj["bgImage9Patch"].toBool(true);
-    item.bgOffsetX = styleObj["bgOffsetX"].toInt(0);
-    item.bgOffsetY = styleObj["bgOffsetY"].toInt(0);
-    item.bubbleEnabled = styleObj["bubbleEnabled"].toBool(false);
-    item.bubbleImagePath = styleObj["bubbleImagePath"].toString();
-    item.bubblePaddingLeft = styleObj["bubblePaddingLeft"].toInt(15);
-    item.bubblePaddingRight = styleObj["bubblePaddingRight"].toInt(15);
-    item.bubblePaddingTop = styleObj["bubblePaddingTop"].toInt(10);
-    item.bubblePaddingBottom = styleObj["bubblePaddingBottom"].toInt(10);
+    item.bgType = styleObj["bgType"].toInt(defaultBgType_);
+    item.bgColor = styleObj["bgColor"].toString(defaultBgColor_);
+    item.bgOpacity = styleObj["bgOpacity"].toDouble(defaultBgOpacity_);
+    item.bgRoundness = styleObj["bgRoundness"].toInt(defaultBgRoundness_);
+    item.bgPaddingX = styleObj["bgPaddingX"].toInt(defaultBgPaddingX_);
+    item.bgPaddingY = styleObj["bgPaddingY"].toInt(defaultBgPaddingY_);
+    item.bgImagePath = styleObj["bgImagePath"].toString(defaultBgImagePath_);
+    item.bgImage9Patch =
+        styleObj["bgImage9Patch"].toBool(defaultBgImage9Patch_);
+    item.bgOffsetX = styleObj["bgOffsetX"].toInt(defaultBgOffsetX_);
+    item.bgOffsetY = styleObj["bgOffsetY"].toInt(defaultBgOffsetY_);
+    item.bubbleEnabled =
+        styleObj["bubbleEnabled"].toBool(defaultBubbleEnabled_);
+    item.bubbleImagePath =
+        styleObj["bubbleImagePath"].toString(defaultBubbleImagePath_);
+    item.bubblePaddingLeft =
+        styleObj["bubblePaddingLeft"].toInt(defaultBubblePaddingLeft_);
+    item.bubblePaddingRight =
+        styleObj["bubblePaddingRight"].toInt(defaultBubblePaddingRight_);
+    item.bubblePaddingTop =
+        styleObj["bubblePaddingTop"].toInt(defaultBubblePaddingTop_);
+    item.bubblePaddingBottom =
+        styleObj["bubblePaddingBottom"].toInt(defaultBubblePaddingBottom_);
 
     QJsonObject posObj = itemObj["position"].toObject();
-    item.rectX = posObj["x"].toDouble(0.1);
-    item.rectY = posObj["y"].toDouble(0.75);
-    item.rectW = posObj["width"].toDouble(0.8);
-    item.rectH = posObj["height"].toDouble(0.2);
-    item.rotation = posObj["rotation"].toDouble(0.0);
+    item.rectX = posObj["x"].toDouble(defaultSubtitleRect_.x());
+    item.rectY = posObj["y"].toDouble(defaultSubtitleRect_.y());
+    item.rectW = posObj["width"].toDouble(defaultSubtitleRect_.width());
+    item.rectH = posObj["height"].toDouble(defaultSubtitleRect_.height());
+    item.rotation = posObj["rotation"].toDouble(defaultRotation_);
 
     addItemDirect(item);
   }
@@ -915,10 +1031,11 @@ void SubtitleTrack::fromJsonObject(const QJsonObject &obj) {
 }
 
 void SubtitleTrack::sortItems() {
-  std::sort(items_.begin(), items_.end(), [](const SubtitleItem &a, const SubtitleItem &b) {
-    if (a.startMs != b.startMs) {
-      return a.startMs < b.startMs;
-    }
-    return a.endMs < b.endMs;
-  });
+  std::sort(items_.begin(), items_.end(),
+            [](const SubtitleItem &a, const SubtitleItem &b) {
+              if (a.startMs != b.startMs) {
+                return a.startMs < b.startMs;
+              }
+              return a.endMs < b.endMs;
+            });
 }

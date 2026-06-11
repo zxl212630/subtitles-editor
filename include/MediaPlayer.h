@@ -48,6 +48,7 @@ public:
   bool isMuted() const { return isMuted_; }
   void setVideoQuality(double quality);
   double videoQuality() const { return qualityScale_; }
+  void updateVideoOutputSize(const QSize &size);
 
   State state() const { return state_; }
   bool isLoading() const { return isLoading_.load(); }
