@@ -30,9 +30,11 @@
 #include <QHBoxLayout>
 #include <QKeySequence>
 #include <QLabel>
+#include <QLineEdit>
 #include <QMenu>
 #include <QMenuBar>
 #include <QMouseEvent>
+#include <QPlainTextEdit>
 #include <QProcess>
 #include <QPushButton>
 #include <QResizeEvent>
@@ -40,6 +42,7 @@
 #include <QShowEvent>
 #include <QSplitter>
 #include <QStatusBar>
+#include <QTextEdit>
 #include <QTime>
 #include <QUndoStack>
 #include <QUrl>
@@ -98,6 +101,9 @@ struct AppWindow::Private {
 
   // ProjectManager
   ProjectManager *projectManager = nullptr;
+
+  // Shortcuts
+  QMap<QString, QAction *> playbackShortcuts;
 };
 
 AppWindow::AppWindow(QWidget *parent)
@@ -156,6 +162,7 @@ void AppWindow::setupUi() {
   setupMenuBar(); // Call this first so menuBar exists when setupTitleBar runs
   setupTitleBar();
   setupSplitterLayout();
+  setupShortcuts();
 
   // 组合标题栏和菜单栏到同一个 widget 中
   auto *menuContainer = new QWidget(this);
@@ -484,10 +491,10 @@ void AppWindow::setupSplitterLayout() {
           &VideoPreviewPanel::onPlaybackStateChanged);
 
   // 10. VideoPreview step -> MediaPlayer
-  connect(d->videoPreviewPanel, &VideoPreviewPanel::stepForwardRequested,
-          d->mediaPlayer, &MediaPlayer::stepForward);
-  connect(d->videoPreviewPanel, &VideoPreviewPanel::stepBackwardRequested,
-          d->mediaPlayer, &MediaPlayer::stepBackward);
+  connect(d->videoPreviewPanel, &VideoPreviewPanel::stepForwardRequested, this,
+          [this]() { d->mediaPlayer->stepForward(); });
+  connect(d->videoPreviewPanel, &VideoPreviewPanel::stepBackwardRequested, this,
+          [this]() { d->mediaPlayer->stepBackward(); });
 
   // 10a. VideoPreview progress bar drag -> MediaPlayer (same as Timeline)
   connect(d->videoPreviewPanel, &VideoPreviewPanel::previewSeekRequested,
@@ -1351,8 +1358,76 @@ void AppWindow::onDeleteSelected() {
 }
 
 void AppWindow::onConfigApplied() {
+  checkConfig();
+  updateShortcuts();
   if (d->subtitleListPanel) {
     d->subtitleListPanel->updateSpeakerColumnVisibility();
+  }
+}
+
+void AppWindow::setupShortcuts() {
+  auto addShortcut = [&](const QString &id, auto slot) {
+    auto *action = new QAction(this);
+    action->setShortcutContext(Qt::ApplicationShortcut);
+    connect(action, &QAction::triggered, this, [this, slot]() {
+      QWidget *focusWidget = QApplication::focusWidget();
+      if (qobject_cast<QLineEdit *>(focusWidget) ||
+          qobject_cast<QTextEdit *>(focusWidget) ||
+          qobject_cast<QPlainTextEdit *>(focusWidget)) {
+        return; // Ignore if editing text
+      }
+      if (d->mediaPlayer) {
+        slot();
+      }
+    });
+    addAction(action);
+    d->playbackShortcuts[id] = action;
+  };
+
+  addShortcut("play_pause", [this]() {
+    if (d->mediaPlayer->state() == MediaPlayer::Playing) {
+      d->mediaPlayer->pause();
+    } else {
+      d->mediaPlayer->play();
+    }
+  });
+  addShortcut("step_forward_1", [this]() { d->mediaPlayer->stepForward(1); });
+  addShortcut("step_backward_1", [this]() { d->mediaPlayer->stepBackward(1); });
+  addShortcut("step_forward_5", [this]() { d->mediaPlayer->stepForward(5); });
+  addShortcut("step_backward_5", [this]() { d->mediaPlayer->stepBackward(5); });
+  addShortcut("step_forward_10", [this]() { d->mediaPlayer->stepForward(10); });
+  addShortcut("step_backward_10",
+              [this]() { d->mediaPlayer->stepBackward(10); });
+
+  updateShortcuts();
+}
+
+void AppWindow::updateShortcuts() {
+  auto &cfg = ConfigManager::instance();
+  if (d->playbackShortcuts.contains("play_pause"))
+    d->playbackShortcuts["play_pause"]->setShortcut(
+        cfg.getShortcut("play_pause", QKeySequence(Qt::Key_Space)));
+  if (d->playbackShortcuts.contains("step_forward_1"))
+    d->playbackShortcuts["step_forward_1"]->setShortcut(
+        cfg.getShortcut("step_forward_1", QKeySequence(Qt::Key_Right)));
+  if (d->playbackShortcuts.contains("step_backward_1"))
+    d->playbackShortcuts["step_backward_1"]->setShortcut(
+        cfg.getShortcut("step_backward_1", QKeySequence(Qt::Key_Left)));
+  if (d->playbackShortcuts.contains("step_forward_5"))
+    d->playbackShortcuts["step_forward_5"]->setShortcut(cfg.getShortcut(
+        "step_forward_5", QKeySequence(Qt::CTRL | Qt::Key_Right)));
+  if (d->playbackShortcuts.contains("step_backward_5"))
+    d->playbackShortcuts["step_backward_5"]->setShortcut(cfg.getShortcut(
+        "step_backward_5", QKeySequence(Qt::CTRL | Qt::Key_Left)));
+  if (d->playbackShortcuts.contains("step_forward_10"))
+    d->playbackShortcuts["step_forward_10"]->setShortcut(cfg.getShortcut(
+        "step_forward_10", QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_Right)));
+  if (d->playbackShortcuts.contains("step_backward_10"))
+    d->playbackShortcuts["step_backward_10"]->setShortcut(cfg.getShortcut(
+        "step_backward_10", QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_Left)));
+
+  if (d->timelinePanel) {
+    d->timelinePanel->updateShortcuts();
   }
 }
 

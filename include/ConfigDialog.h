@@ -16,6 +16,8 @@ class ThemeSelectorWidget;
 class ColorSelectorWidget;
 class QAction;
 class QGroupBox;
+class QKeySequenceEdit;
+class QGroupBox;
 
 class ConfigDialog : public BaseDialog {
   Q_OBJECT
@@ -126,6 +128,10 @@ private:
   QLabel *speakerMarginTopLabel_;
   QLabel *speakerMarginRightLabel_;
   QLabel *speakerMarginBottomLabel_;
+
+  // Shortcuts Page
+  QMap<QString, QKeySequenceEdit *> shortcutEdits_;
+  QMap<QString, QLabel *> shortcutLabels_;
 
   // Footer
   QLabel *dirtyLabel_;

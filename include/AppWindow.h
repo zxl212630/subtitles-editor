@@ -36,6 +36,8 @@ private:
   void setupUi();
   void setupTitleBar();
   void setupSplitterLayout();
+  void setupShortcuts();
+  void updateShortcuts();
   void setupDummyData();
   void checkConfig();
   void retranslateUi();

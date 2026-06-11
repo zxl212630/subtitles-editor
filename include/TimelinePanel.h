@@ -40,6 +40,7 @@ public:
   void setMediaFilePath(const QString &path);
   void clear();
   void retranslateUi();
+  void updateShortcuts();
 
   qint64 totalDuration() const { return totalDurationMs_; }
   QString mediaFilePath() const { return mediaFilePath_; }
@@ -170,7 +171,6 @@ private:
 
   bool snapEnabled_ = true;
   bool pendingAutoFit_ = false;
-
 
   void updateToolbarStates();
   void updateZoomControls();

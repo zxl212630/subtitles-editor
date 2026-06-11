@@ -1885,9 +1885,56 @@ void TimelinePanel::retranslateUi() {
   zoomOutBtn_->setToolTip(tr("缩小"));
   zoomInBtn_->setToolTip(tr("放大"));
   zoomSlider_->setToolTip(tr("滑动以缩放"));
+
+  updateShortcuts();
+
   if (canvas_) {
     canvas_->update();
   }
+}
+
+#ifdef Q_OS_MAC
+#define DEFAULT_DELETE_KEY Qt::Key_Backspace
+#else
+#define DEFAULT_DELETE_KEY Qt::Key_Delete
+#endif
+
+void TimelinePanel::updateShortcuts() {
+  auto &cfg = ConfigManager::instance();
+
+  auto applyShortcut = [&](QToolButton *btn, const QString &id,
+                           const QKeySequence &defaultKey,
+                           const QString &baseTooltip) {
+    QKeySequence seq = cfg.getShortcut(id, defaultKey);
+    btn->setShortcut(seq);
+    if (!seq.isEmpty()) {
+      btn->setToolTip(baseTooltip + " (" +
+                      seq.toString(QKeySequence::NativeText) + ")");
+    } else {
+      btn->setToolTip(baseTooltip);
+    }
+  };
+
+  applyShortcut(selectAllBtn_, "timeline_select_all", QKeySequence::SelectAll,
+                tr("全选"));
+  applyShortcut(deselectBtn_, "timeline_deselect",
+                QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_A), tr("取消选择"));
+  applyShortcut(undoBtn_, "timeline_undo", QKeySequence::Undo, tr("撤销"));
+  applyShortcut(redoBtn_, "timeline_redo", QKeySequence::Redo, tr("恢复"));
+  applyShortcut(addBtn_, "timeline_add", QKeySequence(Qt::Key_N),
+                tr("添加字幕"));
+  applyShortcut(splitBtn_, "timeline_split", QKeySequence(Qt::Key_S),
+                tr("切割字幕"));
+  applyShortcut(deleteBtn_, "timeline_delete", QKeySequence(DEFAULT_DELETE_KEY),
+                tr("删除字幕"));
+  applyShortcut(snapBtn_, "timeline_snap", QKeySequence(Qt::CTRL | Qt::Key_N),
+                tr("自动吸附"));
+  applyShortcut(fitBtn_, "timeline_fit", QKeySequence(Qt::SHIFT | Qt::Key_Z),
+                tr("自适应"));
+  applyShortcut(zoomInBtn_, "timeline_zoom_in", QKeySequence(Qt::Key_Equal),
+                tr("放大"));
+  applyShortcut(zoomOutBtn_, "timeline_zoom_out", QKeySequence(Qt::Key_Minus),
+                tr("缩小"));
 }
 
 void TimelinePanel::updateToolbarStates() {

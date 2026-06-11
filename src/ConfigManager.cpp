@@ -274,3 +274,16 @@ void ConfigManager::setSnapEnabled(bool enabled) {
   setValue("timeline", "snap_enabled", enabled ? "true" : "false");
   sync();
 }
+
+QKeySequence ConfigManager::getShortcut(const QString &name,
+                                        const QKeySequence &defaultKey) const {
+  QString val = getString("shortcuts", name);
+  if (val.isEmpty()) {
+    return defaultKey;
+  }
+  return QKeySequence(val, QKeySequence::PortableText);
+}
+
+void ConfigManager::setShortcut(const QString &name, const QKeySequence &key) {
+  setValue("shortcuts", name, key.toString(QKeySequence::PortableText));
+}

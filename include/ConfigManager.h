@@ -1,5 +1,6 @@
 #pragma once
 
+#include <QKeySequence>
 #include <QSettings>
 #include <QString>
 
@@ -62,6 +63,12 @@ public:
 
   bool snapEnabled() const;
   void setSnapEnabled(bool enabled);
+
+  // Shortcuts
+  QKeySequence
+  getShortcut(const QString &name,
+              const QKeySequence &defaultKey = QKeySequence()) const;
+  void setShortcut(const QString &name, const QKeySequence &key);
 
 private:
   ConfigManager();

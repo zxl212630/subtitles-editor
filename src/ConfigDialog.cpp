@@ -12,7 +12,7 @@
 #include <QFileDialog>
 #include <QFontDatabase>
 #include <QGroupBox>
-#include <QHeaderView>
+#include <QKeySequenceEdit>
 #include <QLabel>
 #include <QLineEdit>
 #include <QListWidget>
@@ -23,7 +23,49 @@
 #include <QStandardPaths>
 #include <QToolButton>
 
+#ifdef Q_OS_MAC
+#define DEFAULT_DELETE_KEY Qt::Key_Backspace
+#else
+#define DEFAULT_DELETE_KEY Qt::Key_Delete
+#endif
+
 namespace {
+struct ShortcutDef {
+  const char *id;
+  int keyOrStandard;
+  bool isStandard;
+};
+
+const ShortcutDef kShortcutDefs[] = {
+    {"play_pause", Qt::Key_Space, false},
+    {"step_forward_1", Qt::Key_Right, false},
+    {"step_backward_1", Qt::Key_Left, false},
+    {"step_forward_5", Qt::CTRL | Qt::Key_Right, false},
+    {"step_backward_5", Qt::CTRL | Qt::Key_Left, false},
+    {"step_forward_10", Qt::CTRL | Qt::SHIFT | Qt::Key_Right, false},
+    {"step_backward_10", Qt::CTRL | Qt::SHIFT | Qt::Key_Left, false},
+    {"timeline_select_all", QKeySequence::SelectAll, true},
+    {"timeline_deselect", Qt::CTRL | Qt::SHIFT | Qt::Key_A, false},
+    {"timeline_undo", QKeySequence::Undo, true},
+    {"timeline_redo", QKeySequence::Redo, true},
+    {"timeline_add", Qt::Key_N, false},
+    {"timeline_split", Qt::Key_S, false},
+    {"timeline_delete", DEFAULT_DELETE_KEY, false},
+    {"timeline_snap", Qt::CTRL | Qt::Key_N, false},
+    {"timeline_fit", Qt::SHIFT | Qt::Key_Z, false},
+    {"timeline_zoom_in", Qt::Key_Equal, false},
+    {"timeline_zoom_out", Qt::Key_Minus, false}};
+
+QKeySequence getShortcutDefault(const ShortcutDef &def) {
+  if (def.isStandard) {
+    return QKeySequence(
+        static_cast<QKeySequence::StandardKey>(def.keyOrStandard));
+  } else {
+    return QKeySequence(def.keyOrStandard);
+  }
+}
+} // namespace
+
 QIcon createEyeIcon(bool open) {
   QIcon icon;
   if (open) {
@@ -35,7 +77,6 @@ QIcon createEyeIcon(bool open) {
   }
   return icon;
 }
-} // namespace
 
 ConfigDialog::ConfigDialog(QWidget *parent) : BaseDialog(parent) {
   setWindowTitle(tr("设置"));
@@ -144,6 +185,11 @@ ConfigDialog::ConfigDialog(QWidget *parent) : BaseDialog(parent) {
           this, &ConfigDialog::checkDirtyState);
   connect(speakerMarginBottomSpin_, qOverload<int>(&QSpinBox::valueChanged),
           this, &ConfigDialog::checkDirtyState);
+
+  for (auto *edit : shortcutEdits_) {
+    connect(edit, &QKeySequenceEdit::editingFinished, this,
+            &ConfigDialog::checkDirtyState);
+  }
 
   setupWindowAgent(titleBar);
   if (titleLabel) {
@@ -325,69 +371,90 @@ void ConfigDialog::loadConfig() {
   initialConfig_["spk_marginBottom"] =
       cfg.getInt("speaker", "marginBottom", 15);
 
+  // Shortcuts
+  for (const auto &def : kShortcutDefs) {
+    QKeySequence seq = cfg.getShortcut(def.id, getShortcutDefault(def));
+    initialConfig_["shortcut_" + QString(def.id)] = QVariant::fromValue(seq);
+    if (shortcutEdits_.contains(def.id)) {
+      shortcutEdits_[def.id]->setKeySequence(seq);
+    }
+  }
+
   checkDirtyState();
 }
 
 bool ConfigDialog::isDirty() const {
-  return (langCombo_->currentData().toString() !=
-          initialConfig_["language"].toString()) ||
-         (themeSelector_->currentTheme() !=
-          initialConfig_["theme"].toString()) ||
-         (colorSelector_->currentColor() !=
-          initialConfig_["primary_color"].toString()) ||
-         (storageProviderCombo_->currentData().toString() !=
-          initialConfig_["storage_provider"].toString()) ||
-         (tempAliBucket_ != initialConfig_["oss_bucket"].toString()) ||
-         (tempAliRegion_ != initialConfig_["oss_region"].toString()) ||
-         (tempAliAk_ != initialConfig_["oss_ak"].toString()) ||
-         (tempAliSk_ != initialConfig_["oss_sk"].toString()) ||
-         (tempCosBucket_ != initialConfig_["cos_bucket"].toString()) ||
-         (tempCosRegion_ != initialConfig_["cos_region"].toString()) ||
-         (tempCosAk_ != initialConfig_["cos_ak"].toString()) ||
-         (tempCosSk_ != initialConfig_["cos_sk"].toString()) ||
-         (tencentAppIdEdit_->text() != initialConfig_["tc_appid"].toString()) ||
-         (tencentSecretIdEdit_->text() !=
-          initialConfig_["tc_sid"].toString()) ||
-         (tencentSecretKeyEdit_->text() !=
-          initialConfig_["tc_skey"].toString()) ||
-         (speakerDiarizationCheck_->isChecked() !=
-          initialConfig_["tc_speaker_diarization"].toBool()) ||
-         (sentenceMaxLengthSpin_->value() !=
-          initialConfig_["tc_sentence_max_length"].toInt()) ||
-         (engineModelTypeCombo_->currentData().toString() !=
-          initialConfig_["tc_engine_model_type"].toString()) ||
-         (subtitleFontFamilyCombo_->currentText() !=
-          initialConfig_["sub_fontFamily"].toString()) ||
-         (subtitleFontSizeSpin_->value() !=
-          initialConfig_["sub_fontSize"].toInt()) ||
-         (subtitleBoldCheck_->isChecked() !=
-          initialConfig_["sub_bold"].toBool()) ||
-         (subtitleItalicCheck_->isChecked() !=
-          initialConfig_["sub_italic"].toBool()) ||
-         (subtitleUnderlineCheck_->isChecked() !=
-          initialConfig_["sub_underline"].toBool()) ||
-         (subtitleAlignmentCombo_->currentData().toInt() !=
-          initialConfig_["sub_alignment"].toInt()) ||
-         (qAbs(subtitleRectXSpin_->value() -
-               initialConfig_["sub_rectX"].toDouble()) > 1e-5) ||
-         (qAbs(subtitleRectYSpin_->value() -
-               initialConfig_["sub_rectY"].toDouble()) > 1e-5) ||
-         (qAbs(subtitleRectWSpin_->value() -
-               initialConfig_["sub_rectW"].toDouble()) > 1e-5) ||
-         (qAbs(subtitleRectHSpin_->value() -
-               initialConfig_["sub_rectH"].toDouble()) > 1e-5) ||
-         (qAbs(subtitleRotationSpin_->value() -
-               initialConfig_["sub_rotation"].toDouble()) > 1e-5) ||
-         (speakerBgFolderEdit_->text() !=
-          initialConfig_["spk_bgFolder"].toString()) ||
-         (speakerMarginLeftSpin_->value() !=
-          initialConfig_["spk_marginLeft"].toInt()) ||
-         (speakerMarginTopSpin_->value() !=
-          initialConfig_["spk_marginTop"].toInt()) ||
-         (speakerMarginRightSpin_->value() !=
-          initialConfig_["spk_marginRight"].toInt()) ||
-         (speakerMarginBottomSpin_->value() !=
-          initialConfig_["spk_marginBottom"].toInt());
+  bool dirty =
+      (langCombo_->currentData().toString() !=
+       initialConfig_["language"].toString()) ||
+      (themeSelector_->currentTheme() != initialConfig_["theme"].toString()) ||
+      (colorSelector_->currentColor() !=
+       initialConfig_["primary_color"].toString()) ||
+      (storageProviderCombo_->currentData().toString() !=
+       initialConfig_["storage_provider"].toString()) ||
+      (tempAliBucket_ != initialConfig_["oss_bucket"].toString()) ||
+      (tempAliRegion_ != initialConfig_["oss_region"].toString()) ||
+      (tempAliAk_ != initialConfig_["oss_ak"].toString()) ||
+      (tempAliSk_ != initialConfig_["oss_sk"].toString()) ||
+      (tempCosBucket_ != initialConfig_["cos_bucket"].toString()) ||
+      (tempCosRegion_ != initialConfig_["cos_region"].toString()) ||
+      (tempCosAk_ != initialConfig_["cos_ak"].toString()) ||
+      (tempCosSk_ != initialConfig_["cos_sk"].toString()) ||
+      (tencentAppIdEdit_->text() != initialConfig_["tc_appid"].toString()) ||
+      (tencentSecretIdEdit_->text() != initialConfig_["tc_sid"].toString()) ||
+      (tencentSecretKeyEdit_->text() != initialConfig_["tc_skey"].toString()) ||
+      (speakerDiarizationCheck_->isChecked() !=
+       initialConfig_["tc_speaker_diarization"].toBool()) ||
+      (sentenceMaxLengthSpin_->value() !=
+       initialConfig_["tc_sentence_max_length"].toInt()) ||
+      (engineModelTypeCombo_->currentData().toString() !=
+       initialConfig_["tc_engine_model_type"].toString()) ||
+      (subtitleFontFamilyCombo_->currentText() !=
+       initialConfig_["sub_fontFamily"].toString()) ||
+      (subtitleFontSizeSpin_->value() !=
+       initialConfig_["sub_fontSize"].toInt()) ||
+      (subtitleBoldCheck_->isChecked() !=
+       initialConfig_["sub_bold"].toBool()) ||
+      (subtitleItalicCheck_->isChecked() !=
+       initialConfig_["sub_italic"].toBool()) ||
+      (subtitleUnderlineCheck_->isChecked() !=
+       initialConfig_["sub_underline"].toBool()) ||
+      (subtitleAlignmentCombo_->currentData().toInt() !=
+       initialConfig_["sub_alignment"].toInt()) ||
+      (qAbs(subtitleRectXSpin_->value() -
+            initialConfig_["sub_rectX"].toDouble()) > 1e-5) ||
+      (qAbs(subtitleRectYSpin_->value() -
+            initialConfig_["sub_rectY"].toDouble()) > 1e-5) ||
+      (qAbs(subtitleRectWSpin_->value() -
+            initialConfig_["sub_rectW"].toDouble()) > 1e-5) ||
+      (qAbs(subtitleRectHSpin_->value() -
+            initialConfig_["sub_rectH"].toDouble()) > 1e-5) ||
+      (qAbs(subtitleRotationSpin_->value() -
+            initialConfig_["sub_rotation"].toDouble()) > 1e-5) ||
+      (speakerBgFolderEdit_->text() !=
+       initialConfig_["spk_bgFolder"].toString()) ||
+      (speakerMarginLeftSpin_->value() !=
+       initialConfig_["spk_marginLeft"].toInt()) ||
+      (speakerMarginTopSpin_->value() !=
+       initialConfig_["spk_marginTop"].toInt()) ||
+      (speakerMarginRightSpin_->value() !=
+       initialConfig_["spk_marginRight"].toInt()) ||
+      (speakerMarginBottomSpin_->value() !=
+       initialConfig_["spk_marginBottom"].toInt());
+
+  if (dirty)
+    return true;
+
+  for (const auto &def : kShortcutDefs) {
+    if (shortcutEdits_.contains(def.id)) {
+      if (shortcutEdits_[def.id]->keySequence() !=
+          initialConfig_["shortcut_" + QString(def.id)].value<QKeySequence>()) {
+        return true;
+      }
+    }
+  }
+
+  return false;
 }
 
 void ConfigDialog::checkDirtyState() {
@@ -443,6 +510,12 @@ void ConfigDialog::saveConfig() {
   cfg.setValue("speaker", "marginRight", speakerMarginRightSpin_->value());
   cfg.setValue("speaker", "marginBottom", speakerMarginBottomSpin_->value());
 
+  for (const auto &def : kShortcutDefs) {
+    if (shortcutEdits_.contains(def.id)) {
+      cfg.setShortcut(def.id, shortcutEdits_[def.id]->keySequence());
+    }
+  }
+
   cfg.sync();
 
   // Update initialConfig_ directly to reflect saved state
@@ -486,6 +559,13 @@ void ConfigDialog::saveConfig() {
   initialConfig_["spk_marginTop"] = speakerMarginTopSpin_->value();
   initialConfig_["spk_marginRight"] = speakerMarginRightSpin_->value();
   initialConfig_["spk_marginBottom"] = speakerMarginBottomSpin_->value();
+
+  for (const auto &def : kShortcutDefs) {
+    if (shortcutEdits_.contains(def.id)) {
+      initialConfig_["shortcut_" + QString(def.id)] =
+          QVariant::fromValue(shortcutEdits_[def.id]->keySequence());
+    }
+  }
 
   checkDirtyState();
 }
@@ -619,6 +699,10 @@ void ConfigDialog::retranslateUi() {
   if (auto *item = sidebarList_->item(3))
     item->setText(tr("字幕设置"));
 
+  // Shortcuts page
+  if (auto *item = sidebarList_->item(4))
+    item->setText(tr("快捷键"));
+
   if (fontStyleGroup_)
     fontStyleGroup_->setTitle(tr("默认字体样式"));
   if (positionGroup_)
@@ -648,6 +732,44 @@ void ConfigDialog::retranslateUi() {
   speakerMarginTopLabel_->setText(tr("上:"));
   speakerMarginRightLabel_->setText(tr("右:"));
   speakerMarginBottomLabel_->setText(tr("下:"));
+
+  // Shortcuts translations
+  if (shortcutLabels_.contains("play_pause"))
+    shortcutLabels_["play_pause"]->setText(tr("播放/暂停"));
+  if (shortcutLabels_.contains("step_forward_1"))
+    shortcutLabels_["step_forward_1"]->setText(tr("前进 1 帧"));
+  if (shortcutLabels_.contains("step_backward_1"))
+    shortcutLabels_["step_backward_1"]->setText(tr("后退 1 帧"));
+  if (shortcutLabels_.contains("step_forward_5"))
+    shortcutLabels_["step_forward_5"]->setText(tr("前进 5 帧"));
+  if (shortcutLabels_.contains("step_backward_5"))
+    shortcutLabels_["step_backward_5"]->setText(tr("后退 5 帧"));
+  if (shortcutLabels_.contains("step_forward_10"))
+    shortcutLabels_["step_forward_10"]->setText(tr("前进 10 帧"));
+  if (shortcutLabels_.contains("step_backward_10"))
+    shortcutLabels_["step_backward_10"]->setText(tr("后退 10 帧"));
+  if (shortcutLabels_.contains("timeline_select_all"))
+    shortcutLabels_["timeline_select_all"]->setText(tr("全选"));
+  if (shortcutLabels_.contains("timeline_deselect"))
+    shortcutLabels_["timeline_deselect"]->setText(tr("取消全选"));
+  if (shortcutLabels_.contains("timeline_undo"))
+    shortcutLabels_["timeline_undo"]->setText(tr("撤销"));
+  if (shortcutLabels_.contains("timeline_redo"))
+    shortcutLabels_["timeline_redo"]->setText(tr("重做"));
+  if (shortcutLabels_.contains("timeline_add"))
+    shortcutLabels_["timeline_add"]->setText(tr("添加"));
+  if (shortcutLabels_.contains("timeline_split"))
+    shortcutLabels_["timeline_split"]->setText(tr("分割"));
+  if (shortcutLabels_.contains("timeline_delete"))
+    shortcutLabels_["timeline_delete"]->setText(tr("删除"));
+  if (shortcutLabels_.contains("timeline_snap"))
+    shortcutLabels_["timeline_snap"]->setText(tr("吸附开关"));
+  if (shortcutLabels_.contains("timeline_fit"))
+    shortcutLabels_["timeline_fit"]->setText(tr("自适应"));
+  if (shortcutLabels_.contains("timeline_zoom_in"))
+    shortcutLabels_["timeline_zoom_in"]->setText(tr("时间线放大"));
+  if (shortcutLabels_.contains("timeline_zoom_out"))
+    shortcutLabels_["timeline_zoom_out"]->setText(tr("时间线缩小"));
 
   // Footer
   dirtyLabel_->setText(tr("有未保存的更改"));
@@ -681,6 +803,7 @@ void ConfigDialog::setupUi() {
   sidebarList_->addItem(tr("对象存储"));
   sidebarList_->addItem(tr("语音识别"));
   sidebarList_->addItem(tr("字幕设置"));
+  sidebarList_->addItem(tr("快捷键"));
   contentLayout->addWidget(sidebarList_);
 
   stackedWidget_ = new QStackedWidget(contentWidget);
@@ -1170,6 +1293,43 @@ void ConfigDialog::setupUi() {
   subtitleScrollArea->setWidget(subtitlePage);
   stackedWidget_->addWidget(subtitleScrollArea);
 
+  // ------------------------------------------------------------------------
+  // Shortcuts Page
+  // ------------------------------------------------------------------------
+  auto *shortcutsScrollArea = new QScrollArea();
+  shortcutsScrollArea->setWidgetResizable(true);
+  shortcutsScrollArea->setFrameShape(QFrame::NoFrame);
+  auto *shortcutsPage = new QWidget();
+  auto *shortcutsLayout = new QVBoxLayout(shortcutsPage);
+  shortcutsLayout->setContentsMargins(30, 25, 30, 30);
+  shortcutsLayout->setSpacing(15);
+
+  auto *shortcutsGrid = new QGridLayout();
+  shortcutsGrid->setSpacing(10);
+  shortcutsGrid->setColumnStretch(0, 1);
+  shortcutsGrid->setColumnStretch(1, 2);
+
+  int row = 0;
+  for (const auto &def : kShortcutDefs) {
+    auto *label = new QLabel(shortcutsPage);
+    label->setObjectName("ConfigFieldLabel");
+    label->setAlignment(Qt::AlignRight | Qt::AlignVCenter);
+    shortcutLabels_[def.id] = label;
+    shortcutsGrid->addWidget(label, row, 0);
+
+    auto *edit = new QKeySequenceEdit(shortcutsPage);
+    edit->setFixedHeight(32);
+    shortcutEdits_[def.id] = edit;
+    shortcutsGrid->addWidget(edit, row, 1);
+
+    row++;
+  }
+
+  shortcutsLayout->addLayout(shortcutsGrid);
+  shortcutsLayout->addStretch();
+  shortcutsScrollArea->setWidget(shortcutsPage);
+  stackedWidget_->addWidget(shortcutsScrollArea);
+
   contentLayout->addWidget(stackedWidget_);
 
   mainLayout->addWidget(contentWidget);
@@ -1208,6 +1368,7 @@ void ConfigDialog::setupUi() {
     }
   });
   sidebarList_->setCurrentRow(0);
+  retranslateUi();
 }
 
 void ConfigDialog::updateStorageFields(const QString &provider) {

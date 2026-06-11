@@ -491,17 +491,17 @@ double MediaPlayer::decoderFps() const {
   return decoder_ ? decoder_->fps() : 25.0;
 }
 
-void MediaPlayer::stepForward() {
+void MediaPlayer::stepForward(int frames) {
   double fps = decoder_->fps();
   if (fps > 0.0) {
-    seek(currentTimeMs_ + static_cast<qint64>(1000.0 / fps));
+    seek(currentTimeMs_ + static_cast<qint64>(1000.0 * frames / fps));
   }
 }
 
-void MediaPlayer::stepBackward() {
+void MediaPlayer::stepBackward(int frames) {
   double fps = decoder_->fps();
   if (fps > 0.0) {
-    seek(currentTimeMs_ - static_cast<qint64>(1000.0 / fps));
+    seek(currentTimeMs_ - static_cast<qint64>(1000.0 * frames / fps));
   }
 }
 

@@ -34,8 +34,8 @@ public:
   void seek(qint64 ms);
   void previewSeek(qint64 ms);
   void stopPreviewDragging();
-  void stepForward();
-  void stepBackward();
+  void stepForward(int frames = 1);
+  void stepBackward(int frames = 1);
 
   void setTotalDurationLimit(qint64 ms);
   qint64 totalDurationLimit() const;
