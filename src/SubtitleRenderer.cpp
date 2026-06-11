@@ -165,6 +165,9 @@ void SubtitleRenderer::renderSubtitle(QPainter &painter, const QString &text,
     bx = textRect.center().x() - maxLineW / 2;
   } else if (alignment & Qt::AlignRight) {
     bx = textRect.right() - maxLineW;
+  } else if (alignment & Qt::AlignJustify) {
+    bx = textRect.x();
+    maxLineW = textRect.width();
   }
 
   if (alignFlags & Qt::AlignVCenter) {
@@ -309,7 +312,20 @@ void SubtitleRenderer::renderSubtitle(QPainter &painter, const QString &text,
     }
 
     int ly = by + i * lineSpacing + fm.ascent();
-    textPath.addText(lx, ly, font, line);
+    if ((alignment & Qt::AlignJustify) && line.length() > 1 &&
+        lw < textRect.width()) {
+      double curX = textRect.x();
+      double extraSpace =
+          static_cast<double>(textRect.width() - lw) / (line.length() - 1);
+      for (int charIdx = 0; charIdx < line.length(); ++charIdx) {
+        QString ch = line.mid(charIdx, 1);
+        int chW = fm.horizontalAdvance(ch);
+        textPath.addText(curX, ly, font, ch);
+        curX += chW + extraSpace;
+      }
+    } else {
+      textPath.addText(lx, ly, font, line);
+    }
   }
 
   // 4. Draw Shadow
