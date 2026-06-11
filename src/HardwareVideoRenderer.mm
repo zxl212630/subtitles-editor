@@ -547,6 +547,7 @@ void HardwareVideoRenderer::paintEvent(QPaintEvent *event) {
   painter.fillRect(rect(), bgPanel);
 
   QRect targetRect = getTargetRect();
+  painter.fillRect(targetRect, Qt::black);
 
   bool isHwFrame = false;
   CVPixelBufferRef cvBuf = nullptr;
@@ -638,6 +639,8 @@ void HardwareVideoRenderer::drawSubtitlesOverlay(QPainter &painter,
 
     int scaledSize = qMax(1, qRound(originalSize * scale));
     drawFont.setPixelSize(scaledSize);
+    drawFont.setStyleStrategy(QFont::PreferAntialias);
+    drawFont.setHintingPreference(QFont::PreferFullHinting);
 
     QFontMetrics fmTemp(drawFont);
     QString textToDraw = text;
@@ -1179,6 +1182,19 @@ int HardwareVideoRenderer::cursorPosFromLocalPoint(
 }
 
 void HardwareVideoRenderer::mouseMoveEvent(QMouseEvent *event) {
+  if (isEditing_) {
+    QRect pixelRect = getSubtitlePixelRect();
+    QTransform inv = getSubtitleTransform().inverted();
+    QPoint localPos = inv.map(event->pos());
+    if (pixelRect.contains(localPos)) {
+      setCursor(Qt::IBeamCursor);
+    } else {
+      unsetCursor();
+    }
+    event->accept();
+    return;
+  }
+
   if (dragMode_ != DragNone) {
     QPoint delta = event->pos() - dragStartPos_;
     QRect targetRect = getTargetRect();

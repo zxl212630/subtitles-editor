@@ -303,6 +303,7 @@ void MediaPlayer::stop() {
 
   state_ = Stopped;
   currentTimeMs_ = 0;
+  seekTargetMs_ = 0;
   pendingVideoFrame_ = std::nullopt;
   driftStartMs_ = -1;
 

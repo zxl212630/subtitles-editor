@@ -828,7 +828,7 @@ bool VideoExporter::decodeAndProcessVideo(AVPacket *pkt) {
         if (dstBuf) {
           static CIContext *ciContext = nullptr;
           if (!ciContext) {
-            ciContext = [CIContext contextWithOptions:nil];
+            ciContext = [[CIContext contextWithOptions:nil] retain];
           }
           [ciContext render:outputImage toCVPixelBuffer:dstBuf];
 

@@ -377,6 +377,8 @@ void SoftwareVideoRenderer::paintEvent(QPaintEvent *event) {
 
     int scaledSize = qMax(1, qRound(originalSize * scale));
     drawFont.setPixelSize(scaledSize);
+    drawFont.setStyleStrategy(QFont::PreferAntialias);
+    drawFont.setHintingPreference(QFont::PreferFullHinting);
 
     // 动态判断：如果边框过小，则等比例缩放字体以适应边框
     QFontMetrics fmTemp(drawFont);
@@ -1023,6 +1025,18 @@ void SoftwareVideoRenderer::cancelEditing() {
 }
 
 void SoftwareVideoRenderer::mouseMoveEvent(QMouseEvent *event) {
+  if (isEditing_) {
+    QRect pixelRect = getSubtitlePixelRect();
+    QTransform inv = getSubtitleTransform().inverted();
+    QPoint localPos = inv.map(event->pos());
+    if (pixelRect.contains(localPos)) {
+      setCursor(Qt::IBeamCursor);
+    } else {
+      unsetCursor();
+    }
+    event->accept();
+    return;
+  }
 
   if (dragMode_ == DragNone) {
     DragMode hit = hitTest(event->pos());
