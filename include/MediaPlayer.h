@@ -14,7 +14,7 @@
 class FFmpegDecoder;
 class SeekDecoder;
 class QtAudioOutput;
-class SoftwareVideoRenderer;
+class IVideoRenderer;
 
 class MediaPlayer : public QObject {
   Q_OBJECT
@@ -40,7 +40,7 @@ public:
   void setTotalDurationLimit(qint64 ms);
   qint64 totalDurationLimit() const;
 
-  void setVideoRenderer(SoftwareVideoRenderer *renderer);
+  void setVideoRenderer(IVideoRenderer *renderer);
 
   void setVolume(qreal volume);
   qreal volume() const { return volume_; }
@@ -90,7 +90,7 @@ private:
   FFmpegDecoder *decoder_ = nullptr;
   SeekDecoder *seekDecoder_ = nullptr;
   QtAudioOutput *audioOutput_ = nullptr;
-  SoftwareVideoRenderer *videoRenderer_ = nullptr;
+  IVideoRenderer *videoRenderer_ = nullptr;
   QTimer *playbackTimer_ = nullptr;
 
   qint64 currentTimeMs_ = 0;

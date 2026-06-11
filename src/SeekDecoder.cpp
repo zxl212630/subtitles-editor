@@ -7,6 +7,7 @@ extern "C" {
 #include <libavcodec/avcodec.h>
 #include <libavformat/avformat.h>
 #include <libavutil/avutil.h>
+#include <libavutil/hwcontext.h>
 #include <libavutil/imgutils.h>
 #include <libswscale/swscale.h>
 }
@@ -27,6 +28,10 @@ SeekDecoder::~SeekDecoder() {
 }
 
 void SeekDecoder::setCancelOpen(bool cancel) { cancelOpen_.store(cancel); }
+
+void SeekDecoder::setHardwareDecodeEnabled(bool enabled) {
+  hwDecodeEnabled_ = enabled;
+}
 
 int SeekDecoder::decodeInterruptCb(void *ctx) {
   if (!ctx)
@@ -105,6 +110,34 @@ bool SeekDecoder::open(const QString &path) {
   // 启用多线程解码提高拖动预览的追帧效率
   videoCodecCtx_->thread_count = 0; // auto
   videoCodecCtx_->thread_type = FF_THREAD_FRAME | FF_THREAD_SLICE;
+
+#ifdef Q_OS_MAC
+  if (hwDecodeEnabled_) {
+    AVBufferRef *hw_device_ctx = nullptr;
+    int hw_err = av_hwdevice_ctx_create(
+        &hw_device_ctx, AV_HWDEVICE_TYPE_VIDEOTOOLBOX, nullptr, nullptr, 0);
+    if (hw_err >= 0) {
+      videoCodecCtx_->hw_device_ctx = av_buffer_ref(hw_device_ctx);
+      videoCodecCtx_->get_format =
+          [](AVCodecContext *ctx,
+             const enum AVPixelFormat *pix_fmts) -> AVPixelFormat {
+        Q_UNUSED(ctx);
+        const enum AVPixelFormat *p;
+        for (p = pix_fmts; *p != -1; p++) {
+          if (*p == AV_PIX_FMT_VIDEOTOOLBOX) {
+            return *p;
+          }
+        }
+        return pix_fmts[0];
+      };
+      av_buffer_unref(&hw_device_ctx);
+      LOG_SEEK(info, "VideoToolbox hardware decoding enabled for SeekDecoder");
+    } else {
+      LOG_SEEK(warning, "VideoToolbox hardware decoding context creation "
+                        "failed for SeekDecoder, using software");
+    }
+  }
+#endif
 
   ret = avcodec_open2(videoCodecCtx_, codec, nullptr);
   if (ret < 0) {
@@ -222,7 +255,8 @@ void SeekDecoder::run() {
       continue;
     }
 
-    if (frame.width > 0 && !frame.rgbaData.isEmpty()) {
+    if (frame.width > 0 &&
+        (!frame.rgbaData.isEmpty() || frame.hwFrame != nullptr)) {
 #if PROFILE_TIMING
       qint64 elapsedUs = totalTimer.nsecsElapsed() / 1000;
       qInfo() << "[TIMING:SeekDecoder] decoded frame at" << frame.ptsMs
@@ -343,6 +377,21 @@ DecodedVideoFrame SeekDecoder::decodeOneFrame(qint64 targetMs, bool precise) {
 }
 
 DecodedVideoFrame SeekDecoder::convertFrame(AVFrame *frame, qint64 ptsMs) {
+#ifdef Q_OS_MAC
+  if (frame->format == AV_PIX_FMT_VIDEOTOOLBOX) {
+    CVPixelBufferRef cvBuf = reinterpret_cast<CVPixelBufferRef>(frame->data[3]);
+    if (cvBuf) {
+      CVPixelBufferRetain(cvBuf);
+      DecodedVideoFrame vf;
+      vf.ptsMs = ptsMs;
+      vf.width = frame->width;
+      vf.height = frame->height;
+      vf.hwFrame = cvBuf;
+      return vf;
+    }
+  }
+#endif
+
   DecodedVideoFrame vf;
   int srcW = frame->width;
   int srcH = frame->height;

@@ -2,11 +2,16 @@
 
 #include "AppWindow.h"
 #include "MediaPlayer.h"
+#include "IVideoRenderer.h"
 #include "SoftwareVideoRenderer.h"
+#ifdef Q_OS_MAC
+#include "HardwareVideoRenderer.h"
+#endif
 #include "SubtitleTrack.h"
 #include "ToolTipEventFilter.h"
 
 #include "SubtitleItem.h"
+#include <QShowEvent>
 #include <QAbstractItemView>
 #include <QApplication>
 #include <QButtonGroup>
@@ -384,8 +389,9 @@ static QPushButton *createIconBtn(QWidget *parent, const QString &iconPath,
 VideoPreviewPanel::VideoPreviewPanel(QWidget *parent) : QWidget(parent) {
   setupUi();
 
+#ifndef Q_OS_MAC
   // 绑定视频渲染器包围框拖拽和缩放的坐标变更信号，实时写入字幕项
-  connect(videoRenderer_, &SoftwareVideoRenderer::subtitleRectChanged, this,
+  connect(videoRenderer_->videoSignals(), &VideoRendererSignals::subtitleRectChanged, this,
           [this](const QRectF &rect) {
             updateCurrentItemStyle([rect](SubtitleItem &item) {
               item.rectX = rect.x();
@@ -396,14 +402,14 @@ VideoPreviewPanel::VideoPreviewPanel(QWidget *parent) : QWidget(parent) {
           });
 
   // 绑定视频渲染器旋转变更信号，实时写入字幕项
-  connect(videoRenderer_, &SoftwareVideoRenderer::subtitleRotationChanged, this,
+  connect(videoRenderer_->videoSignals(), &VideoRendererSignals::subtitleRotationChanged, this,
           [this](double rotation) {
             updateCurrentItemStyle(
                 [rotation](SubtitleItem &item) { item.rotation = rotation; });
           });
 
   // 绑定视频渲染器包围框拖拽和缩放的字号变更信号，写入字幕项并更新工具栏显示
-  connect(videoRenderer_, &SoftwareVideoRenderer::subtitleFontSizeChanged, this,
+  connect(videoRenderer_->videoSignals(), &VideoRendererSignals::subtitleFontSizeChanged, this,
           [this](int size) {
             updateCurrentItemStyle(
                 [size](SubtitleItem &item) { item.fontSize = size; });
@@ -414,7 +420,7 @@ VideoPreviewPanel::VideoPreviewPanel(QWidget *parent) : QWidget(parent) {
           });
 
   // 绑定视频渲染器点击选中信号，在当前播放时间查找并选中对应的字幕项
-  connect(videoRenderer_, &SoftwareVideoRenderer::subtitleClicked, this,
+  connect(videoRenderer_->videoSignals(), &VideoRendererSignals::subtitleClicked, this,
           [this]() {
             if (subtitleTrack_ && mediaPlayer_) {
               qint64 currentTimeMs = mediaPlayer_->currentTimeMs();
@@ -434,12 +440,13 @@ VideoPreviewPanel::VideoPreviewPanel(QWidget *parent) : QWidget(parent) {
           });
 
   // 绑定视频渲染器字幕双击编辑完成信号，更新当前字幕文本内容
-  connect(videoRenderer_, &SoftwareVideoRenderer::subtitleTextEdited, this,
+  connect(videoRenderer_->videoSignals(), &VideoRendererSignals::subtitleTextEdited, this,
           [this](const QString &text) {
             updateCurrentItemStyle(
                 [text](SubtitleItem &item) { item.text = text; });
             updateSubtitleOverlay();
           });
+#endif
 
   if (auto *aw = qobject_cast<AppWindow *>(window())) {
     connect(aw, &AppWindow::windowClicked, this, [this](QPoint globalPos) {
@@ -630,8 +637,12 @@ void VideoPreviewPanel::setupUi() {
   auto *vaLayout = new QVBoxLayout(videoArea_);
   vaLayout->setContentsMargins(0, 0, 0, 0);
 
+#ifdef Q_OS_MAC
+  videoRenderer_ = nullptr;
+#else
   videoRenderer_ = new SoftwareVideoRenderer(videoArea_);
-  vaLayout->addWidget(videoRenderer_);
+  vaLayout->addWidget(videoRenderer_->asWidget());
+#endif
 
   layout->addWidget(videoArea_, 1);
 
@@ -854,7 +865,7 @@ void VideoPreviewPanel::resizeEvent(QResizeEvent *event) {
   updateHandlePositions();
   if (mediaPlayer_ && videoRenderer_) {
     QSize physicalSize =
-        videoRenderer_->size() * videoRenderer_->devicePixelRatioF();
+        videoRenderer_->asWidget()->size() * videoRenderer_->asWidget()->devicePixelRatioF();
     mediaPlayer_->updateVideoOutputSize(physicalSize);
   }
 }
@@ -891,6 +902,12 @@ void VideoPreviewPanel::setMediaPlayer(MediaPlayer *player) {
       if (idx >= 0) {
         mediaPlayer_->setVideoQuality(qualityCombo_->itemData(idx).toDouble());
       }
+    }
+    if (videoRenderer_) {
+      mediaPlayer_->setVideoRenderer(videoRenderer_);
+      QSize physicalSize =
+          videoRenderer_->asWidget()->size() * videoRenderer_->asWidget()->devicePixelRatioF();
+      mediaPlayer_->updateVideoOutputSize(physicalSize);
     }
   }
 }
@@ -1172,11 +1189,111 @@ void VideoPreviewPanel::hideVolumeSliderDeferred() {
     sliderWidget_->startHideTimer();
   }
 }
-
 void VideoPreviewPanel::toggleMute() {
   if (mediaPlayer_) {
     mediaPlayer_->setMuted(!mediaPlayer_->isMuted());
   }
 }
 
-// End of VideoPreviewPanel implementation
+class QBlockAllWinIdChangeFilter : public QObject {
+protected:
+  bool eventFilter(QObject *watched, QEvent *event) override {
+    if (event && event->type() == QEvent::WinIdChange) {
+      return true; // 拦截所有 WinIdChange 事件
+    }
+    return QObject::eventFilter(watched, event);
+  }
+};
+
+void VideoPreviewPanel::initVideoRenderer() {
+#ifdef Q_OS_MAC
+  if (videoRenderer_) return;
+
+  auto *vaLayout = qobject_cast<QVBoxLayout *>(videoArea_->layout());
+  if (!vaLayout) return;
+
+  // 动态安装事件过滤器以完全拦截构造期间的所有 WinIdChange 事件
+  auto *bypassFilter = new QBlockAllWinIdChangeFilter();
+  qApp->installEventFilter(bypassFilter);
+
+  videoRenderer_ = new HardwareVideoRenderer(videoArea_);
+  vaLayout->addWidget(videoRenderer_->asWidget());
+
+  // 卸载并销毁事件过滤器
+  qApp->removeEventFilter(bypassFilter);
+  delete bypassFilter;
+
+  // 绑定视频渲染器包围框拖拽和缩放的坐标变更信号，实时写入字幕项
+  connect(videoRenderer_->videoSignals(), &VideoRendererSignals::subtitleRectChanged, this,
+          [this](const QRectF &rect) {
+            updateCurrentItemStyle([rect](SubtitleItem &item) {
+              item.rectX = rect.x();
+              item.rectY = rect.y();
+              item.rectW = rect.width();
+              item.rectH = rect.height();
+            });
+          });
+
+  // 绑定视频渲染器旋转变更信号，实时写入字幕项
+  connect(videoRenderer_->videoSignals(), &VideoRendererSignals::subtitleRotationChanged, this,
+          [this](double rotation) {
+            updateCurrentItemStyle(
+                [rotation](SubtitleItem &item) { item.rotation = rotation; });
+          });
+
+  // 绑定视频渲染器包围框拖拽和缩放的字号变更信号，写入字幕项并更新工具栏显示
+  connect(videoRenderer_->videoSignals(), &VideoRendererSignals::subtitleFontSizeChanged, this,
+          [this](int size) {
+            updateCurrentItemStyle(
+                [size](SubtitleItem &item) { item.fontSize = size; });
+            sizeCombo_->blockSignals(true);
+            sizeCombo_->setCurrentText(QString::number(size));
+            sizeCombo_->blockSignals(false);
+            updateSubtitleOverlay();
+          });
+
+  // 绑定视频渲染器点击选中信号，在当前播放时间查找并选中对应的字幕项
+  connect(videoRenderer_->videoSignals(), &VideoRendererSignals::subtitleClicked, this,
+          [this]() {
+            if (subtitleTrack_ && mediaPlayer_) {
+              qint64 currentTimeMs = mediaPlayer_->currentTimeMs();
+              const auto &items = subtitleTrack_->items();
+              for (int i = 0; i < items.size(); ++i) {
+                const auto &item = items[i];
+                bool isLast = (i == items.size() - 1);
+                if (currentTimeMs >= item.startMs) {
+                  if (currentTimeMs < item.endMs ||
+                      (isLast && currentTimeMs == item.endMs)) {
+                    subtitleTrack_->selectItem(item.id);
+                    break;
+                  }
+                }
+              }
+            }
+          });
+
+  // 绑定视频渲染器字幕双击编辑完成信号，更新当前字幕文本内容
+  connect(videoRenderer_->videoSignals(), &VideoRendererSignals::subtitleTextEdited, this,
+          [this](const QString &text) {
+            updateCurrentItemStyle(
+                [text](SubtitleItem &item) { item.text = text; });
+            updateSubtitleOverlay();
+          });
+
+  if (mediaPlayer_) {
+    mediaPlayer_->setVideoRenderer(videoRenderer_);
+    QSize physicalSize =
+        videoRenderer_->asWidget()->size() * videoRenderer_->asWidget()->devicePixelRatioF();
+    mediaPlayer_->updateVideoOutputSize(physicalSize);
+  }
+
+  updateSubtitleOverlay();
+#endif
+}
+
+void VideoPreviewPanel::showEvent(QShowEvent *event) {
+  QWidget::showEvent(event);
+#ifdef Q_OS_MAC
+  initVideoRenderer();
+#endif
+}

@@ -1,108 +1,33 @@
 #pragma once
 
-#include "FFmpegDecoder.h"
+#include "IVideoRenderer.h"
 #include "SubtitleItem.h"
+
 #include <QFocusEvent>
 #include <QHash>
 #include <QImage>
 #include <QKeyEvent>
 #include <QMargins>
 #include <QMutex>
+#include <QOpenGLFunctions>
+#include <QOpenGLWidget>
 #include <QRectF>
-#include <QTextCursor>
-#include <QTextEdit>
 #include <QTimer>
-#include <QWidget>
 
-class SubtitleLineEdit : public QTextEdit {
-  Q_OBJECT
-public:
-  explicit SubtitleLineEdit(QWidget *parent = nullptr) : QTextEdit(parent) {
-    setStyleSheet("background: transparent; border: none;");
-    setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
-    setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
-    setAcceptRichText(false);
-  }
+#ifdef Q_OS_MAC
+#include <CoreVideo/CVOpenGLTextureCache.h>
+#endif
 
-  QString text() const { return toPlainText(); }
-  void setText(const QString &t) { setPlainText(t); }
+class SubtitleLineEdit;
 
-  int cursorPosition() const { return textCursor().position(); }
-  void setCursorPosition(int pos) {
-    QTextCursor c = textCursor();
-    c.setPosition(pos);
-    setTextCursor(c);
-  }
-
-  bool hasSelectedText() const { return textCursor().hasSelection(); }
-  int selectionStart() const { return textCursor().selectionStart(); }
-  int selectionLength() const { return textCursor().selectedText().length(); }
-
-  void deselect() {
-    QTextCursor c = textCursor();
-    c.clearSelection();
-    setTextCursor(c);
-  }
-
-  void setSelection(int start, int len) {
-    QTextCursor c = textCursor();
-    c.setPosition(start);
-    // Determine the anchor mathematically. If len < 0, it selects backwards.
-    c.setPosition(start + len, QTextCursor::KeepAnchor);
-    setTextCursor(c);
-  }
-
-protected:
-  void paintEvent(QPaintEvent *event) override {
-    // Do nothing to prevent drawing native text, selection, and caret cursor
-    Q_UNUSED(event);
-  }
-
-  void mousePressEvent(QMouseEvent *event) override {
-    QTextEdit::mousePressEvent(event);
-  }
-
-  void mouseReleaseEvent(QMouseEvent *event) override {
-    QTextEdit::mouseReleaseEvent(event);
-  }
-
-  void keyPressEvent(QKeyEvent *event) override {
-    if (event->key() == Qt::Key_Escape) {
-      emit escPressed();
-      event->accept();
-      return;
-    }
-    if (event->key() == Qt::Key_Return || event->key() == Qt::Key_Enter) {
-      if (event->modifiers() & Qt::ShiftModifier) {
-        QTextEdit::keyPressEvent(event); // Insert newline
-      } else {
-        emit returnPressed();
-      }
-      event->accept();
-      return;
-    }
-    QTextEdit::keyPressEvent(event);
-  }
-
-  void focusOutEvent(QFocusEvent *event) override {
-    emit focusLost();
-    QTextEdit::focusOutEvent(event);
-  }
-
-signals:
-  void escPressed();
-  void focusLost();
-  void returnPressed();
-};
-
-#include "IVideoRenderer.h"
-
-class SoftwareVideoRenderer : public QWidget, public IVideoRenderer {
+class HardwareVideoRenderer : public QOpenGLWidget,
+                              protected QOpenGLFunctions,
+                              public IVideoRenderer {
   Q_OBJECT
 
 public:
-  explicit SoftwareVideoRenderer(QWidget *parent = nullptr);
-  ~SoftwareVideoRenderer() override;
+  explicit HardwareVideoRenderer(QWidget *parent = nullptr);
+  ~HardwareVideoRenderer() override;
 
   // IVideoRenderer overrides
   void renderFrame(const DecodedVideoFrame &frame) override;
@@ -130,22 +55,37 @@ public:
 
   QWidget *asWidget() override { return this; }
   VideoRendererSignals *videoSignals() override { return signals_; }
-  bool supportsHardwareFrames() const override { return false; }
+  bool supportsHardwareFrames() const override { return true; }
 
 protected:
-  bool eventFilter(QObject *watched, QEvent *event) override;
+  // OpenGL lifecycle
+  void initializeGL() override;
+  void resizeGL(int w, int h) override;
+  void paintGL() override;
   void paintEvent(QPaintEvent *event) override;
+
+  // Event handlers
+  bool eventFilter(QObject *watched, QEvent *event) override;
   bool hasHeightForWidth() const override { return true; }
   int heightForWidth(int width) const override;
 
-  // 鼠标交互重写
+  // Mouse / Keyboard interactions
   void mousePressEvent(QMouseEvent *event) override;
   void mouseDoubleClickEvent(QMouseEvent *event) override;
   void mouseMoveEvent(QMouseEvent *event) override;
   void mouseReleaseEvent(QMouseEvent *event) override;
 
 private:
-  QByteArray currentRgbaData_;
+#ifdef Q_OS_MAC
+  CVPixelBufferRef currentHwFrame_ = nullptr;
+  CVOpenGLTextureCacheRef textureCache_ = nullptr;
+  void *ciContext_ = nullptr;
+  unsigned int textureId_ = 0;
+  int lastTexW_ = 0;
+  int lastTexH_ = 0;
+#endif
+  QImage currentSwFrame_;
+  void renderHwFrameOpenGL(CVPixelBufferRef cvBuf, int w, int h);
   int currentWidth_ = 0;
   int currentHeight_ = 0;
   bool hasFrame_ = false;
@@ -201,7 +141,10 @@ private:
   void updateEditorGeometry();
   int cursorPosFromLocalPoint(const QPoint &localPos) const;
 
+  void drawSubtitlesOverlay(QPainter &painter, const QRect &targetRect);
+
   SubtitleLineEdit *editor_ = nullptr;
+  VideoRendererSignals *signals_ = nullptr;
   bool isEditing_ = false;
   QTimer cursorTimer_;
   bool cursorVisible_ = true;
@@ -210,6 +153,4 @@ private:
   int dragStartFontSize_ = 24;
   double dragStartFontRefHeight_ = 0.05;
   int currentDragFontSize_ = 24;
-
-  VideoRendererSignals *signals_ = nullptr;
 };

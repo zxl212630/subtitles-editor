@@ -7,6 +7,7 @@ extern "C" {
 #include <libavcodec/avcodec.h>
 #include <libavformat/avformat.h>
 #include <libavutil/avutil.h>
+#include <libavutil/hwcontext.h>
 #include <libavutil/imgutils.h>
 #include <libavutil/samplefmt.h>
 #include <libswresample/swresample.h>
@@ -26,6 +27,10 @@ FFmpegDecoder::FFmpegDecoder(QObject *parent) : QThread(parent) {}
 FFmpegDecoder::~FFmpegDecoder() { close(); }
 
 void FFmpegDecoder::setCancelOpen(bool cancel) { cancelOpen_.store(cancel); }
+
+void FFmpegDecoder::setHardwareDecodeEnabled(bool enabled) {
+  hwDecodeEnabled_ = enabled;
+}
 
 int FFmpegDecoder::decodeInterruptCb(void *ctx) {
   if (!ctx)
@@ -100,6 +105,35 @@ bool FFmpegDecoder::open(const QString &path) {
       // Enable multi-threaded video decoding
       videoCodecCtx_->thread_count = 0; // auto
       videoCodecCtx_->thread_type = FF_THREAD_FRAME | FF_THREAD_SLICE;
+
+#ifdef Q_OS_MAC
+      if (hwDecodeEnabled_) {
+        AVBufferRef *hw_device_ctx = nullptr;
+        int hw_err = av_hwdevice_ctx_create(
+            &hw_device_ctx, AV_HWDEVICE_TYPE_VIDEOTOOLBOX, nullptr, nullptr, 0);
+        if (hw_err >= 0) {
+          videoCodecCtx_->hw_device_ctx = av_buffer_ref(hw_device_ctx);
+          videoCodecCtx_->get_format =
+              [](AVCodecContext *ctx,
+                 const enum AVPixelFormat *pix_fmts) -> AVPixelFormat {
+            Q_UNUSED(ctx);
+            const enum AVPixelFormat *p;
+            for (p = pix_fmts; *p != -1; p++) {
+              if (*p == AV_PIX_FMT_VIDEOTOOLBOX) {
+                return *p;
+              }
+            }
+            return pix_fmts[0];
+          };
+          av_buffer_unref(&hw_device_ctx);
+          LOG_DEC(info, "VideoToolbox hardware decoding enabled");
+        } else {
+          LOG_DEC(warning, "VideoToolbox hardware decoding context creation "
+                           "failed, using software");
+        }
+      }
+#endif
+
       ret = avcodec_open2(videoCodecCtx_, codec, nullptr);
       if (ret < 0) {
         char errbuf[256];
@@ -590,6 +624,25 @@ bool FFmpegDecoder::decodeVideoPacket(AVPacket *packet) {
     } else {
       lastEnqueuedVideoPts_ = ptsMs;
     }
+
+#ifdef Q_OS_MAC
+    if (f->format == AV_PIX_FMT_VIDEOTOOLBOX) {
+      CVPixelBufferRef cvBuf = reinterpret_cast<CVPixelBufferRef>(f->data[3]);
+      if (cvBuf) {
+        CVPixelBufferRetain(cvBuf);
+        DecodedVideoFrame vf;
+        vf.ptsMs = ptsMs;
+        vf.width = f->width;
+        vf.height = f->height;
+        vf.hwFrame = cvBuf;
+
+        QMutexLocker locker(&videoQueueMutex_);
+        videoQueue_.enqueue(std::move(vf));
+        queueNotFull_.wakeAll();
+        return;
+      }
+    }
+#endif
 
     int w = f->width;
     int h = f->height;

@@ -21,12 +21,83 @@ extern "C" {
 #include <libavutil/samplefmt.h>
 }
 
+#ifdef Q_OS_MAC
+#include <CoreVideo/CoreVideo.h>
+#endif
+
 struct DecodedVideoFrame {
   qint64 ptsMs = 0;
   qint64 targetMs = 0;
   int width = 0;
   int height = 0;
   QByteArray rgbaData;
+  void *hwFrame = nullptr; // CVPixelBufferRef on macOS
+
+  DecodedVideoFrame() = default;
+  ~DecodedVideoFrame() {
+#ifdef Q_OS_MAC
+    if (hwFrame) {
+      CVPixelBufferRelease(static_cast<CVPixelBufferRef>(hwFrame));
+    }
+#endif
+  }
+
+  DecodedVideoFrame(const DecodedVideoFrame &other)
+      : ptsMs(other.ptsMs), targetMs(other.targetMs), width(other.width),
+        height(other.height), rgbaData(other.rgbaData), hwFrame(other.hwFrame) {
+#ifdef Q_OS_MAC
+    if (hwFrame) {
+      CVPixelBufferRetain(static_cast<CVPixelBufferRef>(hwFrame));
+    }
+#endif
+  }
+
+  DecodedVideoFrame(DecodedVideoFrame &&other) noexcept
+      : ptsMs(other.ptsMs), targetMs(other.targetMs), width(other.width),
+        height(other.height), rgbaData(std::move(other.rgbaData)),
+        hwFrame(other.hwFrame) {
+    other.hwFrame = nullptr;
+  }
+
+  DecodedVideoFrame &operator=(const DecodedVideoFrame &other) {
+    if (this != &other) {
+#ifdef Q_OS_MAC
+      if (hwFrame) {
+        CVPixelBufferRelease(static_cast<CVPixelBufferRef>(hwFrame));
+      }
+#endif
+      ptsMs = other.ptsMs;
+      targetMs = other.targetMs;
+      width = other.width;
+      height = other.height;
+      rgbaData = other.rgbaData;
+      hwFrame = other.hwFrame;
+#ifdef Q_OS_MAC
+      if (hwFrame) {
+        CVPixelBufferRetain(static_cast<CVPixelBufferRef>(hwFrame));
+      }
+#endif
+    }
+    return *this;
+  }
+
+  DecodedVideoFrame &operator=(DecodedVideoFrame &&other) noexcept {
+    if (this != &other) {
+#ifdef Q_OS_MAC
+      if (hwFrame) {
+        CVPixelBufferRelease(static_cast<CVPixelBufferRef>(hwFrame));
+      }
+#endif
+      ptsMs = other.ptsMs;
+      targetMs = other.targetMs;
+      width = other.width;
+      height = other.height;
+      rgbaData = std::move(other.rgbaData);
+      hwFrame = other.hwFrame;
+      other.hwFrame = nullptr;
+    }
+    return *this;
+  }
 };
 
 struct DecodedAudioFrame {
@@ -46,6 +117,7 @@ public:
   bool open(const QString &path);
   void close();
   void setCancelOpen(bool cancel);
+  void setHardwareDecodeEnabled(bool enabled);
   void setVideoQuality(double scale);
   double videoQuality() const;
   void setOutputSize(const QSize &size);
@@ -128,6 +200,7 @@ private:
   std::atomic<bool> seekRequested_{false};
   std::atomic<qint64> seekTargetMs_{0};
   std::atomic<bool> cancelOpen_{false};
+  bool hwDecodeEnabled_ = true;
   static int decodeInterruptCb(void *ctx);
 
   QMutex playControlMutex_;

@@ -37,6 +37,7 @@ static QCursor getRotateCursor() {
 
 SoftwareVideoRenderer::SoftwareVideoRenderer(QWidget *parent)
     : QWidget(parent), videoSize_(1920, 1080) {
+  signals_ = new VideoRendererSignals(this);
   setAttribute(Qt::WA_OpaquePaintEvent);
   setMinimumSize(320, 180);
   setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Preferred);
@@ -47,6 +48,8 @@ SoftwareVideoRenderer::SoftwareVideoRenderer(QWidget *parent)
     update();
   });
 }
+
+SoftwareVideoRenderer::~SoftwareVideoRenderer() {}
 
 void SoftwareVideoRenderer::renderFrame(const DecodedVideoFrame &frame) {
 #if PROFILE_TIMING
@@ -771,7 +774,7 @@ void SoftwareVideoRenderer::mousePressEvent(QMouseEvent *event) {
       QTransform inv = getSubtitleTransform().inverted();
       QPoint localPos = inv.map(event->pos());
       if (pixelRect.contains(localPos)) {
-        emit subtitleClicked();
+        emit signals_->subtitleClicked();
         event->accept();
         return;
       }
@@ -1006,7 +1009,7 @@ void SoftwareVideoRenderer::commitEditing() {
   cursorTimer_.stop();
   editor_->hide();
   update();
-  emit subtitleTextEdited(newText);
+  emit signals_->subtitleTextEdited(newText);
 }
 
 void SoftwareVideoRenderer::cancelEditing() {
@@ -1233,11 +1236,11 @@ void SoftwareVideoRenderer::mouseReleaseEvent(QMouseEvent *event) {
     }
 
     if (prevMode == DragRotate) {
-      emit subtitleRotationChanged(subtitleRotation_);
+      emit signals_->subtitleRotationChanged(subtitleRotation_);
     } else {
       // 只发射包围框变更，不再发射字体大小变更
       // 因为现在是通过包围框大小动态缩放字体，不超过原设定大小
-      emit subtitleRectChanged(subtitleNormalizedRect_);
+      emit signals_->subtitleRectChanged(subtitleNormalizedRect_);
     }
     event->accept();
     return;

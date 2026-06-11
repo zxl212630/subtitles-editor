@@ -2,6 +2,13 @@
 #include "SubtitleRenderer.h"
 #include "SubtitleTrack.h"
 
+#ifdef Q_OS_MAC
+#import <CoreGraphics/CoreGraphics.h>
+#import <CoreImage/CoreImage.h>
+#import <CoreVideo/CoreVideo.h>
+#import <QuartzCore/QuartzCore.h>
+#endif
+
 #include <QDebug>
 #include <QDir>
 #include <QFileInfo>
@@ -13,6 +20,7 @@ extern "C" {
 #include <libavformat/avformat.h>
 #include <libavutil/audio_fifo.h>
 #include <libavutil/avutil.h>
+#include <libavutil/hwcontext.h>
 #include <libavutil/imgutils.h>
 #include <libavutil/opt.h>
 #include <libavutil/samplefmt.h>
@@ -202,6 +210,29 @@ bool VideoExporter::openInput() {
   avcodec_parameters_to_context(videoDecCtx_, inVideoStream_->codecpar);
   videoDecCtx_->thread_count = 0; // 自动多线程解码
 
+#ifdef Q_OS_MAC
+  AVBufferRef *hw_device_ctx = nullptr;
+  int hw_err = av_hwdevice_ctx_create(
+      &hw_device_ctx, AV_HWDEVICE_TYPE_VIDEOTOOLBOX, nullptr, nullptr, 0);
+  if (hw_err >= 0) {
+    videoDecCtx_->hw_device_ctx = av_buffer_ref(hw_device_ctx);
+    videoDecCtx_->get_format =
+        [](AVCodecContext *ctx,
+           const enum AVPixelFormat *pix_fmts) -> AVPixelFormat {
+      Q_UNUSED(ctx);
+      const enum AVPixelFormat *p;
+      for (p = pix_fmts; *p != -1; p++) {
+        if (*p == AV_PIX_FMT_VIDEOTOOLBOX) {
+          return *p;
+        }
+      }
+      return pix_fmts[0];
+    };
+    av_buffer_unref(&hw_device_ctx);
+    LOG_EXP_info("VideoToolbox hardware decoding enabled for export");
+  }
+#endif
+
   ret = avcodec_open2(videoDecCtx_, videoDec, nullptr);
   if (ret < 0) {
     char errbuf[256];
@@ -360,6 +391,37 @@ bool VideoExporter::initVideoEncoder() {
   // 编码像素格式，VideoToolbox 和 libx264 都很好地支持 YUV420P
   videoEncCtx_->pix_fmt = AV_PIX_FMT_YUV420P;
 
+#ifdef Q_OS_MAC
+  if (videoDecCtx_->hw_device_ctx &&
+      QString(encoder->name).contains("videotoolbox")) {
+    videoEncCtx_->hw_device_ctx = av_buffer_ref(videoDecCtx_->hw_device_ctx);
+
+    AVBufferRef *hw_frames_ref =
+        av_hwframe_ctx_alloc(videoDecCtx_->hw_device_ctx);
+    if (hw_frames_ref) {
+      AVHWFramesContext *frames_ctx = (AVHWFramesContext *)hw_frames_ref->data;
+      frames_ctx->format = AV_PIX_FMT_VIDEOTOOLBOX;
+      frames_ctx->sw_format = AV_PIX_FMT_NV12;
+      frames_ctx->width = outWidth;
+      frames_ctx->height = outHeight;
+      frames_ctx->initial_pool_size = 8;
+
+      int ret = av_hwframe_ctx_init(hw_frames_ref);
+      if (ret >= 0) {
+        videoEncCtx_->hw_frames_ctx = hw_frames_ref;
+        videoEncCtx_->pix_fmt = AV_PIX_FMT_VIDEOTOOLBOX;
+        LOG_EXP_info(
+            "Using VideoToolbox hardware encoder with allocated hw_frames_ctx");
+      } else {
+        av_buffer_unref(&hw_frames_ref);
+        LOG_EXP_warning(
+            "Failed to initialize hw_frames_ctx for VideoToolbox encoder: "
+            << ret);
+      }
+    }
+  }
+#endif
+
   // 复制/设置色彩参数（保障 1080P/HD
   // 等高清视频播放时不会发生亮度和色度错位导致的虚边和重影）
   AVColorSpace colorspace = videoDecCtx_->colorspace;
@@ -475,48 +537,55 @@ bool VideoExporter::initVideoEncoder() {
   encVideoFrame_->format = videoEncCtx_->pix_fmt;
   encVideoFrame_->width = outWidth;
   encVideoFrame_->height = outHeight;
-  av_frame_get_buffer(encVideoFrame_, 0);
+  if (videoEncCtx_->pix_fmt != AV_PIX_FMT_VIDEOTOOLBOX) {
+    av_frame_get_buffer(encVideoFrame_, 0);
+  }
 
   // 初始化 Sws
   // 缩放与转换上下文，使用双三次插值（SWS_BICUBIC）提高缩放后的图像清晰度
-  swsToRgb_ =
-      sws_getContext(videoDecCtx_->width, videoDecCtx_->height,
-                     videoDecCtx_->pix_fmt, outWidth, outHeight,
-                     AV_PIX_FMT_RGBA, SWS_BICUBIC, nullptr, nullptr, nullptr);
+  bool isHwVideo = (videoDecCtx_->pix_fmt == AV_PIX_FMT_VIDEOTOOLBOX ||
+                    videoEncCtx_->pix_fmt == AV_PIX_FMT_VIDEOTOOLBOX);
 
-  swsFromRgb_ =
-      sws_getContext(outWidth, outHeight, AV_PIX_FMT_RGBA, outWidth, outHeight,
-                     videoEncCtx_->pix_fmt,
-                     SWS_BICUBIC | SWS_ACCURATE_RND | SWS_FULL_CHR_H_INT,
-                     nullptr, nullptr, nullptr);
+  if (!isHwVideo) {
+    swsToRgb_ =
+        sws_getContext(videoDecCtx_->width, videoDecCtx_->height,
+                       videoDecCtx_->pix_fmt, outWidth, outHeight,
+                       AV_PIX_FMT_RGBA, SWS_BICUBIC, nullptr, nullptr, nullptr);
 
-  if (!swsToRgb_ || !swsFromRgb_) {
-    emit exportFailed(tr("分配图像缩放与格式转换上下文失败。"));
-    return false;
+    swsFromRgb_ =
+        sws_getContext(outWidth, outHeight, AV_PIX_FMT_RGBA, outWidth,
+                       outHeight, videoEncCtx_->pix_fmt,
+                       SWS_BICUBIC | SWS_ACCURATE_RND | SWS_FULL_CHR_H_INT,
+                       nullptr, nullptr, nullptr);
+
+    if (!swsToRgb_ || !swsFromRgb_) {
+      emit exportFailed(tr("分配图像缩放与格式转换上下文失败。"));
+      return false;
+    }
+
+    // 显式指定 RGB 和 YUV
+    // 的色彩转换矩阵，避免红蓝（蓝紫色）高饱和度字体转换时发生渗色 and 模糊
+    int srcColorspace = videoDecCtx_->colorspace;
+    if (srcColorspace == AVCOL_SPC_UNSPECIFIED) {
+      srcColorspace =
+          (videoDecCtx_->height >= 720) ? AVCOL_SPC_BT709 : AVCOL_SPC_BT470BG;
+    }
+    int dstColorspace = videoEncCtx_->colorspace;
+
+    const int *srcCoefs = sws_getCoefficients(srcColorspace);
+    const int *dstCoefs = sws_getCoefficients(dstColorspace);
+
+    int srcRange = (videoDecCtx_->color_range == AVCOL_RANGE_JPEG) ? 1 : 0;
+    int dstRange = (videoEncCtx_->color_range == AVCOL_RANGE_JPEG) ? 1 : 0;
+
+    // swsToRgb_: YUV (MPEG/JPEG) -> RGBA (Full Range = 1)
+    sws_setColorspaceDetails(swsToRgb_, srcCoefs, srcRange, srcCoefs, 1, 0,
+                             1 << 16, 1 << 16);
+
+    // swsFromRgb_: RGBA (Full Range = 1) -> YUV (MPEG/JPEG)
+    sws_setColorspaceDetails(swsFromRgb_, dstCoefs, 1, dstCoefs, dstRange, 0,
+                             1 << 16, 1 << 16);
   }
-
-  // 显式指定 RGB 和 YUV
-  // 的色彩转换矩阵，避免红蓝（蓝紫色）高饱和度字体转换时发生渗色和模糊
-  int srcColorspace = videoDecCtx_->colorspace;
-  if (srcColorspace == AVCOL_SPC_UNSPECIFIED) {
-    srcColorspace =
-        (videoDecCtx_->height >= 720) ? AVCOL_SPC_BT709 : AVCOL_SPC_BT470BG;
-  }
-  int dstColorspace = videoEncCtx_->colorspace;
-
-  const int *srcCoefs = sws_getCoefficients(srcColorspace);
-  const int *dstCoefs = sws_getCoefficients(dstColorspace);
-
-  int srcRange = (videoDecCtx_->color_range == AVCOL_RANGE_JPEG) ? 1 : 0;
-  int dstRange = (videoEncCtx_->color_range == AVCOL_RANGE_JPEG) ? 1 : 0;
-
-  // swsToRgb_: YUV (MPEG/JPEG) -> RGBA (Full Range = 1)
-  sws_setColorspaceDetails(swsToRgb_, srcCoefs, srcRange, srcCoefs, 1, 0,
-                           1 << 16, 1 << 16);
-
-  // swsFromRgb_: RGBA (Full Range = 1) -> YUV (MPEG/JPEG)
-  sws_setColorspaceDetails(swsFromRgb_, dstCoefs, 1, dstCoefs, dstRange, 0,
-                           1 << 16, 1 << 16);
 
   return true;
 }
@@ -694,23 +763,125 @@ bool VideoExporter::decodeAndProcessVideo(AVPacket *pkt) {
       return true;
     }
 
-    // 1. 缩放并转为 RGBA 格式 QImage
     int outWidth = videoEncCtx_->width;
     int outHeight = videoEncCtx_->height;
 
-    QImage img(outWidth, outHeight, QImage::Format_RGBA8888);
-    uint8_t *dstData[4] = {img.bits(), nullptr, nullptr, nullptr};
-    int dstLinesize[4] = {(int)img.bytesPerLine(), 0, 0, 0};
-    sws_scale(swsToRgb_, decVideoFrame_->data, decVideoFrame_->linesize, 0,
-              decVideoFrame_->height, dstData, dstLinesize);
-
-    // 2. 几何字幕位置匹配的 PTS 计算
+    // 1. 几何字幕位置匹配的 PTS 计算
     qint64 pts = decVideoFrame_->pts;
     if (pts == AV_NOPTS_VALUE) {
       pts = decVideoFrame_->best_effort_timestamp;
     }
     qint64 ptsMs =
         static_cast<qint64>(pts * av_q2d(inVideoStream_->time_base) * 1000.0);
+
+#ifdef Q_OS_MAC
+    if (decVideoFrame_->format == AV_PIX_FMT_VIDEOTOOLBOX) {
+      CVPixelBufferRef srcBuf = (CVPixelBufferRef)decVideoFrame_->data[3];
+      if (srcBuf) {
+        // 1. Create CIImage from decoded video frame and scale to output resolution
+        CIImage *videoImage = [CIImage imageWithCVPixelBuffer:srcBuf];
+        double scaleX = (double)outWidth / [videoImage extent].size.width;
+        double scaleY = (double)outHeight / [videoImage extent].size.height;
+        CIImage *scaledVideoImage = [videoImage imageByApplyingTransform:CGAffineTransformMakeScale(scaleX, scaleY)];
+
+        // 2. Render subtitles onto a transparent QImage
+        QImage subImg(outWidth, outHeight, QImage::Format_ARGB32_Premultiplied);
+        subImg.fill(Qt::transparent);
+        if (track_) {
+          SubtitleRenderer::render(*track_, subImg, ptsMs,
+                                   QSize(outWidth, outHeight));
+        }
+
+        // 3. Convert QImage to CGImage and then to CIImage
+        CGColorSpaceRef colorSpace = CGColorSpaceCreateDeviceRGB();
+        CGDataProviderRef provider = CGDataProviderCreateWithData(
+            nullptr, subImg.bits(), subImg.sizeInBytes(), nullptr);
+        CGImageRef cgSub = CGImageCreate(
+            subImg.width(), subImg.height(), 8, 32, subImg.bytesPerLine(),
+            colorSpace,
+            kCGImageAlphaPremultipliedFirst | kCGBitmapByteOrder32Host,
+            provider, nullptr, false, kCGRenderingIntentDefault);
+
+        CIImage *subtitleImage = [CIImage imageWithCGImage:cgSub];
+
+        // 4. Composite them using CISourceOverCompositing
+        CIFilter *filter = [CIFilter filterWithName:@"CISourceOverCompositing"];
+        [filter setValue:subtitleImage forKey:kCIInputImageKey];
+        [filter setValue:scaledVideoImage forKey:kCIInputBackgroundImageKey];
+        CIImage *outputImage = filter.outputImage;
+
+        // 5. Allocate an output AVFrame from encoder's hw_frames_ctx pool
+        av_frame_unref(encVideoFrame_);
+        int ret_buf = av_hwframe_get_buffer(videoEncCtx_->hw_frames_ctx,
+                                            encVideoFrame_, 0);
+        if (ret_buf < 0) {
+          LOG_EXP_critical(
+              "Failed to allocate AVFrame from hardware pool: " << ret_buf);
+          CGImageRelease(cgSub);
+          CGDataProviderRelease(provider);
+          CGColorSpaceRelease(colorSpace);
+          av_frame_unref(decVideoFrame_);
+          return false;
+        }
+
+        CVPixelBufferRef dstBuf = (CVPixelBufferRef)encVideoFrame_->data[3];
+        if (dstBuf) {
+          static CIContext *ciContext = nullptr;
+          if (!ciContext) {
+            ciContext = [CIContext contextWithOptions:nil];
+          }
+          [ciContext render:outputImage toCVPixelBuffer:dstBuf];
+
+          // Setup PTS
+          if (config_.outputFps > 0.0) {
+            double fpsVal = config_.outputFps;
+            int64_t targetPts =
+                av_rescale_q(lastProcessedPtsMs_, AVRational{1, 1000},
+                             videoEncCtx_->time_base);
+            encVideoFrame_->pts = targetPts;
+            lastProcessedPtsMs_ += qRound(1000.0 / fpsVal);
+          } else {
+            encVideoFrame_->pts = av_rescale_q(pts, inVideoStream_->time_base,
+                                               videoEncCtx_->time_base);
+            lastProcessedPtsMs_ = ptsMs;
+          }
+          encVideoFrame_->pict_type = AV_PICTURE_TYPE_NONE;
+
+          // Send to encoder
+          bool success = encodeVideoFrame(encVideoFrame_);
+          av_frame_unref(encVideoFrame_);
+          CGImageRelease(cgSub);
+          CGDataProviderRelease(provider);
+          CGColorSpaceRelease(colorSpace);
+          av_frame_unref(decVideoFrame_);
+
+          // Send progress signals
+          int progress =
+              qBound(0, static_cast<int>(ptsMs * 100 / totalDurationMs_), 99);
+          if (progress > lastProgressPercent_) {
+            lastProgressPercent_ = progress;
+            emit progressChanged(progress);
+          }
+
+          if (!success) {
+            return false;
+          }
+          continue;
+        }
+
+        CGImageRelease(cgSub);
+        CGDataProviderRelease(provider);
+        CGColorSpaceRelease(colorSpace);
+      }
+    }
+#endif
+
+    // 2. 缩放并转为 RGBA 格式 QImage (软件分支)
+    QImage img(outWidth, outHeight, QImage::Format_RGBA8888);
+    uint8_t *dstData[4] = {img.bits(), nullptr, nullptr, nullptr};
+    int dstLinesize[4] = {(int)img.bytesPerLine(), 0, 0, 0};
+    sws_scale(swsToRgb_, decVideoFrame_->data, decVideoFrame_->linesize, 0,
+              decVideoFrame_->height, dstData, dstLinesize);
 
     // 3. 将字幕渲染到帧图像上
     if (track_) {

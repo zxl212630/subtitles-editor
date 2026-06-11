@@ -29,6 +29,7 @@ public:
   bool open(const QString &path);
   void close();
   void setCancelOpen(bool cancel);
+  void setHardwareDecodeEnabled(bool enabled);
 
   // 设置预览输出的限宽限高尺寸（降分辨率缩放提高 sws_scale 效率）
   void setOutputSize(QSize size);
@@ -80,6 +81,7 @@ private:
 
   std::atomic<bool> running_{false};
   std::atomic<bool> cancelOpen_{false};
+  bool hwDecodeEnabled_ = true;
   static int decodeInterruptCb(void *ctx);
   QMutex wakeMutex_;
   QWaitCondition wakeCondition_;

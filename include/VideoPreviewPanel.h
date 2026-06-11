@@ -56,7 +56,7 @@ private:
   bool isDragging_ = false;
 };
 
-class SoftwareVideoRenderer;
+class IVideoRenderer;
 class SubtitleTrack;
 struct SubtitleItem;
 
@@ -69,7 +69,7 @@ public:
   void setMediaPlayer(MediaPlayer *player);
   void setSubtitleTrack(SubtitleTrack *track);
 
-  SoftwareVideoRenderer *videoRenderer() const { return videoRenderer_; }
+  IVideoRenderer *videoRenderer() const { return videoRenderer_; }
   void onMediaLoaded(qint64 durationMs, QSize videoSize);
   void setTotalDuration(qint64 durationMs);
   void seekTo(qint64 ms);
@@ -95,8 +95,10 @@ public slots:
 protected:
   void resizeEvent(QResizeEvent *event) override;
   void changeEvent(QEvent *event) override;
+  void showEvent(QShowEvent *event) override;
 
 private:
+  void initVideoRenderer();
   void setupUi();
   void populateFontCombo();
   void populateSizeCombo();
@@ -116,7 +118,7 @@ private:
   QList<QFrame *> handles_;
 
   MediaPlayer *mediaPlayer_ = nullptr;
-  SoftwareVideoRenderer *videoRenderer_ = nullptr;
+  IVideoRenderer *videoRenderer_ = nullptr;
   SubtitleTrack *subtitleTrack_ = nullptr;
   QPushButton *playPauseBtn_ = nullptr;
   QPushButton *stopBtn_ = nullptr;

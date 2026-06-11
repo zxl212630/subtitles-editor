@@ -84,7 +84,7 @@ endif()
 # Qt6
 # ============================================================
 set(CMAKE_PREFIX_PATH "${Qt6_ROOT};${CMAKE_PREFIX_PATH}")
-find_package(Qt6 REQUIRED COMPONENTS Core Gui Widgets Network Multimedia Svg)
+find_package(Qt6 REQUIRED COMPONENTS Core Gui Widgets Network Multimedia Svg OpenGLWidgets)
 
 # ============================================================
 # QWindowKit (Qt6 build)
@@ -128,6 +128,7 @@ set(SOURCES
     src/SeekDecoder.cpp
     src/QtAudioOutput.cpp
     src/SoftwareVideoRenderer.cpp
+    src/HardwareVideoRenderer.mm
     src/MediaPlayer.cpp
     src/VideoPropertyDialog.cpp
     src/ConfigDialog.cpp
@@ -165,6 +166,8 @@ set(HEADERS
     include/SeekDecoder.h
     include/QtAudioOutput.h
     include/SoftwareVideoRenderer.h
+    include/HardwareVideoRenderer.h
+    include/IVideoRenderer.h
     include/MediaPlayer.h
     include/VideoPropertyDialog.h
     include/ConfigDialog.h
@@ -221,6 +224,7 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
     Qt::Network
     Qt::Multimedia
     Qt::Svg
+    Qt::OpenGLWidgets
 )
 
 # QWindowKit dependencies
@@ -257,6 +261,7 @@ endif()
 # macOS specific
 # ============================================================
 if(APPLE)
+    enable_language(OBJCXX)
     set_target_properties(${PROJECT_NAME} PROPERTIES
         MACOSX_BUNDLE YES
         MACOSX_BUNDLE_GUI_IDENTIFIER "com.subtitles.editor"
@@ -268,6 +273,19 @@ if(APPLE)
         MACOSX_PACKAGE_LOCATION "Resources"
     )
     target_sources(${PROJECT_NAME} PRIVATE resources/AppIcon.icns)
+
+    # Link macOS specific frameworks for hardware decoding/rendering/compositing
+    find_library(COREVIDEO_FRAMEWORK CoreVideo)
+    find_library(COREIMAGE_FRAMEWORK CoreImage)
+    find_library(QUARTZCORE_FRAMEWORK QuartzCore)
+    find_library(OPENGL_FRAMEWORK OpenGL)
+    target_link_libraries(${PROJECT_NAME} PRIVATE
+        ${COREVIDEO_FRAMEWORK}
+        ${COREIMAGE_FRAMEWORK}
+        ${QUARTZCORE_FRAMEWORK}
+        ${OPENGL_FRAMEWORK}
+    )
+    set_source_files_properties(src/VideoExporter.cpp PROPERTIES LANGUAGE OBJCXX)
 endif()
 
 

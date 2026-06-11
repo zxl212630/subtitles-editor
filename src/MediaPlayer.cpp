@@ -1,9 +1,9 @@
 #include "MediaPlayer.h"
 #include "ConfigManager.h"
 #include "FFmpegDecoder.h"
+#include "IVideoRenderer.h"
 #include "QtAudioOutput.h"
 #include "SeekDecoder.h"
-#include "SoftwareVideoRenderer.h"
 
 #include <QDebug>
 #include <QElapsedTimer>
@@ -75,8 +75,15 @@ MediaPlayer::~MediaPlayer() {
   }
 }
 
-void MediaPlayer::setVideoRenderer(SoftwareVideoRenderer *renderer) {
+void MediaPlayer::setVideoRenderer(IVideoRenderer *renderer) {
   videoRenderer_ = renderer;
+  bool enableHw = (videoRenderer_ && videoRenderer_->supportsHardwareFrames());
+  if (decoder_) {
+    decoder_->setHardwareDecodeEnabled(enableHw);
+  }
+  if (seekDecoder_) {
+    seekDecoder_->setHardwareDecodeEnabled(enableHw);
+  }
 }
 
 void MediaPlayer::ensureSeekDecoderOpen() {
@@ -88,8 +95,9 @@ void MediaPlayer::ensureSeekDecoderOpen() {
     bool ok = seekDecoder_->open(currentPath_);
     if (ok) {
       if (videoRenderer_) {
-        seekDecoder_->setOutputSize(videoRenderer_->size() *
-                                    videoRenderer_->devicePixelRatioF());
+        seekDecoder_->setOutputSize(
+            videoRenderer_->asWidget()->size() *
+            videoRenderer_->asWidget()->devicePixelRatioF());
       }
       seekDecoder_->setVideoQuality(qualityScale_);
       LOG_MP(info, "ensureSeekDecoderOpen() lazy loaded successfully");
@@ -102,10 +110,15 @@ void MediaPlayer::ensureSeekDecoderOpen() {
 void MediaPlayer::load(const QString &path) {
   // If a previous async load is still running, interrupt it first to avoid
   // blocking the main thread
-  if (decoder_)
+  bool enableHw = (videoRenderer_ && videoRenderer_->supportsHardwareFrames());
+  if (decoder_) {
     decoder_->setCancelOpen(true);
-  if (seekDecoder_)
+    decoder_->setHardwareDecodeEnabled(enableHw);
+  }
+  if (seekDecoder_) {
     seekDecoder_->setCancelOpen(true);
+    seekDecoder_->setHardwareDecodeEnabled(enableHw);
+  }
 
   if (loadThread_.joinable()) {
     loadThread_.join();
@@ -211,8 +224,8 @@ void MediaPlayer::onLoadFinished(const QString &path, bool decoderOk,
   if (decoder_->hasVideo()) {
     videoRenderer_->clear();
     if (videoRenderer_) {
-      QSize physicalSize =
-          videoRenderer_->size() * videoRenderer_->devicePixelRatioF();
+      QSize physicalSize = videoRenderer_->asWidget()->size() *
+                           videoRenderer_->asWidget()->devicePixelRatioF();
       if (seekDecoderOk) {
         seekDecoder_->setOutputSize(physicalSize);
       }

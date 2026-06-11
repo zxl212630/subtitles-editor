@@ -4,6 +4,7 @@
 #include "SoftwareVideoRenderer.h"
 #include "ThemeManager.h"
 #include "TranslationManager.h"
+#include "VideoExporter.h"
 #include <QApplication>
 #include <QDateTime>
 #include <QDebug>
@@ -12,6 +13,24 @@
 #include <QStyleFactory>
 #include <QTimer>
 #include <cmath>
+#include <QEvent>
+
+class QWinIdCrashBypasser : public QObject {
+public:
+  static QWinIdCrashBypasser* instance() {
+    static QWinIdCrashBypasser inst;
+    return &inst;
+  }
+protected:
+  bool eventFilter(QObject *watched, QEvent *event) override {
+    if (event && event->type() == QEvent::WinIdChange) {
+      if (watched && (watched->inherits("QOpenGLWidget") || watched->inherits("HardwareVideoRenderer"))) {
+        return true; // 拦截事件，避免 QWindowKit 崩溃
+      }
+    }
+    return QObject::eventFilter(watched, event);
+  }
+};
 
 int main(int argc, char *argv[]) {
   // Check for --benchmark flag
@@ -27,6 +46,7 @@ int main(int argc, char *argv[]) {
 
   if (runBenchmark) {
     QApplication app(argc, argv);
+    app.installEventFilter(QWinIdCrashBypasser::instance());
 
     // Set up MediaPlayer and a dummy SoftwareVideoRenderer to receive frames
     MediaPlayer player;
@@ -94,7 +114,7 @@ int main(int argc, char *argv[]) {
 
     QObject::connect(
         &player, &MediaPlayer::mediaLoaded,
-        [&player, runner](qint64 durationMs, QSize size) {
+        [&player, runner, benchmarkVideoPath](qint64 durationMs, QSize size) {
           qInfo() << "[BENCHMARK] Media loaded successfully. Duration:"
                   << durationMs << "ms, Size:" << size.width() << "x"
                   << size.height();
@@ -102,7 +122,7 @@ int main(int argc, char *argv[]) {
 
           runner->dragTimer = new QTimer(&player);
 
-          auto runNextScenario = [&player, runner]() {
+          auto runNextScenario = [&player, runner, benchmarkVideoPath]() {
             if (runner->currentScenarioIdx >= runner->scenarios.size()) {
               runner->dragTimer->stop();
               qInfo() << "[BENCHMARK] All scenarios complete. Stopping preview "
@@ -111,7 +131,7 @@ int main(int argc, char *argv[]) {
 
               // Wait 500ms for final precise seek to complete, then print
               // report
-              QTimer::singleShot(500, [runner]() {
+              QTimer::singleShot(500, [runner, benchmarkVideoPath]() {
                 qInfo() << "\n================================================="
                            "=================";
                 qInfo() << "                 VIDEO PREVIEW BENCHMARK REPORT";
@@ -146,7 +166,57 @@ int main(int argc, char *argv[]) {
                              "-----------------";
                 }
 
-                QCoreApplication::quit();
+                qInfo() << "\n>>> Starting Video Exporter Benchmark (Hardware "
+                           "VideoToolbox)...";
+                VideoExporter *exporter = new VideoExporter();
+                VideoExportConfig config;
+                config.inputPath = benchmarkVideoPath;
+                config.outputPath = "/tmp/benchmark_export.mp4";
+#ifdef Q_OS_MAC
+                config.videoCodec = "h264_videotoolbox";
+#else
+                config.videoCodec = "libx264";
+#endif
+                config.qualityMode = VideoExportConfig::QualityMedium;
+                config.exportAudio = false; // testsrc has no audio
+                exporter->setConfig(config);
+
+                static bool exportSuccess = false;
+
+                QObject::connect(
+                    exporter, &VideoExporter::progressChanged,
+                    QCoreApplication::instance(), [](int percent) {
+                      qInfo() << QString("[EXPORT] Progress: %1%").arg(percent);
+                    });
+
+                QObject::connect(
+                    exporter, &VideoExporter::exportFinished,
+                    QCoreApplication::instance(), [](const QString &out) {
+                      qInfo() << "[EXPORT] Successfully finished exporting to:"
+                              << out;
+                      exportSuccess = true;
+                    });
+
+                QObject::connect(
+                    exporter, &VideoExporter::exportFailed,
+                    QCoreApplication::instance(), [](const QString &err) {
+                      qCritical() << "[EXPORT] Export failed:" << err;
+                      exportSuccess = false;
+                    });
+
+                QObject::connect(exporter, &VideoExporter::finished,
+                                 QCoreApplication::instance(), [exporter]() {
+                                   qInfo() << "[EXPORT] Thread finished "
+                                              "safely. Exiting benchmark.";
+                                   exporter->deleteLater();
+                                   if (exportSuccess) {
+                                     QCoreApplication::quit();
+                                   } else {
+                                     QCoreApplication::exit(1);
+                                   }
+                                 });
+
+                exporter->start();
               });
               return;
             }
@@ -237,6 +307,7 @@ int main(int argc, char *argv[]) {
   }
 
   QApplication app(argc, argv);
+  app.installEventFilter(QWinIdCrashBypasser::instance());
   app.setApplicationName("Subtitles Editor");
   app.setWindowIcon(QIcon(":/icon.png"));
 
