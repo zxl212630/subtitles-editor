@@ -125,6 +125,11 @@ void AppWindow::checkConfig() {
 }
 
 AppWindow::~AppWindow() {
+  if (d->windowAgent) {
+    delete d->windowAgent;
+    d->windowAgent = nullptr;
+  }
+
   // MediaPlayer is destroyed first (last child). Its destructor calls
   // stop() which emits stateChanged, triggering slots on still-alive
   // children (timelinePanel, videoPreviewPanel). Disconnect all
