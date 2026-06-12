@@ -23,6 +23,11 @@
 #include <QDateTime>
 #include <QDesktopServices>
 #include <QEvent>
+
+#ifdef Q_OS_MAC
+#include <objc/message.h>
+#include <objc/runtime.h>
+#endif
 #include <QFile>
 #include <QFileDialog>
 #include <QFileInfo>
@@ -52,6 +57,7 @@
 
 struct AppWindow::Private {
   QWK::WidgetWindowAgent *windowAgent = nullptr;
+  void *nsView = nullptr;
   QFrame *titleBar = nullptr;
   QLabel *titleLabel = nullptr;
   QPushButton *exportBtn = nullptr;
@@ -130,6 +136,15 @@ AppWindow::~AppWindow() {
     d->windowAgent = nullptr;
   }
 
+#ifdef Q_OS_MAC
+  if (d->nsView) {
+    typedef void (*VoidMsgSend)(void *, SEL);
+    auto voidFunc = reinterpret_cast<VoidMsgSend>(objc_msgSend);
+    voidFunc(d->nsView, sel_registerName("release"));
+    d->nsView = nullptr;
+  }
+#endif
+
   // MediaPlayer is destroyed first (last child). Its destructor calls
   // stop() which emits stateChanged, triggering slots on still-alive
   // children (timelinePanel, videoPreviewPanel). Disconnect all
@@ -163,6 +178,16 @@ void AppWindow::setupUi() {
 
   d->windowAgent = new QWK::WidgetWindowAgent(this);
   d->windowAgent->setup(this);
+
+#ifdef Q_OS_MAC
+  void *view = reinterpret_cast<void *>(winId());
+  if (view) {
+    typedef void (*VoidMsgSend)(void *, SEL);
+    auto voidFunc = reinterpret_cast<VoidMsgSend>(objc_msgSend);
+    voidFunc(view, sel_registerName("retain"));
+    d->nsView = view;
+  }
+#endif
 
   setupMenuBar(); // Call this first so menuBar exists when setupTitleBar runs
   setupTitleBar();

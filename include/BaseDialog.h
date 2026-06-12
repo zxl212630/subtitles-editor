@@ -22,6 +22,7 @@ protected:
   bool eventFilter(QObject *obj, QEvent *event) override;
 
   QWK::WidgetWindowAgent *windowAgent = nullptr;
+  void *nsView = nullptr;
   QFrame *titleBar = nullptr;
   QLabel *titleLabel = nullptr;
 

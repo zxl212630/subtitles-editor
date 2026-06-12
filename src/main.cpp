@@ -327,13 +327,14 @@ int main(int argc, char *argv[]) {
   TranslationManager::instance().loadLanguage(
       ConfigManager::instance().language());
 
-  AppWindow window;
-  window.show();
+  auto *window = new AppWindow();
+  window->setAttribute(Qt::WA_DeleteOnClose);
+  window->show();
 
   if (argc > 1) {
     QString filePath = QString::fromUtf8(argv[1]);
     qInfo() << "Loading file from command line:" << filePath;
-    QMetaObject::invokeMethod(&window, "loadFile", Qt::QueuedConnection,
+    QMetaObject::invokeMethod(window, "loadFile", Qt::QueuedConnection,
                               Q_ARG(QString, filePath));
   }
 

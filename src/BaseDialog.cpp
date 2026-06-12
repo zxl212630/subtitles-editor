@@ -1,4 +1,5 @@
 #include "BaseDialog.h"
+#include <QCloseEvent>
 #include <QEvent>
 #include <QFrame>
 #include <QHBoxLayout>
@@ -7,14 +8,43 @@
 #include <QPushButton>
 #include <QWindowKit/QWKWidgets/widgetwindowagent.h>
 
+#ifdef Q_OS_MAC
+#include <objc/message.h>
+#include <objc/runtime.h>
+#endif
+
 BaseDialog::BaseDialog(QWidget *parent) : QDialog(parent) {}
 
-BaseDialog::~BaseDialog() {}
+BaseDialog::~BaseDialog() {
+  if (windowAgent) {
+    delete windowAgent;
+    windowAgent = nullptr;
+  }
+#ifdef Q_OS_MAC
+  if (nsView) {
+    typedef void (*VoidMsgSend)(void *, SEL);
+    auto voidFunc = reinterpret_cast<VoidMsgSend>(objc_msgSend);
+    voidFunc(nsView, sel_registerName("release"));
+    nsView = nullptr;
+  }
+#endif
+}
 
 void BaseDialog::setupWindowAgent(QFrame *customTitleBar) {
   titleBar = customTitleBar;
   windowAgent = new QWK::WidgetWindowAgent(this);
   windowAgent->setup(this);
+
+#ifdef Q_OS_MAC
+  void *view = reinterpret_cast<void *>(winId());
+  if (view) {
+    typedef void (*VoidMsgSend)(void *, SEL);
+    auto voidFunc = reinterpret_cast<VoidMsgSend>(objc_msgSend);
+    voidFunc(view, sel_registerName("retain"));
+    nsView = view;
+  }
+#endif
+
   windowAgent->setTitleBar(titleBar);
 
   // 创建物理上绝对居中的标题 Label
