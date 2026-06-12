@@ -778,11 +778,14 @@ bool VideoExporter::decodeAndProcessVideo(AVPacket *pkt) {
     if (decVideoFrame_->format == AV_PIX_FMT_VIDEOTOOLBOX) {
       CVPixelBufferRef srcBuf = (CVPixelBufferRef)decVideoFrame_->data[3];
       if (srcBuf) {
-        // 1. Create CIImage from decoded video frame and scale to output resolution
+        // 1. Create CIImage from decoded video frame and scale to output
+        // resolution
         CIImage *videoImage = [CIImage imageWithCVPixelBuffer:srcBuf];
         double scaleX = (double)outWidth / [videoImage extent].size.width;
         double scaleY = (double)outHeight / [videoImage extent].size.height;
-        CIImage *scaledVideoImage = [videoImage imageByApplyingTransform:CGAffineTransformMakeScale(scaleX, scaleY)];
+        CIImage *scaledVideoImage = [videoImage
+            imageByApplyingTransform:CGAffineTransformMakeScale(scaleX,
+                                                                scaleY)];
 
         // 2. Render subtitles onto a transparent QImage
         QImage subImg(outWidth, outHeight, QImage::Format_ARGB32_Premultiplied);

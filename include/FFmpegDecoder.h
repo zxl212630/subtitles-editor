@@ -32,6 +32,7 @@ struct DecodedVideoFrame {
   int height = 0;
   QByteArray rgbaData;
   void *hwFrame = nullptr; // CVPixelBufferRef on macOS
+  double qualityScale = 1.0;
 
   DecodedVideoFrame() = default;
   ~DecodedVideoFrame() {
@@ -44,7 +45,8 @@ struct DecodedVideoFrame {
 
   DecodedVideoFrame(const DecodedVideoFrame &other)
       : ptsMs(other.ptsMs), targetMs(other.targetMs), width(other.width),
-        height(other.height), rgbaData(other.rgbaData), hwFrame(other.hwFrame) {
+        height(other.height), rgbaData(other.rgbaData), hwFrame(other.hwFrame),
+        qualityScale(other.qualityScale) {
 #ifdef Q_OS_MAC
     if (hwFrame) {
       CVPixelBufferRetain(static_cast<CVPixelBufferRef>(hwFrame));
@@ -55,7 +57,7 @@ struct DecodedVideoFrame {
   DecodedVideoFrame(DecodedVideoFrame &&other) noexcept
       : ptsMs(other.ptsMs), targetMs(other.targetMs), width(other.width),
         height(other.height), rgbaData(std::move(other.rgbaData)),
-        hwFrame(other.hwFrame) {
+        hwFrame(other.hwFrame), qualityScale(other.qualityScale) {
     other.hwFrame = nullptr;
   }
 
@@ -72,6 +74,7 @@ struct DecodedVideoFrame {
       height = other.height;
       rgbaData = other.rgbaData;
       hwFrame = other.hwFrame;
+      qualityScale = other.qualityScale;
 #ifdef Q_OS_MAC
       if (hwFrame) {
         CVPixelBufferRetain(static_cast<CVPixelBufferRef>(hwFrame));
@@ -94,6 +97,7 @@ struct DecodedVideoFrame {
       height = other.height;
       rgbaData = std::move(other.rgbaData);
       hwFrame = other.hwFrame;
+      qualityScale = other.qualityScale;
       other.hwFrame = nullptr;
     }
     return *this;

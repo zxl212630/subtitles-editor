@@ -63,7 +63,9 @@ void SoftwareVideoRenderer::renderFrame(const DecodedVideoFrame &frame) {
     currentHeight_ = frame.height;
     hasFrame_ = true;
   }
-  videoSize_ = QSize(frame.width, frame.height);
+  double qScale = frame.qualityScale > 0.0 ? frame.qualityScale : 1.0;
+  videoSize_ =
+      QSize(qRound(frame.width / qScale), qRound(frame.height / qScale));
   QMetaObject::invokeMethod(this, "update", Qt::QueuedConnection);
 
 #if PROFILE_TIMING
@@ -1194,8 +1196,10 @@ void SoftwareVideoRenderer::mouseMoveEvent(QMouseEvent *event) {
       double localCenterX = left + w1 / 2.0;
       double localCenterY = top + h1 / 2.0;
 
-      double startCenterX = dragStartNormalizedRect_.left() + dragStartNormalizedRect_.width() / 2.0;
-      double startCenterY = dragStartNormalizedRect_.top() + dragStartNormalizedRect_.height() / 2.0;
+      double startCenterX = dragStartNormalizedRect_.left() +
+                            dragStartNormalizedRect_.width() / 2.0;
+      double startCenterY = dragStartNormalizedRect_.top() +
+                            dragStartNormalizedRect_.height() / 2.0;
 
       double angleRad = subtitleRotation_ * M_PI / 180.0;
       double cosAngle = std::cos(angleRad);

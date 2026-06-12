@@ -20,7 +20,8 @@
 #define LOG_MP(level, msg) LOG_MP_##level(msg)
 
 MediaPlayer::MediaPlayer(QObject *parent)
-    : QObject(parent), totalDurationLimitMs_(0) {
+    : QObject(parent), totalDurationLimitMs_(0),
+      waitingForFirstFrameAfterSeek_(false) {
   volume_ = ConfigManager::instance().volume();
   isMuted_ = ConfigManager::instance().muted();
 
@@ -255,6 +256,7 @@ void MediaPlayer::play() {
       decoder_->requestSeek(currentTimeMs_);
       decoder_->clearAllQueues();
       decoder_->start();
+      waitingForFirstFrameAfterSeek_ = true;
     }
 
     seekPreviewMode_ = false;
@@ -342,6 +344,7 @@ void MediaPlayer::clear() {
   playbackTimerRunning_ = false;
   seekPreviewMode_ = false;
   isPreviewDragging_ = false;
+  waitingForFirstFrameAfterSeek_ = false;
   hasPendingSeek_ = false;
   seekCoalesceTimer_->stop();
   driftStartMs_ = -1;
@@ -410,6 +413,7 @@ void MediaPlayer::seek(qint64 ms) {
   isPreviewDragging_ = false;
 
   seekPreviewMode_ = true;
+  waitingForFirstFrameAfterSeek_ = true;
   ensureSeekDecoderOpen();
   if (seekDecoder_) {
     seekDecoder_->requestSeek(ms, true);
@@ -532,6 +536,49 @@ void MediaPlayer::onPlaybackTimer() {
       LOG_MP(warning, "seek preview timed out");
     }
     return;
+  }
+
+  if (waitingForFirstFrameAfterSeek_) {
+    if (decoder_ && decoder_->hasVideo()) {
+      if (!pendingVideoFrame_) {
+        pendingVideoFrame_ = decoder_->dequeueVideoFrame();
+      }
+      while (pendingVideoFrame_ &&
+             pendingVideoFrame_->ptsMs < playbackStartTimeMs_) {
+        pendingVideoFrame_ = decoder_->dequeueVideoFrame();
+      }
+      if (pendingVideoFrame_) {
+        playbackStartTimeMs_ = pendingVideoFrame_->ptsMs;
+        playbackElapsedTimer_.restart();
+        if (audioOutput_) {
+          audioSessionStartUSecs_ = audioOutput_->playedUSecs();
+        }
+        waitingForFirstFrameAfterSeek_ = false;
+      } else {
+        while (decoder_->audioQueueSize() > 0) {
+          decoder_->dequeueAudioFrame();
+        }
+        return;
+      }
+    } else if (decoder_) {
+      auto aframe = decoder_->dequeueAudioFrame();
+      while (aframe && aframe->ptsMs < playbackStartTimeMs_) {
+        aframe = decoder_->dequeueAudioFrame();
+      }
+      if (aframe) {
+        audioOutput_->write(aframe->pcmData.constData(),
+                            aframe->pcmData.size());
+        playbackStartTimeMs_ = aframe->ptsMs;
+        playbackElapsedTimer_.restart();
+        if (audioOutput_) {
+          audioSessionStartUSecs_ = audioOutput_->playedUSecs();
+        }
+        waitingForFirstFrameAfterSeek_ = false;
+        return;
+      } else {
+        return;
+      }
+    }
   }
 
   qint64 videoDuration =

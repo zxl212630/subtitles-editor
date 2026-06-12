@@ -8,23 +8,25 @@
 #include <QApplication>
 #include <QDateTime>
 #include <QDebug>
+#include <QEvent>
 #include <QIcon>
 #include <QPalette>
 #include <QStyleFactory>
 #include <QTimer>
 #include <cmath>
-#include <QEvent>
 
 class QWinIdCrashBypasser : public QObject {
 public:
-  static QWinIdCrashBypasser* instance() {
+  static QWinIdCrashBypasser *instance() {
     static QWinIdCrashBypasser inst;
     return &inst;
   }
+
 protected:
   bool eventFilter(QObject *watched, QEvent *event) override {
     if (event && event->type() == QEvent::WinIdChange) {
-      if (watched && (watched->inherits("QOpenGLWidget") || watched->inherits("HardwareVideoRenderer"))) {
+      if (watched && (watched->inherits("QOpenGLWidget") ||
+                      watched->inherits("HardwareVideoRenderer"))) {
         return true; // 拦截事件，避免 QWindowKit 崩溃
       }
     }

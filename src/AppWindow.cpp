@@ -125,11 +125,6 @@ void AppWindow::checkConfig() {
 }
 
 AppWindow::~AppWindow() {
-  if (d->windowAgent) {
-    delete d->windowAgent;
-    d->windowAgent = nullptr;
-  }
-
   // MediaPlayer is destroyed first (last child). Its destructor calls
   // stop() which emits stateChanged, triggering slots on still-alive
   // children (timelinePanel, videoPreviewPanel). Disconnect all
@@ -1515,14 +1510,4 @@ void AppWindow::updateTotalDuration(bool resetPlayback) {
     if (d->subtitleListPanel)
       d->subtitleListPanel->setVideoFps(fps);
   }
-}
-
-bool AppWindow::event(QEvent *event) {
-  if (event && event->type() == QEvent::Destroy) {
-    if (d && d->windowAgent) {
-      delete d->windowAgent;
-      d->windowAgent = nullptr;
-    }
-  }
-  return QMainWindow::event(event);
 }

@@ -28,7 +28,6 @@ signals:
 
 protected:
   void changeEvent(QEvent *event) override;
-  bool event(QEvent *event) override;
   bool eventFilter(QObject *obj, QEvent *event) override;
   void resizeEvent(QResizeEvent *event) override;
   void showEvent(QShowEvent *event) override;

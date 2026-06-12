@@ -642,7 +642,9 @@ bool FFmpegDecoder::decodeVideoPacket(AVPacket *packet) {
     if (outSize.isValid() && !outSize.isEmpty()) {
       double widgetScale = qMin(static_cast<double>(outSize.width()) / w,
                                 static_cast<double>(outSize.height()) / h);
-      widgetScale = qMin(1.0, widgetScale); // Never upscale decoding resolution beyond native size
+      widgetScale = qMin(
+          1.0,
+          widgetScale); // Never upscale decoding resolution beyond native size
       finalScale = widgetScale * qScale;
     }
     if (finalScale < 1.0) {
@@ -664,6 +666,7 @@ bool FFmpegDecoder::decodeVideoPacket(AVPacket *packet) {
         vf.width = dstW;
         vf.height = dstH;
         vf.hwFrame = cvBuf;
+        vf.qualityScale = qScale;
 
         QMutexLocker locker(&videoQueueMutex_);
         videoQueue_.enqueue(std::move(vf));
@@ -714,6 +717,7 @@ bool FFmpegDecoder::decodeVideoPacket(AVPacket *packet) {
     vf.width = dstW;
     vf.height = dstH;
     vf.rgbaData = std::move(rgbaData);
+    vf.qualityScale = qScale;
 
     QMutexLocker locker(&videoQueueMutex_);
     videoQueue_.enqueue(std::move(vf));

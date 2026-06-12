@@ -395,7 +395,9 @@ DecodedVideoFrame SeekDecoder::convertFrame(AVFrame *frame, qint64 ptsMs) {
   if (outSize.isValid() && !outSize.isEmpty()) {
     double widgetScale = qMin(static_cast<double>(outSize.width()) / srcW,
                               static_cast<double>(outSize.height()) / srcH);
-    widgetScale = qMin(1.0, widgetScale); // Never upscale decoding resolution beyond native size
+    widgetScale = qMin(
+        1.0,
+        widgetScale); // Never upscale decoding resolution beyond native size
     finalScale = widgetScale * qScale;
   }
   if (finalScale < 1.0) {
@@ -417,6 +419,7 @@ DecodedVideoFrame SeekDecoder::convertFrame(AVFrame *frame, qint64 ptsMs) {
       vf.width = dstW;
       vf.height = dstH;
       vf.hwFrame = cvBuf;
+      vf.qualityScale = qScale;
       return vf;
     }
   }
@@ -456,6 +459,7 @@ DecodedVideoFrame SeekDecoder::convertFrame(AVFrame *frame, qint64 ptsMs) {
   vf.width = dstW;
   vf.height = dstH;
   vf.rgbaData = std::move(rgbaData);
+  vf.qualityScale = qScale;
 
   return vf;
 }

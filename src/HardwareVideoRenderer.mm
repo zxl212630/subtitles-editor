@@ -7,14 +7,14 @@
 #include <QDebug>
 #include <QElapsedTimer>
 #include <QMouseEvent>
-#include <QPainter>
 #include <QPaintEvent>
+#include <QPainter>
 #include <cmath>
 
 #ifdef Q_OS_MAC
-#include <OpenGL/OpenGL.h>
-#import <CoreVideo/CoreVideo.h>
 #import <CoreImage/CoreImage.h>
+#import <CoreVideo/CoreVideo.h>
+#include <OpenGL/OpenGL.h>
 #endif
 
 #ifndef GL_TEXTURE_RECTANGLE
@@ -117,8 +117,10 @@ void HardwareVideoRenderer::renderFrame(const DecodedVideoFrame &frame) {
     }
 #endif
     if (!frame.rgbaData.isEmpty() && frame.hwFrame == nullptr) {
-      currentSwFrame_ = QImage(reinterpret_cast<const uchar *>(frame.rgbaData.constData()),
-                               frame.width, frame.height, QImage::Format_RGBA8888).copy();
+      currentSwFrame_ =
+          QImage(reinterpret_cast<const uchar *>(frame.rgbaData.constData()),
+                 frame.width, frame.height, QImage::Format_RGBA8888)
+              .copy();
     } else {
       currentSwFrame_ = QImage();
     }
@@ -126,7 +128,9 @@ void HardwareVideoRenderer::renderFrame(const DecodedVideoFrame &frame) {
     currentHeight_ = frame.height;
     hasFrame_ = (currentHwFrame_ != nullptr || !currentSwFrame_.isNull());
   }
-  videoSize_ = QSize(frame.width, frame.height);
+  double qScale = frame.qualityScale > 0.0 ? frame.qualityScale : 1.0;
+  videoSize_ =
+      QSize(qRound(frame.width / qScale), qRound(frame.height / qScale));
   QMetaObject::invokeMethod(this, "update", Qt::QueuedConnection);
 
 #if PROFILE_TIMING
@@ -358,12 +362,15 @@ void HardwareVideoRenderer::initializeGL() {
   initializeOpenGLFunctions();
 
   // 打印分配的 OpenGL 版本及硬件驱动平台信息以供调试诊断
-  const GLubyte* version = glGetString(GL_VERSION);
-  const GLubyte* vendor = glGetString(GL_VENDOR);
-  const GLubyte* renderer = glGetString(GL_RENDERER);
-  qInfo() << "[HardwareVideoRenderer] GL_VERSION:" << (version ? reinterpret_cast<const char*>(version) : "null")
-          << "GL_VENDOR:" << (vendor ? reinterpret_cast<const char*>(vendor) : "null")
-          << "GL_RENDERER:" << (renderer ? reinterpret_cast<const char*>(renderer) : "null");
+  const GLubyte *version = glGetString(GL_VERSION);
+  const GLubyte *vendor = glGetString(GL_VENDOR);
+  const GLubyte *renderer = glGetString(GL_RENDERER);
+  qInfo() << "[HardwareVideoRenderer] GL_VERSION:"
+          << (version ? reinterpret_cast<const char *>(version) : "null")
+          << "GL_VENDOR:"
+          << (vendor ? reinterpret_cast<const char *>(vendor) : "null")
+          << "GL_RENDERER:"
+          << (renderer ? reinterpret_cast<const char *>(renderer) : "null");
 
 #ifdef Q_OS_MAC
   CGLContextObj cglContext = CGLGetCurrentContext();
@@ -382,15 +389,18 @@ void HardwareVideoRenderer::initializeGL() {
                    "successfully in initializeGL";
       }
 
-      // 创建基于当前 OpenGL 上下文的 CIContext，并手动 retain 增加引用计数防止被 AutoreleasePool 提前释放
+      // 创建基于当前 OpenGL 上下文的 CIContext，并手动 retain
+      // 增加引用计数防止被 AutoreleasePool 提前释放
       ciContext_ = (void *)[[CIContext contextWithCGLContext:cglContext
                                                  pixelFormat:cglPixelFormat
                                                   colorSpace:nil
                                                      options:nil] retain];
       if (ciContext_) {
-        qInfo() << "[HardwareVideoRenderer] CIContext created and retained successfully with CGLContext in initializeGL";
+        qInfo() << "[HardwareVideoRenderer] CIContext created and retained "
+                   "successfully with CGLContext in initializeGL";
       } else {
-        qWarning() << "[HardwareVideoRenderer] Failed to create CIContext in initializeGL";
+        qWarning() << "[HardwareVideoRenderer] Failed to create CIContext in "
+                      "initializeGL";
       }
     }
   } else {
@@ -406,7 +416,8 @@ void HardwareVideoRenderer::paintGL() {
   // 留空，绘制工作已全部由 paintEvent 中接管
 }
 
-void HardwareVideoRenderer::renderHwFrameOpenGL(CVPixelBufferRef cvBuf, int w, int h) {
+void HardwareVideoRenderer::renderHwFrameOpenGL(CVPixelBufferRef cvBuf, int w,
+                                                int h) {
   // 显式规范化 Viewport（使用物理像素比），防止在 Retina 屏幕下视口缩水在左下角
   double ratio = devicePixelRatioF();
   int physicalW = static_cast<int>(width() * ratio);
@@ -438,7 +449,7 @@ void HardwareVideoRenderer::renderHwFrameOpenGL(CVPixelBufferRef cvBuf, int w, i
         ciContext_ = (void *)[[CIContext contextWithCGLContext:cglContext
                                                    pixelFormat:cglPixelFormat
                                                     colorSpace:nil
-                                                        options:nil] retain];
+                                                       options:nil] retain];
       }
     }
   }
@@ -448,7 +459,7 @@ void HardwareVideoRenderer::renderHwFrameOpenGL(CVPixelBufferRef cvBuf, int w, i
       CIImage *ciImage = [CIImage imageWithCVPixelBuffer:cvBuf];
       if (ciImage) {
         CIContext *context = (__bridge CIContext *)ciContext_;
-        
+
         // 根据视口大小及 aspect ratio，计算在物理像素下的渲染目标坐标区间
         double destW = physicalW;
         double destH = physicalH;
@@ -463,7 +474,7 @@ void HardwareVideoRenderer::renderHwFrameOpenGL(CVPixelBufferRef cvBuf, int w, i
         }
         double destX = (physicalW - destW) / 2.0;
         double destY = (physicalH - destH) / 2.0;
-        
+
         // 1. 初始化或重建渲染用 2D 纹理
         if (textureId_ == 0 || lastTexW_ != w || lastTexH_ != h) {
           if (textureId_ != 0) {
@@ -471,7 +482,8 @@ void HardwareVideoRenderer::renderHwFrameOpenGL(CVPixelBufferRef cvBuf, int w, i
           }
           glGenTextures(1, &textureId_);
           glBindTexture(GL_TEXTURE_2D, textureId_);
-          glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+          glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, w, h, 0, GL_RGBA,
+                       GL_UNSIGNED_BYTE, nullptr);
           glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
           glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
           glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
@@ -480,45 +492,60 @@ void HardwareVideoRenderer::renderHwFrameOpenGL(CVPixelBufferRef cvBuf, int w, i
           lastTexH_ = h;
         }
 
-        // 2. 将 CIImage 缩放到目标大小，并渲染至该 OpenGL 纹理中（在 GPU 上零拷贝执行缩放与格式转换）
+        // 2. 将 CIImage 缩放到目标大小，并渲染至该 OpenGL 纹理中（在 GPU
+        // 上零拷贝执行缩放与格式转换）
         double scaleX = (double)w / [ciImage extent].size.width;
         double scaleY = (double)h / [ciImage extent].size.height;
-        CIImage *scaledImage = [ciImage imageByApplyingTransform:CGAffineTransformMakeScale(scaleX, scaleY)];
+        CIImage *scaledImage = [ciImage
+            imageByApplyingTransform:CGAffineTransformMakeScale(scaleX,
+                                                                scaleY)];
 
         CGColorSpaceRef cs = CGColorSpaceCreateDeviceRGB();
-        [context render:scaledImage toTexture:textureId_ bounds:CGRectMake(0, 0, w, h) colorSpace:cs];
+        [context render:scaledImage
+              toTexture:textureId_
+                 bounds:CGRectMake(0, 0, w, h)
+             colorSpace:cs];
         CGColorSpaceRelease(cs);
 
         // 3. 使用标准固定管线绘制纹理贴图 Quad，完美兼容各种 OpenGL 上下文环境
         glEnable(GL_TEXTURE_2D);
         glBindTexture(GL_TEXTURE_2D, textureId_);
-        
+
         glDisable(GL_LIGHTING);
         glDisable(GL_DEPTH_TEST);
-        
+
         glBegin(GL_QUADS);
         glColor4f(1.0f, 1.0f, 1.0f, 1.0f);
-        glTexCoord2f(0.0f, 0.0f); glVertex2f(destX, destY);
-        glTexCoord2f(1.0f, 0.0f); glVertex2f(destX + destW, destY);
-        glTexCoord2f(1.0f, 1.0f); glVertex2f(destX + destW, destY + destH);
-        glTexCoord2f(0.0f, 1.0f); glVertex2f(destX, destY + destH);
+        glTexCoord2f(0.0f, 0.0f);
+        glVertex2f(destX, destY);
+        glTexCoord2f(1.0f, 0.0f);
+        glVertex2f(destX + destW, destY);
+        glTexCoord2f(1.0f, 1.0f);
+        glVertex2f(destX + destW, destY + destH);
+        glTexCoord2f(0.0f, 1.0f);
+        glVertex2f(destX, destY + destH);
         glEnd();
-        
+
         glBindTexture(GL_TEXTURE_2D, 0);
         glDisable(GL_TEXTURE_2D);
 
         GLenum errAfterDraw = glGetError();
         if (errAfterDraw != GL_NO_ERROR) {
-          qWarning() << "[HardwareVideoRenderer] GL error right after texture render:" << errAfterDraw;
+          qWarning()
+              << "[HardwareVideoRenderer] GL error right after texture render:"
+              << errAfterDraw;
         }
       } else {
-        qWarning() << "[HardwareVideoRenderer] Failed to create CIImage from CVPixelBuffer";
+        qWarning() << "[HardwareVideoRenderer] Failed to create CIImage from "
+                      "CVPixelBuffer";
       }
     }
   } else {
     static int missingContextCount = 0;
     if (missingContextCount++ < 5) {
-      qWarning() << "[HardwareVideoRenderer] cvBuf or ciContext_ missing. cvBuf:" << cvBuf << "ciContext_:" << ciContext_;
+      qWarning()
+          << "[HardwareVideoRenderer] cvBuf or ciContext_ missing. cvBuf:"
+          << cvBuf << "ciContext_:" << ciContext_;
     }
   }
 #endif
@@ -532,7 +559,8 @@ void HardwareVideoRenderer::renderHwFrameOpenGL(CVPixelBufferRef cvBuf, int w, i
   // 捕获并汇报 OpenGL 调用错误
   GLenum err;
   while ((err = glGetError()) != GL_NO_ERROR) {
-    qWarning() << "[HardwareVideoRenderer] GL error in renderHwFrameOpenGL:" << err;
+    qWarning() << "[HardwareVideoRenderer] GL error in renderHwFrameOpenGL:"
+               << err;
   }
 }
 
@@ -674,7 +702,8 @@ void HardwareVideoRenderer::drawSubtitlesOverlay(QPainter &painter,
 
     // 创建透明缓冲图片以支持软件高精度抗锯齿（高DPI屏下使用物理像素大小以消除模糊）
     double dpr = devicePixelRatioF();
-    QImage overlayImage(rect().size() * dpr, QImage::Format_ARGB32_Premultiplied);
+    QImage overlayImage(rect().size() * dpr,
+                        QImage::Format_ARGB32_Premultiplied);
     overlayImage.setDevicePixelRatio(dpr);
     overlayImage.fill(Qt::transparent);
     {
@@ -695,9 +724,9 @@ void HardwareVideoRenderer::drawSubtitlesOverlay(QPainter &painter,
 
       imgPainter.save();
       // 不设置剪裁，允许超出视频边界绘制
-      SubtitleRenderer::renderSubtitle(imgPainter, textToDraw, drawFont, activeStyle,
-                                       textRect, subtitleRotation_, bgPath,
-                                       is9Patch, bgMargins);
+      SubtitleRenderer::renderSubtitle(imgPainter, textToDraw, drawFont,
+                                       activeStyle, textRect, subtitleRotation_,
+                                       bgPath, is9Patch, bgMargins);
       imgPainter.restore();
 
       if (isEditing_ && editor_) {
@@ -1312,8 +1341,10 @@ void HardwareVideoRenderer::mouseMoveEvent(QMouseEvent *event) {
       double localCenterX = left + w1 / 2.0;
       double localCenterY = top + h1 / 2.0;
 
-      double startCenterX = dragStartNormalizedRect_.left() + dragStartNormalizedRect_.width() / 2.0;
-      double startCenterY = dragStartNormalizedRect_.top() + dragStartNormalizedRect_.height() / 2.0;
+      double startCenterX = dragStartNormalizedRect_.left() +
+                            dragStartNormalizedRect_.width() / 2.0;
+      double startCenterY = dragStartNormalizedRect_.top() +
+                            dragStartNormalizedRect_.height() / 2.0;
 
       double angleRad = subtitleRotation_ * M_PI / 180.0;
       double cosAngle = std::cos(angleRad);

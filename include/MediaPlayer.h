@@ -122,6 +122,7 @@ private:
   bool isMuted_ = false;
   qint64 totalDurationLimitMs_ = 0;
   double qualityScale_ = 1.0;
+  bool waitingForFirstFrameAfterSeek_ = false;
 
   std::atomic<bool> isLoading_{false};
   std::thread loadThread_;
