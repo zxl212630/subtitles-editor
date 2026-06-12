@@ -364,7 +364,7 @@ void SoftwareVideoRenderer::paintEvent(QPaintEvent *event) {
     // 根据预览画面实际高度与基准高度 1080.0
     // 的比例，缩放预览字体大小，保持与导出比例一致
     QFont drawFont = font;
-    double refHeight = (videoSize_.height() > 0) ? videoSize_.height() : 1080.0;
+    double refHeight = 1080.0;
     double scale = (targetRect.height() > 0)
                        ? (static_cast<double>(targetRect.height()) / refHeight)
                        : 1.0;

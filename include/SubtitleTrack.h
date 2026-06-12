@@ -71,11 +71,8 @@ public:
   void setUnifiedBorderMargins(const QMargins &margins);
 
   // --- 全局默认样式设置 ---
-  int refHeight() const { return refHeight_; }
-  void setRefHeight(int h) {
-    if (h > 0)
-      refHeight_ = h;
-  }
+  int refHeight() const { return 1080; }
+  void setRefHeight(int h) { Q_UNUSED(h); }
 
   QString defaultFontFamily() const { return defaultFontFamily_; }
   void setDefaultFontFamily(const QString &family) {

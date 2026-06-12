@@ -657,7 +657,7 @@ void HardwareVideoRenderer::drawSubtitlesOverlay(QPainter &painter,
     QRect textRect = getSubtitlePixelRect();
 
     QFont drawFont = font;
-    double refHeight = (videoSize_.height() > 0) ? videoSize_.height() : 1080.0;
+    double refHeight = 1080.0;
     double scale = (targetRect.height() > 0)
                        ? (static_cast<double>(targetRect.height()) / refHeight)
                        : 1.0;
@@ -1146,7 +1146,7 @@ int HardwareVideoRenderer::cursorPosFromLocalPoint(
 
   QFont drawFont = subtitleFont_;
   QRect targetRect = getTargetRect();
-  double refHeight = (videoSize_.height() > 0) ? videoSize_.height() : 1080.0;
+  double refHeight = 1080.0;
   double scale = (targetRect.height() > 0)
                      ? (static_cast<double>(targetRect.height()) / refHeight)
                      : 1.0;
