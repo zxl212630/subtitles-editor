@@ -490,9 +490,9 @@ void VideoPreviewPanel::setupUi() {
 
   // Font combo
   fontCombo_ = new QComboBox(toolbar);
-  fontCombo_->setFocusPolicy(Qt::NoFocus);
+  fontCombo_->setFocusPolicy(Qt::ClickFocus);
   fontCombo_->setObjectName("PreviewFontCombo");
-  fontCombo_->setFixedSize(140, 28);
+  fontCombo_->setFixedSize(210, 28);
   populateFontCombo();
   tbLayout->addWidget(fontCombo_);
 
@@ -522,6 +522,15 @@ void VideoPreviewPanel::setupUi() {
 
   auto onSizeUpdated = [this]() {
     int size = sizeCombo_->currentText().toInt();
+    if (size > 300) {
+      size = 300;
+      sizeCombo_->blockSignals(true);
+      sizeCombo_->setCurrentText("300");
+      if (sizeCombo_->lineEdit()) {
+        sizeCombo_->lineEdit()->setText("300");
+      }
+      sizeCombo_->blockSignals(false);
+    }
     if (size > 0) {
       emit fontSizeChanged(size);
       updateCurrentItemStyle(
@@ -542,7 +551,7 @@ void VideoPreviewPanel::setupUi() {
   }
 
   // Size input validation
-  auto *validator = new QIntValidator(1, 999, sizeCombo_);
+  auto *validator = new QIntValidator(1, 300, sizeCombo_);
   sizeCombo_->setValidator(validator);
 
   // Elastic spacer
@@ -703,7 +712,7 @@ void VideoPreviewPanel::setupUi() {
   // Quality combo
   qualityCombo_ = new QComboBox(controlBar);
   qualityCombo_->setObjectName("PreviewQualityCombo");
-  qualityCombo_->setFocusPolicy(Qt::NoFocus);
+  qualityCombo_->setFocusPolicy(Qt::ClickFocus);
   qualityCombo_->setItemDelegate(new QualityDelegate(qualityCombo_));
   qualityCombo_->setFixedWidth(56);
   qualityCombo_->setFixedHeight(24);
@@ -796,8 +805,8 @@ void VideoPreviewPanel::populateFontCombo() {
 }
 
 void VideoPreviewPanel::populateSizeCombo() {
-  const QList<int> sizes = {8,  9,  10, 11, 12, 14, 16, 18, 20, 22,
-                            24, 28, 32, 36, 40, 48, 56, 64, 72};
+  const QList<int> sizes = {8,  9,  10, 11, 12, 14, 16, 18, 20, 22, 24,
+                            28, 32, 36, 40, 48, 56, 64, 72, 96, 128};
   for (int s : sizes) {
     sizeCombo_->addItem(QString::number(s));
   }
