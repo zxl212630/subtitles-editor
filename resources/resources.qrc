@@ -45,6 +45,8 @@
         <file>icons/undo.svg</file>
         <file>icons/redo.svg</file>
         <file>icons/delete-subtitle.svg</file>
+        <file>icons/trim-right.svg</file>
+        <file>icons/trim-left.svg</file>
         <file>icons/snap.svg</file>
         <file>icons/fit.svg</file>
         <file>icons/zoom-out.svg</file>
