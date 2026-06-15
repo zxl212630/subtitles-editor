@@ -227,9 +227,11 @@ void HardwareVideoRenderer::setSubtitleStyle(const SubtitleItem &style) {
     subtitleFont_.setItalic(style.italic);
     subtitleFont_.setUnderline(style.underline);
     subtitleAlignment_ = style.alignment;
-    subtitleRotation_ = style.rotation;
-    subtitleNormalizedRect_ =
-        QRectF(style.rectX, style.rectY, style.rectW, style.rectH);
+    if (dragMode_ == DragNone) {
+      subtitleRotation_ = style.rotation;
+      subtitleNormalizedRect_ =
+          QRectF(style.rectX, style.rectY, style.rectW, style.rectH);
+    }
   }
   update();
 }
@@ -1427,7 +1429,6 @@ void HardwareVideoRenderer::mouseReleaseEvent(QMouseEvent *event) {
       emit signals_->subtitleRectChanged(subtitleNormalizedRect_);
     }
     event->accept();
-    return;
   }
   QOpenGLWidget::mouseReleaseEvent(event);
 }
