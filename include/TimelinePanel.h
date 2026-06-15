@@ -79,6 +79,8 @@ private:
   void drawEmptyState(QPainter &painter);
   void drawPlayhead(QPainter &painter);
 
+  void trimSubtitleEdgeToPlayhead(bool trimStart);
+
   int timeToX(qint64 ms) const;
   qint64 xToTime(int x) const;
   void updateScrollBar();
@@ -163,6 +165,8 @@ private:
   QToolButton *addBtn_ = nullptr;
   QToolButton *splitBtn_ = nullptr;
   QToolButton *deleteBtn_ = nullptr;
+  QToolButton *trimRightBtn_ = nullptr;
+  QToolButton *trimLeftBtn_ = nullptr;
   QToolButton *snapBtn_ = nullptr;
   QToolButton *fitBtn_ = nullptr;
   QToolButton *zoomOutBtn_ = nullptr;
