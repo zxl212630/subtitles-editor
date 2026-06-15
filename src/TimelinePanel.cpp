@@ -2020,6 +2020,87 @@ void TimelinePanel::updateToolbarStates() {
   splitBtn_->setEnabled(canSplit);
 }
 
+void TimelinePanel::trimSubtitleEdgeToPlayhead(bool trimStart) {
+  if (!track_)
+    return;
+
+  const auto &items = track_->items();
+  if (items.isEmpty())
+    return;
+
+  // 1. Try to find a subtitle containing the playhead.
+  const SubtitleItem *containing = nullptr;
+  for (const auto &item : items) {
+    if (item.startMs <= currentTimeMs_ && currentTimeMs_ < item.endMs) {
+      containing = &item;
+      break;
+    }
+  }
+
+  QString targetId;
+  qint64 newStartMs = 0;
+  qint64 newEndMs = 0;
+
+  if (containing) {
+    targetId = containing->id;
+    if (trimStart) {
+      newStartMs = currentTimeMs_;
+      newEndMs = containing->endMs;
+    } else {
+      newStartMs = containing->startMs;
+      newEndMs = currentTimeMs_;
+    }
+  } else {
+    if (trimStart) {
+      // Nearest subtitle to the LEFT (largest endMs <= playhead).
+      const SubtitleItem *left = nullptr;
+      for (const auto &item : items) {
+        if (item.endMs <= currentTimeMs_) {
+          if (!left || item.endMs > left->endMs) {
+            left = &item;
+          }
+        }
+      }
+      if (!left)
+        return;
+      targetId = left->id;
+      newStartMs = left->startMs;
+      newEndMs = currentTimeMs_;
+    } else {
+      // Nearest subtitle to the RIGHT (smallest startMs > playhead).
+      const SubtitleItem *right = nullptr;
+      for (const auto &item : items) {
+        if (item.startMs > currentTimeMs_) {
+          if (!right || item.startMs < right->startMs) {
+            right = &item;
+          }
+        }
+      }
+      if (!right)
+        return;
+      targetId = right->id;
+      newStartMs = currentTimeMs_;
+      newEndMs = right->endMs;
+    }
+  }
+
+  // Validity guard: refuse to create an inverted or zero-duration item.
+  if (newStartMs >= newEndMs)
+    return;
+
+  const SubtitleItem *orig = track_->findItem(targetId);
+  if (!orig)
+    return;
+
+  if (orig->startMs == newStartMs && orig->endMs == newEndMs)
+    return; // no-op; do not pollute the undo stack
+
+  SubtitleItem updated = *orig;
+  updated.startMs = newStartMs;
+  updated.endMs = newEndMs;
+  track_->updateItem(targetId, updated);
+}
+
 void TimelinePanel::updateZoomControls() {
   double minPps, maxPps;
   getZoomBounds(minPps, maxPps);
