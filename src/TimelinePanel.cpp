@@ -1965,6 +1965,8 @@ void TimelinePanel::updateToolbarStates() {
     addBtn_->setEnabled(false);
     splitBtn_->setEnabled(false);
     deleteBtn_->setEnabled(false);
+    trimRightBtn_->setEnabled(false);
+    trimLeftBtn_->setEnabled(false);
     return;
   }
 
@@ -2018,6 +2020,25 @@ void TimelinePanel::updateToolbarStates() {
     }
   }
   splitBtn_->setEnabled(canSplit);
+
+  // Trim-right (]): enabled if a subtitle contains the playhead, or if any
+  // subtitle lies to the left of the playhead (endMs <= currentTimeMs_).
+  // Trim-left ([): same containing check, plus any subtitle to the right
+  // (startMs > currentTimeMs_).
+  bool isContaining = false;
+  bool hasLeft = false;
+  bool hasRight = false;
+  for (const auto &item : items) {
+    if (item.startMs <= currentTimeMs_ && currentTimeMs_ < item.endMs) {
+      isContaining = true;
+    } else if (item.endMs <= currentTimeMs_) {
+      hasLeft = true;
+    } else if (item.startMs > currentTimeMs_) {
+      hasRight = true;
+    }
+  }
+  trimRightBtn_->setEnabled(isContaining || hasLeft);
+  trimLeftBtn_->setEnabled(isContaining || hasRight);
 }
 
 void TimelinePanel::trimSubtitleEdgeToPlayhead(bool trimStart) {
