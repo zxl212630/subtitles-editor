@@ -88,6 +88,19 @@ private:
   QLabel *maxLenLabel_;
   QLabel *engineLabel_;
 
+  QWidget *tencentAsrContainer_ = nullptr;
+  QWidget *whisperAsrContainer_ = nullptr;
+  QLineEdit *whisperModelPathEdit_ = nullptr;
+  QPushButton *whisperModelPathBtn_ = nullptr;
+  QComboBox *whisperModelCombo_ = nullptr;
+  QComboBox *whisperLangCombo_ = nullptr;
+  QSpinBox *whisperThreadsSpin_ = nullptr;
+
+  QLabel *whisperModelPathLabel_ = nullptr;
+  QLabel *whisperModelLabel_ = nullptr;
+  QLabel *whisperLangLabel_ = nullptr;
+  QLabel *whisperThreadsLabel_ = nullptr;
+
   // Subtitle Settings Page
   QComboBox *subtitleFontFamilyCombo_;
   QSpinBox *subtitleFontSizeSpin_;

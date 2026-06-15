@@ -285,4 +285,35 @@ if ($Target -eq "all" -or $Target -eq "qwindowkit") {
     Set-Location $OriginalLocation
 }
 
+# 4. 编译 Whisper.cpp
+if ($Target -eq "all" -or $Target -eq "whisper") {
+    Write-Host "=== Building Whisper.cpp ==="
+    $WhisperSrcDir = Join-Path $TargetDir "whisper-src"
+    if (-not (Test-Path $WhisperSrcDir)) {
+        Write-Host "Cloning Whisper.cpp..."
+        & git clone --branch v1.7.3 --depth 1 https://github.com/ggml-org/whisper.cpp.git $WhisperSrcDir
+    }
+
+    $WhisperBuildDir = Join-Path $TargetDir "whisper-build"
+    New-Item -ItemType Directory -Force -Path $WhisperBuildDir | Out-Null
+    Set-Location $WhisperBuildDir
+
+    $WhisperInstallDir = Join-Path $DepsDir "whisper"
+
+    Write-Host "Configuring Whisper..."
+    cmake $WhisperSrcDir -DCMAKE_INSTALL_PREFIX="$WhisperInstallDir" -DBUILD_SHARED_LIBS=ON -DCMAKE_BUILD_TYPE=Release
+    Write-Host "Building Whisper..."
+    cmake --build . --config Release --parallel 8
+    Write-Host "Installing Whisper..."
+    cmake --install . --config Release
+
+    Set-Location $OriginalLocation
+
+    # Pack Whisper
+    Write-Host "=== Packaging Whisper ==="
+    Set-Location $DepsDir
+    Compress-Archive -Path "whisper" -DestinationPath (Join-Path $OutputDir "whisper-windows-x64.zip") -Force
+    Set-Location $OriginalLocation
+}
+
 Write-Host "=== Done ==="

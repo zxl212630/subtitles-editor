@@ -68,8 +68,9 @@ jobs:
             -p "ffmpeg-macos-${{ matrix.arch }}.tar.zst" \
             -p "qt6-macos-${{ matrix.arch }}.tar.zst" \
             -p "qwindowkit-macos-${{ matrix.arch }}.tar.zst" \
+            -p "whisper-macos-${{ matrix.arch }}.tar.zst" \
             --repo "${{ github.repository }}"
-          for lib in ffmpeg qt6 qwindowkit; do
+          for lib in ffmpeg qt6 qwindowkit whisper; do
             zstd -d "${lib}-macos-${{ matrix.arch }}.tar.zst"
             tar -xf "${lib}-macos-${{ matrix.arch }}.tar"
             rm -f "${lib}-macos-${{ matrix.arch }}.tar" "${lib}-macos-${{ matrix.arch }}.tar.zst"
@@ -136,18 +137,21 @@ jobs:
             -p "ffmpeg-windows-x64.zip" \
             -p "qt6-windows-x64.zip" \
             -p "qwindowkit-windows-x64.zip" \
+            -p "whisper-windows-x64.zip" \
             --repo "${{ github.repository }}"
           unzip -q ffmpeg-windows-x64.zip -d deps_ffmpeg
           unzip -q qt6-windows-x64.zip -d deps_qt6
           unzip -q qwindowkit-windows-x64.zip -d deps_qwindowkit
+          unzip -q whisper-windows-x64.zip -d deps_whisper
           echo "FFMPEG_ROOT=$PWD/deps_ffmpeg/ffmpeg" >> $GITHUB_ENV
           echo "QT_DIR=$PWD/deps_qt6/qt6" >> $GITHUB_ENV
           echo "QWindowKit_ROOT=$PWD/deps_qwindowkit/qwindowkit" >> $GITHUB_ENV
+          echo "WHISPER_ROOT=$PWD/deps_whisper/whisper" >> $GITHUB_ENV
 
       - name: Build
         shell: bash
         run: |
-          cmake -B cmake-build-release -S . -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH="$QT_DIR" -DFFMPEG_ROOT="$FFMPEG_ROOT" -DQWindowKit_ROOT="$QWindowKit_ROOT"
+          cmake -B cmake-build-release -S . -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH="$QT_DIR" -DFFMPEG_ROOT="$FFMPEG_ROOT" -DQWindowKit_ROOT="$QWindowKit_ROOT" -Dwhisper_ROOT="$WHISPER_ROOT"
           cmake --build cmake-build-release --config Release
 
       - name: Package
@@ -159,9 +163,10 @@ jobs:
           # Deploy Qt
           $QT_DIR/bin/windeployqt.exe --release --no-compiler-runtime --no-opengl-sw --no-translations dist/windows/SubtitlesEditor-${{ steps.version.outputs.version }}-Windows-x64/subtitles-editor.exe
           
-          # Copy FFmpeg and QWindowKit DLLs
+          # Copy FFmpeg, QWindowKit and Whisper DLLs
           cp $FFMPEG_ROOT/bin/*.dll dist/windows/SubtitlesEditor-${{ steps.version.outputs.version }}-Windows-x64/
           cp $QWindowKit_ROOT/bin/*.dll dist/windows/SubtitlesEditor-${{ steps.version.outputs.version }}-Windows-x64/
+          cp $WHISPER_ROOT/bin/*.dll dist/windows/SubtitlesEditor-${{ steps.version.outputs.version }}-Windows-x64/
           
           cd dist/windows
           tar.exe -a -c -f SubtitlesEditor-${{ steps.version.outputs.version }}-Windows-x64.zip SubtitlesEditor-${{ steps.version.outputs.version }}-Windows-x64

@@ -18,7 +18,7 @@ public:
   ~AsrProgressDialog() override;
 
   void setStage(Stage stage);
-  void setStatus(const QString &mainText, const QString &subText);
+  void setStatus(const QString &mainText, const QString &subText = QString());
   void setError(const QString &errorMessage);
 
 signals:

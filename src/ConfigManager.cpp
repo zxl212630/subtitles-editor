@@ -5,6 +5,7 @@
 #include <QFile>
 #include <QFileInfo>
 #include <QStandardPaths>
+#include <QThread>
 
 ConfigManager &ConfigManager::instance() {
   static ConfigManager inst;
@@ -39,6 +40,12 @@ ConfigManager::ConfigManager()
       settings_(configFilePath_, QSettings::IniFormat) {}
 
 bool ConfigManager::isValid() const {
+  QString asrProv = asrProvider();
+  if (asrProv == "local_whisper") {
+    qDebug() << "[ConfigManager] Configuration is valid: true (using local whisper)";
+    return true;
+  }
+
   auto check = [this](const QString &group, const QString &key) {
     QString val = getString(group, key);
     return !val.isEmpty() && !val.contains("YOUR_") &&
@@ -286,4 +293,49 @@ QKeySequence ConfigManager::getShortcut(const QString &name,
 
 void ConfigManager::setShortcut(const QString &name, const QKeySequence &key) {
   setValue("shortcuts", name, key.toString(QKeySequence::PortableText));
+}
+
+QString ConfigManager::asrProvider() const {
+  return getString("asr", "provider", "local_whisper");
+}
+
+void ConfigManager::setAsrProvider(const QString &provider) {
+  setValue("asr", "provider", provider);
+}
+
+QString ConfigManager::whisperModelPath() const {
+  QString defaultPath = QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation) + "/models";
+  return getString("whisper", "model_path", defaultPath);
+}
+
+void ConfigManager::setWhisperModelPath(const QString &path) {
+  setValue("whisper", "model_path", path);
+}
+
+QString ConfigManager::whisperModel() const {
+  return getString("whisper", "model", "base");
+}
+
+void ConfigManager::setWhisperModel(const QString &model) {
+  setValue("whisper", "model", model);
+}
+
+QString ConfigManager::whisperLanguage() const {
+  return getString("whisper", "language", "zh");
+}
+
+void ConfigManager::setWhisperLanguage(const QString &lang) {
+  setValue("whisper", "language", lang);
+}
+
+int ConfigManager::whisperThreads() const {
+  int defaultThreads = QThread::idealThreadCount();
+  if (defaultThreads <= 0) {
+    defaultThreads = 4;
+  }
+  return getInt("whisper", "threads", defaultThreads);
+}
+
+void ConfigManager::setWhisperThreads(int threads) {
+  setValue("whisper", "threads", threads);
 }

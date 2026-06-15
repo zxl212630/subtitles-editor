@@ -24,7 +24,7 @@ Options:
   --qt-version <ver>       Qt version (default: $QT_VERSION)
   --ffmpeg-version <ver>   FFmpeg version (default: $FFMPEG_VERSION)
   --jobs <n>               Parallel jobs (default: $JOBS)
-  --target <target>        Build target: all, ffmpeg, qt6, qwindowkit (default: $TARGET)
+  --target <target>        Build target: all, ffmpeg, qt6, qwindowkit, whisper (default: $TARGET)
   -h, --help               Show this help
 EOF
     exit 0
@@ -56,8 +56,8 @@ if [[ "$ARCH" != "arm64" && "$ARCH" != "x64" ]]; then
     exit 1
 fi
 
-if [[ "$TARGET" != "all" && "$TARGET" != "ffmpeg" && "$TARGET" != "qt6" && "$TARGET" != "qwindowkit" ]]; then
-    echo "Error: --target must be one of all, ffmpeg, qt6, qwindowkit" >&2
+if [[ "$TARGET" != "all" && "$TARGET" != "ffmpeg" && "$TARGET" != "qt6" && "$TARGET" != "qwindowkit" && "$TARGET" != "whisper" ]]; then
+    echo "Error: --target must be one of all, ffmpeg, qt6, qwindowkit, whisper" >&2
     exit 1
 fi
 
@@ -259,6 +259,37 @@ build_qwindowkit() {
     echo "QWindowKit installed to $DEPS_DIR/qwindowkit"
 }
 
+# --- Build Whisper.cpp ---
+build_whisper() {
+    echo ""
+    echo "=== Building Whisper.cpp ==="
+    local src_dir="$OUTPUT_DIR/whisper-src"
+
+    # Clone if not present
+    if [[ ! -d "$src_dir" ]]; then
+        echo "Cloning Whisper.cpp..."
+        git clone --branch v1.7.3 --depth 1 https://github.com/ggml-org/whisper.cpp.git "$src_dir"
+    fi
+
+    local build_dir="$OUTPUT_DIR/whisper-build"
+    mkdir -p "$build_dir"
+
+    echo "Configuring Whisper.cpp..."
+    cd "$build_dir"
+    cmake "$src_dir" \
+        -DCMAKE_INSTALL_PREFIX="$DEPS_DIR/whisper" \
+        -DCMAKE_OSX_DEPLOYMENT_TARGET=12.0 \
+        -DBUILD_SHARED_LIBS=ON \
+        -DCMAKE_BUILD_TYPE=Release
+
+    echo "Building Whisper.cpp..."
+    cmake --build . -j"$JOBS"
+    cmake --install .
+
+    cd "$PROJECT_DIR"
+    echo "Whisper.cpp installed to $DEPS_DIR/whisper"
+}
+
 # --- Main ---
 cd "$OUTPUT_DIR"
 
@@ -317,6 +348,19 @@ if [[ "$TARGET" == "all" || "$TARGET" == "qwindowkit" ]]; then
         echo "=== Packaging QWindowKit ==="
         cd "$OUTPUT_DIR"
         tar -cf - deps/qwindowkit | zstd -T0 -o "$OUTPUT_DIR/qwindowkit-macos-${ARCH}.tar.zst"
+        rm -rf deps
+    fi
+fi
+
+if [[ "$TARGET" == "all" || "$TARGET" == "whisper" ]]; then
+    if [[ -f "$OUTPUT_DIR/whisper-macos-${ARCH}.tar.zst" ]]; then
+        echo "Whisper package already exists, skipping build."
+    else
+        build_whisper
+        echo ""
+        echo "=== Packaging Whisper ==="
+        cd "$OUTPUT_DIR"
+        tar -cf - deps/whisper | zstd -T0 -o "$OUTPUT_DIR/whisper-macos-${ARCH}.tar.zst"
         rm -rf deps
     fi
 fi

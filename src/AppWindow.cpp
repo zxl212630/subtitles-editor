@@ -771,11 +771,20 @@ void AppWindow::onVideoAsrRequested() {
     return;
   }
 
-  QString model = configDlg.engineModelType();
-  int maxLen = configDlg.sentenceMaxLength();
-  bool enableSpeaker = configDlg.speakerDiarization();
+  auto &cfg = ConfigManager::instance();
+  cfg.setAsrProvider(configDlg.asrProvider());
+  if (configDlg.asrProvider() == "local_whisper") {
+    cfg.setWhisperModel(configDlg.whisperModel());
+    cfg.setWhisperLanguage(configDlg.whisperLanguage());
+    cfg.setWhisperThreads(configDlg.whisperThreads());
+  } else {
+    cfg.setEngineModelType(configDlg.engineModelType());
+    cfg.setSentenceMaxLength(configDlg.sentenceMaxLength());
+    cfg.setSpeakerDiarization(configDlg.speakerDiarization());
+  }
+  cfg.sync();
 
-  d->timelinePanel->startAsrPipeline(videoPath, model, maxLen, enableSpeaker);
+  d->timelinePanel->startAsrPipeline(videoPath);
 }
 
 void AppWindow::onVideoPropertyRequested() {

@@ -8,6 +8,7 @@
 #include "SubtitleItem.h"
 #include "SubtitleTrack.h"
 #include "TencentAsrService.h"
+#include "WhisperAsrService.h"
 #include "ThemeManager.h"
 #include "ToolTipEventFilter.h"
 #include "TranslationManager.h"
@@ -1553,10 +1554,7 @@ void TimelinePanel::dropEvent(QDropEvent *event) {
   }
 }
 
-void TimelinePanel::startAsrPipeline(const QString &localPath,
-                                     const QString &engineModelType,
-                                     int sentenceMaxLength,
-                                     bool speakerDiarization) {
+void TimelinePanel::startAsrPipeline(const QString &localPath) {
   qDebug() << "=== Starting ASR Pipeline ===";
   asrCancelledByUser_ = false;
 
@@ -1567,130 +1565,225 @@ void TimelinePanel::startAsrPipeline(const QString &localPath,
 
   AudioTranscoder *transcoder = new AudioTranscoder(this);
 
-  QString provider = ConfigManager::instance().storageProvider();
-  QObject *uploader = nullptr;
-  if (provider == "tencent_cos") {
-    uploader = new CosUploader(this);
-  } else {
-    uploader = new OssUploader(this);
-  }
+  QString provider = ConfigManager::instance().asrProvider();
+  if (provider == "local_whisper") {
+    // ------------------------------------------------------------------------
+    // 本地 Whisper ASR 识别流程
+    // ------------------------------------------------------------------------
+    WhisperAsrService *asrService = new WhisperAsrService(this);
 
-  TencentAsrService *asrService = new TencentAsrService(this);
-  asrService->setEngineModelType(engineModelType);
-  asrService->setSentenceMaxLength(sentenceMaxLength);
-  asrService->setSpeakerDiarization(speakerDiarization);
+    connect(dialog, &AsrProgressDialog::canceled, this,
+            [this, dialog, transcoder, asrService]() {
+              qDebug() << "[ASR] canceled signal received (Local)";
+              asrCancelledByUser_ = true;
+              QPointer<AudioTranscoder> t(transcoder);
+              QPointer<WhisperAsrService> a(asrService);
+              if (t)
+                t->abort();
+              if (a)
+                a->abort();
+              dialog->deleteLater();
+              transcoder->deleteLater();
+              asrService->deleteLater();
+            });
 
-  connect(dialog, &AsrProgressDialog::canceled, this,
-          [this, dialog, transcoder, uploader, asrService]() {
-            qDebug() << "[ASR] canceled signal received";
-            asrCancelledByUser_ = true;
-            QPointer<AudioTranscoder> t(transcoder);
-            QPointer<QObject> u(uploader);
-            QPointer<TencentAsrService> a(asrService);
-            if (t)
-              t->abort();
-            if (u)
-              QMetaObject::invokeMethod(u, "abort");
-            if (a)
-              a->abort();
-            qDebug() << "[ASR] cancel handler done, cleaning up";
-            dialog->deleteLater();
-            transcoder->deleteLater();
-            if (u)
-              u->deleteLater();
-            asrService->deleteLater();
-          });
-
-  // Connect transcoder and uploader events
-  if (provider == "tencent_cos") {
-    auto *cos = qobject_cast<CosUploader *>(uploader);
-    connect(transcoder, &AudioTranscoder::transcodingFinished, cos,
-            &CosUploader::upload);
-    connect(cos, &CosUploader::uploadFinished, this,
-            [dialog, asrService](const QString &, const QString &presignedUrl) {
+    connect(transcoder, &AudioTranscoder::transcodingFinished, this,
+            [this, dialog, asrService](const QString &outputPath) {
+              if (asrCancelledByUser_) return;
               dialog->setStage(AsrProgressDialog::Stage::Recognition);
-              asrService->transcribe(presignedUrl);
+              dialog->setStatus(tr("正在识别语音 (Local Whisper)..."));
+              asrService->transcribe(outputPath);
             });
-    connect(cos, &CosUploader::uploadFailed, this,
-            [dialog](const QString &error) {
-              qDebug() << "[ASR] uploadFailed:" << error;
-              dialog->setError(tr("Upload failed: %1").arg(error));
-            });
-  } else {
-    auto *oss = qobject_cast<OssUploader *>(uploader);
-    connect(transcoder, &AudioTranscoder::transcodingFinished, oss,
-            &OssUploader::upload);
-    connect(oss, &OssUploader::uploadFinished, this,
-            [dialog, asrService](const QString &, const QString &presignedUrl) {
-              dialog->setStage(AsrProgressDialog::Stage::Recognition);
-              asrService->transcribe(presignedUrl);
-            });
-    connect(oss, &OssUploader::uploadFailed, this,
-            [dialog](const QString &error) {
-              qDebug() << "[ASR] uploadFailed:" << error;
-              dialog->setError(tr("Upload failed: %1").arg(error));
-            });
-  }
 
-  connect(asrService, &AsrServiceBase::transcribeFinished, this,
-          [this, transcoder, uploader, asrService,
-           dialog](const AsrServiceBase::TranscriptResult &result) {
-            qDebug() << "[ASR] transcribeFinished success=" << result.success
-                     << "asrCancelledByUser_=" << asrCancelledByUser_;
-            if (!result.success) {
-              if (!asrCancelledByUser_) {
-                qDebug() << "[ASR] real recognition error, showing on dialog";
-                dialog->setError(result.errorMessage);
+    connect(asrService, &WhisperAsrService::transcribeProgress, this,
+            [dialog](int percent) {
+              dialog->setStatus(tr("正在识别语音: %1%").arg(percent));
+            });
+
+    connect(asrService, &AsrServiceBase::transcribeFinished, this,
+            [this, transcoder, asrService, dialog](const AsrServiceBase::TranscriptResult &result) {
+              qDebug() << "[ASR] Local transcribeFinished success=" << result.success
+                       << "asrCancelledByUser_=" << asrCancelledByUser_;
+              
+              if (!result.success) {
+                if (!asrCancelledByUser_) {
+                  dialog->setError(result.errorMessage);
+                } else {
+                  dialog->deleteLater();
+                  transcoder->deleteLater();
+                  asrService->deleteLater();
+                }
               } else {
-                qDebug() << "[ASR] cancelled by user, closing dialog";
+                dialog->accept();
                 dialog->deleteLater();
+
+                auto loadAction = [this, result]() {
+                  track_->clear();
+                  for (const auto &seg : result.segments) {
+                    SubtitleItem item;
+                    item.id = QUuid::createUuid().toString();
+                    item.text = seg.text;
+                    item.startMs = seg.startMs;
+                    item.endMs = seg.endMs;
+                    item.speakerId = seg.speakerId;
+                    if (track_) {
+                      track_->applyDefaultStyle(item);
+                    }
+                    track_->addItem(item);
+                    track_->autoRegisterSpeaker(seg.speakerId);
+                  }
+                };
+
+                if (track_) {
+                  track_->executeBatchAction(tr("语音转文字"), loadAction);
+                } else {
+                  loadAction();
+                }
+
+                emit asrSucceeded();
+                transcoder->deleteLater();
+                asrService->deleteLater();
+              }
+            });
+
+    connect(transcoder, &AudioTranscoder::transcodingFailed, this,
+            [dialog](const QString &error) {
+              qDebug() << "[ASR] transcodingFailed:" << error;
+              dialog->setError(tr("提取音频失败: %1").arg(error));
+            });
+
+    transcoder->transcode(localPath);
+
+  } else {
+    // ------------------------------------------------------------------------
+    // 云端 腾讯云 ASR 识别流程
+    // ------------------------------------------------------------------------
+    QString storageProv = ConfigManager::instance().storageProvider();
+    QObject *uploader = nullptr;
+    if (storageProv == "tencent_cos") {
+      uploader = new CosUploader(this);
+    } else {
+      uploader = new OssUploader(this);
+    }
+
+    auto &cfg = ConfigManager::instance();
+    TencentAsrService *asrService = new TencentAsrService(this);
+    asrService->setEngineModelType(cfg.engineModelType());
+    asrService->setSentenceMaxLength(cfg.sentenceMaxLength());
+    asrService->setSpeakerDiarization(cfg.speakerDiarization());
+
+    connect(dialog, &AsrProgressDialog::canceled, this,
+            [this, dialog, transcoder, uploader, asrService]() {
+              qDebug() << "[ASR] canceled signal received (Cloud)";
+              asrCancelledByUser_ = true;
+              QPointer<AudioTranscoder> t(transcoder);
+              QPointer<QObject> u(uploader);
+              QPointer<TencentAsrService> a(asrService);
+              if (t)
+                t->abort();
+              if (u)
+                QMetaObject::invokeMethod(u, "abort");
+              if (a)
+                a->abort();
+              qDebug() << "[ASR] cancel handler done, cleaning up";
+              dialog->deleteLater();
+              transcoder->deleteLater();
+              if (u)
+                u->deleteLater();
+              asrService->deleteLater();
+            });
+
+    // Connect transcoder and uploader events
+    if (storageProv == "tencent_cos") {
+      auto *cos = qobject_cast<CosUploader *>(uploader);
+      connect(transcoder, &AudioTranscoder::transcodingFinished, cos,
+              &CosUploader::upload);
+      connect(cos, &CosUploader::uploadFinished, this,
+              [dialog, asrService](const QString &, const QString &presignedUrl) {
+                dialog->setStage(AsrProgressDialog::Stage::Recognition);
+                asrService->transcribe(presignedUrl);
+              });
+      connect(cos, &CosUploader::uploadFailed, this,
+              [dialog](const QString &error) {
+                qDebug() << "[ASR] uploadFailed:" << error;
+                dialog->setError(tr("上传失败: %1").arg(error));
+              });
+    } else {
+      auto *oss = qobject_cast<OssUploader *>(uploader);
+      connect(transcoder, &AudioTranscoder::transcodingFinished, oss,
+              &OssUploader::upload);
+      connect(oss, &OssUploader::uploadFinished, this,
+              [dialog, asrService](const QString &, const QString &presignedUrl) {
+                dialog->setStage(AsrProgressDialog::Stage::Recognition);
+                asrService->transcribe(presignedUrl);
+              });
+      connect(oss, &OssUploader::uploadFailed, this,
+              [dialog](const QString &error) {
+                qDebug() << "[ASR] uploadFailed:" << error;
+                dialog->setError(tr("上传失败: %1").arg(error));
+              });
+    }
+
+    connect(asrService, &AsrServiceBase::transcribeFinished, this,
+            [this, transcoder, uploader, asrService,
+             dialog](const AsrServiceBase::TranscriptResult &result) {
+              qDebug() << "[ASR] Cloud transcribeFinished success=" << result.success
+                       << "asrCancelledByUser_=" << asrCancelledByUser_;
+              if (!result.success) {
+                if (!asrCancelledByUser_) {
+                  qDebug() << "[ASR] real recognition error, showing on dialog";
+                  dialog->setError(result.errorMessage);
+                } else {
+                  qDebug() << "[ASR] cancelled by user, closing dialog";
+                  dialog->deleteLater();
+                  transcoder->deleteLater();
+                  if (uploader)
+                    uploader->deleteLater();
+                  asrService->deleteLater();
+                }
+              } else {
+                dialog->accept();
+                dialog->deleteLater();
+
+                auto loadAction = [this, result]() {
+                  track_->clear();
+                  for (const auto &seg : result.segments) {
+                    SubtitleItem item;
+                    item.id = QUuid::createUuid().toString();
+                    item.text = seg.text;
+                    item.startMs = seg.startMs;
+                    item.endMs = seg.endMs;
+                    item.speakerId = seg.speakerId;
+                    if (track_) {
+                      track_->applyDefaultStyle(item);
+                    }
+                    track_->addItem(item);
+                    track_->autoRegisterSpeaker(seg.speakerId);
+                  }
+                };
+
+                if (track_) {
+                  track_->executeBatchAction(tr("语音转文字"), loadAction);
+                } else {
+                  loadAction();
+                }
+
+                emit asrSucceeded();
                 transcoder->deleteLater();
                 if (uploader)
                   uploader->deleteLater();
                 asrService->deleteLater();
               }
-            } else {
-              dialog->accept();
-              dialog->deleteLater();
+            });
 
-              auto loadAction = [this, result]() {
-                track_->clear();
-                for (const auto &seg : result.segments) {
-                  SubtitleItem item;
-                  item.id = QUuid::createUuid().toString();
-                  item.text = seg.text;
-                  item.startMs = seg.startMs;
-                  item.endMs = seg.endMs;
-                  item.speakerId = seg.speakerId;
-                  if (track_) {
-                    track_->applyDefaultStyle(item);
-                  }
-                  track_->addItem(item);
-                  track_->autoRegisterSpeaker(seg.speakerId);
-                }
-              };
+    connect(transcoder, &AudioTranscoder::transcodingFailed, this,
+            [dialog](const QString &error) {
+              qDebug() << "[ASR] transcodingFailed:" << error;
+              dialog->setError(tr("提取音频失败: %1").arg(error));
+            });
 
-              if (track_) {
-                track_->executeBatchAction(tr("语音转文字"), loadAction);
-              } else {
-                loadAction();
-              }
-
-              emit asrSucceeded();
-              transcoder->deleteLater();
-              if (uploader)
-                uploader->deleteLater();
-              asrService->deleteLater();
-            }
-          });
-
-  connect(transcoder, &AudioTranscoder::transcodingFailed, this,
-          [dialog](const QString &error) {
-            qDebug() << "[ASR] transcodingFailed:" << error;
-            dialog->setError(tr("Transcoding failed: %1").arg(error));
-          });
-
-  transcoder->transcode(localPath);
+    transcoder->transcode(localPath);
+  }
 }
 
 void TimelinePanel::wheelEvent(QWheelEvent *event) {

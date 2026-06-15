@@ -15,6 +15,10 @@ public:
   // FFmpeg
   QString ffmpegPath() const;
 
+  // ASR provider
+  QString asrProvider() const;
+  void setAsrProvider(const QString &provider);
+
   // Tencent ASR
   QString tencentSecretId() const;
   QString tencentSecretKey() const;
@@ -25,6 +29,16 @@ public:
   void setSentenceMaxLength(int length);
   QString engineModelType() const;
   void setEngineModelType(const QString &model);
+
+  // Whisper Local ASR
+  QString whisperModelPath() const;
+  void setWhisperModelPath(const QString &path);
+  QString whisperModel() const;
+  void setWhisperModel(const QString &model);
+  QString whisperLanguage() const;
+  void setWhisperLanguage(const QString &lang);
+  int whisperThreads() const;
+  void setWhisperThreads(int threads);
 
   // Aliyun OSS
   QString ossAccessKeyId() const;

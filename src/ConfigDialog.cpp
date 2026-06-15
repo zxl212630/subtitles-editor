@@ -113,6 +113,15 @@ ConfigDialog::ConfigDialog(QWidget *parent) : BaseDialog(parent) {
     connect(le, &QLineEdit::textChanged, this, &ConfigDialog::checkDirtyState);
   }
 
+  connect(whisperModelPathEdit_, &QLineEdit::textChanged, this,
+          &ConfigDialog::checkDirtyState);
+  connect(whisperModelCombo_, &QComboBox::currentTextChanged, this,
+          &ConfigDialog::checkDirtyState);
+  connect(whisperLangCombo_, &QComboBox::currentTextChanged, this,
+          &ConfigDialog::checkDirtyState);
+  connect(whisperThreadsSpin_, QOverload<int>::of(&QSpinBox::valueChanged),
+          this, &ConfigDialog::checkDirtyState);
+
   connect(ossBucketEdit_, &QLineEdit::textChanged, this,
           [this](const QString &text) {
             if (currentProvider_ == "aliyun_oss")
@@ -300,12 +309,29 @@ void ConfigDialog::loadConfig() {
   tencentSecretIdEdit_->setText(initialConfig_["tc_sid"].toString());
   tencentSecretKeyEdit_->setText(initialConfig_["tc_skey"].toString());
 
-  speakerDiarizationCheck_->setChecked(
-      initialConfig_["tc_speaker_diarization"].toBool());
   sentenceMaxLengthSpin_->setValue(
       initialConfig_["tc_sentence_max_length"].toInt());
   engineModelTypeCombo_->setCurrentIndex(engineModelTypeCombo_->findData(
       initialConfig_["tc_engine_model_type"].toString()));
+
+  initialConfig_["asr_provider"] = cfg.asrProvider();
+  initialConfig_["wp_model_path"] = cfg.whisperModelPath();
+  initialConfig_["wp_model"] = cfg.whisperModel();
+  initialConfig_["wp_language"] = cfg.whisperLanguage();
+  initialConfig_["wp_threads"] = cfg.whisperThreads();
+
+  asrProviderCombo_->setCurrentIndex(
+      asrProviderCombo_->findData(initialConfig_["asr_provider"].toString()));
+  whisperModelPathEdit_->setText(initialConfig_["wp_model_path"].toString());
+  whisperModelCombo_->setCurrentIndex(
+      whisperModelCombo_->findData(initialConfig_["wp_model"].toString()));
+  whisperLangCombo_->setCurrentIndex(
+      whisperLangCombo_->findData(initialConfig_["wp_language"].toString()));
+  whisperThreadsSpin_->setValue(initialConfig_["wp_threads"].toInt());
+
+  QString asrProvider = asrProviderCombo_->currentData().toString();
+  tencentAsrContainer_->setVisible(asrProvider == "tencent_asr");
+  whisperAsrContainer_->setVisible(asrProvider == "local_whisper");
 
   // Sync title
   if (sidebarList_->currentItem()) {
@@ -411,6 +437,16 @@ bool ConfigDialog::isDirty() const {
        initialConfig_["tc_sentence_max_length"].toInt()) ||
       (engineModelTypeCombo_->currentData().toString() !=
        initialConfig_["tc_engine_model_type"].toString()) ||
+      (asrProviderCombo_->currentData().toString() !=
+       initialConfig_["asr_provider"].toString()) ||
+      (whisperModelPathEdit_->text() !=
+       initialConfig_["wp_model_path"].toString()) ||
+      (whisperModelCombo_->currentData().toString() !=
+       initialConfig_["wp_model"].toString()) ||
+      (whisperLangCombo_->currentData().toString() !=
+       initialConfig_["wp_language"].toString()) ||
+      (whisperThreadsSpin_->value() !=
+       initialConfig_["wp_threads"].toInt()) ||
       (subtitleFontFamilyCombo_->currentText() !=
        initialConfig_["sub_fontFamily"].toString()) ||
       (subtitleFontSizeSpin_->value() !=
@@ -491,6 +527,12 @@ void ConfigDialog::saveConfig() {
   cfg.setSentenceMaxLength(sentenceMaxLengthSpin_->value());
   cfg.setEngineModelType(engineModelTypeCombo_->currentData().toString());
 
+  cfg.setAsrProvider(asrProviderCombo_->currentData().toString());
+  cfg.setWhisperModelPath(whisperModelPathEdit_->text());
+  cfg.setWhisperModel(whisperModelCombo_->currentData().toString());
+  cfg.setWhisperLanguage(whisperLangCombo_->currentData().toString());
+  cfg.setWhisperThreads(whisperThreadsSpin_->value());
+
   // 字幕设置
   cfg.setValue("subtitle", "fontFamily",
                subtitleFontFamilyCombo_->currentText());
@@ -526,6 +568,12 @@ void ConfigDialog::saveConfig() {
   initialConfig_["primary_color"] = colorSelector_->currentColor();
   initialConfig_["storage_provider"] =
       storageProviderCombo_->currentData().toString();
+  initialConfig_["asr_provider"] =
+      asrProviderCombo_->currentData().toString();
+  initialConfig_["wp_model_path"] = whisperModelPathEdit_->text();
+  initialConfig_["wp_model"] = whisperModelCombo_->currentData().toString();
+  initialConfig_["wp_language"] = whisperLangCombo_->currentData().toString();
+  initialConfig_["wp_threads"] = whisperThreadsSpin_->value();
   initialConfig_["oss_bucket"] = tempAliBucket_;
   initialConfig_["oss_region"] = tempAliRegion_;
   initialConfig_["oss_ak"] = tempAliAk_;
@@ -649,6 +697,21 @@ void ConfigDialog::retranslateUi() {
   sidLabel_->setText(tr("密钥 ID (Secret ID)"));
   skeyLabel_->setText(tr("密钥 (Secret Key)"));
   asrProviderCombo_->setItemText(0, tr("腾讯云 ASR"));
+  asrProviderCombo_->setItemText(1, tr("本地 ASR (Whisper)"));
+
+  if (whisperModelPathLabel_) {
+    whisperModelPathLabel_->setText(tr("模型存放目录"));
+    whisperModelPathBtn_->setText(tr("浏览..."));
+    whisperModelLabel_->setText(tr("默认模型大小"));
+    whisperLangLabel_->setText(tr("默认识别语言"));
+    whisperThreadsLabel_->setText(tr("线程数"));
+    
+    whisperLangCombo_->setItemText(0, tr("自动检测"));
+    whisperLangCombo_->setItemText(1, tr("中文 (Chinese)"));
+    whisperLangCombo_->setItemText(2, tr("英文 (English)"));
+    whisperLangCombo_->setItemText(3, tr("日文 (Japanese)"));
+    whisperLangCombo_->setItemText(4, tr("韩文 (Korean)"));
+  }
 
   speakerDiarizationLabel_->setText(tr("说话人识别"));
   speakerDiarizationCheck_->setText(tr("开启说话人识别"));
@@ -946,32 +1009,39 @@ void ConfigDialog::setupUi() {
   asrProviderCombo_ = new QComboBox(asrPage);
   asrProviderCombo_->setFixedHeight(32);
   asrProviderCombo_->addItem(tr("腾讯云 ASR"), "tencent_asr");
+  asrProviderCombo_->addItem(tr("本地 ASR (Whisper)"), "local_whisper");
   asrLayout->addWidget(asrProviderCombo_);
 
-  auto *appIdLabel = new QLabel(tr("应用 ID (App ID)"), asrPage);
+  // Tencent ASR Container
+  tencentAsrContainer_ = new QWidget(asrPage);
+  auto *tencentLayout = new QVBoxLayout(tencentAsrContainer_);
+  tencentLayout->setContentsMargins(0, 0, 0, 0);
+  tencentLayout->setSpacing(15);
+
+  auto *appIdLabel = new QLabel(tr("应用 ID (App ID)"), tencentAsrContainer_);
   appIdLabel_ = appIdLabel;
   appIdLabel->setObjectName("ConfigFieldLabel");
-  asrLayout->addWidget(appIdLabel);
-  tencentAppIdEdit_ = new QLineEdit(asrPage);
+  tencentLayout->addWidget(appIdLabel);
+  tencentAppIdEdit_ = new QLineEdit(tencentAsrContainer_);
   tencentAppIdEdit_->setFixedHeight(32);
-  asrLayout->addWidget(tencentAppIdEdit_);
+  tencentLayout->addWidget(tencentAppIdEdit_);
 
-  auto *sidLabel = new QLabel(tr("密钥 ID (Secret ID)"), asrPage);
+  auto *sidLabel = new QLabel(tr("密钥 ID (Secret ID)"), tencentAsrContainer_);
   sidLabel_ = sidLabel;
   sidLabel->setObjectName("ConfigFieldLabel");
-  asrLayout->addWidget(sidLabel);
-  tencentSecretIdEdit_ = new QLineEdit(asrPage);
+  tencentLayout->addWidget(sidLabel);
+  tencentSecretIdEdit_ = new QLineEdit(tencentAsrContainer_);
   tencentSecretIdEdit_->setFixedHeight(32);
-  asrLayout->addWidget(tencentSecretIdEdit_);
+  tencentLayout->addWidget(tencentSecretIdEdit_);
 
-  auto *skeyLabel = new QLabel(tr("密钥 (Secret Key)"), asrPage);
+  auto *skeyLabel = new QLabel(tr("密钥 (Secret Key)"), tencentAsrContainer_);
   skeyLabel_ = skeyLabel;
   skeyLabel->setObjectName("ConfigFieldLabel");
-  asrLayout->addWidget(skeyLabel);
-  tencentSecretKeyEdit_ = new QLineEdit(asrPage);
+  tencentLayout->addWidget(skeyLabel);
+  tencentSecretKeyEdit_ = new QLineEdit(tencentAsrContainer_);
   tencentSecretKeyEdit_->setFixedHeight(32);
   tencentSecretKeyEdit_->setEchoMode(QLineEdit::Password);
-  asrLayout->addWidget(tencentSecretKeyEdit_);
+  tencentLayout->addWidget(tencentSecretKeyEdit_);
 
   asrEyeAction_ = tencentSecretKeyEdit_->addAction(createEyeIcon(false),
                                                    QLineEdit::TrailingPosition);
@@ -988,28 +1058,28 @@ void ConfigDialog::setupUi() {
     btn->setCursor(Qt::PointingHandCursor);
   }
 
-  speakerDiarizationLabel_ = new QLabel(tr("说话人识别"), asrPage);
+  speakerDiarizationLabel_ = new QLabel(tr("说话人识别"), tencentAsrContainer_);
   speakerDiarizationLabel_->setObjectName("ConfigFieldLabel");
-  asrLayout->addWidget(speakerDiarizationLabel_);
-  speakerDiarizationCheck_ = new QCheckBox(tr("开启说话人识别"), asrPage);
+  tencentLayout->addWidget(speakerDiarizationLabel_);
+  speakerDiarizationCheck_ = new QCheckBox(tr("开启说话人识别"), tencentAsrContainer_);
   speakerDiarizationCheck_->setFixedHeight(32);
   speakerDiarizationCheck_->setObjectName("ConfigCheckBox");
-  asrLayout->addWidget(speakerDiarizationCheck_);
+  tencentLayout->addWidget(speakerDiarizationCheck_);
 
-  maxLenLabel_ = new QLabel(tr("单行字幕最大字数"), asrPage);
+  maxLenLabel_ = new QLabel(tr("单行字幕最大字数"), tencentAsrContainer_);
   maxLenLabel_->setObjectName("ConfigFieldLabel");
-  asrLayout->addWidget(maxLenLabel_);
-  sentenceMaxLengthSpin_ = new QSpinBox(asrPage);
+  tencentLayout->addWidget(maxLenLabel_);
+  sentenceMaxLengthSpin_ = new QSpinBox(tencentAsrContainer_);
   sentenceMaxLengthSpin_->setFixedHeight(32);
   sentenceMaxLengthSpin_->setRange(6, 40);
   sentenceMaxLengthSpin_->setValue(16);
   sentenceMaxLengthSpin_->setObjectName("ConfigSpinBox");
-  asrLayout->addWidget(sentenceMaxLengthSpin_);
+  tencentLayout->addWidget(sentenceMaxLengthSpin_);
 
-  engineLabel_ = new QLabel(tr("引擎模型类型"), asrPage);
+  engineLabel_ = new QLabel(tr("引擎模型类型"), tencentAsrContainer_);
   engineLabel_->setObjectName("ConfigFieldLabel");
-  asrLayout->addWidget(engineLabel_);
-  engineModelTypeCombo_ = new QComboBox(asrPage);
+  tencentLayout->addWidget(engineLabel_);
+  engineModelTypeCombo_ = new QComboBox(tencentAsrContainer_);
   engineModelTypeCombo_->setFixedHeight(32);
   engineModelTypeCombo_->addItem("16k_zh_en(中英粤+9种方言大模型)",
                                  "16k_zh_en");
@@ -1038,7 +1108,89 @@ void ConfigDialog::setupUi() {
   engineModelTypeCombo_->addItem("16k_de(德语)", "16k_de");
   engineModelTypeCombo_->addItem("16k_zh_medical(中文医疗)", "16k_zh_medical");
   engineModelTypeCombo_->setObjectName("ConfigComboBox");
-  asrLayout->addWidget(engineModelTypeCombo_);
+  tencentLayout->addWidget(engineModelTypeCombo_);
+
+  asrLayout->addWidget(tencentAsrContainer_);
+
+  // Whisper ASR Container
+  whisperAsrContainer_ = new QWidget(asrPage);
+  auto *whisperLayout = new QVBoxLayout(whisperAsrContainer_);
+  whisperLayout->setContentsMargins(0, 0, 0, 0);
+  whisperLayout->setSpacing(15);
+
+  whisperModelPathLabel_ = new QLabel(tr("模型存放目录"), whisperAsrContainer_);
+  whisperModelPathLabel_->setObjectName("ConfigFieldLabel");
+  whisperLayout->addWidget(whisperModelPathLabel_);
+
+  auto *pathLayout = new QHBoxLayout();
+  pathLayout->setSpacing(10);
+  whisperModelPathEdit_ = new QLineEdit(whisperAsrContainer_);
+  whisperModelPathEdit_->setFixedHeight(32);
+  whisperModelPathEdit_->setReadOnly(true);
+  pathLayout->addWidget(whisperModelPathEdit_);
+
+  whisperModelPathBtn_ = new QPushButton(tr("浏览..."), whisperAsrContainer_);
+  whisperModelPathBtn_->setFixedHeight(32);
+  whisperModelPathBtn_->setFixedWidth(80);
+  pathLayout->addWidget(whisperModelPathBtn_);
+  whisperLayout->addLayout(pathLayout);
+
+  connect(whisperModelPathBtn_, &QPushButton::clicked, this, [this]() {
+    QString dir = QFileDialog::getExistingDirectory(this, tr("选择模型存放目录"), whisperModelPathEdit_->text());
+    if (!dir.isEmpty()) {
+      whisperModelPathEdit_->setText(dir);
+      checkDirtyState();
+    }
+  });
+
+  whisperModelLabel_ = new QLabel(tr("默认模型大小"), whisperAsrContainer_);
+  whisperModelLabel_->setObjectName("ConfigFieldLabel");
+  whisperLayout->addWidget(whisperModelLabel_);
+
+  whisperModelCombo_ = new QComboBox(whisperAsrContainer_);
+  whisperModelCombo_->setFixedHeight(32);
+  whisperModelCombo_->addItem("base (~148MB)", "base");
+  whisperModelCombo_->addItem("small (~466MB)", "small");
+  whisperModelCombo_->addItem("medium (~1.5GB)", "medium");
+  whisperModelCombo_->addItem("large-v3 (~2.9GB)", "large-v3");
+  whisperModelCombo_->addItem("large-v3-turbo (~1.5GB)", "large-v3-turbo");
+  whisperModelCombo_->setObjectName("ConfigComboBox");
+  whisperLayout->addWidget(whisperModelCombo_);
+
+  whisperLangLabel_ = new QLabel(tr("默认识别语言"), whisperAsrContainer_);
+  whisperLangLabel_->setObjectName("ConfigFieldLabel");
+  whisperLayout->addWidget(whisperLangLabel_);
+
+  whisperLangCombo_ = new QComboBox(whisperAsrContainer_);
+  whisperLangCombo_->setFixedHeight(32);
+  whisperLangCombo_->addItem(tr("自动检测"), "auto");
+  whisperLangCombo_->addItem(tr("中文 (Chinese)"), "zh");
+  whisperLangCombo_->addItem(tr("英文 (English)"), "en");
+  whisperLangCombo_->addItem(tr("日文 (Japanese)"), "ja");
+  whisperLangCombo_->addItem(tr("韩文 (Korean)"), "ko");
+  whisperLangCombo_->setObjectName("ConfigComboBox");
+  whisperLayout->addWidget(whisperLangCombo_);
+
+  whisperThreadsLabel_ = new QLabel(tr("线程数"), whisperAsrContainer_);
+  whisperThreadsLabel_->setObjectName("ConfigFieldLabel");
+  whisperLayout->addWidget(whisperThreadsLabel_);
+
+  whisperThreadsSpin_ = new QSpinBox(whisperAsrContainer_);
+  whisperThreadsSpin_->setFixedHeight(32);
+  whisperThreadsSpin_->setRange(1, 64);
+  whisperThreadsSpin_->setValue(4);
+  whisperThreadsSpin_->setObjectName("ConfigSpinBox");
+  whisperLayout->addWidget(whisperThreadsSpin_);
+
+  asrLayout->addWidget(whisperAsrContainer_);
+
+  // Toggle Visibility Connect
+  connect(asrProviderCombo_, &QComboBox::currentTextChanged, this, [this]() {
+    QString provider = asrProviderCombo_->currentData().toString();
+    tencentAsrContainer_->setVisible(provider == "tencent_asr");
+    whisperAsrContainer_->setVisible(provider == "local_whisper");
+    checkDirtyState();
+  });
 
   asrLayout->addStretch();
   asrScrollArea->setWidget(asrPage);

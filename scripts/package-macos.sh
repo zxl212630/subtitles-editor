@@ -44,6 +44,7 @@ EOF
 QT_ROOT="${QT_ROOT:-}"
 FFMPEG_ROOT="${FFMPEG_ROOT:-}"
 QWINDOWKIT_ROOT="${QWINDOWKIT_ROOT:-}"
+WHISPER_ROOT="${WHISPER_ROOT:-}"
 DEPS_DIR=""
 TARGET_ARCH=""
 
@@ -52,6 +53,7 @@ while [[ $# -gt 0 ]]; do
         --qt)           QT_ROOT="$2"; shift 2 ;;
         --ffmpeg)       FFMPEG_ROOT="$2"; shift 2 ;;
         --qwindowkit)   QWINDOWKIT_ROOT="$2"; shift 2 ;;
+        --whisper)      WHISPER_ROOT="$2"; shift 2 ;;
         --output)       DMG_NAME="$2"; shift 2 ;;
         --deps-dir)     DEPS_DIR="$2"; shift 2 ;;
         --arch)         TARGET_ARCH="$2"; shift 2 ;;
@@ -69,9 +71,11 @@ if [[ -n "$DEPS_DIR" ]]; then
     [[ -d "$DEPS_DIR/deps/qt6" ]]     || { echo "Error: $DEPS_DIR/deps/qt6 not found" >&2; exit 1; }
     [[ -d "$DEPS_DIR/deps/qwindowkit" ]] || { echo "Error: $DEPS_DIR/deps/qwindowkit not found" >&2; exit 1; }
     [[ -d "$DEPS_DIR/deps/ffmpeg" ]]   || { echo "Error: $DEPS_DIR/deps/ffmpeg not found" >&2; exit 1; }
+    [[ -d "$DEPS_DIR/deps/whisper" ]]  || { echo "Error: $DEPS_DIR/deps/whisper not found" >&2; exit 1; }
     QT_ROOT="$DEPS_DIR/deps/qt6"
     QWINDOWKIT_ROOT="$DEPS_DIR/deps/qwindowkit"
     FFMPEG_ROOT="$DEPS_DIR/deps/ffmpeg"
+    WHISPER_ROOT="$DEPS_DIR/deps/whisper"
 fi
 
 # --- Validate required paths ---
@@ -79,6 +83,7 @@ missing=()
 [[ -z "$QT_ROOT" ]]     && missing+=("--qt (Qt6 根目录)")
 [[ -z "$QWINDOWKIT_ROOT" ]] && missing+=("--qwindowkit (QWindowKit 根目录)")
 [[ -z "$FFMPEG_ROOT" ]] && missing+=("--ffmpeg (FFmpeg 根目录)")
+[[ -z "$WHISPER_ROOT" ]] && missing+=("--whisper (Whisper 根目录)")
 
 if [[ ${#missing[@]} -gt 0 ]]; then
     echo "错误: 缺少必需参数:" >&2
@@ -90,7 +95,7 @@ if [[ ${#missing[@]} -gt 0 ]]; then
     exit 1
 fi
 
-for dir in "$QT_ROOT" "$QWINDOWKIT_ROOT"; do
+for dir in "$QT_ROOT" "$QWINDOWKIT_ROOT" "$WHISPER_ROOT"; do
     [[ -d "$dir" ]] || { echo "错误: 目录不存在: $dir" >&2; exit 1; }
 done
 # FFMPEG_ROOT 可以为空（使用系统 FFmpeg），非空时检查目录
@@ -145,6 +150,9 @@ resolve_rpath() {
     fi
     if [[ -n "$FFMPEG_ROOT" ]]; then
         dirs+=("$FFMPEG_ROOT/lib")
+    fi
+    if [[ -n "$WHISPER_ROOT" ]]; then
+        dirs+=("$WHISPER_ROOT/lib")
     fi
 
     # 最后才是系统级路径作为后备
@@ -202,7 +210,8 @@ cmake -B "$BUILD_DIR" -S "$PROJECT_DIR" \
     -DCMAKE_OSX_DEPLOYMENT_TARGET=12.0 \
     -DQt6_ROOT="$QT_ROOT" \
     -DFFMPEG_ROOT="$FFMPEG_ROOT" \
-    -DQWindowKit_ROOT="$QWINDOWKIT_ROOT"
+    -DQWindowKit_ROOT="$QWINDOWKIT_ROOT" \
+    -Dwhisper_ROOT="$WHISPER_ROOT"
 cmake --build "$BUILD_DIR" -j"$(sysctl -n hw.ncpu)"
 
 [[ ! -d "$APP_BUNDLE" ]] && { echo "ERROR: $APP_BUNDLE not found" >&2; exit 1; }

@@ -102,6 +102,35 @@ find_path(SWSCALE_INCLUDE_DIR libswscale/swscale.h PATHS "${FFMPEG_INCLUDE_DIR}"
 find_path(SWRESAMPLE_INCLUDE_DIR libswresample/swresample.h PATHS "${FFMPEG_INCLUDE_DIR}")
 
 # ============================================================
+# Whisper.cpp
+# ============================================================
+if(NOT DEFINED whisper_ROOT)
+  if(APPLE)
+    set(whisper_ROOT_DEFAULT "$ENV{HOME}/Tools/whisper")
+  elseif(WIN32)
+    set(whisper_ROOT_DEFAULT "C:/Tools/whisper")
+  else()
+    set(whisper_ROOT_DEFAULT "/usr")
+  endif()
+  set(whisper_ROOT "${whisper_ROOT_DEFAULT}" CACHE PATH "whisper.cpp installation root")
+endif()
+
+find_path(WHISPER_INCLUDE_DIR whisper.h PATHS "${whisper_ROOT}/include" NO_DEFAULT_PATH)
+find_library(WHISPER_LIBRARY NAMES whisper libwhisper PATHS "${whisper_ROOT}/lib" NO_DEFAULT_PATH)
+
+if(NOT WHISPER_INCLUDE_DIR OR NOT WHISPER_LIBRARY)
+  # Fallback to system paths
+  find_path(WHISPER_INCLUDE_DIR whisper.h)
+  find_library(WHISPER_LIBRARY NAMES whisper libwhisper)
+endif()
+
+if(WHISPER_INCLUDE_DIR AND WHISPER_LIBRARY)
+  message(STATUS "Found whisper.cpp: ${WHISPER_LIBRARY} (headers: ${WHISPER_INCLUDE_DIR})")
+else()
+  message(FATAL_ERROR "Could not find whisper.cpp library or headers. Please specify -Dwhisper_ROOT=/path/to/whisper")
+endif()
+
+# ============================================================
 # Source files
 # ============================================================
 set(SOURCES
@@ -114,6 +143,7 @@ set(SOURCES
     src/SubtitleTrack.cpp
     src/AsrServiceBase.cpp
     src/TencentAsrService.cpp
+    src/WhisperAsrService.cpp
     src/SubtitleExporter.cpp
     src/SubtitleListModel.cpp
     src/SubtitleListDelegate.cpp
@@ -152,6 +182,7 @@ set(HEADERS
     include/SubtitleTrack.h
     include/AsrServiceBase.h
     include/TencentAsrService.h
+    include/WhisperAsrService.h
     include/SubtitleExporter.h
     include/SubtitleListModel.h
     include/SubtitleListDelegate.h
@@ -209,6 +240,7 @@ target_include_directories(${PROJECT_NAME} PRIVATE
     "${Qt6_ROOT}/include"
     "${QWindowKit_ROOT}/include"
     "${FFMPEG_INCLUDE_DIR}"
+    "${WHISPER_INCLUDE_DIR}"
 )
 
 target_link_directories(${PROJECT_NAME} PRIVATE
@@ -225,6 +257,7 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
     Qt::Multimedia
     Qt::Svg
     Qt::OpenGLWidgets
+    ${WHISPER_LIBRARY}
 )
 
 # QWindowKit dependencies
