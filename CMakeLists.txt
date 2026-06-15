@@ -128,6 +128,7 @@ set(SOURCES
     src/SeekDecoder.cpp
     src/QtAudioOutput.cpp
     src/SoftwareVideoRenderer.cpp
+    src/CursorManager.cpp
     src/HardwareVideoRenderer.mm
     src/MediaPlayer.cpp
     src/VideoPropertyDialog.cpp
@@ -166,6 +167,7 @@ set(HEADERS
     include/SeekDecoder.h
     include/QtAudioOutput.h
     include/SoftwareVideoRenderer.h
+    include/CursorManager.h
     include/HardwareVideoRenderer.h
     include/IVideoRenderer.h
     include/MediaPlayer.h

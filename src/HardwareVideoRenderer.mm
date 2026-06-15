@@ -1,4 +1,5 @@
 #include "HardwareVideoRenderer.h"
+#include "CursorManager.h"
 #include "SubtitleRenderer.h"
 #include "ThemeManager.h"
 
@@ -6,9 +7,11 @@
 #include <QCursor>
 #include <QDebug>
 #include <QElapsedTimer>
+#include <QMap>
 #include <QMouseEvent>
 #include <QPaintEvent>
 #include <QPainter>
+#include <QPainterPath>
 #include <cmath>
 
 #ifdef Q_OS_MAC
@@ -21,73 +24,40 @@
 #define GL_TEXTURE_RECTANGLE 0x84F5
 #endif
 
-static QCursor getRotateCursor() {
-  static bool initialized = false;
-  static QCursor rotateCursor;
-  if (!initialized) {
-    QPixmap pixmap(":/icons/rotate.svg");
-    if (!pixmap.isNull()) {
-      QSize cursorSize(18, 18);
-      QPixmap scaledPixmap = pixmap.scaled(cursorSize, Qt::KeepAspectRatio,
-                                           Qt::SmoothTransformation);
-      rotateCursor = QCursor(scaledPixmap, cursorSize.width() / 2,
-                             cursorSize.height() / 2);
-    } else {
-      rotateCursor = QCursor(Qt::PointingHandCursor);
-    }
-    initialized = true;
-  }
-  return rotateCursor;
-}
-
-static Qt::CursorShape getResizeCursor(HardwareVideoRenderer::DragMode hit,
-                                       double rotation) {
+static QCursor getResizeCursor(HardwareVideoRenderer::DragMode hit,
+                               double rotation, const QWidget *widget) {
   double baseAngle = 0.0;
   switch (hit) {
   case HardwareVideoRenderer::DragResizeMR:
     baseAngle = 0.0;
     break;
-  case HardwareVideoRenderer::DragResizeTR:
+  case HardwareVideoRenderer::DragResizeBR:
     baseAngle = 45.0;
     break;
-  case HardwareVideoRenderer::DragResizeTM:
+  case HardwareVideoRenderer::DragResizeBM:
     baseAngle = 90.0;
     break;
-  case HardwareVideoRenderer::DragResizeTL:
+  case HardwareVideoRenderer::DragResizeBL:
     baseAngle = 135.0;
     break;
   case HardwareVideoRenderer::DragResizeML:
     baseAngle = 180.0;
     break;
-  case HardwareVideoRenderer::DragResizeBL:
+  case HardwareVideoRenderer::DragResizeTL:
     baseAngle = 225.0;
     break;
-  case HardwareVideoRenderer::DragResizeBM:
+  case HardwareVideoRenderer::DragResizeTM:
     baseAngle = 270.0;
     break;
-  case HardwareVideoRenderer::DragResizeBR:
+  case HardwareVideoRenderer::DragResizeTR:
     baseAngle = 315.0;
     break;
   default:
     return Qt::ArrowCursor;
   }
 
-  // 使用减法以保证顺时针旋转时光标变化方向在 Qt 的 y-down 坐标系下完全正确
-  double actualAngle = baseAngle - rotation;
-  double normAngle = std::fmod(actualAngle, 180.0);
-  if (normAngle < 0.0) {
-    normAngle += 180.0;
-  }
-
-  if (normAngle < 22.5 || normAngle >= 157.5) {
-    return Qt::SizeHorCursor;
-  } else if (normAngle >= 22.5 && normAngle < 67.5) {
-    return Qt::SizeFDiagCursor;
-  } else if (normAngle >= 67.5 && normAngle < 112.5) {
-    return Qt::SizeVerCursor;
-  } else {
-    return Qt::SizeBDiagCursor;
-  }
+  double actualAngle = baseAngle + rotation;
+  return CursorManager::resizeCursor(actualAngle, widget);
 }
 
 #ifdef QT_DEBUG
@@ -1294,7 +1264,7 @@ void HardwareVideoRenderer::mouseMoveEvent(QMouseEvent *event) {
     QTransform inv = getSubtitleTransform().inverted();
     QPoint localPos = inv.map(event->pos());
     if (pixelRect.contains(localPos)) {
-      setCursor(Qt::IBeamCursor);
+      setCursor(CursorManager::iBeamCursor(this));
     } else {
       unsetCursor();
     }
@@ -1436,10 +1406,10 @@ void HardwareVideoRenderer::mouseMoveEvent(QMouseEvent *event) {
   DragMode mode = hitTest(event->pos());
   switch (mode) {
   case DragRotate:
-    setCursor(getRotateCursor());
+    setCursor(CursorManager::rotateCursor(this));
     break;
   case DragMove:
-    setCursor(Qt::SizeAllCursor);
+    setCursor(CursorManager::sizeAllCursor(this));
     break;
   case DragResizeTL:
   case DragResizeTM:
@@ -1449,7 +1419,7 @@ void HardwareVideoRenderer::mouseMoveEvent(QMouseEvent *event) {
   case DragResizeBL:
   case DragResizeBM:
   case DragResizeBR:
-    setCursor(getResizeCursor(mode, subtitleRotation_));
+    setCursor(getResizeCursor(mode, subtitleRotation_, this));
     break;
   default:
     unsetCursor();
@@ -1469,10 +1439,10 @@ void HardwareVideoRenderer::mouseReleaseEvent(QMouseEvent *event) {
     DragMode hit = hitTest(event->pos());
     switch (hit) {
     case DragMove:
-      setCursor(Qt::SizeAllCursor);
+      setCursor(CursorManager::sizeAllCursor(this));
       break;
     case DragRotate:
-      setCursor(getRotateCursor());
+      setCursor(CursorManager::rotateCursor(this));
       break;
     case DragResizeTL:
     case DragResizeTM:
@@ -1482,7 +1452,7 @@ void HardwareVideoRenderer::mouseReleaseEvent(QMouseEvent *event) {
     case DragResizeBL:
     case DragResizeBM:
     case DragResizeBR:
-      setCursor(getResizeCursor(hit, subtitleRotation_));
+      setCursor(getResizeCursor(hit, subtitleRotation_, this));
       break;
     default:
       unsetCursor();

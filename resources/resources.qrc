@@ -40,6 +40,8 @@
         <file>icons/align-right.svg</file>
         <file>icons/align-justify.svg</file>
         <file>icons/rotate.svg</file>
+        <file>icons/cursor-move.svg</file>
+        <file>icons/cursor-resize.svg</file>
         <file>icons/select-all.svg</file>
         <file>icons/deselect.svg</file>
         <file>icons/undo.svg</file>
