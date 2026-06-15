@@ -108,6 +108,8 @@ TimelinePanel::TimelinePanel(QWidget *parent) : QWidget(parent) {
   createToolBtn(addBtn_, "TimelineToolbarBtn");
   createToolBtn(splitBtn_, "TimelineToolbarBtn");
   createToolBtn(deleteBtn_, "TimelineToolbarBtn");
+  createToolBtn(trimRightBtn_, "TimelineToolbarBtn");
+  createToolBtn(trimLeftBtn_, "TimelineToolbarBtn");
 
   tbLayout->addStretch();
 
@@ -134,6 +136,8 @@ TimelinePanel::TimelinePanel(QWidget *parent) : QWidget(parent) {
   addBtn_->installEventFilter(ToolTipEventFilter::instance());
   splitBtn_->installEventFilter(ToolTipEventFilter::instance());
   deleteBtn_->installEventFilter(ToolTipEventFilter::instance());
+  trimRightBtn_->installEventFilter(ToolTipEventFilter::instance());
+  trimLeftBtn_->installEventFilter(ToolTipEventFilter::instance());
   snapBtn_->installEventFilter(ToolTipEventFilter::instance());
   fitBtn_->installEventFilter(ToolTipEventFilter::instance());
   zoomOutBtn_->installEventFilter(ToolTipEventFilter::instance());
@@ -259,6 +263,11 @@ TimelinePanel::TimelinePanel(QWidget *parent) : QWidget(parent) {
       });
     }
   });
+
+  connect(trimRightBtn_, &QToolButton::clicked, this,
+          [this]() { trimSubtitleEdgeToPlayhead(true); });
+  connect(trimLeftBtn_, &QToolButton::clicked, this,
+          [this]() { trimSubtitleEdgeToPlayhead(false); });
 
   connect(snapBtn_, &QToolButton::toggled, this, [this](bool checked) {
     snapEnabled_ = checked;
@@ -1861,6 +1870,10 @@ void TimelinePanel::updateIcons() {
   splitBtn_->setIcon(renderSvgToIcon(":/icons/scissors.svg", textNormal, 16));
   deleteBtn_->setIcon(
       renderSvgToIcon(":/icons/delete-subtitle.svg", textNormal, 16));
+  trimRightBtn_->setIcon(
+      renderSvgToIcon(":/icons/trim-right.svg", textNormal, 16));
+  trimLeftBtn_->setIcon(
+      renderSvgToIcon(":/icons/trim-left.svg", textNormal, 16));
   snapBtn_->setIcon(renderSvgToIcon(":/icons/snap.svg", textNormal, 16));
   fitBtn_->setIcon(renderSvgToIcon(":/icons/fit.svg", textNormal, 16));
   zoomOutBtn_->setIcon(renderSvgToIcon(":/icons/zoom-out.svg", textNormal, 16));
@@ -1880,6 +1893,8 @@ void TimelinePanel::retranslateUi() {
   addBtn_->setToolTip(tr("添加字幕"));
   splitBtn_->setToolTip(tr("切割字幕"));
   deleteBtn_->setToolTip(tr("删除字幕"));
+  trimRightBtn_->setToolTip(tr("右对齐"));
+  trimLeftBtn_->setToolTip(tr("左对齐"));
   snapBtn_->setToolTip(tr("自动吸附"));
   fitBtn_->setToolTip(tr("自适应"));
   zoomOutBtn_->setToolTip(tr("缩小"));
@@ -1927,6 +1942,10 @@ void TimelinePanel::updateShortcuts() {
                 tr("切割字幕"));
   applyShortcut(deleteBtn_, "timeline_delete", QKeySequence(DEFAULT_DELETE_KEY),
                 tr("删除字幕"));
+  applyShortcut(trimRightBtn_, "timeline_trim_right",
+                QKeySequence(Qt::Key_BracketRight), tr("右对齐"));
+  applyShortcut(trimLeftBtn_, "timeline_trim_left",
+                QKeySequence(Qt::Key_BracketLeft), tr("左对齐"));
   applyShortcut(snapBtn_, "timeline_snap", QKeySequence(Qt::CTRL | Qt::Key_N),
                 tr("自动吸附"));
   applyShortcut(fitBtn_, "timeline_fit", QKeySequence(Qt::SHIFT | Qt::Key_Z),
