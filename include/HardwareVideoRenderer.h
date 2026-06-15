@@ -99,7 +99,9 @@ private:
   int lastTexH_ = 0;
 #endif
   QImage currentSwFrame_;
+#ifdef Q_OS_MAC
   void renderHwFrameOpenGL(CVPixelBufferRef cvBuf, int w, int h);
+#endif
   int currentWidth_ = 0;
   int currentHeight_ = 0;
   bool hasFrame_ = false;

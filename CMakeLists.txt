@@ -129,7 +129,6 @@ set(SOURCES
     src/QtAudioOutput.cpp
     src/SoftwareVideoRenderer.cpp
     src/CursorManager.cpp
-    src/HardwareVideoRenderer.mm
     src/MediaPlayer.cpp
     src/VideoPropertyDialog.cpp
     src/ConfigDialog.cpp
@@ -168,7 +167,6 @@ set(HEADERS
     include/QtAudioOutput.h
     include/SoftwareVideoRenderer.h
     include/CursorManager.h
-    include/HardwareVideoRenderer.h
     include/IVideoRenderer.h
     include/MediaPlayer.h
     include/VideoPropertyDialog.h
@@ -264,6 +262,10 @@ endif()
 # ============================================================
 if(APPLE)
     enable_language(OBJCXX)
+    target_sources(${PROJECT_NAME} PRIVATE
+        src/HardwareVideoRenderer.mm
+        include/HardwareVideoRenderer.h
+    )
     set_target_properties(${PROJECT_NAME} PROPERTIES
         MACOSX_BUNDLE YES
         MACOSX_BUNDLE_GUI_IDENTIFIER "com.subtitles.editor"
