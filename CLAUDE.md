@@ -10,26 +10,26 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ```bash
 # Configure (default SDK paths, override with -D flags)
-cmake -B cmake-build-debug -S .
+cmake -B cmake-build-release -S . -DCMAKE_BUILD_TYPE=Release
 
 # Build
-cmake --build cmake-build-debug
+cmake --build cmake-build-release
 
 # Run
-./cmake-build-debug/subtitles-editor.app/Contents/MacOS/subtitles-editor
+./cmake-build-release/subtitles-editor.app/Contents/MacOS/subtitles-editor
 ```
 
 ### Windows (x64)
 
 ```powershell
 # Configure (default SDK paths, override with -D flags)
-cmake -B cmake-build-debug -S .
+cmake -B cmake-build-release -S .
 
 # Build
-cmake --build cmake-build-debug --config Debug
+cmake --build cmake-build-release --config Release
 
 # Run
-.\cmake-build-debug\Debug\subtitles-editor.exe
+.\cmake-build-release\Release\subtitles-editor.exe
 ```
 
 ## Formatting & Analysis
@@ -42,7 +42,7 @@ clang-format -i src/*.cpp include/*.h
 clang-tidy src/*.cpp -- -std=c++17
 
 # Build
-cmake --build cmake-build-debug
+cmake --build cmake-build-release
 ```
 
 ## Runtime Debugging & Interaction
@@ -51,12 +51,12 @@ cmake --build cmake-build-debug
 When debugging runtime issues, capture application logs:
 - **macOS**:
   ```bash
-  nohup ./cmake-build-debug/subtitles-editor.app/Contents/MacOS/subtitles-editor > /tmp/startup.log 2>&1 &
+  nohup ./cmake-build-release/subtitles-editor.app/Contents/MacOS/subtitles-editor > /tmp/startup.log 2>&1 &
   ```
   Analyze `/tmp/startup.log` (Qt warnings, FFmpeg errors, custom `qDebug()` output).
 - **Windows**:
   ```powershell
-  .\cmake-build-debug\Debug\subtitles-editor.exe > startup.log 2>&1
+  .\cmake-build-release\Release\subtitles-editor.exe > startup.log 2>&1
   ```
   Analyze `startup.log` in the root folder.
 
@@ -117,7 +117,7 @@ All splitters are non-collapsible.
 ## Pre-Commit Checks
 
 1. **Format**: `clang-format -i src/*.cpp include/*.h`
-2. **Compile**: `cmake --build cmake-build-debug`
+2. **Compile**: `cmake --build cmake-build-release`
 
 ## Multi-language / Internationalization (I18n)
 

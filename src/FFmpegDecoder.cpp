@@ -14,7 +14,11 @@ extern "C" {
 #include <libswscale/swscale.h>
 }
 
+#ifdef QT_DEBUG
 #define PROFILE_TIMING 1
+#else
+#define PROFILE_TIMING 0
+#endif
 
 #define LOG_DEC_info(msg) qInfo() << "[FFmpegDecoder]" << msg
 #define LOG_DEC_warning(msg) qWarning() << "[FFmpegDecoder]" << msg
@@ -302,7 +306,7 @@ void FFmpegDecoder::close() {
   lastDstH_ = -1;
   lastSwsFormat_ = -1;
 
-  LOG_DEC(info, "close() complete");
+  LOG_DEC(debug, "close() complete");
 }
 
 void FFmpegDecoder::setVideoQuality(double scale) {
@@ -502,7 +506,7 @@ void FFmpegDecoder::run() {
     int ret = av_read_frame(fmtCtx_, packet);
     if (ret < 0) {
       if (ret == AVERROR_EOF) {
-        LOG_DEC(info, "EOF");
+        LOG_DEC(debug, "EOF");
         emit endOfStream();
       } else {
         char errbuf[256];
@@ -529,7 +533,7 @@ void FFmpegDecoder::run() {
   }
 
   av_packet_free(&packet);
-  LOG_DEC(info, "Decoder thread stopped");
+  LOG_DEC(debug, "Decoder thread stopped");
 }
 
 void FFmpegDecoder::performSeek(qint64 targetMs) {
@@ -566,7 +570,7 @@ void FFmpegDecoder::performSeek(qint64 targetMs) {
   qInfo() << "[TIMING:seek] targetMs=" << targetMs << " cost_us=" << elapsed;
 #endif
 
-  LOG_DEC(info, "Seek complete target=" << targetMs << "ms");
+  LOG_DEC(debug, "Seek complete target=" << targetMs << "ms");
 }
 
 void FFmpegDecoder::clearAudioQueue() {

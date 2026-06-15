@@ -11,7 +11,11 @@
 
 #include <thread>
 
+#ifdef QT_DEBUG
 #define PROFILE_TIMING 1
+#else
+#define PROFILE_TIMING 0
+#endif
 
 #define LOG_MP_info(msg) qInfo() << "[MediaPlayer]" << msg
 #define LOG_MP_warning(msg) qWarning() << "[MediaPlayer]" << msg
@@ -91,7 +95,7 @@ void MediaPlayer::ensureSeekDecoderOpen() {
   if (currentPath_.isEmpty())
     return;
   if (seekDecoder_ && !seekDecoder_->isRunning()) {
-    LOG_MP(info, "ensureSeekDecoderOpen() lazy loading SeekDecoder path="
+    LOG_MP(debug, "ensureSeekDecoderOpen() lazy loading SeekDecoder path="
                      << currentPath_);
     bool ok = seekDecoder_->open(currentPath_);
     if (ok) {
@@ -101,7 +105,7 @@ void MediaPlayer::ensureSeekDecoderOpen() {
             videoRenderer_->asWidget()->devicePixelRatioF());
       }
       seekDecoder_->setVideoQuality(qualityScale_);
-      LOG_MP(info, "ensureSeekDecoderOpen() lazy loaded successfully");
+      LOG_MP(debug, "ensureSeekDecoderOpen() lazy loaded successfully");
     } else {
       LOG_MP(warning, "ensureSeekDecoderOpen() lazy load failed");
     }
@@ -143,8 +147,8 @@ void MediaPlayer::load(const QString &path) {
   state_ = Loading;
   emit stateChanged(Loading);
 
-  LOG_MP(info, "load() started (async) path=" << path);
-  LOG_MP(info, "load() launching background thread...");
+  LOG_MP(debug, "load() started (async) path=" << path);
+  LOG_MP(debug, "load() launching background thread...");
 
   // Connect loadFinished signal to onLoadFinished slot (auto-queued since
   // signal is emitted from worker thread, slot runs on main thread)
@@ -207,7 +211,7 @@ void MediaPlayer::onLoadFinished(const QString &path, bool decoderOk,
   currentPath_ = path;
 
   if (!seekDecoderOk) {
-    LOG_MP(info,
+    LOG_MP(debug,
            "SeekDecoder is not opened yet, will be lazy loaded on demand");
   }
 
@@ -273,7 +277,7 @@ void MediaPlayer::play() {
       audioSessionStartUSecs_ = -1;
       audioOutput_->resume();
     }
-    LOG_MP(info, "play() state=Playing startTime=" << playbackStartTimeMs_);
+    LOG_MP(debug, "play() state=Playing startTime=" << playbackStartTimeMs_);
   }
 }
 
@@ -287,7 +291,7 @@ void MediaPlayer::pause() {
     state_ = Paused;
     driftStartMs_ = -1;
     emit stateChanged(Paused);
-    LOG_MP(info, "pause() state=Paused time=" << currentTimeMs_);
+    LOG_MP(debug, "pause() state=Paused time=" << currentTimeMs_);
   }
 }
 
@@ -316,7 +320,7 @@ void MediaPlayer::stop() {
 
   emit timeChanged(0);
   emit stateChanged(Stopped);
-  LOG_MP(info, "stop() state=Stopped");
+  LOG_MP(debug, "stop() state=Stopped");
 }
 
 void MediaPlayer::clear() {
@@ -393,13 +397,13 @@ void MediaPlayer::seek(qint64 ms) {
     return;
 
   if (sender()) {
-    qInfo() << "[DEBUG_SEEK] seek requested by signal sender:"
+    qDebug() << "[DEBUG_SEEK] seek requested by signal sender:"
             << sender()->metaObject()->className()
             << " name:" << sender()->objectName();
   } else {
-    qInfo() << "[DEBUG_SEEK] seek requested by direct function call";
+    qDebug() << "[DEBUG_SEEK] seek requested by direct function call";
   }
-  LOG_MP(info, "seek() request target=" << ms << "ms");
+  LOG_MP(debug, "seek() request target=" << ms << "ms");
 
   if (state_ == Playing) {
     pause();
@@ -427,7 +431,7 @@ void MediaPlayer::seek(qint64 ms) {
   }
 
   emit timeChanged(currentTimeMs_);
-  LOG_MP(info, "seek() complete");
+  LOG_MP(debug, "seek() complete");
 }
 
 void MediaPlayer::previewSeek(qint64 ms) {
@@ -450,7 +454,7 @@ void MediaPlayer::previewSeek(qint64 ms) {
     isPreviewDragging_ = true;
     seekPreviewMode_ = true;
     seekPreviewTimer_.start();
-    LOG_MP(info, "previewSeek() drag started target=" << ms);
+    LOG_MP(debug, "previewSeek() drag started target=" << ms);
   }
 
   ensureSeekDecoderOpen();

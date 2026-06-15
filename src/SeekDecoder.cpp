@@ -12,7 +12,11 @@ extern "C" {
 #include <libswscale/swscale.h>
 }
 
+#ifdef QT_DEBUG
 #define PROFILE_TIMING 1
+#else
+#define PROFILE_TIMING 0
+#endif
 
 #define LOG_SEEK_info(msg) qInfo() << "[SeekDecoder]" << msg
 #define LOG_SEEK_warning(msg) qWarning() << "[SeekDecoder]" << msg
@@ -217,7 +221,7 @@ void SeekDecoder::shutdown() {
 
 void SeekDecoder::run() {
   running_.store(true);
-  LOG_SEEK(info, "Seek thread started");
+  LOG_SEEK(debug, "Seek thread started");
 
   while (running_.load()) {
     int gen = 0;
@@ -268,7 +272,7 @@ void SeekDecoder::run() {
     }
   }
 
-  LOG_SEEK(info, "Seek thread stopped");
+  LOG_SEEK(debug, "Seek thread stopped");
 }
 
 DecodedVideoFrame SeekDecoder::decodeOneFrame(qint64 targetMs, bool precise) {

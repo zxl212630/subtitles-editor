@@ -27,7 +27,11 @@ static QCursor getRotateCursor() {
   }
   return rotateCursor;
 }
+#ifdef QT_DEBUG
 #define PROFILE_TIMING 1
+#else
+#define PROFILE_TIMING 0
+#endif
 
 #define LOG_RENDER_info(msg) qInfo() << "[VideoRenderer]" << msg
 #define LOG_RENDER_warning(msg) qWarning() << "[VideoRenderer]" << msg
