@@ -51,6 +51,8 @@ const ShortcutDef kShortcutDefs[] = {
     {"timeline_add", Qt::Key_N, false},
     {"timeline_split", Qt::Key_S, false},
     {"timeline_delete", DEFAULT_DELETE_KEY, false},
+    {"timeline_trim_right", Qt::Key_BracketRight, false},
+    {"timeline_trim_left", Qt::Key_BracketLeft, false},
     {"timeline_snap", Qt::CTRL | Qt::Key_N, false},
     {"timeline_fit", Qt::SHIFT | Qt::Key_Z, false},
     {"timeline_zoom_in", Qt::Key_Equal, false},
