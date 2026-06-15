@@ -17,13 +17,17 @@ class ColorSelectorWidget;
 class QAction;
 class QGroupBox;
 class QKeySequenceEdit;
-class QGroupBox;
+class QProgressBar;
+class QNetworkAccessManager;
+class QNetworkReply;
+class QFile;
+class QUrl;
 
 class ConfigDialog : public BaseDialog {
   Q_OBJECT
 public:
   explicit ConfigDialog(QWidget *parent = nullptr);
-  ~ConfigDialog() override = default;
+  ~ConfigDialog() override;
 
 signals:
   void configApplied();
@@ -100,6 +104,21 @@ private:
   QLabel *whisperModelLabel_ = nullptr;
   QLabel *whisperLangLabel_ = nullptr;
   QLabel *whisperThreadsLabel_ = nullptr;
+
+  QLabel *whisperModelStatusLabel_ = nullptr;
+  QPushButton *btnDownloadWhisperModel_ = nullptr;
+  QProgressBar *whisperDownloadProgressBar_ = nullptr;
+
+  void updateWhisperStatus();
+  bool checkModelExists(const QString &modelName);
+  void onDownloadWhisperModelClicked();
+  void startWhisperDownload(const QUrl &url, const QString &savePath, int redirectCount = 0);
+  void resetWhisperDownloadState();
+
+  QNetworkAccessManager *whisperNetworkManager_ = nullptr;
+  QNetworkReply *whisperReply_ = nullptr;
+  QFile *whisperDownloadFile_ = nullptr;
+  bool whisperIsDownloading_ = false;
 
   // Subtitle Settings Page
   QComboBox *subtitleFontFamilyCombo_;

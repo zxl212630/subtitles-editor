@@ -8,12 +8,17 @@ class QLabel;
 class QPushButton;
 class QCheckBox;
 class QSpinBox;
+class QProgressBar;
+class QNetworkAccessManager;
+class QNetworkReply;
+class QFile;
+class QUrl;
 
 class AsrConfigDialog : public BaseDialog {
   Q_OBJECT
 public:
   explicit AsrConfigDialog(QWidget *parent = nullptr);
-  ~AsrConfigDialog() override = default;
+  ~AsrConfigDialog() override;
 
   QString asrProvider() const;
 
@@ -38,6 +43,8 @@ private:
   bool checkModelExists(const QString &modelName);
   void updateWhisperStatus();
   void onDownloadClicked();
+  void startDownload(const QUrl &url, const QString &savePath, int redirectCount = 0);
+  void resetDownloadState();
 
   QComboBox *asrProviderCombo_ = nullptr;
   QLabel *asrProvLabel_ = nullptr;
@@ -61,7 +68,14 @@ private:
   QLabel *whisperModelLabel_ = nullptr;
   QLabel *whisperLangLabel_ = nullptr;
   QLabel *whisperThreadsLabel_ = nullptr;
+  QProgressBar *whisperProgressBar_ = nullptr;
 
   QPushButton *btnOk_ = nullptr;
   QPushButton *btnCancel_ = nullptr;
+
+  // Download Management
+  QNetworkAccessManager *networkManager_ = nullptr;
+  QNetworkReply *reply_ = nullptr;
+  QFile *downloadFile_ = nullptr;
+  bool isDownloading_ = false;
 };
