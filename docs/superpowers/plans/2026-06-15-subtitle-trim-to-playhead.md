@@ -36,19 +36,21 @@ No changes to `SubtitleTrack`, `SubtitleItem`, or other panels. No new data-mode
 
 - [ ] **Step 1: Create `resources/icons/trim-right.svg`**
 
-Write the following file (a `]` bracket shape, 24×24, matching the style of `delete-subtitle.svg`):
+Write the following file (a `]` bracket shape, 24×24, matching the style of `delete-subtitle.svg`). The polyline traces top-arm-rightward, then a vertical on the **right** at x=15, then the bottom-arm-leftward — the classic `]` shape:
 
 ```xml
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#d1d5db" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-  <polyline points="18,4 9,4 9,20 18,20"/>
+  <polyline points="6,4 15,4 15,20 6,20"/>
 </svg>
 ```
 
 - [ ] **Step 2: Create `resources/icons/trim-left.svg`**
 
+The polyline traces top-arm-leftward, then a vertical on the **left** at x=9, then the bottom-arm-rightward — the classic `[` shape. The points are deliberately mirrored from the right-bracket file so the two icons are visually distinct.
+
 ```xml
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#d1d5db" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-  <polyline points="6,4 15,4 15,20 6,20"/>
+  <polyline points="18,4 9,4 9,20 18,20"/>
 </svg>
 ```
 
