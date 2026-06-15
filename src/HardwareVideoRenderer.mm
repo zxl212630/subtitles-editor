@@ -40,6 +40,56 @@ static QCursor getRotateCursor() {
   return rotateCursor;
 }
 
+static Qt::CursorShape getResizeCursor(HardwareVideoRenderer::DragMode hit,
+                                       double rotation) {
+  double baseAngle = 0.0;
+  switch (hit) {
+  case HardwareVideoRenderer::DragResizeMR:
+    baseAngle = 0.0;
+    break;
+  case HardwareVideoRenderer::DragResizeTR:
+    baseAngle = 45.0;
+    break;
+  case HardwareVideoRenderer::DragResizeTM:
+    baseAngle = 90.0;
+    break;
+  case HardwareVideoRenderer::DragResizeTL:
+    baseAngle = 135.0;
+    break;
+  case HardwareVideoRenderer::DragResizeML:
+    baseAngle = 180.0;
+    break;
+  case HardwareVideoRenderer::DragResizeBL:
+    baseAngle = 225.0;
+    break;
+  case HardwareVideoRenderer::DragResizeBM:
+    baseAngle = 270.0;
+    break;
+  case HardwareVideoRenderer::DragResizeBR:
+    baseAngle = 315.0;
+    break;
+  default:
+    return Qt::ArrowCursor;
+  }
+
+  // 使用减法以保证顺时针旋转时光标变化方向在 Qt 的 y-down 坐标系下完全正确
+  double actualAngle = baseAngle - rotation;
+  double normAngle = std::fmod(actualAngle, 180.0);
+  if (normAngle < 0.0) {
+    normAngle += 180.0;
+  }
+
+  if (normAngle < 22.5 || normAngle >= 157.5) {
+    return Qt::SizeHorCursor;
+  } else if (normAngle >= 22.5 && normAngle < 67.5) {
+    return Qt::SizeFDiagCursor;
+  } else if (normAngle >= 67.5 && normAngle < 112.5) {
+    return Qt::SizeVerCursor;
+  } else {
+    return Qt::SizeBDiagCursor;
+  }
+}
+
 #ifdef QT_DEBUG
 #define PROFILE_TIMING 1
 #else
@@ -1268,28 +1318,33 @@ void HardwareVideoRenderer::mouseMoveEvent(QMouseEvent *event) {
       update();
     } else if (dragMode_ == DragRotate) {
       QRect pixelRect = getSubtitlePixelRect();
-      QPoint center = pixelRect.center();
+      QPointF center = pixelRect.center();
+      QPointF diff = event->pos() - center;
+      double angleRad = std::atan2(diff.y(), diff.x());
+      double angleDeg = angleRad * 180.0 / M_PI;
 
-      QTransform inv = getSubtitleTransform().inverted();
-      QPoint startLocal = inv.map(dragStartPos_);
-      QPoint curLocal = inv.map(event->pos());
+      double newAngle = angleDeg + 90.0;
+      while (newAngle < 0.0)
+        newAngle += 360.0;
+      while (newAngle >= 360.0)
+        newAngle -= 360.0;
 
-      QPoint centerLocal = inv.map(center);
+      double snapThreshold = 3.0; // 3度旋转磁吸阈值
+      if (std::abs(newAngle - 0.0) < snapThreshold ||
+          std::abs(newAngle - 360.0) < snapThreshold) {
+        newAngle = 0.0;
+      } else if (std::abs(newAngle - 90.0) < snapThreshold) {
+        newAngle = 90.0;
+      } else if (std::abs(newAngle - 180.0) < snapThreshold) {
+        newAngle = 180.0;
+      } else if (std::abs(newAngle - 270.0) < snapThreshold) {
+        newAngle = 270.0;
+      }
 
-      double angleStart = std::atan2(startLocal.y() - centerLocal.y(),
-                                     startLocal.x() - centerLocal.x());
-      double angleCur = std::atan2(curLocal.y() - centerLocal.y(),
-                                   curLocal.x() - centerLocal.x());
-      double deltaAngle = (angleCur - angleStart) * 180.0 / M_PI;
-
-      double newRot = subtitleRotation_ + deltaAngle;
-      if (newRot > 180.0)
-        newRot -= 360.0;
-      else if (newRot < -180.0)
-        newRot += 360.0;
-
-      subtitleRotation_ = newRot;
-      dragStartPos_ = event->pos();
+      {
+        QMutexLocker lock(&subtitleMutex_);
+        subtitleRotation_ = newAngle;
+      }
       update();
     } else {
       QTransform inv = dragStartTransform_.inverted();
@@ -1370,19 +1425,8 @@ void HardwareVideoRenderer::mouseMoveEvent(QMouseEvent *event) {
 
       subtitleNormalizedRect_ = QRectF(newLeft, newTop, w1, h1);
 
-      double scaleChange =
-          subtitleNormalizedRect_.height() / dragStartNormalizedRect_.height();
-      int newSize = qRound(dragStartFontSize_ * scaleChange);
-      newSize = qBound(8, newSize, 120);
-
-      if (newSize != currentDragFontSize_) {
-        currentDragFontSize_ = newSize;
-        {
-          QMutexLocker lock(&subtitleMutex_);
-          subtitleFont_.setPointSize(newSize);
-        }
-        emit signals_->subtitleFontSizeChanged(newSize);
-      }
+      // 不再在拖拽时修改字体大小，只修改包围框
+      currentDragFontSize_ = dragStartFontSize_;
       update();
     }
     event->accept();
@@ -1398,20 +1442,14 @@ void HardwareVideoRenderer::mouseMoveEvent(QMouseEvent *event) {
     setCursor(Qt::SizeAllCursor);
     break;
   case DragResizeTL:
-  case DragResizeBR:
-    setCursor(Qt::SizeFDiagCursor);
-    break;
-  case DragResizeTR:
-  case DragResizeBL:
-    setCursor(Qt::SizeBDiagCursor);
-    break;
   case DragResizeTM:
-  case DragResizeBM:
-    setCursor(Qt::SizeVerCursor);
-    break;
+  case DragResizeTR:
   case DragResizeML:
   case DragResizeMR:
-    setCursor(Qt::SizeHorCursor);
+  case DragResizeBL:
+  case DragResizeBM:
+  case DragResizeBR:
+    setCursor(getResizeCursor(mode, subtitleRotation_));
     break;
   default:
     unsetCursor();
@@ -1425,7 +1463,31 @@ void HardwareVideoRenderer::mouseReleaseEvent(QMouseEvent *event) {
   if (dragMode_ != DragNone) {
     DragMode prevMode = dragMode_;
     dragMode_ = DragNone;
-    unsetCursor();
+
+    // 重新计算并根据当前释放点更新 Hover
+    // 状态下的光标样式，避免松开鼠标时光标卡死在普通箭头
+    DragMode hit = hitTest(event->pos());
+    switch (hit) {
+    case DragMove:
+      setCursor(Qt::SizeAllCursor);
+      break;
+    case DragRotate:
+      setCursor(getRotateCursor());
+      break;
+    case DragResizeTL:
+    case DragResizeTM:
+    case DragResizeTR:
+    case DragResizeML:
+    case DragResizeMR:
+    case DragResizeBL:
+    case DragResizeBM:
+    case DragResizeBR:
+      setCursor(getResizeCursor(hit, subtitleRotation_));
+      break;
+    default:
+      unsetCursor();
+      break;
+    }
 
     if (prevMode == DragRotate) {
       emit signals_->subtitleRotationChanged(subtitleRotation_);

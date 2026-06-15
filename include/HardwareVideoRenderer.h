@@ -42,6 +42,20 @@ public:
   QSize videoSize() const override { return videoSize_; }
   void setVideoSize(const QSize &size) override;
 
+  enum DragMode {
+    DragNone,
+    DragMove,
+    DragResizeTL,
+    DragResizeTM,
+    DragResizeTR,
+    DragResizeML,
+    DragResizeMR,
+    DragResizeBL,
+    DragResizeBM,
+    DragResizeBR,
+    DragRotate
+  };
+
   // === 字幕对齐与排版包围框设置 ===
   void setSubtitleAlignment(int alignment) override;
   void setSubtitleNormalizedRect(const QRectF &rect) override;
@@ -109,19 +123,6 @@ private:
   double subtitleRotation_ = 0.0;
   bool showEditFrame_ = true;
 
-  enum DragMode {
-    DragNone,
-    DragMove,
-    DragResizeTL,
-    DragResizeTM,
-    DragResizeTR,
-    DragResizeML,
-    DragResizeMR,
-    DragResizeBL,
-    DragResizeBM,
-    DragResizeBR,
-    DragRotate
-  };
   DragMode dragMode_ = DragNone;
   QPoint dragStartPos_;
   QRectF dragStartNormalizedRect_;

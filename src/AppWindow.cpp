@@ -32,6 +32,8 @@
 #include <QFileDialog>
 #include <QFileInfo>
 #include <QFrame>
+#include <QGraphicsDropShadowEffect>
+#include <QGraphicsOpacityEffect>
 #include <QHBoxLayout>
 #include <QKeySequence>
 #include <QLabel>
@@ -41,6 +43,7 @@
 #include <QMouseEvent>
 #include <QPlainTextEdit>
 #include <QProcess>
+#include <QPropertyAnimation>
 #include <QPushButton>
 #include <QResizeEvent>
 #include <QScrollBar>
@@ -49,6 +52,7 @@
 #include <QStatusBar>
 #include <QTextEdit>
 #include <QTime>
+#include <QTimer>
 #include <QUndoStack>
 #include <QUrl>
 #include <QUuid>
@@ -662,10 +666,6 @@ void AppWindow::setupSplitterLayout() {
   // 启用自动保存
   d->projectManager->enableAutoSave(true);
   d->projectManager->setAutoSaveInterval(60); // 1 分钟
-
-  // 连接自动保存信号
-  connect(d->projectManager, &ProjectManager::autoSaveTriggered, this,
-          [this]() { statusBar()->showMessage(tr("工程已自动保存"), 2000); });
 }
 
 void AppWindow::loadFile(const QString &path) {

@@ -96,7 +96,7 @@ void MediaPlayer::ensureSeekDecoderOpen() {
     return;
   if (seekDecoder_ && !seekDecoder_->isRunning()) {
     LOG_MP(debug, "ensureSeekDecoderOpen() lazy loading SeekDecoder path="
-                     << currentPath_);
+                      << currentPath_);
     bool ok = seekDecoder_->open(currentPath_);
     if (ok) {
       if (videoRenderer_) {
@@ -398,8 +398,8 @@ void MediaPlayer::seek(qint64 ms) {
 
   if (sender()) {
     qDebug() << "[DEBUG_SEEK] seek requested by signal sender:"
-            << sender()->metaObject()->className()
-            << " name:" << sender()->objectName();
+             << sender()->metaObject()->className()
+             << " name:" << sender()->objectName();
   } else {
     qDebug() << "[DEBUG_SEEK] seek requested by direct function call";
   }

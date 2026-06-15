@@ -137,19 +137,24 @@ protected:
   }
 
   void mousePressEvent(QMouseEvent *event) override {
-    if (totalDurationMs_ <= 0)
+    if (totalDurationMs_ <= 0) {
+      QWidget::mousePressEvent(event);
       return;
+    }
     if (event->button() == Qt::LeftButton) {
       dragging_ = true;
       lastPreviewSystemTime_ = QDateTime::currentMSecsSinceEpoch();
       if (panel_)
         emit panel_->previewSeekRequested(timeFromPos(event->pos().x()));
     }
+    QWidget::mousePressEvent(event);
   }
 
   void mouseMoveEvent(QMouseEvent *event) override {
-    if (totalDurationMs_ <= 0)
+    if (totalDurationMs_ <= 0) {
+      QWidget::mouseMoveEvent(event);
       return;
+    }
     bool inside = rect().contains(event->pos());
     if (inside != hover_) {
       hover_ = inside;
@@ -163,16 +168,20 @@ protected:
         emit panel_->previewSeekRequested(timeFromPos(event->pos().x()));
       }
     }
+    QWidget::mouseMoveEvent(event);
   }
 
   void mouseReleaseEvent(QMouseEvent *event) override {
-    if (totalDurationMs_ <= 0)
+    if (totalDurationMs_ <= 0) {
+      QWidget::mouseReleaseEvent(event);
       return;
+    }
     if (event->button() == Qt::LeftButton && dragging_) {
       dragging_ = false;
       if (panel_)
         emit panel_->previewSeekFinished();
     }
+    QWidget::mouseReleaseEvent(event);
   }
 
   void enterEvent(QEnterEvent *) override {

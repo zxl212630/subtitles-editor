@@ -59,12 +59,15 @@ protected:
 
   void mousePressEvent(QMouseEvent *event) override {
     panel_->handleCanvasPress(event);
+    QWidget::mousePressEvent(event);
   }
   void mouseMoveEvent(QMouseEvent *event) override {
     panel_->handleCanvasMove(event);
+    QWidget::mouseMoveEvent(event);
   }
   void mouseReleaseEvent(QMouseEvent *event) override {
     panel_->handleCanvasRelease(event);
+    QWidget::mouseReleaseEvent(event);
   }
 
 private:

@@ -27,6 +27,57 @@ static QCursor getRotateCursor() {
   }
   return rotateCursor;
 }
+
+static Qt::CursorShape getResizeCursor(SoftwareVideoRenderer::DragMode hit,
+                                       double rotation) {
+  double baseAngle = 0.0;
+  switch (hit) {
+  case SoftwareVideoRenderer::DragResizeMR:
+    baseAngle = 0.0;
+    break;
+  case SoftwareVideoRenderer::DragResizeTR:
+    baseAngle = 45.0;
+    break;
+  case SoftwareVideoRenderer::DragResizeTM:
+    baseAngle = 90.0;
+    break;
+  case SoftwareVideoRenderer::DragResizeTL:
+    baseAngle = 135.0;
+    break;
+  case SoftwareVideoRenderer::DragResizeML:
+    baseAngle = 180.0;
+    break;
+  case SoftwareVideoRenderer::DragResizeBL:
+    baseAngle = 225.0;
+    break;
+  case SoftwareVideoRenderer::DragResizeBM:
+    baseAngle = 270.0;
+    break;
+  case SoftwareVideoRenderer::DragResizeBR:
+    baseAngle = 315.0;
+    break;
+  default:
+    return Qt::ArrowCursor;
+  }
+
+  // 使用减法以保证顺时针旋转时光标变化方向在 Qt 的 y-down 坐标系下完全正确
+  double actualAngle = baseAngle - rotation;
+  double normAngle = std::fmod(actualAngle, 180.0);
+  if (normAngle < 0.0) {
+    normAngle += 180.0;
+  }
+
+  if (normAngle < 22.5 || normAngle >= 157.5) {
+    return Qt::SizeHorCursor;
+  } else if (normAngle >= 22.5 && normAngle < 67.5) {
+    return Qt::SizeFDiagCursor;
+  } else if (normAngle >= 67.5 && normAngle < 112.5) {
+    return Qt::SizeVerCursor;
+  } else {
+    return Qt::SizeBDiagCursor;
+  }
+}
+
 #ifdef QT_DEBUG
 #define PROFILE_TIMING 1
 #else
@@ -1054,20 +1105,14 @@ void SoftwareVideoRenderer::mouseMoveEvent(QMouseEvent *event) {
       setCursor(getRotateCursor());
       break;
     case DragResizeTL:
-    case DragResizeBR:
-      setCursor(Qt::SizeFDiagCursor);
-      break;
-    case DragResizeTR:
-    case DragResizeBL:
-      setCursor(Qt::SizeBDiagCursor);
-      break;
     case DragResizeTM:
-    case DragResizeBM:
-      setCursor(Qt::SizeVerCursor);
-      break;
+    case DragResizeTR:
     case DragResizeML:
     case DragResizeMR:
-      setCursor(Qt::SizeHorCursor);
+    case DragResizeBL:
+    case DragResizeBM:
+    case DragResizeBR:
+      setCursor(getResizeCursor(hit, subtitleRotation_));
       break;
     default:
       unsetCursor();
@@ -1257,20 +1302,14 @@ void SoftwareVideoRenderer::mouseReleaseEvent(QMouseEvent *event) {
       setCursor(getRotateCursor());
       break;
     case DragResizeTL:
-    case DragResizeBR:
-      setCursor(Qt::SizeFDiagCursor);
-      break;
-    case DragResizeTR:
-    case DragResizeBL:
-      setCursor(Qt::SizeBDiagCursor);
-      break;
     case DragResizeTM:
-    case DragResizeBM:
-      setCursor(Qt::SizeVerCursor);
-      break;
+    case DragResizeTR:
     case DragResizeML:
     case DragResizeMR:
-      setCursor(Qt::SizeHorCursor);
+    case DragResizeBL:
+    case DragResizeBM:
+    case DragResizeBR:
+      setCursor(getResizeCursor(hit, subtitleRotation_));
       break;
     default:
       unsetCursor();
