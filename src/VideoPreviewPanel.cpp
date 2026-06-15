@@ -1212,16 +1212,6 @@ void VideoPreviewPanel::toggleMute() {
   }
 }
 
-class QBlockAllWinIdChangeFilter : public QObject {
-protected:
-  bool eventFilter(QObject *watched, QEvent *event) override {
-    if (event && event->type() == QEvent::WinIdChange) {
-      return true; // 拦截所有 WinIdChange 事件
-    }
-    return QObject::eventFilter(watched, event);
-  }
-};
-
 void VideoPreviewPanel::initVideoRenderer() {
 #ifdef Q_OS_MAC
   if (videoRenderer_)
@@ -1231,16 +1221,8 @@ void VideoPreviewPanel::initVideoRenderer() {
   if (!vaLayout)
     return;
 
-  // 动态安装事件过滤器以完全拦截构造期间的所有 WinIdChange 事件
-  auto *bypassFilter = new QBlockAllWinIdChangeFilter();
-  qApp->installEventFilter(bypassFilter);
-
   videoRenderer_ = new HardwareVideoRenderer(videoArea_);
   vaLayout->addWidget(videoRenderer_->asWidget());
-
-  // 卸载并销毁事件过滤器
-  qApp->removeEventFilter(bypassFilter);
-  delete bypassFilter;
 
   // 绑定视频渲染器包围框拖拽和缩放的坐标变更信号，实时写入字幕项
   connect(videoRenderer_->videoSignals(),

@@ -15,25 +15,6 @@
 #include <QTimer>
 #include <cmath>
 
-class QWinIdCrashBypasser : public QObject {
-public:
-  static QWinIdCrashBypasser *instance() {
-    static QWinIdCrashBypasser inst;
-    return &inst;
-  }
-
-protected:
-  bool eventFilter(QObject *watched, QEvent *event) override {
-    if (event && event->type() == QEvent::WinIdChange) {
-      if (watched && (watched->inherits("QOpenGLWidget") ||
-                      watched->inherits("HardwareVideoRenderer"))) {
-        return true; // 拦截事件，避免 QWindowKit 崩溃
-      }
-    }
-    return QObject::eventFilter(watched, event);
-  }
-};
-
 int main(int argc, char *argv[]) {
   // Check for --benchmark flag
   bool runBenchmark = false;
@@ -48,7 +29,6 @@ int main(int argc, char *argv[]) {
 
   if (runBenchmark) {
     QApplication app(argc, argv);
-    app.installEventFilter(QWinIdCrashBypasser::instance());
 
     // Set up MediaPlayer and a dummy SoftwareVideoRenderer to receive frames
     MediaPlayer player;
@@ -309,7 +289,6 @@ int main(int argc, char *argv[]) {
   }
 
   QApplication app(argc, argv);
-  app.installEventFilter(QWinIdCrashBypasser::instance());
   app.setApplicationName("Subtitles Editor");
   app.setWindowIcon(QIcon(":/icon.png"));
 
