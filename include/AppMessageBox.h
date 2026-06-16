@@ -25,7 +25,8 @@ public:
     Ok = 0x1,
     Yes = 0x2,
     No = 0x4,
-    Cancel = 0x8
+    Cancel = 0x8,
+    OpenFolder = 0x10
   };
   Q_ENUM(StandardButton)
   Q_DECLARE_FLAGS(StandardButtons, StandardButton)
@@ -68,6 +69,7 @@ private:
   QPushButton *yesBtn_ = nullptr;
   QPushButton *noBtn_ = nullptr;
   QPushButton *cancelBtn_ = nullptr;
+  QPushButton *openFolderBtn_ = nullptr;
 
   int clickedButton_ = NoButton;
   StandardButton defaultButton_ = NoButton;

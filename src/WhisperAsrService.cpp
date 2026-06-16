@@ -1,12 +1,13 @@
 #include "WhisperAsrService.h"
 #include "ConfigManager.h"
-#include <QFile>
-#include <QDir>
 #include <QDebug>
+#include <QDir>
+#include <QFile>
 #include <QVector>
 #include <whisper.h>
 
-WhisperAsrService::WhisperAsrService(QObject *parent) : AsrServiceBase(parent) {}
+WhisperAsrService::WhisperAsrService(QObject *parent)
+    : AsrServiceBase(parent) {}
 
 WhisperAsrService::~WhisperAsrService() {
   abort();
@@ -24,9 +25,8 @@ void WhisperAsrService::transcribe(const QString &audioFilePath) {
     isAborted_ = false;
   }
 
-  QThread *thread = QThread::create([this, audioFilePath]() {
-    runTranscribe(audioFilePath);
-  });
+  QThread *thread = QThread::create(
+      [this, audioFilePath]() { runTranscribe(audioFilePath); });
   activeThread_ = thread;
 
   connect(thread, &QThread::finished, thread, &QThread::deleteLater);
@@ -67,7 +67,8 @@ void WhisperAsrService::runTranscribe(const QString &audioFilePath) {
   const char *bytes = data.constData();
   int size = data.size();
 
-  if (size < 44 || qstrncmp(bytes, "RIFF", 4) != 0 || qstrncmp(bytes + 8, "WAVE", 4) != 0) {
+  if (size < 44 || qstrncmp(bytes, "RIFF", 4) != 0 ||
+      qstrncmp(bytes + 8, "WAVE", 4) != 0) {
     result.errorMessage = tr("非法的 WAV 音频格式，必须是 RIFF WAVE 格式");
     emit transcribeFinished(result);
     return;
@@ -82,14 +83,14 @@ void WhisperAsrService::runTranscribe(const QString &audioFilePath) {
 
   while (pos + 8 <= size) {
     const char *chunkId = bytes + pos;
-    uint32_t chunkSize = *reinterpret_cast<const uint32_t*>(bytes + pos + 4);
+    uint32_t chunkSize = *reinterpret_cast<const uint32_t *>(bytes + pos + 4);
     pos += 8;
 
     if (qstrncmp(chunkId, "fmt ", 4) == 0) {
       if (pos + 16 <= size) {
-        channels = *reinterpret_cast<const uint16_t*>(bytes + pos + 2);
-        sampleRate = *reinterpret_cast<const uint32_t*>(bytes + pos + 4);
-        bitsPerSample = *reinterpret_cast<const uint16_t*>(bytes + pos + 14);
+        channels = *reinterpret_cast<const uint16_t *>(bytes + pos + 2);
+        sampleRate = *reinterpret_cast<const uint32_t *>(bytes + pos + 4);
+        bitsPerSample = *reinterpret_cast<const uint16_t *>(bytes + pos + 14);
       }
     } else if (qstrncmp(chunkId, "data", 4) == 0) {
       pcmBytes = bytes + pos;
@@ -106,15 +107,19 @@ void WhisperAsrService::runTranscribe(const QString &audioFilePath) {
   }
 
   if (channels != 1 || sampleRate != 16000 || bitsPerSample != 16) {
-    result.errorMessage = tr("不支持的音频格式！Whisper 要求 16kHz, 16-bit, 单声道 (Mono) WAV。当前音频为: %1 声道, %2Hz, %3-bit")
-                          .arg(channels).arg(sampleRate).arg(bitsPerSample);
+    result.errorMessage =
+        tr("不支持的音频格式！Whisper 要求 16kHz, 16-bit, 单声道 (Mono) "
+           "WAV。当前音频为: %1 声道, %2Hz, %3-bit")
+            .arg(channels)
+            .arg(sampleRate)
+            .arg(bitsPerSample);
     emit transcribeFinished(result);
     return;
   }
 
   int numSamples = pcmSize / 2;
   QVector<float> floatSamples(numSamples);
-  const int16_t *int16Samples = reinterpret_cast<const int16_t*>(pcmBytes);
+  const int16_t *int16Samples = reinterpret_cast<const int16_t *>(pcmBytes);
   for (int i = 0; i < numSamples; ++i) {
     floatSamples[i] = static_cast<float>(int16Samples[i]) / 32768.0f;
   }
@@ -128,10 +133,12 @@ void WhisperAsrService::runTranscribe(const QString &audioFilePath) {
   // 2. 初始化 Whisper 模型上下文
   auto &cfg = ConfigManager::instance();
   QString modelName = cfg.whisperModel();
-  QString modelPath = cfg.whisperModelPath() + QString("/ggml-%1.bin").arg(modelName);
+  QString modelPath =
+      cfg.whisperModelPath() + QString("/ggml-%1.bin").arg(modelName);
 
   if (!QFile::exists(modelPath)) {
-    result.errorMessage = tr("找不到指定的模型文件，请先下载: %1").arg(modelPath);
+    result.errorMessage =
+        tr("找不到指定的模型文件，请先下载: %1").arg(modelPath);
     emit transcribeFinished(result);
     return;
   }
@@ -143,11 +150,14 @@ void WhisperAsrService::runTranscribe(const QString &audioFilePath) {
 
   {
     QMutexLocker locker(&mutex_);
-    ctx_ = whisper_init_from_file_with_params(modelPath.toUtf8().constData(), cparams);
+    ctx_ = whisper_init_from_file_with_params(modelPath.toUtf8().constData(),
+                                              cparams);
   }
 
   if (!ctx_) {
-    result.errorMessage = tr("初始化 Whisper 核心上下文失败，模型文件可能已损坏: %1").arg(modelPath);
+    result.errorMessage =
+        tr("初始化 Whisper 核心上下文失败，模型文件可能已损坏: %1")
+            .arg(modelPath);
     emit transcribeFinished(result);
     return;
   }
@@ -161,7 +171,8 @@ void WhisperAsrService::runTranscribe(const QString &audioFilePath) {
   }
 
   // 3. 配置推理参数并开始识别
-  struct whisper_full_params wparams = whisper_full_default_params(WHISPER_SAMPLING_GREEDY);
+  struct whisper_full_params wparams =
+      whisper_full_default_params(WHISPER_SAMPLING_GREEDY);
   wparams.print_realtime = false;
   wparams.print_progress = false;
   wparams.print_timestamps = false;
@@ -169,11 +180,14 @@ void WhisperAsrService::runTranscribe(const QString &audioFilePath) {
   wparams.translate = false;
 
   QString lang = cfg.whisperLanguage();
-  wparams.language = (lang == "auto") ? nullptr : lang.toUtf8().constData();
+  QByteArray langBytes = lang.toUtf8();
+  wparams.language = (lang == "auto") ? nullptr : langBytes.constData();
   wparams.n_threads = cfg.whisperThreads();
 
   // 挂载进度条回调
-  wparams.progress_callback = [](struct whisper_context * /*ctx*/, struct whisper_state * /*state*/, int progress, void * user_data) {
+  wparams.progress_callback = [](struct whisper_context * /*ctx*/,
+                                 struct whisper_state * /*state*/, int progress,
+                                 void *user_data) {
     auto *service = static_cast<WhisperAsrService *>(user_data);
     // 映射 Whisper 的 0-100% 进度到 ASR 管线的 5%-95% 区间
     int percent = 5 + (progress * 90) / 100;
@@ -182,13 +196,14 @@ void WhisperAsrService::runTranscribe(const QString &audioFilePath) {
   wparams.progress_callback_user_data = this;
 
   // 挂载用户取消回调
-  wparams.abort_callback = [](void * user_data) {
+  wparams.abort_callback = [](void *user_data) {
     auto *service = static_cast<WhisperAsrService *>(user_data);
     return service->isAborted();
   };
   wparams.abort_callback_user_data = this;
 
-  int ret = whisper_full(ctx_, wparams, floatSamples.constData(), floatSamples.size());
+  int ret = whisper_full(ctx_, wparams, floatSamples.constData(),
+                         floatSamples.size());
 
   if (isAborted()) {
     result.errorMessage = tr("识别已被用户取消");
@@ -209,7 +224,8 @@ void WhisperAsrService::runTranscribe(const QString &audioFilePath) {
   // 4. 解析结果切片
   int n_segments = whisper_full_n_segments(ctx_);
   for (int i = 0; i < n_segments; ++i) {
-    if (isAborted()) break;
+    if (isAborted())
+      break;
 
     TranscriptSegment seg;
     seg.text = QString::fromUtf8(whisper_full_get_segment_text(ctx_, i));

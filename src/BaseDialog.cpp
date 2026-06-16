@@ -1,10 +1,12 @@
 #include "BaseDialog.h"
 #include <QCloseEvent>
+#include <QComboBox>
 #include <QEvent>
 #include <QFrame>
 #include <QHBoxLayout>
 #include <QIcon>
 #include <QLabel>
+#include <QMoveEvent>
 #include <QPushButton>
 #include <QWindowKit/QWKWidgets/widgetwindowagent.h>
 
@@ -160,6 +162,14 @@ void BaseDialog::changeEvent(QEvent *event) {
   }
 #endif
   QDialog::changeEvent(event);
+}
+
+void BaseDialog::moveEvent(QMoveEvent *event) {
+  QDialog::moveEvent(event);
+  const auto comboBoxes = findChildren<QComboBox *>();
+  for (auto *comboBox : comboBoxes) {
+    comboBox->hidePopup();
+  }
 }
 
 bool BaseDialog::eventFilter(QObject *obj, QEvent *event) {

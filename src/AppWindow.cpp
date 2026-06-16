@@ -83,6 +83,10 @@ struct AppWindow::Private {
 
   QDateTime videoImportTime_;
 
+  bool isDraggingTitleBar = false;
+  QPoint dragStartPosition;
+  QPoint windowStartPosition;
+
   // 菜单栏
   QMenuBar *menuBar = nullptr;
   QMenu *fileMenu = nullptr;
@@ -220,6 +224,44 @@ bool AppWindow::eventFilter(QObject *obj, QEvent *event) {
                                  d->titleBar->height());
     }
   }
+
+  // Allow dragging the main window by its custom title bar even when disabled
+  // by a modal dialog
+  if (!this->isEnabled() || QApplication::activeModalWidget()) {
+    if (event->type() == QEvent::MouseButtonPress) {
+      auto *me = static_cast<QMouseEvent *>(event);
+      if (me->button() == Qt::LeftButton) {
+        QWidget *clickedWidget = qobject_cast<QWidget *>(obj);
+        if (clickedWidget) {
+          bool isTitleBarOrChild = (clickedWidget == d->titleBar ||
+                                    clickedWidget->parent() == d->titleBar);
+          bool isButton = clickedWidget->inherits("QAbstractButton") ||
+                          clickedWidget->inherits("QPushButton") ||
+                          clickedWidget->inherits("QToolButton");
+          if (isTitleBarOrChild && !isButton) {
+            d->isDraggingTitleBar = true;
+            d->dragStartPosition = me->globalPosition().toPoint();
+            d->windowStartPosition = this->pos();
+            event->accept();
+            return true;
+          }
+        }
+      }
+    } else if (event->type() == QEvent::MouseMove && d->isDraggingTitleBar) {
+      auto *me = static_cast<QMouseEvent *>(event);
+      QPoint currentPos = me->globalPosition().toPoint();
+      QPoint delta = currentPos - d->dragStartPosition;
+      this->move(d->windowStartPosition + delta);
+      event->accept();
+      return true;
+    } else if (event->type() == QEvent::MouseButtonRelease &&
+               d->isDraggingTitleBar) {
+      d->isDraggingTitleBar = false;
+      event->accept();
+      return true;
+    }
+  }
+
   if (event->type() == QEvent::MouseButtonPress) {
     auto *me = static_cast<QMouseEvent *>(event);
     emit windowClicked(me->globalPosition().toPoint());
@@ -1003,9 +1045,14 @@ void AppWindow::onExportRequested() {
 
     // 如果仅仅导出字幕，导出成功后直接提示并退出
     if (!exportVideo) {
-      AppMessageBox::information(
+      int ret = AppMessageBox::information(
           this, tr("导出成功"),
-          tr("字幕文件已成功导出到：\n%1").arg(subtitlePath));
+          tr("字幕文件已成功导出到：\n%1").arg(subtitlePath),
+          AppMessageBox::Ok | AppMessageBox::OpenFolder);
+      if (ret == AppMessageBox::OpenFolder) {
+        QString dirPath = QFileInfo(subtitlePath).absolutePath();
+        QDesktopServices::openUrl(QUrl::fromLocalFile(dirPath));
+      }
       return;
     }
   }
@@ -1029,7 +1076,13 @@ void AppWindow::onExportRequested() {
       if (exportSubtitle) {
         successMsg += tr("\n\n关联字幕文件已一并输出。");
       }
-      AppMessageBox::information(this, tr("导出成功"), successMsg);
+      int ret = AppMessageBox::information(this, tr("导出成功"), successMsg,
+                                           AppMessageBox::Ok |
+                                               AppMessageBox::OpenFolder);
+      if (ret == AppMessageBox::OpenFolder) {
+        QString dirPath = QFileInfo(mainOutputPath).absolutePath();
+        QDesktopServices::openUrl(QUrl::fromLocalFile(dirPath));
+      }
     } else {
       QString errMsg = progressDlg.errorString();
       if (!errMsg.isEmpty()) {

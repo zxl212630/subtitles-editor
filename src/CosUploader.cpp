@@ -191,7 +191,7 @@ void CosUploader::upload(const QString &localFilePath) {
       QString presignedUrl = generatePresignedUrl(cosPath);
       emit uploadFinished(urlStr, presignedUrl);
     } else {
-      QString errorMsg = QString(tr("上传失败：%1")).arg(reply_->errorString());
+      QString errorMsg = tr("Upload failed: %1").arg(reply_->errorString());
       if (!response.isEmpty()) {
         errorMsg += QString(" | Response: %1").arg(QString::fromUtf8(response));
       }

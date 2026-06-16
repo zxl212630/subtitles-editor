@@ -42,7 +42,8 @@ ConfigManager::ConfigManager()
 bool ConfigManager::isValid() const {
   QString asrProv = asrProvider();
   if (asrProv == "local_whisper") {
-    qDebug() << "[ConfigManager] Configuration is valid: true (using local whisper)";
+    qDebug()
+        << "[ConfigManager] Configuration is valid: true (using local whisper)";
     return true;
   }
 
@@ -304,7 +305,9 @@ void ConfigManager::setAsrProvider(const QString &provider) {
 }
 
 QString ConfigManager::whisperModelPath() const {
-  QString defaultPath = QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation) + "/models";
+  QString defaultPath =
+      QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation) +
+      "/models";
   return getString("whisper", "model_path", defaultPath);
 }
 
@@ -321,7 +324,7 @@ void ConfigManager::setWhisperModel(const QString &model) {
 }
 
 QString ConfigManager::whisperLanguage() const {
-  return getString("whisper", "language", "zh");
+  return getString("whisper", "language", "auto");
 }
 
 void ConfigManager::setWhisperLanguage(const QString &lang) {

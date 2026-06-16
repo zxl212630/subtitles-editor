@@ -1,22 +1,23 @@
 #include "AsrConfigDialog.h"
-#include "ConfigManager.h"
 #include "AppMessageBox.h"
+#include "ConfigManager.h"
+#include "TranslationManager.h"
 #include <QBoxLayout>
 #include <QCheckBox>
 #include <QComboBox>
 #include <QDebug>
+#include <QDir>
 #include <QEvent>
+#include <QFile>
 #include <QFrame>
 #include <QLabel>
+#include <QNetworkAccessManager>
+#include <QNetworkReply>
+#include <QNetworkRequest>
+#include <QProgressBar>
 #include <QPushButton>
 #include <QSpinBox>
 #include <QStandardPaths>
-#include <QDir>
-#include <QFile>
-#include <QProgressBar>
-#include <QNetworkAccessManager>
-#include <QNetworkRequest>
-#include <QNetworkReply>
 
 AsrConfigDialog::AsrConfigDialog(QWidget *parent) : BaseDialog(parent) {
   setWindowTitle(tr("语音识别配置"));
@@ -27,10 +28,14 @@ AsrConfigDialog::AsrConfigDialog(QWidget *parent) : BaseDialog(parent) {
 
   setupTitleBar();
   setupUi();
+  retranslateUi();
   loadDefaultConfig();
 
   connect(btnCancel_, &QPushButton::clicked, this, &QDialog::reject);
   connect(btnOk_, &QPushButton::clicked, this, &QDialog::accept);
+
+  connect(&TranslationManager::instance(), &TranslationManager::languageChanged,
+          this, [this]() { retranslateUi(); });
 
   setupWindowAgent(titleBar);
 }
@@ -93,9 +98,11 @@ void AsrConfigDialog::setupUi() {
   engineModelTypeCombo_ = new QComboBox(tencentContainer_);
   engineModelTypeCombo_->setFixedHeight(32);
   engineModelTypeCombo_->setObjectName("ConfigComboBox");
-  engineModelTypeCombo_->addItem("16k_zh_en(中英粤+9种方言大模型)", "16k_zh_en");
+  engineModelTypeCombo_->addItem("16k_zh_en(中英粤+9种方言大模型)",
+                                 "16k_zh_en");
   engineModelTypeCombo_->addItem("16k_zh_large(普方英大模型)", "16k_zh_large");
-  engineModelTypeCombo_->addItem("16k_multi_lang(多语种大模型)", "16k_multi_lang");
+  engineModelTypeCombo_->addItem("16k_multi_lang(多语种大模型)",
+                                 "16k_multi_lang");
   engineModelTypeCombo_->addItem("16k_zh(中文普通话通用)", "16k_zh");
   engineModelTypeCombo_->addItem("16k_en(英语)", "16k_en");
   engineModelTypeCombo_->addItem("16k_en_large(英语大模型)", "16k_en_large");
@@ -134,7 +141,8 @@ void AsrConfigDialog::setupUi() {
   speakerDiarizationLabel_->setObjectName("ConfigFieldLabel");
   tencentLayout->addWidget(speakerDiarizationLabel_);
 
-  speakerDiarizationCheck_ = new QCheckBox(tr("开启说话人识别"), tencentContainer_);
+  speakerDiarizationCheck_ =
+      new QCheckBox(tr("开启说话人识别"), tencentContainer_);
   speakerDiarizationCheck_->setFixedHeight(32);
   speakerDiarizationCheck_->setObjectName("ConfigCheckBox");
   tencentLayout->addWidget(speakerDiarizationCheck_);
@@ -246,12 +254,12 @@ void AsrConfigDialog::setupUi() {
   });
 
   // Whisper model selection triggers verification
-  connect(whisperModelCombo_, &QComboBox::currentTextChanged, this, [this]() {
-    updateWhisperStatus();
-  });
+  connect(whisperModelCombo_, &QComboBox::currentTextChanged, this,
+          [this]() { updateWhisperStatus(); });
 
   // Download Trigger
-  connect(btnDownload_, &QPushButton::clicked, this, &AsrConfigDialog::onDownloadClicked);
+  connect(btnDownload_, &QPushButton::clicked, this,
+          &AsrConfigDialog::onDownloadClicked);
 
   retranslateUi();
 }
@@ -283,9 +291,14 @@ void AsrConfigDialog::loadDefaultConfig() {
   }
 
   QString wLang = cfg.whisperLanguage();
+  if (wLang.isEmpty()) {
+    wLang = "auto";
+  }
   int lIdx = whisperLangCombo_->findData(wLang);
   if (lIdx >= 0) {
     whisperLangCombo_->setCurrentIndex(lIdx);
+  } else {
+    whisperLangCombo_->setCurrentIndex(0);
   }
 
   whisperThreadsSpin_->setValue(cfg.whisperThreads());
@@ -313,16 +326,28 @@ void AsrConfigDialog::updateWhisperStatus() {
   }
 
   QString model = whisperModel();
+  if (model != lastCheckedModel_) {
+    lastCheckedModel_ = model;
+    downloadError_.clear();
+  }
+
   bool exists = checkModelExists(model);
 
-  if (exists) {
-    whisperStatusLabel_->setText(tr("模型状态: 已下载"));
-    whisperStatusLabel_->setStyleSheet("color: #10b981; font-weight: bold;");
+  if (!downloadError_.isEmpty()) {
+    whisperStatusLabel_->setText(
+        tr("模型状态: 下载失败 (%1)").arg(downloadError_));
+    whisperStatusLabel_->setStyleSheet("color: #ef4444; font-weight: bold;");
+    whisperStatusLabel_->show();
+    btnDownload_->show();
+    btnOk_->setEnabled(false);
+  } else if (exists) {
+    whisperStatusLabel_->hide(); // 隐藏状态标签以腾出空间
     btnDownload_->hide();
     btnOk_->setEnabled(true);
   } else {
     whisperStatusLabel_->setText(tr("模型状态: 未下载"));
     whisperStatusLabel_->setStyleSheet("color: #ef4444; font-weight: bold;");
+    whisperStatusLabel_->show();
     btnDownload_->show();
     btnOk_->setEnabled(false);
   }
@@ -336,34 +361,44 @@ void AsrConfigDialog::onDownloadClicked() {
     return;
   }
 
+  downloadError_.clear();
+  lastReportedPercent_ = -1;
+
   QString modelName = whisperModel();
   QString fileName = QString("ggml-%1.bin").arg(modelName);
-  
+
   QString saveDir = ConfigManager::instance().whisperModelPath();
   QDir().mkpath(saveDir);
   QString savePath = saveDir + "/" + fileName;
 
   downloadFile_ = new QFile(savePath, this);
   if (!downloadFile_->open(QIODevice::WriteOnly)) {
-    AppMessageBox::critical(this, tr("下载失败"), tr("无法创建模型文件: %1").arg(savePath));
+    downloadError_ = tr("无法创建模型文件: %1").arg(savePath);
+#ifdef QT_DEBUG
+    qDebug() << "[Debug] [AsrConfigDialog] " << downloadError_;
+#endif
     downloadFile_->deleteLater();
     downloadFile_ = nullptr;
+    updateWhisperStatus();
     return;
   }
 
   isDownloading_ = true;
   btnDownload_->setText(tr("取消"));
-  whisperProgressBar_->show();
+  // whisperProgressBar_->show(); // 移去进度条，仅保留文字描述
   whisperProgressBar_->setValue(0);
   whisperModelCombo_->setEnabled(false);
   whisperLangCombo_->setEnabled(false);
   whisperThreadsSpin_->setEnabled(false);
   btnOk_->setEnabled(false);
-  
+
+  whisperStatusLabel_->show();
   whisperStatusLabel_->setText(tr("正在启动下载..."));
   whisperStatusLabel_->setStyleSheet("color: #3b82f6; font-weight: bold;");
 
-  QString urlStr = QString("https://hf-mirror.com/ggerganov/whisper.cpp/resolve/main/%1").arg(fileName);
+  QString urlStr =
+      QString("https://hf-mirror.com/ggerganov/whisper.cpp/resolve/main/%1")
+          .arg(fileName);
   QUrl url(urlStr);
 
   if (!networkManager_) {
@@ -373,49 +408,107 @@ void AsrConfigDialog::onDownloadClicked() {
   startDownload(url, savePath);
 }
 
-void AsrConfigDialog::startDownload(const QUrl &url, const QString &savePath, int redirectCount) {
+void AsrConfigDialog::startDownload(const QUrl &url, const QString &savePath,
+                                    int redirectCount) {
   if (redirectCount > 5) {
-    AppMessageBox::critical(this, tr("下载失败"), tr("重定向次数过多"));
+    downloadError_ = tr("重定向次数过多");
+#ifdef QT_DEBUG
+    qDebug() << "[Debug] [AsrConfigDialog] " << downloadError_;
+#endif
     resetDownloadState();
     updateWhisperStatus();
     return;
   }
 
+  // Ensure file is clean and truncated if we start a request (in case of
+  // redirect leftovers)
+  if (downloadFile_) {
+    if (downloadFile_->isOpen()) {
+      downloadFile_->close();
+    }
+    if (!downloadFile_->open(QIODevice::WriteOnly)) {
+      downloadError_ = tr("无法创建模型文件: %1").arg(savePath);
+#ifdef QT_DEBUG
+      qDebug() << "[Debug] [AsrConfigDialog] " << downloadError_;
+#endif
+      resetDownloadState();
+      updateWhisperStatus();
+      return;
+    }
+  }
+
+#ifdef QT_DEBUG
+  qDebug() << "[Debug] [AsrConfigDialog] 开始下载模型, URL:" << url.toString();
+#endif
+
   QNetworkRequest request(url);
-  request.setAttribute(QNetworkRequest::RedirectPolicyAttribute, QNetworkRequest::ManualRedirectPolicy);
-  request.setHeader(QNetworkRequest::UserAgentHeader, "Mozilla/5.0 (SubtitlesEditor)");
+  request.setAttribute(QNetworkRequest::RedirectPolicyAttribute,
+                       QNetworkRequest::ManualRedirectPolicy);
+  request.setHeader(QNetworkRequest::UserAgentHeader,
+                    "Mozilla/5.0 (SubtitlesEditor)");
 
   reply_ = networkManager_->get(request);
 
   connect(reply_, &QNetworkReply::readyRead, this, [this]() {
     if (downloadFile_ && reply_) {
+      int statusCode =
+          reply_->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
+      if (statusCode >= 300 && statusCode < 400) {
+        return; // Skip redirect response body
+      }
       downloadFile_->write(reply_->readAll());
     }
   });
 
-  connect(reply_, &QNetworkReply::downloadProgress, this, [this](qint64 bytesRead, qint64 totalBytes) {
-    if (totalBytes > 0) {
-      int percent = static_cast<int>((bytesRead * 100) / totalBytes);
-      whisperProgressBar_->setValue(percent);
-      double readMb = bytesRead / (1024.0 * 1024.0);
-      double totalMb = totalBytes / (1024.0 * 1024.0);
-      whisperStatusLabel_->setText(tr("正在下载: %1% (%2 MB / %3 MB)").arg(percent).arg(readMb, 0, 'f', 1).arg(totalMb, 0, 'f', 1));
-    }
-  });
+  connect(
+      reply_, &QNetworkReply::downloadProgress, this,
+      [this](qint64 bytesRead, qint64 totalBytes) {
+        if (!reply_)
+          return;
+        int statusCode =
+            reply_->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
+        if (statusCode >= 300 && statusCode < 400) {
+          return; // Skip redirect progress
+        }
+        if (totalBytes > 0) {
+          int percent = static_cast<int>((bytesRead * 100) / totalBytes);
+          whisperProgressBar_->setValue(percent);
+          double readMb = bytesRead / (1024.0 * 1024.0);
+          double totalMb = totalBytes / (1024.0 * 1024.0);
+          whisperStatusLabel_->show();
+          whisperStatusLabel_->setText(tr("正在下载: %1% (%2 MB / %3 MB)")
+                                           .arg(percent)
+                                           .arg(readMb, 0, 'f', 1)
+                                           .arg(totalMb, 0, 'f', 1));
 
-  connect(reply_, &QNetworkReply::redirected, this, [this, savePath, redirectCount](const QUrl &redirectUrl) {
-    reply_->deleteLater();
-    reply_ = nullptr;
-    startDownload(redirectUrl, savePath, redirectCount + 1);
-  });
+          if (percent != lastReportedPercent_) {
+            lastReportedPercent_ = percent;
+#ifdef QT_DEBUG
+            qDebug() << "[Debug] [AsrConfigDialog] 下载进度:" << percent
+                     << "% (" << readMb << "MB /" << totalMb << "MB)";
+#endif
+          }
+        }
+      });
+
+  connect(reply_, &QNetworkReply::redirected, this,
+          [this, savePath, redirectCount](const QUrl &redirectUrl) {
+            reply_->deleteLater();
+            reply_ = nullptr;
+            startDownload(redirectUrl, savePath, redirectCount + 1);
+          });
 
   connect(reply_, &QNetworkReply::finished, this, [this, savePath]() {
-    if (!reply_) return;
+    if (!reply_)
+      return;
 
     // Check for HTTP redirect manually
-    int statusCode = reply_->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
+    int statusCode =
+        reply_->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
     if (statusCode >= 300 && statusCode < 400) {
-      QUrl redirectUrl = reply_->attribute(QNetworkRequest::RedirectionTargetAttribute).toUrl();
+      QUrl redirectUrl =
+          reply_->attribute(QNetworkRequest::RedirectionTargetAttribute)
+              .toUrl();
       if (redirectUrl.isValid()) {
         QUrl resolvedUrl = reply_->url().resolved(redirectUrl);
         reply_->deleteLater();
@@ -428,11 +521,16 @@ void AsrConfigDialog::startDownload(const QUrl &url, const QString &savePath, in
     downloadFile_->close();
 
     if (reply_->error() == QNetworkReply::NoError) {
-      AppMessageBox::information(this, tr("下载成功"), tr("模型已成功下载并保存。"));
+#ifdef QT_DEBUG
+      qDebug() << "[Debug] [AsrConfigDialog] 模型下载成功";
+#endif
     } else {
       downloadFile_->remove();
       if (reply_->error() != QNetworkReply::OperationCanceledError) {
-        AppMessageBox::critical(this, tr("下载失败"), tr("下载错误: %1").arg(reply_->errorString()));
+        downloadError_ = tr("下载错误: %1").arg(reply_->errorString());
+#ifdef QT_DEBUG
+        qDebug() << "[Debug] [AsrConfigDialog] " << downloadError_;
+#endif
       }
     }
 
@@ -539,30 +637,54 @@ void AsrConfigDialog::retranslateUi() {
   }
 
   if (engineModelTypeCombo_) {
-    engineModelTypeCombo_->setItemText(0, QString("16k_zh_en(%1)").arg(tr("中英粤+9种方言大模型")));
-    engineModelTypeCombo_->setItemText(1, QString("16k_zh_large(%1)").arg(tr("普方英大模型")));
-    engineModelTypeCombo_->setItemText(2, QString("16k_multi_lang(%1)").arg(tr("多语种大模型")));
-    engineModelTypeCombo_->setItemText(3, QString("16k_zh(%1)").arg(tr("中文普通话通用")));
-    engineModelTypeCombo_->setItemText(4, QString("16k_en(%1)").arg(tr("英语")));
-    engineModelTypeCombo_->setItemText(5, QString("16k_en_large(%1)").arg(tr("英语大模型")));
-    engineModelTypeCombo_->setItemText(6, QString("16k_yue(%1)").arg(tr("粤语")));
-    engineModelTypeCombo_->setItemText(7, QString("16k_zh-PY(%1)").arg(tr("中英粤混合")));
-    engineModelTypeCombo_->setItemText(8, QString("16k_zh-TW(%1)").arg(tr("中文繁体")));
-    engineModelTypeCombo_->setItemText(9, QString("16k_ja(%1)").arg(tr("日语")));
-    engineModelTypeCombo_->setItemText(10, QString("16k_ko(%1)").arg(tr("韩语")));
-    engineModelTypeCombo_->setItemText(11, QString("16k_vi(%1)").arg(tr("越南语")));
-    engineModelTypeCombo_->setItemText(12, QString("16k_ms(%1)").arg(tr("马来语")));
-    engineModelTypeCombo_->setItemText(13, QString("16k_id(%1)").arg(tr("印度尼西亚语")));
-    engineModelTypeCombo_->setItemText(14, QString("16k_fil(%1)").arg(tr("菲律宾语")));
-    engineModelTypeCombo_->setItemText(15, QString("16k_th(%1)").arg(tr("泰语")));
-    engineModelTypeCombo_->setItemText(16, QString("16k_pt(%1)").arg(tr("葡萄牙语")));
-    engineModelTypeCombo_->setItemText(17, QString("16k_tr(%1)").arg(tr("土耳其语")));
-    engineModelTypeCombo_->setItemText(18, QString("16k_ar(%1)").arg(tr("阿拉伯语")));
-    engineModelTypeCombo_->setItemText(19, QString("16k_es(%1)").arg(tr("西班牙语")));
-    engineModelTypeCombo_->setItemText(20, QString("16k_hi(%1)").arg(tr("印地语")));
-    engineModelTypeCombo_->setItemText(21, QString("16k_fr(%1)").arg(tr("法语")));
-    engineModelTypeCombo_->setItemText(22, QString("16k_de(%1)").arg(tr("德语")));
-    engineModelTypeCombo_->setItemText(23, QString("16k_zh_medical(%1)").arg(tr("中文医疗")));
+    engineModelTypeCombo_->setItemText(
+        0, QString("16k_zh_en(%1)").arg(tr("中英粤+9种方言大模型")));
+    engineModelTypeCombo_->setItemText(
+        1, QString("16k_zh_large(%1)").arg(tr("普方英大模型")));
+    engineModelTypeCombo_->setItemText(
+        2, QString("16k_multi_lang(%1)").arg(tr("多语种大模型")));
+    engineModelTypeCombo_->setItemText(
+        3, QString("16k_zh(%1)").arg(tr("中文普通话通用")));
+    engineModelTypeCombo_->setItemText(4,
+                                       QString("16k_en(%1)").arg(tr("英语")));
+    engineModelTypeCombo_->setItemText(
+        5, QString("16k_en_large(%1)").arg(tr("英语大模型")));
+    engineModelTypeCombo_->setItemText(6,
+                                       QString("16k_yue(%1)").arg(tr("粤语")));
+    engineModelTypeCombo_->setItemText(
+        7, QString("16k_zh-PY(%1)").arg(tr("中英粤混合")));
+    engineModelTypeCombo_->setItemText(
+        8, QString("16k_zh-TW(%1)").arg(tr("中文繁体")));
+    engineModelTypeCombo_->setItemText(9,
+                                       QString("16k_ja(%1)").arg(tr("日语")));
+    engineModelTypeCombo_->setItemText(10,
+                                       QString("16k_ko(%1)").arg(tr("韩语")));
+    engineModelTypeCombo_->setItemText(11,
+                                       QString("16k_vi(%1)").arg(tr("越南语")));
+    engineModelTypeCombo_->setItemText(12,
+                                       QString("16k_ms(%1)").arg(tr("马来语")));
+    engineModelTypeCombo_->setItemText(
+        13, QString("16k_id(%1)").arg(tr("印度尼西亚语")));
+    engineModelTypeCombo_->setItemText(
+        14, QString("16k_fil(%1)").arg(tr("菲律宾语")));
+    engineModelTypeCombo_->setItemText(15,
+                                       QString("16k_th(%1)").arg(tr("泰语")));
+    engineModelTypeCombo_->setItemText(
+        16, QString("16k_pt(%1)").arg(tr("葡萄牙语")));
+    engineModelTypeCombo_->setItemText(
+        17, QString("16k_tr(%1)").arg(tr("土耳其语")));
+    engineModelTypeCombo_->setItemText(
+        18, QString("16k_ar(%1)").arg(tr("阿拉伯语")));
+    engineModelTypeCombo_->setItemText(
+        19, QString("16k_es(%1)").arg(tr("西班牙语")));
+    engineModelTypeCombo_->setItemText(20,
+                                       QString("16k_hi(%1)").arg(tr("印地语")));
+    engineModelTypeCombo_->setItemText(21,
+                                       QString("16k_fr(%1)").arg(tr("法语")));
+    engineModelTypeCombo_->setItemText(22,
+                                       QString("16k_de(%1)").arg(tr("德语")));
+    engineModelTypeCombo_->setItemText(
+        23, QString("16k_zh_medical(%1)").arg(tr("中文医疗")));
   }
 
   if (btnCancel_) {

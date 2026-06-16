@@ -23,6 +23,10 @@
         <source>取消</source>
         <translation>Cancel</translation>
     </message>
+    <message>
+        <source>打开所在文件夹</source>
+        <translation>Open Folder</translation>
+    </message>
 </context>
 <context>
     <name>AppWindow</name>
@@ -745,6 +749,82 @@ A simple and easy-to-use video subtitle editing tool.</translation>
         <source>中文医疗</source>
         <translation>Chinese Medical</translation>
     </message>
+    <message>
+        <source>识别提供商</source>
+        <translation>Recognition Provider</translation>
+    </message>
+    <message>
+        <source>本地 ASR (Whisper)</source>
+        <translation>Local ASR (Whisper)</translation>
+    </message>
+    <message>
+        <source>腾讯云 ASR</source>
+        <translation>Tencent Cloud ASR</translation>
+    </message>
+    <message>
+        <source>语音识别模型</source>
+        <translation>ASR Model</translation>
+    </message>
+    <message>
+        <source>下载模型</source>
+        <translation>Download Model</translation>
+    </message>
+    <message>
+        <source>识别语言</source>
+        <translation>Language</translation>
+    </message>
+    <message>
+        <source>自动检测</source>
+        <translation>Auto Detect</translation>
+    </message>
+    <message>
+        <source>中文</source>
+        <translation>Chinese</translation>
+    </message>
+    <message>
+        <source>英文</source>
+        <translation>English</translation>
+    </message>
+    <message>
+        <source>日文</source>
+        <translation>Japanese</translation>
+    </message>
+    <message>
+        <source>韩文</source>
+        <translation>Korean</translation>
+    </message>
+    <message>
+        <source>计算线程数</source>
+        <translation>Threads</translation>
+    </message>
+    <message>
+        <source>模型状态: 下载失败 (%1)</source>
+        <translation>Model status: Download failed (%1)</translation>
+    </message>
+    <message>
+        <source>模型状态: 未下载</source>
+        <translation>Model status: Not downloaded</translation>
+    </message>
+    <message>
+        <source>正在启动下载...</source>
+        <translation>Starting download...</translation>
+    </message>
+    <message>
+        <source>正在下载: %1% (%2 MB / %3 MB)</source>
+        <translation>Downloading: %1% (%2 MB / %3 MB)</translation>
+    </message>
+    <message>
+        <source>无法创建模型文件: %1</source>
+        <translation>Cannot create model file: %1</translation>
+    </message>
+    <message>
+        <source>重定向次数过多</source>
+        <translation>Too many redirects</translation>
+    </message>
+    <message>
+        <source>下载错误: %1</source>
+        <translation>Download error: %1</translation>
+    </message>
 </context>
 <context>
     <name>AsrProgressDialog</name>
@@ -1463,7 +1543,7 @@ A simple and easy-to-use video subtitle editing tool.</translation>
     </message>
     <message>
         <location filename="../src/CosUploader.cpp" line="194"/>
-        <source>上传失败：%1</source>
+        <source>Upload failed: %1</source>
         <translation>Upload failed: %1</translation>
     </message>
 </context>
@@ -1714,6 +1794,10 @@ A simple and easy-to-use video subtitle editing tool.</translation>
         <location filename="../src/OssUploader.cpp" line="28"/>
         <source>用户已取消上传</source>
         <translation>Upload cancelled by user</translation>
+    </message>
+    <message>
+        <source>Upload failed: %1</source>
+        <translation>Upload failed: %1</translation>
     </message>
 </context>
 <context>
@@ -2468,6 +2552,18 @@ A simple and easy-to-use video subtitle editing tool.</translation>
         <location filename="../src/TimelinePanel.cpp" line="1794"/>
         <source>语音转文字</source>
         <translation>Speech to Text</translation>
+    </message>
+    <message>
+        <source>Recognizing speech (Local Whisper)...</source>
+        <translation>Recognizing speech (Local Whisper)...</translation>
+    </message>
+    <message>
+        <source>Recognizing speech: %1%</source>
+        <translation>Recognizing speech: %1%</translation>
+    </message>
+    <message>
+        <source>Audio extraction failed: %1</source>
+        <translation>Audio extraction failed: %1</translation>
     </message>
 </context>
 <context>

@@ -1,4 +1,5 @@
 #include "ConfigDialog.h"
+#include "AppMessageBox.h"
 #include "ConfigManager.h"
 #include "PaletteSelectors.h"
 #include "ThemeManager.h"
@@ -9,26 +10,25 @@
 #include <QComboBox>
 #include <QDebug>
 #include <QDoubleSpinBox>
+#include <QFile>
 #include <QFileDialog>
+#include <QFileInfo>
 #include <QFontDatabase>
 #include <QGroupBox>
 #include <QKeySequenceEdit>
 #include <QLabel>
 #include <QLineEdit>
 #include <QListWidget>
+#include <QNetworkAccessManager>
+#include <QNetworkReply>
+#include <QNetworkRequest>
+#include <QProgressBar>
 #include <QPushButton>
 #include <QScrollArea>
 #include <QSpinBox>
 #include <QStackedWidget>
 #include <QStandardPaths>
 #include <QToolButton>
-#include <QNetworkAccessManager>
-#include <QNetworkRequest>
-#include <QNetworkReply>
-#include <QFile>
-#include <QProgressBar>
-#include <QFileInfo>
-#include "AppMessageBox.h"
 
 #ifdef Q_OS_MAC
 #define DEFAULT_DELETE_KEY Qt::Key_Backspace
@@ -465,8 +465,7 @@ bool ConfigDialog::isDirty() const {
        initialConfig_["wp_model"].toString()) ||
       (whisperLangCombo_->currentData().toString() !=
        initialConfig_["wp_language"].toString()) ||
-      (whisperThreadsSpin_->value() !=
-       initialConfig_["wp_threads"].toInt()) ||
+      (whisperThreadsSpin_->value() != initialConfig_["wp_threads"].toInt()) ||
       (subtitleFontFamilyCombo_->currentText() !=
        initialConfig_["sub_fontFamily"].toString()) ||
       (subtitleFontSizeSpin_->value() !=
@@ -588,8 +587,7 @@ void ConfigDialog::saveConfig() {
   initialConfig_["primary_color"] = colorSelector_->currentColor();
   initialConfig_["storage_provider"] =
       storageProviderCombo_->currentData().toString();
-  initialConfig_["asr_provider"] =
-      asrProviderCombo_->currentData().toString();
+  initialConfig_["asr_provider"] = asrProviderCombo_->currentData().toString();
   initialConfig_["wp_model_path"] = whisperModelPathEdit_->text();
   initialConfig_["wp_model"] = whisperModelCombo_->currentData().toString();
   initialConfig_["wp_language"] = whisperLangCombo_->currentData().toString();
@@ -726,12 +724,14 @@ void ConfigDialog::retranslateUi() {
     whisperLangLabel_->setText(tr("默认识别语言"));
     whisperThreadsLabel_->setText(tr("线程数"));
     if (whisperModelStatusLabel_) {
-      whisperModelStatusLabel_->setText(whisperIsDownloading_ ? tr("正在下载...") : tr("模型状态"));
+      whisperModelStatusLabel_->setText(
+          whisperIsDownloading_ ? tr("正在下载...") : tr("模型状态"));
     }
     if (btnDownloadWhisperModel_) {
-      btnDownloadWhisperModel_->setText(whisperIsDownloading_ ? tr("取消") : tr("下载模型"));
+      btnDownloadWhisperModel_->setText(whisperIsDownloading_ ? tr("取消")
+                                                              : tr("下载模型"));
     }
-    
+
     whisperLangCombo_->setItemText(0, tr("自动检测"));
     whisperLangCombo_->setItemText(1, tr("中文 (Chinese)"));
     whisperLangCombo_->setItemText(2, tr("英文 (English)"));
@@ -872,6 +872,7 @@ void ConfigDialog::retranslateUi() {
   if (sidebarList_->currentItem()) {
     titleRightLabel->setText(sidebarList_->currentItem()->text());
   }
+  updateWhisperStatus();
 }
 
 void ConfigDialog::setupUi() {
@@ -1087,7 +1088,8 @@ void ConfigDialog::setupUi() {
   speakerDiarizationLabel_ = new QLabel(tr("说话人识别"), tencentAsrContainer_);
   speakerDiarizationLabel_->setObjectName("ConfigFieldLabel");
   tencentLayout->addWidget(speakerDiarizationLabel_);
-  speakerDiarizationCheck_ = new QCheckBox(tr("开启说话人识别"), tencentAsrContainer_);
+  speakerDiarizationCheck_ =
+      new QCheckBox(tr("开启说话人识别"), tencentAsrContainer_);
   speakerDiarizationCheck_->setFixedHeight(32);
   speakerDiarizationCheck_->setObjectName("ConfigCheckBox");
   tencentLayout->addWidget(speakerDiarizationCheck_);
@@ -1162,7 +1164,8 @@ void ConfigDialog::setupUi() {
   whisperLayout->addLayout(pathLayout);
 
   connect(whisperModelPathBtn_, &QPushButton::clicked, this, [this]() {
-    QString dir = QFileDialog::getExistingDirectory(this, tr("选择模型存放目录"), whisperModelPathEdit_->text());
+    QString dir = QFileDialog::getExistingDirectory(
+        this, tr("选择模型存放目录"), whisperModelPathEdit_->text());
     if (!dir.isEmpty()) {
       whisperModelPathEdit_->setText(dir);
       checkDirtyState();
@@ -1191,7 +1194,8 @@ void ConfigDialog::setupUi() {
   whisperModelStatusLabel_->setObjectName("ConfigFieldLabel");
   statusRowLayout->addWidget(whisperModelStatusLabel_);
 
-  btnDownloadWhisperModel_ = new QPushButton(tr("下载模型"), whisperAsrContainer_);
+  btnDownloadWhisperModel_ =
+      new QPushButton(tr("下载模型"), whisperAsrContainer_);
   btnDownloadWhisperModel_->setFixedHeight(30);
   btnDownloadWhisperModel_->setFixedWidth(100);
   statusRowLayout->addWidget(btnDownloadWhisperModel_);
@@ -1206,7 +1210,8 @@ void ConfigDialog::setupUi() {
   whisperDownloadProgressBar_->hide();
   whisperLayout->addWidget(whisperDownloadProgressBar_);
 
-  connect(btnDownloadWhisperModel_, &QPushButton::clicked, this, &ConfigDialog::onDownloadWhisperModelClicked);
+  connect(btnDownloadWhisperModel_, &QPushButton::clicked, this,
+          &ConfigDialog::onDownloadWhisperModelClicked);
 
   whisperLangLabel_ = new QLabel(tr("默认识别语言"), whisperAsrContainer_);
   whisperLangLabel_->setObjectName("ConfigFieldLabel");
@@ -1623,15 +1628,28 @@ void ConfigDialog::updateWhisperStatus() {
     return;
   }
   QString modelName = whisperModelCombo_->currentData().toString();
+  if (modelName != whisperLastCheckedModel_) {
+    whisperLastCheckedModel_ = modelName;
+    whisperDownloadError_.clear();
+  }
+
   bool exists = checkModelExists(modelName);
 
-  if (exists) {
-    whisperModelStatusLabel_->setText(tr("模型状态: 已下载"));
-    whisperModelStatusLabel_->setStyleSheet("color: #10b981; font-weight: bold;");
+  if (!whisperDownloadError_.isEmpty()) {
+    whisperModelStatusLabel_->setText(
+        tr("模型状态: 下载失败 (%1)").arg(whisperDownloadError_));
+    whisperModelStatusLabel_->setStyleSheet(
+        "color: #ef4444; font-weight: bold;");
+    whisperModelStatusLabel_->show();
+    btnDownloadWhisperModel_->show();
+  } else if (exists) {
+    whisperModelStatusLabel_->hide(); // 隐藏状态标签以腾出空间
     btnDownloadWhisperModel_->hide();
   } else {
     whisperModelStatusLabel_->setText(tr("模型状态: 未下载"));
-    whisperModelStatusLabel_->setStyleSheet("color: #ef4444; font-weight: bold;");
+    whisperModelStatusLabel_->setStyleSheet(
+        "color: #ef4444; font-weight: bold;");
+    whisperModelStatusLabel_->show();
     btnDownloadWhisperModel_->show();
   }
 }
@@ -1653,9 +1671,12 @@ void ConfigDialog::onDownloadWhisperModelClicked() {
     return;
   }
 
+  whisperDownloadError_.clear();
+  whisperLastReportedPercent_ = -1;
+
   QString modelName = whisperModelCombo_->currentData().toString();
   QString fileName = QString("ggml-%1.bin").arg(modelName);
-  
+
   QString saveDir = whisperModelPathEdit_->text();
   if (saveDir.isEmpty()) {
     saveDir = ConfigManager::instance().whisperModelPath();
@@ -1665,23 +1686,30 @@ void ConfigDialog::onDownloadWhisperModelClicked() {
 
   whisperDownloadFile_ = new QFile(savePath, this);
   if (!whisperDownloadFile_->open(QIODevice::WriteOnly)) {
-    AppMessageBox::critical(this, tr("下载失败"), tr("无法创建模型文件: %1").arg(savePath));
+    whisperDownloadError_ = tr("无法创建模型文件: %1").arg(savePath);
+#ifdef QT_DEBUG
+    qDebug() << "[Debug] [ConfigDialog] " << whisperDownloadError_;
+#endif
     whisperDownloadFile_->deleteLater();
     whisperDownloadFile_ = nullptr;
+    updateWhisperStatus();
     return;
   }
 
   whisperIsDownloading_ = true;
   btnDownloadWhisperModel_->setText(tr("取消"));
-  whisperDownloadProgressBar_->show();
+  // whisperDownloadProgressBar_->show(); // 移去进度条，仅保留文字描述
   whisperDownloadProgressBar_->setValue(0);
   whisperModelCombo_->setEnabled(false);
   whisperModelPathBtn_->setEnabled(false);
-  
+
+  whisperModelStatusLabel_->show();
   whisperModelStatusLabel_->setText(tr("正在启动下载..."));
   whisperModelStatusLabel_->setStyleSheet("color: #3b82f6; font-weight: bold;");
 
-  QString urlStr = QString("https://hf-mirror.com/ggerganov/whisper.cpp/resolve/main/%1").arg(fileName);
+  QString urlStr =
+      QString("https://hf-mirror.com/ggerganov/whisper.cpp/resolve/main/%1")
+          .arg(fileName);
   QUrl url(urlStr);
 
   if (!whisperNetworkManager_) {
@@ -1691,49 +1719,111 @@ void ConfigDialog::onDownloadWhisperModelClicked() {
   startWhisperDownload(url, savePath);
 }
 
-void ConfigDialog::startWhisperDownload(const QUrl &url, const QString &savePath, int redirectCount) {
+void ConfigDialog::startWhisperDownload(const QUrl &url,
+                                        const QString &savePath,
+                                        int redirectCount) {
   if (redirectCount > 5) {
-    AppMessageBox::critical(this, tr("下载失败"), tr("重定向次数过多"));
+    whisperDownloadError_ = tr("重定向次数过多");
+#ifdef QT_DEBUG
+    qDebug() << "[Debug] [ConfigDialog] " << whisperDownloadError_;
+#endif
     resetWhisperDownloadState();
     updateWhisperStatus();
     return;
   }
 
+  // Ensure file is clean and truncated if we start a request (in case of
+  // redirect leftovers)
+  if (whisperDownloadFile_) {
+    if (whisperDownloadFile_->isOpen()) {
+      whisperDownloadFile_->close();
+    }
+    if (!whisperDownloadFile_->open(QIODevice::WriteOnly)) {
+      whisperDownloadError_ = tr("无法创建模型文件: %1").arg(savePath);
+#ifdef QT_DEBUG
+      qDebug() << "[Debug] [ConfigDialog] " << whisperDownloadError_;
+#endif
+      resetWhisperDownloadState();
+      updateWhisperStatus();
+      return;
+    }
+  }
+
+#ifdef QT_DEBUG
+  qDebug() << "[Debug] [ConfigDialog] 开始下载模型, URL:" << url.toString();
+#endif
+
   QNetworkRequest request(url);
-  request.setAttribute(QNetworkRequest::RedirectPolicyAttribute, QNetworkRequest::ManualRedirectPolicy);
-  request.setHeader(QNetworkRequest::UserAgentHeader, "Mozilla/5.0 (SubtitlesEditor)");
+  request.setAttribute(QNetworkRequest::RedirectPolicyAttribute,
+                       QNetworkRequest::ManualRedirectPolicy);
+  request.setHeader(QNetworkRequest::UserAgentHeader,
+                    "Mozilla/5.0 (SubtitlesEditor)");
 
   whisperReply_ = whisperNetworkManager_->get(request);
 
   connect(whisperReply_, &QNetworkReply::readyRead, this, [this]() {
     if (whisperDownloadFile_ && whisperReply_) {
+      int statusCode =
+          whisperReply_->attribute(QNetworkRequest::HttpStatusCodeAttribute)
+              .toInt();
+      if (statusCode >= 300 && statusCode < 400) {
+        return; // Skip redirect response body
+      }
       whisperDownloadFile_->write(whisperReply_->readAll());
     }
   });
 
-  connect(whisperReply_, &QNetworkReply::downloadProgress, this, [this](qint64 bytesRead, qint64 totalBytes) {
-    if (totalBytes > 0) {
-      int percent = static_cast<int>((bytesRead * 100) / totalBytes);
-      whisperDownloadProgressBar_->setValue(percent);
-      double readMb = bytesRead / (1024.0 * 1024.0);
-      double totalMb = totalBytes / (1024.0 * 1024.0);
-      whisperModelStatusLabel_->setText(tr("正在下载: %1% (%2 MB / %3 MB)").arg(percent).arg(readMb, 0, 'f', 1).arg(totalMb, 0, 'f', 1));
-    }
-  });
+  connect(
+      whisperReply_, &QNetworkReply::downloadProgress, this,
+      [this](qint64 bytesRead, qint64 totalBytes) {
+        if (!whisperReply_)
+          return;
+        int statusCode =
+            whisperReply_->attribute(QNetworkRequest::HttpStatusCodeAttribute)
+                .toInt();
+        if (statusCode >= 300 && statusCode < 400) {
+          return; // Skip redirect progress
+        }
+        if (totalBytes > 0) {
+          int percent = static_cast<int>((bytesRead * 100) / totalBytes);
+          whisperDownloadProgressBar_->setValue(percent);
+          double readMb = bytesRead / (1024.0 * 1024.0);
+          double totalMb = totalBytes / (1024.0 * 1024.0);
+          whisperModelStatusLabel_->show();
+          whisperModelStatusLabel_->setText(tr("正在下载: %1% (%2 MB / %3 MB)")
+                                                .arg(percent)
+                                                .arg(readMb, 0, 'f', 1)
+                                                .arg(totalMb, 0, 'f', 1));
 
-  connect(whisperReply_, &QNetworkReply::redirected, this, [this, savePath, redirectCount](const QUrl &redirectUrl) {
-    whisperReply_->deleteLater();
-    whisperReply_ = nullptr;
-    startWhisperDownload(redirectUrl, savePath, redirectCount + 1);
-  });
+          if (percent != whisperLastReportedPercent_) {
+            whisperLastReportedPercent_ = percent;
+#ifdef QT_DEBUG
+            qDebug() << "[Debug] [ConfigDialog] 下载进度:" << percent << "% ("
+                     << readMb << "MB /" << totalMb << "MB)";
+#endif
+          }
+        }
+      });
+
+  connect(whisperReply_, &QNetworkReply::redirected, this,
+          [this, savePath, redirectCount](const QUrl &redirectUrl) {
+            whisperReply_->deleteLater();
+            whisperReply_ = nullptr;
+            startWhisperDownload(redirectUrl, savePath, redirectCount + 1);
+          });
 
   connect(whisperReply_, &QNetworkReply::finished, this, [this, savePath]() {
-    if (!whisperReply_) return;
+    if (!whisperReply_)
+      return;
 
     // Check for HTTP redirect manually
-    int statusCode = whisperReply_->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
+    int statusCode =
+        whisperReply_->attribute(QNetworkRequest::HttpStatusCodeAttribute)
+            .toInt();
     if (statusCode >= 300 && statusCode < 400) {
-      QUrl redirectUrl = whisperReply_->attribute(QNetworkRequest::RedirectionTargetAttribute).toUrl();
+      QUrl redirectUrl =
+          whisperReply_->attribute(QNetworkRequest::RedirectionTargetAttribute)
+              .toUrl();
       if (redirectUrl.isValid()) {
         QUrl resolvedUrl = whisperReply_->url().resolved(redirectUrl);
         whisperReply_->deleteLater();
@@ -1746,11 +1836,17 @@ void ConfigDialog::startWhisperDownload(const QUrl &url, const QString &savePath
     whisperDownloadFile_->close();
 
     if (whisperReply_->error() == QNetworkReply::NoError) {
-      AppMessageBox::information(this, tr("下载成功"), tr("模型已成功下载并保存。"));
+#ifdef QT_DEBUG
+      qDebug() << "[Debug] [ConfigDialog] 模型下载成功";
+#endif
     } else {
       whisperDownloadFile_->remove();
       if (whisperReply_->error() != QNetworkReply::OperationCanceledError) {
-        AppMessageBox::critical(this, tr("下载失败"), tr("下载错误: %1").arg(whisperReply_->errorString()));
+        whisperDownloadError_ =
+            tr("下载错误: %1").arg(whisperReply_->errorString());
+#ifdef QT_DEBUG
+        qDebug() << "[Debug] [ConfigDialog] " << whisperDownloadError_;
+#endif
       }
     }
 

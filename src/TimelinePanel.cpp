@@ -1591,13 +1591,13 @@ void TimelinePanel::startAsrPipeline(const QString &localPath) {
             [this, dialog, asrService](const QString &outputPath) {
               if (asrCancelledByUser_) return;
               dialog->setStage(AsrProgressDialog::Stage::Recognition);
-              dialog->setStatus(tr("正在识别语音 (Local Whisper)..."));
+              dialog->setStatus(tr("Recognizing speech (Local Whisper)..."));
               asrService->transcribe(outputPath);
             });
 
     connect(asrService, &WhisperAsrService::transcribeProgress, this,
             [dialog](int percent) {
-              dialog->setStatus(tr("正在识别语音: %1%").arg(percent));
+              dialog->setStatus(tr("Recognizing speech: %1%").arg(percent));
             });
 
     connect(asrService, &AsrServiceBase::transcribeFinished, this,
@@ -1649,7 +1649,7 @@ void TimelinePanel::startAsrPipeline(const QString &localPath) {
     connect(transcoder, &AudioTranscoder::transcodingFailed, this,
             [dialog](const QString &error) {
               qDebug() << "[ASR] transcodingFailed:" << error;
-              dialog->setError(tr("提取音频失败: %1").arg(error));
+              dialog->setError(tr("Audio extraction failed: %1").arg(error));
             });
 
     transcoder->transcode(localPath);
@@ -1706,7 +1706,7 @@ void TimelinePanel::startAsrPipeline(const QString &localPath) {
       connect(cos, &CosUploader::uploadFailed, this,
               [dialog](const QString &error) {
                 qDebug() << "[ASR] uploadFailed:" << error;
-                dialog->setError(tr("上传失败: %1").arg(error));
+                dialog->setError(tr("Upload failed: %1").arg(error));
               });
     } else {
       auto *oss = qobject_cast<OssUploader *>(uploader);
@@ -1720,7 +1720,7 @@ void TimelinePanel::startAsrPipeline(const QString &localPath) {
       connect(oss, &OssUploader::uploadFailed, this,
               [dialog](const QString &error) {
                 qDebug() << "[ASR] uploadFailed:" << error;
-                dialog->setError(tr("上传失败: %1").arg(error));
+                dialog->setError(tr("Upload failed: %1").arg(error));
               });
     }
 
@@ -1779,7 +1779,7 @@ void TimelinePanel::startAsrPipeline(const QString &localPath) {
     connect(transcoder, &AudioTranscoder::transcodingFailed, this,
             [dialog](const QString &error) {
               qDebug() << "[ASR] transcodingFailed:" << error;
-              dialog->setError(tr("提取音频失败: %1").arg(error));
+              dialog->setError(tr("Audio extraction failed: %1").arg(error));
             });
 
     transcoder->transcode(localPath);

@@ -43,7 +43,8 @@ private:
   bool checkModelExists(const QString &modelName);
   void updateWhisperStatus();
   void onDownloadClicked();
-  void startDownload(const QUrl &url, const QString &savePath, int redirectCount = 0);
+  void startDownload(const QUrl &url, const QString &savePath,
+                     int redirectCount = 0);
   void resetDownloadState();
 
   QComboBox *asrProviderCombo_ = nullptr;
@@ -78,4 +79,7 @@ private:
   QNetworkReply *reply_ = nullptr;
   QFile *downloadFile_ = nullptr;
   bool isDownloading_ = false;
+  QString downloadError_;
+  QString lastCheckedModel_;
+  int lastReportedPercent_ = -1;
 };

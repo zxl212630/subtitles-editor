@@ -23,6 +23,10 @@
         <source>取消</source>
         <translation>取消</translation>
     </message>
+    <message>
+        <source>打开所在文件夹</source>
+        <translation>打开所在文件夹</translation>
+    </message>
 </context>
 <context>
     <name>AppWindow</name>
@@ -734,6 +738,82 @@
         <source>中文医疗</source>
         <translation>中文医疗</translation>
     </message>
+    <message>
+        <source>识别提供商</source>
+        <translation>识别提供商</translation>
+    </message>
+    <message>
+        <source>本地 ASR (Whisper)</source>
+        <translation>本地 ASR (Whisper)</translation>
+    </message>
+    <message>
+        <source>腾讯云 ASR</source>
+        <translation>腾讯云 ASR</translation>
+    </message>
+    <message>
+        <source>语音识别模型</source>
+        <translation>语音识别模型</translation>
+    </message>
+    <message>
+        <source>下载模型</source>
+        <translation>下载模型</translation>
+    </message>
+    <message>
+        <source>识别语言</source>
+        <translation>识别语言</translation>
+    </message>
+    <message>
+        <source>自动检测</source>
+        <translation>自动检测</translation>
+    </message>
+    <message>
+        <source>中文</source>
+        <translation>中文</translation>
+    </message>
+    <message>
+        <source>英文</source>
+        <translation>英文</translation>
+    </message>
+    <message>
+        <source>日文</source>
+        <translation>日文</translation>
+    </message>
+    <message>
+        <source>韩文</source>
+        <translation>韩文</translation>
+    </message>
+    <message>
+        <source>计算线程数</source>
+        <translation>计算线程数</translation>
+    </message>
+    <message>
+        <source>模型状态: 下载失败 (%1)</source>
+        <translation>模型状态: 下载失败 (%1)</translation>
+    </message>
+    <message>
+        <source>模型状态: 未下载</source>
+        <translation>模型状态: 未下载</translation>
+    </message>
+    <message>
+        <source>正在启动下载...</source>
+        <translation>正在启动下载...</translation>
+    </message>
+    <message>
+        <source>正在下载: %1% (%2 MB / %3 MB)</source>
+        <translation>正在下载: %1% (%2 MB / %3 MB)</translation>
+    </message>
+    <message>
+        <source>无法创建模型文件: %1</source>
+        <translation>无法创建模型文件: %1</translation>
+    </message>
+    <message>
+        <source>重定向次数过多</source>
+        <translation>重定向次数过多</translation>
+    </message>
+    <message>
+        <source>下载错误: %1</source>
+        <translation>下载错误: %1</translation>
+    </message>
 </context>
 <context>
     <name>AsrProgressDialog</name>
@@ -754,7 +834,7 @@
     <message>
         <location filename="../src/AsrProgressDialog.cpp" line="29"/>
         <source>Initializing...</source>
-        <translation>Initializing...</translation>
+        <translation>正在初始化...</translation>
     </message>
     <message>
         <location filename="../src/AsrProgressDialog.cpp" line="80"/>
@@ -1472,7 +1552,7 @@
     </message>
     <message>
         <location filename="../src/CosUploader.cpp" line="194"/>
-        <source>上传失败：%1</source>
+        <source>Upload failed: %1</source>
         <translation>上传失败：%1</translation>
     </message>
 </context>
@@ -1723,6 +1803,10 @@
         <location filename="../src/OssUploader.cpp" line="28"/>
         <source>用户已取消上传</source>
         <translation>用户已取消上传</translation>
+    </message>
+    <message>
+        <source>Upload failed: %1</source>
+        <translation>上传失败：%1</translation>
     </message>
 </context>
 <context>
@@ -2489,6 +2573,18 @@
         <location filename="../src/TimelinePanel.cpp" line="1619"/>
         <source>Upload failed: %1</source>
         <translation>上传失败: %1</translation>
+    </message>
+    <message>
+        <source>Recognizing speech (Local Whisper)...</source>
+        <translation>正在识别语音 (Local Whisper)...</translation>
+    </message>
+    <message>
+        <source>Recognizing speech: %1%</source>
+        <translation>正在识别语音: %1%</translation>
+    </message>
+    <message>
+        <source>Audio extraction failed: %1</source>
+        <translation>提取音频失败: %1</translation>
     </message>
     <message>
         <source>转码失败: %1</source>

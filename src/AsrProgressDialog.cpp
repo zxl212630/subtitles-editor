@@ -1,5 +1,6 @@
 #include "AsrProgressDialog.h"
 #include "ThemeManager.h"
+#include "TranslationManager.h"
 
 #include <QCloseEvent>
 #include <QDebug>
@@ -14,7 +15,7 @@
 
 AsrProgressDialog::AsrProgressDialog(QWidget *parent) : BaseDialog(parent) {
   setObjectName("AsrProgressDialog");
-  setWindowTitle(tr("语音识别"));
+  setWindowTitle(tr("AI Subtitle Generation"));
   setFixedSize(460, 320);
 
   setupTitleBar();
@@ -65,6 +66,9 @@ AsrProgressDialog::AsrProgressDialog(QWidget *parent) : BaseDialog(parent) {
           &AsrProgressDialog::onAnimationTick);
   animTimer_->start();
 
+  connect(&TranslationManager::instance(), &TranslationManager::languageChanged,
+          this, &AsrProgressDialog::retranslateUi);
+
   setupWindowAgent(titleBar);
 }
 
@@ -96,6 +100,7 @@ void AsrProgressDialog::retranslateUi() {
     statusLabel_->setText(tr("Error Occurred"));
     cancelButton_->setText(tr("Close"));
   }
+  update();
 }
 
 void AsrProgressDialog::changeEvent(QEvent *event) {

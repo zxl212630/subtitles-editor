@@ -100,6 +100,13 @@ AppMessageBox::AppMessageBox(Icon icon, const QString &title,
     connect(cancelBtn_, &QPushButton::clicked, this,
             [this]() { onButtonClicked(Cancel); });
   }
+  if (buttons & OpenFolder) {
+    openFolderBtn_ = new QPushButton(tr("打开所在文件夹"), this);
+    openFolderBtn_->setObjectName("MessageBoxOpenFolderBtn");
+    openFolderBtn_->setMinimumWidth(120);
+    connect(openFolderBtn_, &QPushButton::clicked, this,
+            [this]() { onButtonClicked(OpenFolder); });
+  }
 
   // Set default button focus
   QPushButton *defaultBtn = nullptr;
@@ -111,6 +118,8 @@ AppMessageBox::AppMessageBox(Icon icon, const QString &title,
     defaultBtn = noBtn_;
   else if (defaultButton == Cancel && cancelBtn_)
     defaultBtn = cancelBtn_;
+  else if (defaultButton == OpenFolder && openFolderBtn_)
+    defaultBtn = openFolderBtn_;
 
   if (defaultBtn) {
     defaultBtn->setDefault(true);
@@ -191,6 +200,8 @@ void AppMessageBox::setupFooter() {
     footerLayout->addWidget(noBtn_);
   if (yesBtn_)
     footerLayout->addWidget(yesBtn_);
+  if (openFolderBtn_)
+    footerLayout->addWidget(openFolderBtn_);
   if (okBtn_)
     footerLayout->addWidget(okBtn_);
 

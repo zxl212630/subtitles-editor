@@ -112,13 +112,17 @@ private:
   void updateWhisperStatus();
   bool checkModelExists(const QString &modelName);
   void onDownloadWhisperModelClicked();
-  void startWhisperDownload(const QUrl &url, const QString &savePath, int redirectCount = 0);
+  void startWhisperDownload(const QUrl &url, const QString &savePath,
+                            int redirectCount = 0);
   void resetWhisperDownloadState();
 
   QNetworkAccessManager *whisperNetworkManager_ = nullptr;
   QNetworkReply *whisperReply_ = nullptr;
   QFile *whisperDownloadFile_ = nullptr;
   bool whisperIsDownloading_ = false;
+  QString whisperDownloadError_;
+  QString whisperLastCheckedModel_;
+  int whisperLastReportedPercent_ = -1;
 
   // Subtitle Settings Page
   QComboBox *subtitleFontFamilyCombo_;
