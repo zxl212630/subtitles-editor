@@ -53,9 +53,7 @@
         <file>icons/fit.svg</file>
         <file>icons/zoom-out.svg</file>
         <file>icons/zoom-in.svg</file>
-        <file>themes/dark.qss</file>
-        <file>themes/midnight.qss</file>
-        <file>themes/oled.qss</file>
+        <file>themes/theme.qss</file>
         <file>icon.svg</file>
         <file>icon.png</file>
     </qresource>

@@ -122,10 +122,8 @@ void ThemeManager::applyTheme() {
 }
 
 QString ThemeManager::loadQssTemplate(const QString &themeId) const {
-  // Actually we only need one template now, or maybe two if the structures are
-  // vastly different. Let's load dark.qss as the base template for now, or
-  // light.qss depending on themeId.
-  QFile file(QString(":/themes/%1.qss").arg(themeId));
+  Q_UNUSED(themeId);
+  QFile file(":/themes/theme.qss");
   if (!file.open(QFile::ReadOnly | QFile::Text)) {
     qWarning() << "Could not open theme file:" << file.fileName();
     return "";
