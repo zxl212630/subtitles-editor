@@ -413,19 +413,17 @@ void SubtitleListPanel::setupUi() {
   auto *siLayout = new QHBoxLayout(searchInput);
   siLayout->setContentsMargins(10, 0, 10, 0);
   siLayout->setSpacing(4);
-  siLayout->setAlignment(Qt::AlignVCenter);
 
   auto *searchIcon = new QLabel(searchInput);
   searchIcon->setObjectName("SubtitleSearchIcon");
   searchIcon->setFixedSize(14, 14);
   searchIcon->setAlignment(Qt::AlignCenter);
-  siLayout->addWidget(searchIcon);
+  siLayout->addWidget(searchIcon, 0, Qt::AlignVCenter);
 
   searchEdit_ = new QLineEdit(searchInput);
   searchEdit_->setObjectName("SubtitleSearchEdit");
   searchEdit_->setPlaceholderText(tr("Search..."));
-  searchEdit_->setFixedHeight(28);
-  siLayout->addWidget(searchEdit_);
+  siLayout->addWidget(searchEdit_, 1);
 
   searchClearBtn_ = new QPushButton(searchInput);
   searchClearBtn_->setObjectName("SubtitleSearchClearButton");
@@ -434,7 +432,7 @@ void SubtitleListPanel::setupUi() {
   searchClearBtn_->setIconSize(QSize(10, 10));
   searchClearBtn_->setToolTip(tr("Clear"));
   searchClearBtn_->hide();
-  siLayout->addWidget(searchClearBtn_);
+  siLayout->addWidget(searchClearBtn_, 0, Qt::AlignVCenter);
 
   sbLayout->addWidget(searchInput);
   pcLayout->addWidget(searchBar);

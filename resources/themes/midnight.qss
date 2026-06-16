@@ -473,6 +473,10 @@ QLineEdit#SubtitleSearchEdit {
     border: none;
     font-family: Inter, sans-serif;
     font-size: 12px;
+    padding: 0px;
+    margin: 0px;
+    min-height: 0px;
+    max-height: none;
 }
 QPushButton#SubtitleSearchClearButton {
     background-color: transparent;
