@@ -821,15 +821,15 @@ QCheckBox#ExportSubtitleCheck {
 /* VideoExportDialog Styles */
 QProgressBar#VideoExportProgressBar {
     border: 1px solid @border_color;
-    border-radius: 6px;
+    border-radius: 4px;
     background-color: @bg_lighter;
-    height: 8px;
+    height: 6px;
     text-align: center;
 }
 
 QProgressBar#VideoExportProgressBar::chunk {
     background-color: @primary_color;
-    border-radius: 5px;
+    border-radius: 3px;
 }
 
 QLabel#VideoExportTitleLabel {
@@ -840,12 +840,14 @@ QLabel#VideoExportTitleLabel {
 
 QLabel#VideoExportPercentLabel {
     font-weight: bold;
-    font-size: 24px;
+    font-size: 16px;
+    font-family: "SF Mono", Menlo, Monaco, Consolas, "DejaVu Sans Mono", "Courier New", monospace;
     color: @text_normal;
 }
 
 QLabel#VideoExportTimeLabel {
     font-size: 13px;
+    font-family: "SF Mono", Menlo, Monaco, Consolas, "DejaVu Sans Mono", "Courier New", monospace;
     color: @text_muted;
 }
 
