@@ -72,7 +72,7 @@ protected:
   void run() override;
 
 private:
-  bool openInput();
+  bool openInput(bool useHwDecode = false);
   bool setupOutput();
   bool initVideoEncoder();
   bool initAudioStream();

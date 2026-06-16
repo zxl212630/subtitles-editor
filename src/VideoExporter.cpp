@@ -115,7 +115,30 @@ void VideoExporter::run() {
 
   elapsedTimer_.start();
 
-  if (!openInput()) {
+  // 先确定编码器类型，决定是否启用硬件解码
+  bool useHwDecode = false;
+#ifdef Q_OS_MAC
+  {
+    const AVCodec *encoder = nullptr;
+    if (!config_.videoCodec.isEmpty()) {
+      encoder =
+          avcodec_find_encoder_by_name(config_.videoCodec.toUtf8().constData());
+    }
+    if (encoder) {
+      LOG_EXP_info("Found encoder:" << encoder->name << "for codec:"
+                                    << config_.videoCodec.toStdString());
+      if (QString(encoder->name).contains("videotoolbox")) {
+        useHwDecode = true;
+      }
+    } else {
+      LOG_EXP_warning(
+          "Encoder not found for codec:" << config_.videoCodec.toStdString());
+    }
+    LOG_EXP_info("useHwDecode:" << useHwDecode);
+  }
+#endif
+
+  if (!openInput(useHwDecode)) {
     cleanup();
     return;
   }
@@ -161,7 +184,7 @@ void VideoExporter::run() {
   }
 }
 
-bool VideoExporter::openInput() {
+bool VideoExporter::openInput(bool useHwDecode) {
   int ret = avformat_open_input(
       &inputFmtCtx_, config_.inputPath.toUtf8().constData(), nullptr, nullptr);
   if (ret < 0) {
@@ -211,25 +234,27 @@ bool VideoExporter::openInput() {
   videoDecCtx_->thread_count = 0; // 自动多线程解码
 
 #ifdef Q_OS_MAC
-  AVBufferRef *hw_device_ctx = nullptr;
-  int hw_err = av_hwdevice_ctx_create(
-      &hw_device_ctx, AV_HWDEVICE_TYPE_VIDEOTOOLBOX, nullptr, nullptr, 0);
-  if (hw_err >= 0) {
-    videoDecCtx_->hw_device_ctx = av_buffer_ref(hw_device_ctx);
-    videoDecCtx_->get_format =
-        [](AVCodecContext *ctx,
-           const enum AVPixelFormat *pix_fmts) -> AVPixelFormat {
-      Q_UNUSED(ctx);
-      const enum AVPixelFormat *p;
-      for (p = pix_fmts; *p != -1; p++) {
-        if (*p == AV_PIX_FMT_VIDEOTOOLBOX) {
-          return *p;
+  if (useHwDecode) {
+    AVBufferRef *hw_device_ctx = nullptr;
+    int hw_err = av_hwdevice_ctx_create(
+        &hw_device_ctx, AV_HWDEVICE_TYPE_VIDEOTOOLBOX, nullptr, nullptr, 0);
+    if (hw_err >= 0) {
+      videoDecCtx_->hw_device_ctx = av_buffer_ref(hw_device_ctx);
+      videoDecCtx_->get_format =
+          [](AVCodecContext *ctx,
+             const enum AVPixelFormat *pix_fmts) -> AVPixelFormat {
+        Q_UNUSED(ctx);
+        const enum AVPixelFormat *p;
+        for (p = pix_fmts; *p != -1; p++) {
+          if (*p == AV_PIX_FMT_VIDEOTOOLBOX) {
+            return *p;
+          }
         }
-      }
-      return pix_fmts[0];
-    };
-    av_buffer_unref(&hw_device_ctx);
-    LOG_EXP_info("VideoToolbox hardware decoding enabled for export");
+        return pix_fmts[0];
+      };
+      av_buffer_unref(&hw_device_ctx);
+      LOG_EXP_info("VideoToolbox hardware decoding enabled for export");
+    }
   }
 #endif
 
