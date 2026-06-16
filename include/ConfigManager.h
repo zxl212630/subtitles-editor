@@ -39,6 +39,8 @@ public:
   void setWhisperLanguage(const QString &lang);
   int whisperThreads() const;
   void setWhisperThreads(int threads);
+  int whisperMaxLen() const;
+  void setWhisperMaxLen(int maxLen);
 
   // Aliyun OSS
   QString ossAccessKeyId() const;

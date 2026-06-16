@@ -863,6 +863,7 @@ void AppWindow::onVideoAsrRequested() {
     cfg.setWhisperModel(configDlg.whisperModel());
     cfg.setWhisperLanguage(configDlg.whisperLanguage());
     cfg.setWhisperThreads(configDlg.whisperThreads());
+    cfg.setWhisperMaxLen(configDlg.whisperMaxLen());
   } else {
     cfg.setEngineModelType(configDlg.engineModelType());
     cfg.setSentenceMaxLength(configDlg.sentenceMaxLength());

@@ -21,8 +21,8 @@
 
 AsrConfigDialog::AsrConfigDialog(QWidget *parent) : BaseDialog(parent) {
   setWindowTitle(tr("语音识别配置"));
-  setMinimumSize(460, 440);
-  resize(480, 480);
+  setMinimumSize(460, 500);
+  resize(480, 540);
 
   setObjectName("AsrConfigDialog");
 
@@ -196,6 +196,17 @@ void AsrConfigDialog::setupUi() {
   whisperLangCombo_->setObjectName("ConfigComboBox");
   whisperLayout->addWidget(whisperLangCombo_);
 
+  whisperMaxLenLabel_ = new QLabel(tr("单行字幕最大字数"), whisperContainer_);
+  whisperMaxLenLabel_->setObjectName("ConfigFieldLabel");
+  whisperLayout->addWidget(whisperMaxLenLabel_);
+
+  whisperMaxLenSpin_ = new QSpinBox(whisperContainer_);
+  whisperMaxLenSpin_->setFixedHeight(32);
+  whisperMaxLenSpin_->setRange(6, 40);
+  whisperMaxLenSpin_->setValue(16);
+  whisperMaxLenSpin_->setObjectName("ConfigSpinBox");
+  whisperLayout->addWidget(whisperMaxLenSpin_);
+
   whisperThreadsLabel_ = new QLabel(tr("计算线程数"), whisperContainer_);
   whisperThreadsLabel_->setObjectName("ConfigFieldLabel");
   whisperLayout->addWidget(whisperThreadsLabel_);
@@ -290,6 +301,7 @@ void AsrConfigDialog::loadDefaultConfig() {
   }
 
   whisperThreadsSpin_->setValue(cfg.whisperThreads());
+  whisperMaxLenSpin_->setValue(cfg.whisperMaxLen());
 
   // Setup initial visibility
   tencentContainer_->setVisible(provider == "tencent_asr");
@@ -378,6 +390,7 @@ void AsrConfigDialog::onDownloadClicked() {
   whisperModelCombo_->setEnabled(false);
   whisperLangCombo_->setEnabled(false);
   whisperThreadsSpin_->setEnabled(false);
+  whisperMaxLenSpin_->setEnabled(false);
   btnOk_->setEnabled(false);
 
   whisperStatusLabel_->show();
@@ -542,6 +555,7 @@ void AsrConfigDialog::resetDownloadState() {
   whisperModelCombo_->setEnabled(true);
   whisperLangCombo_->setEnabled(true);
   whisperThreadsSpin_->setEnabled(true);
+  whisperMaxLenSpin_->setEnabled(true);
 }
 
 QString AsrConfigDialog::asrProvider() const {
@@ -570,6 +584,10 @@ QString AsrConfigDialog::whisperLanguage() const {
 
 int AsrConfigDialog::whisperThreads() const {
   return whisperThreadsSpin_->value();
+}
+
+int AsrConfigDialog::whisperMaxLen() const {
+  return whisperMaxLenSpin_->value();
 }
 
 void AsrConfigDialog::changeEvent(QEvent *event) {
@@ -622,6 +640,9 @@ void AsrConfigDialog::retranslateUi() {
   }
   if (whisperThreadsLabel_) {
     whisperThreadsLabel_->setText(tr("计算线程数"));
+  }
+  if (whisperMaxLenLabel_) {
+    whisperMaxLenLabel_->setText(tr("单行字幕最大字数"));
   }
 
   if (engineModelTypeCombo_) {

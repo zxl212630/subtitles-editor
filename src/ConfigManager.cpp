@@ -342,3 +342,11 @@ int ConfigManager::whisperThreads() const {
 void ConfigManager::setWhisperThreads(int threads) {
   setValue("whisper", "threads", threads);
 }
+
+int ConfigManager::whisperMaxLen() const {
+  return getInt("whisper", "max_len", 16);
+}
+
+void ConfigManager::setWhisperMaxLen(int maxLen) {
+  setValue("whisper", "max_len", maxLen);
+}

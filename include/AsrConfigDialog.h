@@ -31,6 +31,7 @@ public:
   QString whisperModel() const;
   QString whisperLanguage() const;
   int whisperThreads() const;
+  int whisperMaxLen() const;
 
 protected:
   void changeEvent(QEvent *event) override;
@@ -68,6 +69,8 @@ private:
   QLabel *whisperModelLabel_ = nullptr;
   QLabel *whisperLangLabel_ = nullptr;
   QLabel *whisperThreadsLabel_ = nullptr;
+  QLabel *whisperMaxLenLabel_ = nullptr;
+  QSpinBox *whisperMaxLenSpin_ = nullptr;
   QProgressBar *whisperProgressBar_ = nullptr;
 
   QPushButton *btnOk_ = nullptr;
