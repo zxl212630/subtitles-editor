@@ -460,17 +460,12 @@ void ExportDialog::setupUi() {
 
   // --- 2. 导出视频折叠区域 ---
   exportVideoChk_ = new QCheckBox(scrollContent);
-  exportVideoChk_->setStyleSheet("font-weight: bold; font-size: 13px;");
   connect(exportVideoChk_, &QCheckBox::stateChanged, this,
           &ExportDialog::onVideoCheckChanged);
 
   videoSectionHeader_ = new QPushButton(scrollContent);
   videoSectionHeader_->setFlat(true);
   videoSectionHeader_->setFixedHeight(28);
-  videoSectionHeader_->setStyleSheet("QPushButton {"
-                                     "  border: none;"
-                                     "  background: transparent;"
-                                     "}");
 
   // 使用内部布局管理文字和 SVG 箭头
   QHBoxLayout *videoHeaderInnerLayout = new QHBoxLayout(videoSectionHeader_);
@@ -478,14 +473,10 @@ void ExportDialog::setupUi() {
   videoHeaderInnerLayout->setSpacing(6);
 
   videoHeaderLabel_ = new QLabel(videoSectionHeader_);
-  videoHeaderLabel_->setStyleSheet("font-weight: bold;"
-                                   "font-size: 13px;"
-                                   "color: palette(text);");
 
   videoHeaderIcon_ = new QLabel(videoSectionHeader_);
   videoHeaderIcon_->setFixedSize(14, 14);
   videoHeaderIcon_->setScaledContents(true);
-  videoHeaderIcon_->setStyleSheet("margin-bottom: 1px;");
 
   videoHeaderInnerLayout->addWidget(videoHeaderLabel_, 0, Qt::AlignVCenter);
   videoHeaderInnerLayout->addWidget(videoHeaderIcon_, 0, Qt::AlignVCenter);
@@ -643,17 +634,12 @@ void ExportDialog::setupUi() {
 
   // --- 3. 导出字幕折叠区域 ---
   exportSubtitleChk_ = new QCheckBox(scrollContent);
-  exportSubtitleChk_->setStyleSheet("font-weight: bold; font-size: 13px;");
   connect(exportSubtitleChk_, &QCheckBox::stateChanged, this,
           &ExportDialog::onSubtitleCheckChanged);
 
   subtitleSectionHeader_ = new QPushButton(scrollContent);
   subtitleSectionHeader_->setFlat(true);
   subtitleSectionHeader_->setFixedHeight(28);
-  subtitleSectionHeader_->setStyleSheet("QPushButton {"
-                                        "  border: none;"
-                                        "  background: transparent;"
-                                        "}");
 
   // 使用内部布局管理文字和 SVG 箭头
   QHBoxLayout *subtitleHeaderInnerLayout =
@@ -662,14 +648,10 @@ void ExportDialog::setupUi() {
   subtitleHeaderInnerLayout->setSpacing(6);
 
   subtitleHeaderLabel_ = new QLabel(subtitleSectionHeader_);
-  subtitleHeaderLabel_->setStyleSheet("font-weight: bold;"
-                                      "font-size: 13px;"
-                                      "color: palette(text);");
 
   subtitleHeaderIcon_ = new QLabel(subtitleSectionHeader_);
   subtitleHeaderIcon_->setFixedSize(14, 14);
   subtitleHeaderIcon_->setScaledContents(true);
-  subtitleHeaderIcon_->setStyleSheet("margin-bottom: 1px;");
 
   subtitleHeaderInnerLayout->addWidget(subtitleHeaderLabel_, 0,
                                        Qt::AlignVCenter);
