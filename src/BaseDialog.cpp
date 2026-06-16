@@ -8,6 +8,7 @@
 #include <QLabel>
 #include <QMoveEvent>
 #include <QPushButton>
+#include <QShowEvent>
 #include <QWindowKit/QWKWidgets/widgetwindowagent.h>
 
 #ifdef Q_OS_MAC
@@ -15,7 +16,9 @@
 #include <objc/runtime.h>
 #endif
 
-BaseDialog::BaseDialog(QWidget *parent) : QDialog(parent) {}
+BaseDialog::BaseDialog(QWidget *parent) : QDialog(parent) {
+  setWindowFlags(windowFlags() & ~Qt::WindowMaximizeButtonHint);
+}
 
 BaseDialog::~BaseDialog() {
   if (windowAgent) {
@@ -56,6 +59,7 @@ void BaseDialog::setupWindowAgent(QFrame *customTitleBar) {
     auto voidFunc = reinterpret_cast<VoidMsgSend>(objc_msgSend);
     voidFunc(view, sel_registerName("retain"));
     nsView = view;
+    disableMacZoomButton();
   }
 #endif
 
@@ -191,4 +195,48 @@ bool BaseDialog::eventFilter(QObject *obj, QEvent *event) {
     }
   }
   return QDialog::eventFilter(obj, event);
+}
+
+void BaseDialog::showEvent(QShowEvent *event) {
+  QDialog::showEvent(event);
+  disableMacZoomButton();
+}
+
+void BaseDialog::disableMacZoomButton() {
+#ifdef Q_OS_MAC
+  if (!nsView) {
+    nsView = reinterpret_cast<void *>(winId());
+  }
+  if (nsView) {
+    // Get the NSWindow from NSView
+    typedef void *(*IdMsgSend)(void *, SEL);
+    auto idFunc = reinterpret_cast<IdMsgSend>(objc_msgSend);
+    void *nsWindow = idFunc(nsView, sel_registerName("window"));
+    if (nsWindow) {
+      // Get the NSWindowZoomButton (value 2)
+      typedef void *(*IdMsgSendInt)(void *, SEL, int);
+      auto idIntFunc = reinterpret_cast<IdMsgSendInt>(objc_msgSend);
+      void *zoomButton =
+          idIntFunc(nsWindow, sel_registerName("standardWindowButton:"), 2);
+      if (zoomButton) {
+        // Disable the zoom button
+        typedef void (*VoidMsgSendBool)(void *, SEL, bool);
+        auto voidBoolFunc = reinterpret_cast<VoidMsgSendBool>(objc_msgSend);
+        voidBoolFunc(zoomButton, sel_registerName("setEnabled:"), false);
+      }
+    }
+  }
+#endif
+}
+
+bool BaseDialog::event(QEvent *event) {
+#ifdef Q_OS_MAC
+  if (event->type() == QEvent::LayoutRequest ||
+      event->type() == QEvent::Paint || event->type() == QEvent::Resize ||
+      event->type() == QEvent::Show ||
+      event->type() == QEvent::WindowActivate) {
+    disableMacZoomButton();
+  }
+#endif
+  return QDialog::event(event);
 }

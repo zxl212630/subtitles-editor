@@ -12,14 +12,67 @@
 #include <QTimer>
 #include <QVBoxLayout>
 
+#include "ThemeManager.h"
+#include <QPainter>
+
+class VideoExportProgressBar : public QProgressBar {
+public:
+  explicit VideoExportProgressBar(QWidget *parent = nullptr)
+      : QProgressBar(parent) {
+    setFixedHeight(16);
+    connect(&ThemeManager::instance(), &ThemeManager::themeChanged, this,
+            [this]() { update(); });
+  }
+
+protected:
+  void paintEvent(QPaintEvent *event) override {
+    Q_UNUSED(event)
+    QPainter painter(this);
+    painter.setRenderHint(QPainter::Antialiasing);
+
+    auto &tm = ThemeManager::instance();
+    QColor trackBg = tm.getBgLighterColor();
+    QColor fillBg = tm.getPrimaryColor();
+
+    int trackH = 8;
+    int trackY = (height() - trackH) / 2;
+    int trackW = width();
+
+    // Draw background track
+    painter.setPen(Qt::NoPen);
+    painter.setBrush(trackBg);
+    double r = trackH / 2.0;
+    painter.drawRoundedRect(0, trackY, trackW, trackH, r, r);
+
+    // Draw fill chunk
+    double progressRatio = 0.0;
+    if (maximum() > minimum()) {
+      progressRatio =
+          static_cast<double>(value() - minimum()) / (maximum() - minimum());
+    }
+    progressRatio = qBound(0.0, progressRatio, 1.0);
+
+    int fillW = static_cast<int>(trackW * progressRatio);
+    if (fillW > 0) {
+      painter.setBrush(fillBg);
+      if (fillW < trackH) {
+        double smallR = fillW / 2.0;
+        painter.drawRoundedRect(0, trackY, fillW, trackH, smallR, smallR);
+      } else {
+        painter.drawRoundedRect(0, trackY, fillW, trackH, r, r);
+      }
+    }
+  }
+};
+
 VideoExportDialog::VideoExportDialog(VideoExporter *exporter, QWidget *parent)
     : BaseDialog(parent), exporter_(exporter) {
   setObjectName("VideoExportDialog");
   setWindowTitle(tr("导出进度"));
-  setModal(true);
-  setFixedWidth(400);
+  setMinimumWidth(400);
+  resize(400, 180);
 
-  setupTitleBar();
+  BaseDialog::setupTitleBar();
   setupUi();
   retranslateUi();
 
@@ -61,7 +114,7 @@ void VideoExportDialog::setupUi() {
   titleLabel->setObjectName("VideoExportTitleLabel");
   contentLayout->addWidget(titleLabel);
 
-  progressBar_ = new QProgressBar(contentWidget);
+  progressBar_ = new VideoExportProgressBar(contentWidget);
   progressBar_->setObjectName("VideoExportProgressBar");
   progressBar_->setRange(0, 100);
   progressBar_->setValue(0);
@@ -80,15 +133,22 @@ void VideoExportDialog::setupUi() {
   timeFrame->setFrameShape(QFrame::NoFrame);
   QFormLayout *timeLayout = new QFormLayout(timeFrame);
   timeLayout->setContentsMargins(0, 0, 0, 0);
-  timeLayout->setSpacing(12);
+  timeLayout->setHorizontalSpacing(16);
+  timeLayout->setVerticalSpacing(8);
 
+  auto *elapsedText = new QLabel(tr("已用时间："), contentWidget);
+  elapsedText->setObjectName("VideoExportFormLabel");
   elapsedLabel_ = new QLabel("00:00", contentWidget);
   elapsedLabel_->setObjectName("VideoExportTimeLabel");
-  timeLayout->addRow(tr("已用时间："), elapsedLabel_);
+  elapsedLabel_->setMinimumWidth(150);
+  timeLayout->addRow(elapsedText, elapsedLabel_);
 
+  auto *remainingText = new QLabel(tr("剩余时间："), contentWidget);
+  remainingText->setObjectName("VideoExportFormLabel");
   remainingLabel_ = new QLabel(tr("正在计算..."), contentWidget);
   remainingLabel_->setObjectName("VideoExportTimeLabel");
-  timeLayout->addRow(tr("剩余时间："), remainingLabel_);
+  remainingLabel_->setMinimumWidth(150);
+  timeLayout->addRow(remainingText, remainingLabel_);
 
   contentLayout->addWidget(timeFrame);
 
