@@ -54,36 +54,40 @@ void VideoExportDialog::setupUi() {
   QWidget *contentWidget = new QWidget(this);
   contentWidget->setObjectName("VideoExportContentWidget");
   QVBoxLayout *contentLayout = new QVBoxLayout(contentWidget);
-  contentLayout->setContentsMargins(20, 20, 20, 20);
-  contentLayout->setSpacing(15);
+  contentLayout->setContentsMargins(30, 25, 30, 25);
+  contentLayout->setSpacing(16);
 
   QLabel *titleLabel = new QLabel(tr("正在导出视频..."), contentWidget);
-  titleLabel->setStyleSheet("font-weight: bold; font-size: 13px;");
+  titleLabel->setObjectName("VideoExportTitleLabel");
   contentLayout->addWidget(titleLabel);
 
   progressBar_ = new QProgressBar(contentWidget);
+  progressBar_->setObjectName("VideoExportProgressBar");
   progressBar_->setRange(0, 100);
   progressBar_->setValue(0);
-  progressBar_->setTextVisible(false); // 我们在旁边写百分比
-  contentLayout->addWidget(progressBar_);
+  progressBar_->setTextVisible(false);
 
-  QHBoxLayout *infoLayout = new QHBoxLayout();
   progressTextLabel_ = new QLabel("0%", contentWidget);
-  progressTextLabel_->setStyleSheet("font-weight: bold;");
-  infoLayout->addWidget(progressTextLabel_);
-  infoLayout->addStretch();
-  contentLayout->addLayout(infoLayout);
+  progressTextLabel_->setObjectName("VideoExportPercentLabel");
+
+  QHBoxLayout *progressLayout = new QHBoxLayout();
+  progressLayout->setSpacing(12);
+  progressLayout->addWidget(progressBar_, 1);
+  progressLayout->addWidget(progressTextLabel_);
+  contentLayout->addLayout(progressLayout);
 
   QFrame *timeFrame = new QFrame(contentWidget);
   timeFrame->setFrameShape(QFrame::NoFrame);
   QFormLayout *timeLayout = new QFormLayout(timeFrame);
   timeLayout->setContentsMargins(0, 0, 0, 0);
-  timeLayout->setSpacing(8);
+  timeLayout->setSpacing(12);
 
   elapsedLabel_ = new QLabel("00:00", contentWidget);
+  elapsedLabel_->setObjectName("VideoExportTimeLabel");
   timeLayout->addRow(tr("已用时间："), elapsedLabel_);
 
   remainingLabel_ = new QLabel(tr("正在计算..."), contentWidget);
+  remainingLabel_->setObjectName("VideoExportTimeLabel");
   timeLayout->addRow(tr("剩余时间："), remainingLabel_);
 
   contentLayout->addWidget(timeFrame);
@@ -91,6 +95,7 @@ void VideoExportDialog::setupUi() {
   QHBoxLayout *btnLayout = new QHBoxLayout();
   btnLayout->addStretch();
   cancelBtn_ = new QPushButton(tr("取消导出"), contentWidget);
+  cancelBtn_->setObjectName("VideoExportCancelButton");
   connect(cancelBtn_, &QPushButton::clicked, this,
           &VideoExportDialog::onCancelClicked);
   btnLayout->addWidget(cancelBtn_);

@@ -818,6 +818,51 @@ QCheckBox#ExportSubtitleCheck {
     font-size: 13px;
 }
 
+/* VideoExportDialog Styles */
+QProgressBar#VideoExportProgressBar {
+    border: 1px solid @border_color;
+    border-radius: 6px;
+    background-color: @bg_lighter;
+    height: 8px;
+    text-align: center;
+}
+
+QProgressBar#VideoExportProgressBar::chunk {
+    background-color: @primary_color;
+    border-radius: 5px;
+}
+
+QLabel#VideoExportTitleLabel {
+    font-weight: bold;
+    font-size: 13px;
+    color: @text_normal;
+}
+
+QLabel#VideoExportPercentLabel {
+    font-weight: bold;
+    font-size: 24px;
+    color: @text_normal;
+}
+
+QLabel#VideoExportTimeLabel {
+    font-size: 13px;
+    color: @text_muted;
+}
+
+QPushButton#VideoExportCancelButton {
+    background-color: @border_color;
+    color: @text_normal;
+    border: none;
+    padding: 8px 24px;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 500;
+}
+
+QPushButton#VideoExportCancelButton:hover {
+    background-color: @text_muted;
+}
+
 /* QMenuBar & QMenu (Windows Titlebar integration & disable ghost fix) */
 QMenuBar {
     background-color: transparent;
