@@ -425,7 +425,6 @@ void ExportDialog::setupUi() {
   exportTitleLabel_->setObjectName("ConfigFieldLabel");
 
   titleEdit_ = new QLineEdit(pathFrame);
-  titleEdit_->setFixedHeight(32);
   titleEdit_->setPlaceholderText(tr("输入导出文件名（不含后缀）"));
   connect(titleEdit_, &QLineEdit::textChanged, this,
           &ExportDialog::checkExportButtonEnabled);
@@ -442,13 +441,11 @@ void ExportDialog::setupUi() {
 
   pathEdit_ = new QLineEdit(pathFrame);
   pathEdit_->setObjectName("SpeakerFolderEdit");
-  pathEdit_->setFixedHeight(32);
   connect(pathEdit_, &QLineEdit::textChanged, this,
           &ExportDialog::checkExportButtonEnabled);
 
   browseBtn_ = new QPushButton(tr("浏览..."), pathFrame);
   browseBtn_->setObjectName("SpeakerBrowseButton");
-  browseBtn_->setFixedHeight(32);
   connect(browseBtn_, &QPushButton::clicked, this,
           &ExportDialog::onBrowseClicked);
 
@@ -467,7 +464,6 @@ void ExportDialog::setupUi() {
   videoSectionHeader_ = new QPushButton(scrollContent);
   videoSectionHeader_->setObjectName("ExportSectionHeader");
   videoSectionHeader_->setFlat(true);
-  videoSectionHeader_->setFixedHeight(28);
 
   // 使用内部布局管理文字和 SVG 箭头
   QHBoxLayout *videoHeaderInnerLayout = new QHBoxLayout(videoSectionHeader_);
@@ -644,7 +640,6 @@ void ExportDialog::setupUi() {
   subtitleSectionHeader_ = new QPushButton(scrollContent);
   subtitleSectionHeader_->setObjectName("ExportSectionHeader");
   subtitleSectionHeader_->setFlat(true);
-  subtitleSectionHeader_->setFixedHeight(28);
 
   // 使用内部布局管理文字和 SVG 箭头
   QHBoxLayout *subtitleHeaderInnerLayout =
