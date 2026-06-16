@@ -47,7 +47,6 @@ private slots:
 private:
   void setupUi();
   void retranslateUi();
-  void setupTitleBar();
   void updateAccordionStates();
   void checkExportButtonEnabled();
   void updatePathExtension();

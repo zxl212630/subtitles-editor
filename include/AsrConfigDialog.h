@@ -37,7 +37,6 @@ protected:
 
 private:
   void setupUi();
-  void setupTitleBar();
   void retranslateUi();
   void loadDefaultConfig();
   bool checkModelExists(const QString &modelName);

@@ -1,8 +1,10 @@
 #include "VideoExportDialog.h"
 #include "AppMessageBox.h"
 #include "VideoExporter.h"
+#include <QCloseEvent>
 #include <QEvent>
 #include <QFormLayout>
+#include <QFrame>
 #include <QHBoxLayout>
 #include <QLabel>
 #include <QProgressBar>
@@ -11,12 +13,13 @@
 #include <QVBoxLayout>
 
 VideoExportDialog::VideoExportDialog(VideoExporter *exporter, QWidget *parent)
-    : QDialog(parent), exporter_(exporter) {
-  setWindowFlags(windowFlags() & ~Qt::WindowCloseButtonHint &
-                 ~Qt::WindowContextHelpButtonHint);
+    : BaseDialog(parent), exporter_(exporter) {
+  setObjectName("VideoExportDialog");
+  setWindowTitle(tr("导出进度"));
   setModal(true);
   setFixedWidth(400);
 
+  setupTitleBar();
   setupUi();
   retranslateUi();
 
@@ -35,56 +38,96 @@ VideoExportDialog::VideoExportDialog(VideoExporter *exporter, QWidget *parent)
   connect(updateTimer_, &QTimer::timeout, this,
           &VideoExportDialog::onTimerUpdate);
   updateTimer_->start(500); // 500ms 刷新一次
+
+  setupWindowAgent(titleBar);
 }
 
-VideoExportDialog::~VideoExportDialog() {}
+VideoExportDialog::~VideoExportDialog() = default;
 
 void VideoExportDialog::setupUi() {
-  QVBoxLayout *layout = new QVBoxLayout(this);
-  layout->setContentsMargins(20, 20, 20, 20);
-  layout->setSpacing(15);
+  auto *mainLayout = new QVBoxLayout(this);
+  mainLayout->setContentsMargins(0, 0, 0, 0);
+  mainLayout->setSpacing(0);
 
-  QLabel *titleLabel = new QLabel(tr("正在导出视频..."), this);
+  mainLayout->addWidget(titleBar);
+
+  QWidget *contentWidget = new QWidget(this);
+  contentWidget->setObjectName("VideoExportContentWidget");
+  QVBoxLayout *contentLayout = new QVBoxLayout(contentWidget);
+  contentLayout->setContentsMargins(20, 20, 20, 20);
+  contentLayout->setSpacing(15);
+
+  QLabel *titleLabel = new QLabel(tr("正在导出视频..."), contentWidget);
   titleLabel->setStyleSheet("font-weight: bold; font-size: 13px;");
-  layout->addWidget(titleLabel);
+  contentLayout->addWidget(titleLabel);
 
-  progressBar_ = new QProgressBar(this);
+  progressBar_ = new QProgressBar(contentWidget);
   progressBar_->setRange(0, 100);
   progressBar_->setValue(0);
   progressBar_->setTextVisible(false); // 我们在旁边写百分比
-  layout->addWidget(progressBar_);
+  contentLayout->addWidget(progressBar_);
 
   QHBoxLayout *infoLayout = new QHBoxLayout();
-  progressTextLabel_ = new QLabel("0%", this);
+  progressTextLabel_ = new QLabel("0%", contentWidget);
   progressTextLabel_->setStyleSheet("font-weight: bold;");
   infoLayout->addWidget(progressTextLabel_);
   infoLayout->addStretch();
-  layout->addLayout(infoLayout);
+  contentLayout->addLayout(infoLayout);
 
-  QFrame *timeFrame = new QFrame(this);
+  QFrame *timeFrame = new QFrame(contentWidget);
   timeFrame->setFrameShape(QFrame::NoFrame);
   QFormLayout *timeLayout = new QFormLayout(timeFrame);
   timeLayout->setContentsMargins(0, 0, 0, 0);
   timeLayout->setSpacing(8);
 
-  elapsedLabel_ = new QLabel("00:00", this);
+  elapsedLabel_ = new QLabel("00:00", contentWidget);
   timeLayout->addRow(tr("已用时间："), elapsedLabel_);
 
-  remainingLabel_ = new QLabel(tr("正在计算..."), this);
+  remainingLabel_ = new QLabel(tr("正在计算..."), contentWidget);
   timeLayout->addRow(tr("剩余时间："), remainingLabel_);
 
-  layout->addWidget(timeFrame);
+  contentLayout->addWidget(timeFrame);
 
   QHBoxLayout *btnLayout = new QHBoxLayout();
   btnLayout->addStretch();
-  cancelBtn_ = new QPushButton(tr("取消导出"), this);
+  cancelBtn_ = new QPushButton(tr("取消导出"), contentWidget);
   connect(cancelBtn_, &QPushButton::clicked, this,
           &VideoExportDialog::onCancelClicked);
   btnLayout->addWidget(cancelBtn_);
-  layout->addLayout(btnLayout);
+  contentLayout->addLayout(btnLayout);
+
+  mainLayout->addWidget(contentWidget, 1);
 }
 
 void VideoExportDialog::retranslateUi() { setWindowTitle(tr("导出进度")); }
+
+void VideoExportDialog::changeEvent(QEvent *event) {
+  if (event->type() == QEvent::LanguageChange) {
+    retranslateUi();
+  }
+  QDialog::changeEvent(event);
+}
+
+void VideoExportDialog::closeEvent(QCloseEvent *event) {
+  if (isFinished_) {
+    event->accept();
+    return;
+  }
+
+  int ret = AppMessageBox::question(
+      this, tr("取消导出"),
+      tr("您确认要中止视频导出吗？未导出完成的文件将被删除。"));
+  if (ret == AppMessageBox::Yes) {
+    if (cancelBtn_) {
+      cancelBtn_->setEnabled(false);
+      cancelBtn_->setText(tr("正在取消..."));
+    }
+    exporter_->requestCancel();
+    event->accept();
+  } else {
+    event->ignore();
+  }
+}
 
 void VideoExportDialog::onProgressChanged(int percent) {
   progressBar_->setValue(percent);

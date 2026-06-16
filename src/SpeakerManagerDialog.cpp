@@ -68,18 +68,6 @@ SpeakerManagerDialog::SpeakerManagerDialog(SubtitleTrack *track,
 
 SpeakerManagerDialog::~SpeakerManagerDialog() = default;
 
-void SpeakerManagerDialog::setupTitleBar() {
-  titleBar = new QFrame(this);
-  titleBar->setFixedHeight(36);
-  titleBar->setObjectName("TitleBar");
-
-  auto *layout = new QHBoxLayout(titleBar);
-  layout->setContentsMargins(80, 0, 12, 0); // 留出 macOS 三色球位置
-  layout->setSpacing(0);
-
-  layout->addStretch();
-}
-
 void SpeakerManagerDialog::setupUi() {
   auto *mainLayout = new QVBoxLayout(this);
   mainLayout->setContentsMargins(0, 0, 0, 0);

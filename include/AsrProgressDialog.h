@@ -40,7 +40,6 @@ private:
   void renderSVG(QPainter &p, const QString &resPath, const QRect &rect,
                  const QColor &color);
   void retranslateUi();
-  void setupTitleBar();
 
   Stage currentStage_ = Stage::Extraction;
   bool isError_ = false;

@@ -59,7 +59,6 @@ private:
                 QWidget *parent = nullptr);
   ~AppMessageBox() override = default;
 
-  void setupTitleBar();
   void setupContent();
   void setupFooter();
   void onButtonClicked(StandardButton button);

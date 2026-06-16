@@ -46,18 +46,6 @@ AsrConfigDialog::~AsrConfigDialog() {
   }
 }
 
-void AsrConfigDialog::setupTitleBar() {
-  titleBar = new QFrame(this);
-  titleBar->setFixedHeight(36);
-  titleBar->setObjectName("TitleBar");
-
-  auto *layout = new QHBoxLayout(titleBar);
-  layout->setContentsMargins(12, 0, 12, 0);
-  layout->setSpacing(0);
-
-  layout->addStretch();
-}
-
 void AsrConfigDialog::setupUi() {
   auto *mainLayout = new QVBoxLayout(this);
   mainLayout->setContentsMargins(0, 0, 0, 0);

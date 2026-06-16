@@ -86,18 +86,6 @@ ExportDialog::ExportDialog(QWidget *parent) : BaseDialog(parent) {
 
 ExportDialog::~ExportDialog() {}
 
-void ExportDialog::setupTitleBar() {
-  titleBar = new QFrame(this);
-  titleBar->setFixedHeight(36);
-  titleBar->setObjectName("TitleBar");
-
-  auto *layout = new QHBoxLayout(titleBar);
-  layout->setContentsMargins(12, 0, 12, 0);
-  layout->setSpacing(0);
-
-  layout->addStretch();
-}
-
 void ExportDialog::setSubtitleTrack(const SubtitleTrack *track) {
   track_ = track;
   if (track_ && track_->items().isEmpty()) {

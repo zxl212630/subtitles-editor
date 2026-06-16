@@ -41,7 +41,7 @@ private:
   void onCancel();
   void checkDirtyState();
   void setupUi();
-  void setupTitleBar();
+  void setupTitleBar() override;
   void loadConfig();
   void saveConfig();
   void retranslateUi();

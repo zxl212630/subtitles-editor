@@ -19,6 +19,7 @@ public:
   ~BaseDialog() override;
 
 protected:
+  virtual void setupTitleBar();
   void setupWindowAgent(QFrame *customTitleBar);
   void changeEvent(QEvent *event) override;
   void moveEvent(QMoveEvent *event) override;

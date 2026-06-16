@@ -18,7 +18,6 @@ public:
 
 private:
   void setupUi();
-  void setupTitleBar();
 
   QList<Section> m_sections;
 };

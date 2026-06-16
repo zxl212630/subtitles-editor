@@ -37,7 +37,6 @@ private slots:
 
 private:
   void setupUi();
-  void setupTitleBar();
   void populateSpeakerList();
   void populateImageCombo();
   void updatePreviewImage();

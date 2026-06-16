@@ -32,6 +32,18 @@ BaseDialog::~BaseDialog() {
 #endif
 }
 
+void BaseDialog::setupTitleBar() {
+  titleBar = new QFrame(this);
+  titleBar->setFixedHeight(36);
+  titleBar->setObjectName("TitleBar");
+
+  auto *layout = new QHBoxLayout(titleBar);
+  layout->setContentsMargins(12, 0, 12, 0);
+  layout->setSpacing(0);
+
+  layout->addStretch();
+}
+
 void BaseDialog::setupWindowAgent(QFrame *customTitleBar) {
   titleBar = customTitleBar;
   windowAgent = new QWK::WidgetWindowAgent(this);

@@ -1,15 +1,18 @@
 #pragma once
 
-#include <QDialog>
+#include "BaseDialog.h"
 #include <QString>
 
 class QProgressBar;
 class QLabel;
 class QPushButton;
 class QTimer;
+class QFrame;
+class QEvent;
+class QCloseEvent;
 class VideoExporter;
 
-class VideoExportDialog : public QDialog {
+class VideoExportDialog : public BaseDialog {
   Q_OBJECT
 
 public:
@@ -18,6 +21,10 @@ public:
   ~VideoExportDialog() override;
 
   QString errorString() const { return errorString_; }
+
+protected:
+  void changeEvent(QEvent *event) override;
+  void closeEvent(QCloseEvent *event) override;
 
 private slots:
   void onProgressChanged(int percent);
