@@ -460,10 +460,12 @@ void ExportDialog::setupUi() {
 
   // --- 2. 导出视频折叠区域 ---
   exportVideoChk_ = new QCheckBox(scrollContent);
+  exportVideoChk_->setObjectName("ExportVideoCheck");
   connect(exportVideoChk_, &QCheckBox::stateChanged, this,
           &ExportDialog::onVideoCheckChanged);
 
   videoSectionHeader_ = new QPushButton(scrollContent);
+  videoSectionHeader_->setObjectName("ExportSectionHeader");
   videoSectionHeader_->setFlat(true);
   videoSectionHeader_->setFixedHeight(28);
 
@@ -475,6 +477,7 @@ void ExportDialog::setupUi() {
   videoHeaderLabel_ = new QLabel(videoSectionHeader_);
 
   videoHeaderIcon_ = new QLabel(videoSectionHeader_);
+  videoHeaderIcon_->setObjectName("ExportSectionIcon");
   videoHeaderIcon_->setFixedSize(14, 14);
   videoHeaderIcon_->setScaledContents(true);
 
@@ -634,10 +637,12 @@ void ExportDialog::setupUi() {
 
   // --- 3. 导出字幕折叠区域 ---
   exportSubtitleChk_ = new QCheckBox(scrollContent);
+  exportSubtitleChk_->setObjectName("ExportSubtitleCheck");
   connect(exportSubtitleChk_, &QCheckBox::stateChanged, this,
           &ExportDialog::onSubtitleCheckChanged);
 
   subtitleSectionHeader_ = new QPushButton(scrollContent);
+  subtitleSectionHeader_->setObjectName("ExportSectionHeader");
   subtitleSectionHeader_->setFlat(true);
   subtitleSectionHeader_->setFixedHeight(28);
 
@@ -650,6 +655,7 @@ void ExportDialog::setupUi() {
   subtitleHeaderLabel_ = new QLabel(subtitleSectionHeader_);
 
   subtitleHeaderIcon_ = new QLabel(subtitleSectionHeader_);
+  subtitleHeaderIcon_->setObjectName("ExportSectionIcon");
   subtitleHeaderIcon_->setFixedSize(14, 14);
   subtitleHeaderIcon_->setScaledContents(true);
 
