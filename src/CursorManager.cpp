@@ -99,7 +99,7 @@ QCursor CursorManager::arrowCursor(const QWidget *widget) {
 }
 
 QCursor CursorManager::pointingHandCursor(const QWidget *widget) {
-  return Qt::PointingHandCursor;
+  return Qt::ArrowCursor;
 }
 
 QCursor CursorManager::iBeamCursor(const QWidget *widget) {

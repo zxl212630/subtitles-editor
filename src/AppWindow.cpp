@@ -19,6 +19,7 @@
 #include "VideoPropertyDialog.h"
 #include "srtparser.h"
 
+#include <QAbstractButton>
 #include <QApplication>
 #include <QDateTime>
 #include <QDesktopServices>
@@ -226,9 +227,30 @@ bool AppWindow::eventFilter(QObject *obj, QEvent *event) {
     }
   }
 
+  // When a modal dialog closes, the main window is unblocked.
+  // Send a Leave event to all buttons to ensure they clear any stuck hover/hand
+  // cursor states, and force Qt to refresh the native OS cursor shape.
+  if (obj == this && event->type() == QEvent::WindowUnblocked) {
+    const auto buttons = this->findChildren<QAbstractButton *>();
+    for (auto *btn : buttons) {
+      QEvent leaveEvent(QEvent::Leave);
+      QCoreApplication::sendEvent(btn, &leaveEvent);
+    }
+    QGuiApplication::setOverrideCursor(Qt::ArrowCursor);
+    QGuiApplication::restoreOverrideCursor();
+  }
+
   // Allow dragging the main window by its custom title bar even when disabled
-  // by a modal dialog
-  if (!this->isEnabled() || QApplication::activeModalWidget()) {
+  // by a modal dialog (on macOS, always handle dragging manually to prevent
+  // QWindowKit desynchronization)
+#ifdef Q_OS_MAC
+  bool shouldHandleDrag = true;
+#else
+  bool shouldHandleDrag =
+      !this->isEnabled() || QApplication::activeModalWidget();
+#endif
+
+  if (shouldHandleDrag) {
     if (event->type() == QEvent::MouseButtonPress) {
       auto *me = static_cast<QMouseEvent *>(event);
       if (me->button() == Qt::LeftButton) {
@@ -258,9 +280,32 @@ bool AppWindow::eventFilter(QObject *obj, QEvent *event) {
     } else if (event->type() == QEvent::MouseButtonRelease &&
                d->isDraggingTitleBar) {
       d->isDraggingTitleBar = false;
-      event->accept();
-      return true;
+      return false;
     }
+#ifdef Q_OS_MAC
+    else if (event->type() == QEvent::MouseButtonDblClick) {
+      auto *me = static_cast<QMouseEvent *>(event);
+      if (me->button() == Qt::LeftButton) {
+        QWidget *clickedWidget = qobject_cast<QWidget *>(obj);
+        if (clickedWidget) {
+          bool isTitleBarOrChild = (clickedWidget == d->titleBar ||
+                                    clickedWidget->parent() == d->titleBar);
+          bool isButton = clickedWidget->inherits("QAbstractButton") ||
+                          clickedWidget->inherits("QPushButton") ||
+                          clickedWidget->inherits("QToolButton");
+          if (isTitleBarOrChild && !isButton) {
+            if (this->isMaximized()) {
+              this->showNormal();
+            } else {
+              this->showMaximized();
+            }
+            event->accept();
+            return true;
+          }
+        }
+      }
+    }
+#endif
   }
 
   if (event->type() == QEvent::MouseButtonPress) {
@@ -376,7 +421,6 @@ void AppWindow::setupTitleBar() {
   d->settingsBtn->setIconSize(QSize(16, 16));
   d->settingsBtn->setFixedSize(26, 26);
   d->settingsBtn->setToolTip(tr("设置"));
-  d->settingsBtn->setCursor(Qt::PointingHandCursor);
   layout->addWidget(d->settingsBtn);
   connect(d->settingsBtn, &QPushButton::clicked, this,
           &AppWindow::onSettingsRequested);
@@ -387,7 +431,6 @@ void AppWindow::setupTitleBar() {
   d->exportBtn->setIconSize(QSize(16, 16));
   d->exportBtn->setFixedSize(26, 26);
   d->exportBtn->setToolTip(tr("导出字幕"));
-  d->exportBtn->setCursor(Qt::PointingHandCursor);
   layout->addWidget(d->exportBtn);
   connect(d->exportBtn, &QPushButton::clicked, this,
           &AppWindow::onExportRequested);

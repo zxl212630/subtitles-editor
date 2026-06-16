@@ -68,7 +68,6 @@ public:
     setFixedHeight(20);
     setMinimumWidth(100);
     setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
-    setCursor(Qt::PointingHandCursor);
     setMouseTracking(true);
 
     connect(&ThemeManager::instance(), &ThemeManager::themeChanged, this,

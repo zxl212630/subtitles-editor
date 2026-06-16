@@ -116,7 +116,6 @@ void ThemeSelectorWidget::mouseMoveEvent(QMouseEvent *event) {
 
   if (newHover != hoverIndex_) {
     hoverIndex_ = newHover;
-    setCursor(hoverIndex_ != -1 ? Qt::PointingHandCursor : Qt::ArrowCursor);
     update();
   }
 }
@@ -215,7 +214,6 @@ void ColorSelectorWidget::mouseMoveEvent(QMouseEvent *event) {
 
   if (newHover != hoverIndex_) {
     hoverIndex_ = newHover;
-    setCursor(hoverIndex_ != -1 ? Qt::PointingHandCursor : Qt::ArrowCursor);
     update();
   }
 }

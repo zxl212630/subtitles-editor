@@ -478,7 +478,6 @@ void ExportDialog::setupUi() {
 
   videoSectionHeader_ = new QPushButton(scrollContent);
   videoSectionHeader_->setFlat(true);
-  videoSectionHeader_->setCursor(Qt::PointingHandCursor);
   videoSectionHeader_->setFixedHeight(28);
   videoSectionHeader_->setStyleSheet("QPushButton {"
                                      "  border: none;"
@@ -662,7 +661,6 @@ void ExportDialog::setupUi() {
 
   subtitleSectionHeader_ = new QPushButton(scrollContent);
   subtitleSectionHeader_->setFlat(true);
-  subtitleSectionHeader_->setCursor(Qt::PointingHandCursor);
   subtitleSectionHeader_->setFixedHeight(28);
   subtitleSectionHeader_->setStyleSheet("QPushButton {"
                                         "  border: none;"

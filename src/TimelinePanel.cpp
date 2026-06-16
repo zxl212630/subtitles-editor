@@ -8,10 +8,10 @@
 #include "SubtitleItem.h"
 #include "SubtitleTrack.h"
 #include "TencentAsrService.h"
-#include "WhisperAsrService.h"
 #include "ThemeManager.h"
 #include "ToolTipEventFilter.h"
 #include "TranslationManager.h"
+#include "WhisperAsrService.h"
 #include <QFile>
 #include <QFrame>
 #include <QHBoxLayout>
@@ -98,7 +98,6 @@ TimelinePanel::TimelinePanel(QWidget *parent) : QWidget(parent) {
     btn = new QToolButton(toolbar_);
     btn->setObjectName(objName);
     btn->setIconSize(QSize(16, 16));
-    btn->setCursor(Qt::PointingHandCursor);
     tbLayout->addWidget(btn);
   };
 
@@ -1589,7 +1588,8 @@ void TimelinePanel::startAsrPipeline(const QString &localPath) {
 
     connect(transcoder, &AudioTranscoder::transcodingFinished, this,
             [this, dialog, asrService](const QString &outputPath) {
-              if (asrCancelledByUser_) return;
+              if (asrCancelledByUser_)
+                return;
               dialog->setStage(AsrProgressDialog::Stage::Recognition);
               dialog->setStatus(tr("Recognizing speech (Local Whisper)..."));
               asrService->transcribe(outputPath);
@@ -1601,10 +1601,12 @@ void TimelinePanel::startAsrPipeline(const QString &localPath) {
             });
 
     connect(asrService, &AsrServiceBase::transcribeFinished, this,
-            [this, transcoder, asrService, dialog](const AsrServiceBase::TranscriptResult &result) {
-              qDebug() << "[ASR] Local transcribeFinished success=" << result.success
+            [this, transcoder, asrService,
+             dialog](const AsrServiceBase::TranscriptResult &result) {
+              qDebug() << "[ASR] Local transcribeFinished success="
+                       << result.success
                        << "asrCancelledByUser_=" << asrCancelledByUser_;
-              
+
               if (!result.success) {
                 if (!asrCancelledByUser_) {
                   dialog->setError(result.errorMessage);
@@ -1698,11 +1700,12 @@ void TimelinePanel::startAsrPipeline(const QString &localPath) {
       auto *cos = qobject_cast<CosUploader *>(uploader);
       connect(transcoder, &AudioTranscoder::transcodingFinished, cos,
               &CosUploader::upload);
-      connect(cos, &CosUploader::uploadFinished, this,
-              [dialog, asrService](const QString &, const QString &presignedUrl) {
-                dialog->setStage(AsrProgressDialog::Stage::Recognition);
-                asrService->transcribe(presignedUrl);
-              });
+      connect(
+          cos, &CosUploader::uploadFinished, this,
+          [dialog, asrService](const QString &, const QString &presignedUrl) {
+            dialog->setStage(AsrProgressDialog::Stage::Recognition);
+            asrService->transcribe(presignedUrl);
+          });
       connect(cos, &CosUploader::uploadFailed, this,
               [dialog](const QString &error) {
                 qDebug() << "[ASR] uploadFailed:" << error;
@@ -1712,11 +1715,12 @@ void TimelinePanel::startAsrPipeline(const QString &localPath) {
       auto *oss = qobject_cast<OssUploader *>(uploader);
       connect(transcoder, &AudioTranscoder::transcodingFinished, oss,
               &OssUploader::upload);
-      connect(oss, &OssUploader::uploadFinished, this,
-              [dialog, asrService](const QString &, const QString &presignedUrl) {
-                dialog->setStage(AsrProgressDialog::Stage::Recognition);
-                asrService->transcribe(presignedUrl);
-              });
+      connect(
+          oss, &OssUploader::uploadFinished, this,
+          [dialog, asrService](const QString &, const QString &presignedUrl) {
+            dialog->setStage(AsrProgressDialog::Stage::Recognition);
+            asrService->transcribe(presignedUrl);
+          });
       connect(oss, &OssUploader::uploadFailed, this,
               [dialog](const QString &error) {
                 qDebug() << "[ASR] uploadFailed:" << error;
@@ -1727,7 +1731,8 @@ void TimelinePanel::startAsrPipeline(const QString &localPath) {
     connect(asrService, &AsrServiceBase::transcribeFinished, this,
             [this, transcoder, uploader, asrService,
              dialog](const AsrServiceBase::TranscriptResult &result) {
-              qDebug() << "[ASR] Cloud transcribeFinished success=" << result.success
+              qDebug() << "[ASR] Cloud transcribeFinished success="
+                       << result.success
                        << "asrCancelledByUser_=" << asrCancelledByUser_;
               if (!result.success) {
                 if (!asrCancelledByUser_) {

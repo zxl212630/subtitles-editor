@@ -1011,9 +1011,6 @@ void ConfigDialog::setupUi() {
       ossEyeAction_->setIcon(createEyeIcon(false));
     }
   });
-  for (auto *btn : ossSecretKeyEdit_->findChildren<QToolButton *>()) {
-    btn->setCursor(Qt::PointingHandCursor);
-  }
 
   stLayout->addStretch();
   stackedWidget_->addWidget(storagePage);
@@ -1081,9 +1078,6 @@ void ConfigDialog::setupUi() {
       asrEyeAction_->setIcon(createEyeIcon(false));
     }
   });
-  for (auto *btn : tencentSecretKeyEdit_->findChildren<QToolButton *>()) {
-    btn->setCursor(Qt::PointingHandCursor);
-  }
 
   speakerDiarizationLabel_ = new QLabel(tr("说话人识别"), tencentAsrContainer_);
   speakerDiarizationLabel_->setObjectName("ConfigFieldLabel");

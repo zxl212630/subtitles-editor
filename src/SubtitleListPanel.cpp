@@ -430,7 +430,6 @@ void SubtitleListPanel::setupUi() {
   searchClearBtn_ = new QPushButton(searchInput);
   searchClearBtn_->setObjectName("SubtitleSearchClearButton");
   searchClearBtn_->setFixedSize(18, 18);
-  searchClearBtn_->setCursor(Qt::PointingHandCursor);
   searchClearBtn_->setIcon(QIcon(":/icons/close.svg"));
   searchClearBtn_->setIconSize(QSize(10, 10));
   searchClearBtn_->setToolTip(tr("Clear"));
@@ -982,7 +981,6 @@ QWidget *SubtitleListPanel::createCustomStylePanel() {
 
         auto *headerButton = new QPushButton(container);
         headerButton->setFlat(true);
-        headerButton->setCursor(Qt::PointingHandCursor);
         headerButton->setFixedHeight(28);
         headerButton->setStyleSheet(
             "QPushButton { border: none; background: transparent; }");
