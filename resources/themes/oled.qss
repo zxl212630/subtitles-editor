@@ -151,8 +151,8 @@ QLineEdit, QComboBox, QSpinBox, QDoubleSpinBox {
     color: @text_normal;
     font-size: 13px;
     selection-background-color: @border_color;
-    min-height: 22px;
-    max-height: 22px;
+    min-height: 28px;
+    max-height: 28px;
 }
 
 QLineEdit:disabled, QComboBox:disabled, QSpinBox:disabled, QDoubleSpinBox:disabled {
@@ -795,6 +795,27 @@ QFrame#ExportSectionFrame {
     border: 1px solid @border_color;
     border-radius: 8px;
     background-color: transparent;
+}
+
+QPushButton#ExportSectionHeader {
+    border: none;
+    background: transparent;
+}
+
+QPushButton#ExportSectionHeader QLabel {
+    font-weight: bold;
+    font-size: 13px;
+    color: @text_normal;
+}
+
+QPushButton#ExportSectionHeader QLabel#ExportSectionIcon {
+    margin-bottom: 1px;
+}
+
+QCheckBox#ExportVideoCheck,
+QCheckBox#ExportSubtitleCheck {
+    font-weight: bold;
+    font-size: 13px;
 }
 
 /* QMenuBar & QMenu (Windows Titlebar integration & disable ghost fix) */
