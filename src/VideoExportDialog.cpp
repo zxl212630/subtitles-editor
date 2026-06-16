@@ -140,14 +140,14 @@ void VideoExportDialog::setupUi() {
   elapsedText->setObjectName("VideoExportFormLabel");
   elapsedLabel_ = new QLabel("00:00", contentWidget);
   elapsedLabel_->setObjectName("VideoExportTimeLabel");
-  elapsedLabel_->setMinimumWidth(150);
+  elapsedLabel_->setFixedSize(150, 20);
   timeLayout->addRow(elapsedText, elapsedLabel_);
 
   auto *remainingText = new QLabel(tr("剩余时间："), contentWidget);
   remainingText->setObjectName("VideoExportFormLabel");
   remainingLabel_ = new QLabel(tr("正在计算..."), contentWidget);
   remainingLabel_->setObjectName("VideoExportTimeLabel");
-  remainingLabel_->setMinimumWidth(150);
+  remainingLabel_->setFixedSize(150, 20);
   timeLayout->addRow(remainingText, remainingLabel_);
 
   contentLayout->addWidget(timeFrame);
