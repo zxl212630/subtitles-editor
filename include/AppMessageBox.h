@@ -50,6 +50,9 @@ public:
                          const QString &text, StandardButtons buttons = Ok,
                          StandardButton defaultButton = Ok);
 
+protected:
+  void changeEvent(QEvent *event) override;
+
 private:
   AppMessageBox(Icon icon, const QString &title, const QString &text,
                 StandardButtons buttons, StandardButton defaultButton,

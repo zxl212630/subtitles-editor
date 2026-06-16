@@ -28,6 +28,7 @@
 #include <objc/message.h>
 #include <objc/runtime.h>
 #endif
+#include <QDir>
 #include <QFile>
 #include <QFileDialog>
 #include <QFileInfo>
@@ -935,14 +936,9 @@ void AppWindow::onVideoPropertyRequested() {
   dialog.exec();
 }
 
-void AppWindow::onOpenFileLocationRequested() {
-  if (!d->timelinePanel)
-    return;
-
-  QString path = d->timelinePanel->mediaFilePath();
+static void showFileInFolder(const QString &path) {
   if (path.isEmpty())
     return;
-
 #ifdef Q_OS_MAC
   // Use 'open -R' to reveal and select the file in Finder
   QProcess::startDetached("open", QStringList() << "-R" << path);
@@ -954,6 +950,14 @@ void AppWindow::onOpenFileLocationRequested() {
 #else
   QDesktopServices::openUrl(QUrl::fromLocalFile(QFileInfo(path).path()));
 #endif
+}
+
+void AppWindow::onOpenFileLocationRequested() {
+  if (!d->timelinePanel)
+    return;
+
+  QString path = d->timelinePanel->mediaFilePath();
+  showFileInFolder(path);
 }
 
 void AppWindow::setupDummyData() {
@@ -1050,8 +1054,7 @@ void AppWindow::onExportRequested() {
           tr("字幕文件已成功导出到：\n%1").arg(subtitlePath),
           AppMessageBox::Ok | AppMessageBox::OpenFolder);
       if (ret == AppMessageBox::OpenFolder) {
-        QString dirPath = QFileInfo(subtitlePath).absolutePath();
-        QDesktopServices::openUrl(QUrl::fromLocalFile(dirPath));
+        showFileInFolder(subtitlePath);
       }
       return;
     }
@@ -1080,8 +1083,7 @@ void AppWindow::onExportRequested() {
                                            AppMessageBox::Ok |
                                                AppMessageBox::OpenFolder);
       if (ret == AppMessageBox::OpenFolder) {
-        QString dirPath = QFileInfo(mainOutputPath).absolutePath();
-        QDesktopServices::openUrl(QUrl::fromLocalFile(dirPath));
+        showFileInFolder(mainOutputPath);
       }
     } else {
       QString errMsg = progressDlg.errorString();

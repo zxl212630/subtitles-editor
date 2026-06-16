@@ -1,6 +1,7 @@
 #include "AppMessageBox.h"
 
 #include <QApplication>
+#include <QEvent>
 #include <QHBoxLayout>
 #include <QLabel>
 #include <QPushButton>
@@ -213,4 +214,20 @@ void AppMessageBox::setupFooter() {
 void AppMessageBox::onButtonClicked(StandardButton button) {
   clickedButton_ = button;
   done(button);
+}
+
+void AppMessageBox::changeEvent(QEvent *event) {
+  if (event->type() == QEvent::LanguageChange) {
+    if (okBtn_)
+      okBtn_->setText(tr("确定"));
+    if (yesBtn_)
+      yesBtn_->setText(tr("是"));
+    if (noBtn_)
+      noBtn_->setText(tr("否"));
+    if (cancelBtn_)
+      cancelBtn_->setText(tr("取消"));
+    if (openFolderBtn_)
+      openFolderBtn_->setText(tr("打开所在文件夹"));
+  }
+  BaseDialog::changeEvent(event);
 }

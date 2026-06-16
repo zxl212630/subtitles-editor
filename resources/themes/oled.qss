@@ -639,7 +639,7 @@ QPushButton#MessageBoxOkBtn:hover, QPushButton#MessageBoxYesBtn:hover {
     background-color: @primary_hover;
 }
 
-QPushButton#MessageBoxNoBtn, QPushButton#MessageBoxCancelBtn {
+QPushButton#MessageBoxNoBtn, QPushButton#MessageBoxCancelBtn, QPushButton#MessageBoxOpenFolderBtn {
     background-color: @border_color;
     color: @text_normal;
     border: none;
@@ -650,7 +650,7 @@ QPushButton#MessageBoxNoBtn, QPushButton#MessageBoxCancelBtn {
     min-width: 70px;
 }
 
-QPushButton#MessageBoxNoBtn:hover, QPushButton#MessageBoxCancelBtn:hover {
+QPushButton#MessageBoxNoBtn:hover, QPushButton#MessageBoxCancelBtn:hover, QPushButton#MessageBoxOpenFolderBtn:hover {
     background-color: @text_muted;
 }
 

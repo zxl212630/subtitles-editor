@@ -24,6 +24,7 @@
         <translation>取消</translation>
     </message>
     <message>
+        <location filename="../src/AppMessageBox.cpp" line="105"/>
         <source>打开所在文件夹</source>
         <translation>打开所在文件夹</translation>
     </message>
