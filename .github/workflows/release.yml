@@ -88,12 +88,15 @@ jobs:
             --sentry-dsn "$SENTRY_DSN"
 
       - name: Upload Debug Symbols to Sentry
-        if: secrets.SENTRY_AUTH_TOKEN != ''
         env:
           SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
           SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
           SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT }}
         run: |
+          if [[ -z "$SENTRY_AUTH_TOKEN" ]]; then
+            echo "SENTRY_AUTH_TOKEN is not set, skipping symbol upload."
+            exit 0
+          fi
           npx --yes @sentry/cli debug-files upload --include-sources cmake-build-release/
 
       - name: Archive App Bundle
@@ -193,13 +196,16 @@ jobs:
           tar.exe -a -c -f SubtitlesEditor-${{ steps.version.outputs.version }}-Windows-x64.zip SubtitlesEditor-${{ steps.version.outputs.version }}-Windows-x64
 
       - name: Upload Debug Symbols to Sentry
-        if: secrets.SENTRY_AUTH_TOKEN != ''
         shell: bash
         env:
           SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
           SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
           SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT }}
         run: |
+          if [[ -z "$SENTRY_AUTH_TOKEN" ]]; then
+            echo "SENTRY_AUTH_TOKEN is not set, skipping symbol upload."
+            exit 0
+          fi
           npx --yes @sentry/cli debug-files upload --include-sources cmake-build-release/
 
       - name: Upload ZIP artifact
