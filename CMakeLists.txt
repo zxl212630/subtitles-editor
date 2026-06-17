@@ -8,6 +8,15 @@ set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTORCC ON)
 set(CMAKE_AUTOUIC ON)
 
+# Enable debug symbols in Release configuration for Sentry symbolication
+if(MSVC)
+  set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /Zi")
+  set(CMAKE_EXE_LINKER_FLAGS_RELEASE "${CMAKE_EXE_LINKER_FLAGS_RELEASE} /DEBUG /OPT:REF /OPT:ICF")
+  set(CMAKE_SHARED_LINKER_FLAGS_RELEASE "${CMAKE_SHARED_LINKER_FLAGS_RELEASE} /DEBUG /OPT:REF /OPT:ICF")
+elseif(APPLE OR CMAKE_COMPILER_IS_GNUCXX)
+  set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -g")
+endif()
+
 # ============================================================
 # SDK Paths (可通过 -D 参数覆盖，如: -DQt6_ROOT=/path/to/qt)
 # ============================================================
@@ -131,6 +140,27 @@ else()
 endif()
 
 # ============================================================
+# Sentry-native
+# ============================================================
+if(NOT DEFINED sentry_ROOT)
+  if(APPLE)
+    set(sentry_ROOT_DEFAULT "$ENV{HOME}/Tools/sentry")
+  elseif(WIN32)
+    set(sentry_ROOT_DEFAULT "C:/Tools/sentry")
+  else()
+    set(sentry_ROOT_DEFAULT "/usr")
+  endif()
+  set(sentry_ROOT "${sentry_ROOT_DEFAULT}" CACHE PATH "Sentry installation root")
+endif()
+
+set(SENTRY_DSN "" CACHE STRING "Sentry DSN")
+
+set(CMAKE_PREFIX_PATH "${sentry_ROOT}/lib/cmake;${CMAKE_PREFIX_PATH}")
+find_package(sentry CONFIG REQUIRED)
+message(STATUS "Found Sentry: ${sentry_DIR}")
+
+
+# ============================================================
 # Source files
 # ============================================================
 set(SOURCES
@@ -170,6 +200,7 @@ set(SOURCES
     src/VideoExporter.cpp
     src/ExportDialog.cpp
     src/VideoExportDialog.cpp
+    src/SentryManager.cpp
 )
 
 set(HEADERS
@@ -210,6 +241,7 @@ set(HEADERS
     include/VideoExporter.h
     include/ExportDialog.h
     include/VideoExportDialog.h
+    include/SentryManager.h
 )
 
 set(RESOURCES
@@ -243,6 +275,11 @@ target_include_directories(${PROJECT_NAME} PRIVATE
     "${WHISPER_INCLUDE_DIR}"
 )
 
+target_compile_definitions(${PROJECT_NAME} PRIVATE
+    APP_VERSION="${PROJECT_VERSION}"
+    SENTRY_DSN_DEFAULT="${SENTRY_DSN}"
+)
+
 target_link_directories(${PROJECT_NAME} PRIVATE
     "${Qt6_ROOT}/lib"
     ${FFMPEG_LIBRARY_DIR}
@@ -258,6 +295,7 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
     Qt::Svg
     Qt::OpenGLWidgets
     ${WHISPER_LIBRARY}
+    sentry::sentry
 )
 
 # QWindowKit dependencies

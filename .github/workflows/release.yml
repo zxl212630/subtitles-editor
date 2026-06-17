@@ -69,19 +69,32 @@ jobs:
             -p "qt6-macos-${{ matrix.arch }}.tar.zst" \
             -p "qwindowkit-macos-${{ matrix.arch }}.tar.zst" \
             -p "whisper-macos-${{ matrix.arch }}.tar.zst" \
+            -p "sentry-macos-${{ matrix.arch }}.tar.zst" \
             --repo "${{ github.repository }}"
-          for lib in ffmpeg qt6 qwindowkit whisper; do
+          for lib in ffmpeg qt6 qwindowkit whisper sentry; do
             zstd -d "${lib}-macos-${{ matrix.arch }}.tar.zst"
             tar -xf "${lib}-macos-${{ matrix.arch }}.tar"
             rm -f "${lib}-macos-${{ matrix.arch }}.tar" "${lib}-macos-${{ matrix.arch }}.tar.zst"
           done
 
       - name: Build and package
+        env:
+          SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
         run: |
           ./scripts/package-macos.sh \
             --deps-dir "$PWD" \
             --arch "${{ matrix.arch }}" \
-            --version "${{ steps.version.outputs.version }}"
+            --version "${{ steps.version.outputs.version }}" \
+            --sentry-dsn "$SENTRY_DSN"
+
+      - name: Upload Debug Symbols to Sentry
+        if: secrets.SENTRY_AUTH_TOKEN != ''
+        env:
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+          SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
+          SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT }}
+        run: |
+          npx --yes @sentry/cli debug-files upload --include-sources cmake-build-release/
 
       - name: Archive App Bundle
         run: |
@@ -138,20 +151,25 @@ jobs:
             -p "qt6-windows-x64.zip" \
             -p "qwindowkit-windows-x64.zip" \
             -p "whisper-windows-x64.zip" \
+            -p "sentry-windows-x64.zip" \
             --repo "${{ github.repository }}"
           unzip -q ffmpeg-windows-x64.zip -d deps_ffmpeg
           unzip -q qt6-windows-x64.zip -d deps_qt6
           unzip -q qwindowkit-windows-x64.zip -d deps_qwindowkit
           unzip -q whisper-windows-x64.zip -d deps_whisper
+          unzip -q sentry-windows-x64.zip -d deps_sentry
           echo "FFMPEG_ROOT=$PWD/deps_ffmpeg/ffmpeg" >> $GITHUB_ENV
           echo "QT_DIR=$PWD/deps_qt6/qt6" >> $GITHUB_ENV
           echo "QWindowKit_ROOT=$PWD/deps_qwindowkit/qwindowkit" >> $GITHUB_ENV
           echo "WHISPER_ROOT=$PWD/deps_whisper/whisper" >> $GITHUB_ENV
+          echo "SENTRY_ROOT=$PWD/deps_sentry/sentry" >> $GITHUB_ENV
 
       - name: Build
         shell: bash
+        env:
+          SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
         run: |
-          cmake -B cmake-build-release -S . -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH="$QT_DIR" -DFFMPEG_ROOT="$FFMPEG_ROOT" -DQWindowKit_ROOT="$QWindowKit_ROOT" -Dwhisper_ROOT="$WHISPER_ROOT"
+          cmake -B cmake-build-release -S . -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH="$QT_DIR" -DFFMPEG_ROOT="$FFMPEG_ROOT" -DQWindowKit_ROOT="$QWindowKit_ROOT" -Dwhisper_ROOT="$WHISPER_ROOT" -Dsentry_ROOT="$SENTRY_ROOT" -DSENTRY_DSN="$SENTRY_DSN"
           cmake --build cmake-build-release --config Release
 
       - name: Package
@@ -159,6 +177,9 @@ jobs:
         run: |
           mkdir -p dist/windows/SubtitlesEditor-${{ steps.version.outputs.version }}-Windows-x64
           cp cmake-build-release/Release/subtitles-editor.exe dist/windows/SubtitlesEditor-${{ steps.version.outputs.version }}-Windows-x64/
+          
+          # Copy Sentry crashpad_handler.exe
+          cp $SENTRY_ROOT/bin/crashpad_handler.exe dist/windows/SubtitlesEditor-${{ steps.version.outputs.version }}-Windows-x64/
           
           # Deploy Qt
           $QT_DIR/bin/windeployqt.exe --release --no-compiler-runtime --no-opengl-sw --no-translations dist/windows/SubtitlesEditor-${{ steps.version.outputs.version }}-Windows-x64/subtitles-editor.exe
@@ -170,6 +191,16 @@ jobs:
           
           cd dist/windows
           tar.exe -a -c -f SubtitlesEditor-${{ steps.version.outputs.version }}-Windows-x64.zip SubtitlesEditor-${{ steps.version.outputs.version }}-Windows-x64
+
+      - name: Upload Debug Symbols to Sentry
+        if: secrets.SENTRY_AUTH_TOKEN != ''
+        shell: bash
+        env:
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+          SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
+          SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT }}
+        run: |
+          npx --yes @sentry/cli debug-files upload --include-sources cmake-build-release/
 
       - name: Upload ZIP artifact
         uses: actions/upload-artifact@v4

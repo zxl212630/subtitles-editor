@@ -18,6 +18,7 @@ Options:
   --qt <path>            Qt6 安装根目录 (例: ~/Tools/Qt/6.5.7)
   --ffmpeg <path>        FFmpeg 安装根目录 (例: ~/Tools/ffmpeg/8.0)
   --qwindowkit <path>    QWindowKit 安装根目录 (例: ~/Tools/Qt/QwindowKit/Qt6)
+  --sentry <path>        Sentry-native 安装根目录
   --output <name>        DMG 输出文件名 (默认: $DMG_NAME)
   --deps-dir <dir>       Use pre-compiled dependencies from this directory
   --arch <arch>          Target architecture: arm64 or x64 (default: host arch)
@@ -45,6 +46,8 @@ QT_ROOT="${QT_ROOT:-}"
 FFMPEG_ROOT="${FFMPEG_ROOT:-}"
 QWINDOWKIT_ROOT="${QWINDOWKIT_ROOT:-}"
 WHISPER_ROOT="${WHISPER_ROOT:-}"
+SENTRY_ROOT="${SENTRY_ROOT:-}"
+SENTRY_DSN="${SENTRY_DSN:-}"
 DEPS_DIR=""
 TARGET_ARCH=""
 
@@ -54,6 +57,8 @@ while [[ $# -gt 0 ]]; do
         --ffmpeg)       FFMPEG_ROOT="$2"; shift 2 ;;
         --qwindowkit)   QWINDOWKIT_ROOT="$2"; shift 2 ;;
         --whisper)      WHISPER_ROOT="$2"; shift 2 ;;
+        --sentry)       SENTRY_ROOT="$2"; shift 2 ;;
+        --sentry-dsn)   SENTRY_DSN="$2"; shift 2 ;;
         --output)       DMG_NAME="$2"; shift 2 ;;
         --deps-dir)     DEPS_DIR="$2"; shift 2 ;;
         --arch)         TARGET_ARCH="$2"; shift 2 ;;
@@ -67,15 +72,16 @@ done
 DMG_NAME="SubtitlesEditor-${VERSION}-macOS-${TARGET_ARCH:-$(uname -m)}-unsigned"
 
 # --- Resolve dependencies from --deps-dir ---
-if [[ -n "$DEPS_DIR" ]]; then
     [[ -d "$DEPS_DIR/deps/qt6" ]]     || { echo "Error: $DEPS_DIR/deps/qt6 not found" >&2; exit 1; }
     [[ -d "$DEPS_DIR/deps/qwindowkit" ]] || { echo "Error: $DEPS_DIR/deps/qwindowkit not found" >&2; exit 1; }
     [[ -d "$DEPS_DIR/deps/ffmpeg" ]]   || { echo "Error: $DEPS_DIR/deps/ffmpeg not found" >&2; exit 1; }
     [[ -d "$DEPS_DIR/deps/whisper" ]]  || { echo "Error: $DEPS_DIR/deps/whisper not found" >&2; exit 1; }
+    [[ -d "$DEPS_DIR/deps/sentry" ]]   || { echo "Error: $DEPS_DIR/deps/sentry not found" >&2; exit 1; }
     QT_ROOT="$DEPS_DIR/deps/qt6"
     QWINDOWKIT_ROOT="$DEPS_DIR/deps/qwindowkit"
     FFMPEG_ROOT="$DEPS_DIR/deps/ffmpeg"
     WHISPER_ROOT="$DEPS_DIR/deps/whisper"
+    SENTRY_ROOT="$DEPS_DIR/deps/sentry"
 fi
 
 # --- Validate required paths ---
@@ -84,6 +90,7 @@ missing=()
 [[ -z "$QWINDOWKIT_ROOT" ]] && missing+=("--qwindowkit (QWindowKit 根目录)")
 [[ -z "$FFMPEG_ROOT" ]] && missing+=("--ffmpeg (FFmpeg 根目录)")
 [[ -z "$WHISPER_ROOT" ]] && missing+=("--whisper (Whisper 根目录)")
+[[ -z "$SENTRY_ROOT" ]] && missing+=("--sentry (Sentry 根目录)")
 
 if [[ ${#missing[@]} -gt 0 ]]; then
     echo "错误: 缺少必需参数:" >&2
@@ -95,7 +102,7 @@ if [[ ${#missing[@]} -gt 0 ]]; then
     exit 1
 fi
 
-for dir in "$QT_ROOT" "$QWINDOWKIT_ROOT" "$WHISPER_ROOT"; do
+for dir in "$QT_ROOT" "$QWINDOWKIT_ROOT" "$WHISPER_ROOT" "$SENTRY_ROOT"; do
     [[ -d "$dir" ]] || { echo "错误: 目录不存在: $dir" >&2; exit 1; }
 done
 # FFMPEG_ROOT 可以为空（使用系统 FFmpeg），非空时检查目录
@@ -211,7 +218,9 @@ cmake -B "$BUILD_DIR" -S "$PROJECT_DIR" \
     -DQt6_ROOT="$QT_ROOT" \
     -DFFMPEG_ROOT="$FFMPEG_ROOT" \
     -DQWindowKit_ROOT="$QWINDOWKIT_ROOT" \
-    -Dwhisper_ROOT="$WHISPER_ROOT"
+    -Dwhisper_ROOT="$WHISPER_ROOT" \
+    -Dsentry_ROOT="$SENTRY_ROOT" \
+    -DSENTRY_DSN="$SENTRY_DSN"
 cmake --build "$BUILD_DIR" -j"$(sysctl -n hw.ncpu)"
 
 [[ ! -d "$APP_BUNDLE" ]] && { echo "ERROR: $APP_BUNDLE not found" >&2; exit 1; }
@@ -351,6 +360,30 @@ if [[ $has_error -ne 0 ]]; then
     exit 1
 fi
 echo "All dependencies resolved OK"
+
+echo "=== Processing Sentry crashpad_handler ==="
+if [[ -f "$SENTRY_ROOT/bin/crashpad_handler" ]]; then
+    echo "  Bundling: crashpad_handler"
+    cp "$SENTRY_ROOT/bin/crashpad_handler" "$APP_BUNDLE/Contents/MacOS/crashpad_handler"
+    chmod 755 "$APP_BUNDLE/Contents/MacOS/crashpad_handler"
+    
+    # Generate dSYM for crashpad_handler
+    echo "  Generating dSYM for crashpad_handler..."
+    dsymutil "$APP_BUNDLE/Contents/MacOS/crashpad_handler" -o "$BUILD_DIR/crashpad_handler.dSYM"
+    
+    # Strip crashpad_handler
+    echo "  Stripping crashpad_handler..."
+    strip -x "$APP_BUNDLE/Contents/MacOS/crashpad_handler"
+else
+    echo "ERROR: crashpad_handler not found in $SENTRY_ROOT/bin/!" >&2
+    exit 1
+fi
+
+echo "=== Generating dSYM and stripping main executable ==="
+# Generate dSYM for main executable
+dsymutil "$APP_BIN" -o "$BUILD_DIR/subtitles-editor.dSYM"
+# Strip main executable
+strip -x "$APP_BIN"
 
 echo "=== Signing bundle ==="
 codesign --force --deep --sign - "$APP_BUNDLE"

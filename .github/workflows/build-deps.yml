@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       target:
-        description: 'Component to build (all, ffmpeg, qt6, qwindowkit, whisper)'
+        description: 'Component to build (all, ffmpeg, qt6, qwindowkit, whisper, sentry)'
         required: true
         default: 'all'
         type: choice
@@ -14,6 +14,7 @@ on:
           - qt6
           - qwindowkit
           - whisper
+          - sentry
       arch:
         description: 'Architecture to build (all, arm64, x64)'
         required: true
@@ -670,3 +671,133 @@ jobs:
             gh release create "$DEPS_TAG" --prerelease --title "$DEPS_TAG" --notes "Pre-compiled dependencies" --repo "${{ github.repository }}"
           }
           gh release upload "$DEPS_TAG" "D:/deps-output/whisper-windows-x64.zip" --clobber --repo "${{ github.repository }}"
+
+  build-sentry-macos:
+    needs: setup-env
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: arm64
+            runner: macos-14
+          - arch: x64
+            runner: macos-15-intel
+    env:
+      DEPS_TAG: ${{ needs.setup-env.outputs.deps_tag }}
+      BASE_TAG: ${{ needs.setup-env.outputs.base_tag }}
+      FORCE_REBUILD: ${{ needs.setup-env.outputs.force_rebuild }}
+      TARGET: ${{ needs.setup-env.outputs.target }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check or Copy Sentry package
+        id: check-cache
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          FILE_NAME="sentry-macos-${{ matrix.arch }}.tar.zst"
+          if gh release view "$DEPS_TAG" --repo "${{ github.repository }}" | grep -q "$FILE_NAME"; then
+            echo "Package $FILE_NAME already exists in $DEPS_TAG. Skipping build."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          SHOULD_FORCE="false"
+          if [[ "$FORCE_REBUILD" == "true" && ( "$TARGET" == "all" || "$TARGET" == "sentry" ) ]]; then
+            SHOULD_FORCE="true"
+          fi
+          if [[ "$SHOULD_FORCE" != "true" && -n "$BASE_TAG" ]]; then
+            echo "Checking if $FILE_NAME exists in base release $BASE_TAG..."
+            if gh release view "$BASE_TAG" --repo "${{ github.repository }}" | grep -q "$FILE_NAME"; then
+              echo "Found $FILE_NAME in $BASE_TAG. Copying to $DEPS_TAG..."
+              gh release download "$BASE_TAG" -p "$FILE_NAME" --repo "${{ github.repository }}"
+              gh release upload "$DEPS_TAG" "$FILE_NAME" --clobber --repo "${{ github.repository }}"
+              echo "skip=true" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+          fi
+          echo "skip=false" >> "$GITHUB_OUTPUT"
+
+      - name: Install build tools
+        if: steps.check-cache.outputs.skip != 'true'
+        run: |
+          brew install cmake zstd
+
+      - name: Build Sentry
+        if: steps.check-cache.outputs.skip != 'true'
+        run: |
+          ./scripts/build-deps-macos.sh \
+            --arch ${{ matrix.arch }} \
+            --output ${{ runner.temp }}/deps-output \
+            --target sentry \
+            --jobs $(sysctl -n hw.ncpu)
+
+      - name: Upload Sentry package
+        if: steps.check-cache.outputs.skip != 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release view "$DEPS_TAG" --repo "${{ github.repository }}" >/dev/null 2>&1 || {
+            gh release create "$DEPS_TAG" --prerelease --title "$DEPS_TAG" --notes "Pre-compiled dependencies" --repo "${{ github.repository }}"
+          }
+          gh release upload "$DEPS_TAG" "${{ runner.temp }}/deps-output/sentry-macos-${{ matrix.arch }}.tar.zst" --clobber --repo "${{ github.repository }}"
+
+  build-sentry-windows:
+    needs: setup-env
+    runs-on: windows-latest
+    env:
+      DEPS_TAG: ${{ needs.setup-env.outputs.deps_tag }}
+      BASE_TAG: ${{ needs.setup-env.outputs.base_tag }}
+      FORCE_REBUILD: ${{ needs.setup-env.outputs.force_rebuild }}
+      TARGET: ${{ needs.setup-env.outputs.target }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check or Copy Sentry package
+        id: check-cache
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
+        run: |
+          FILE_NAME="sentry-windows-x64.zip"
+          if gh release view "$DEPS_TAG" --repo "${{ github.repository }}" | grep -q "$FILE_NAME"; then
+            echo "Package $FILE_NAME already exists in $DEPS_TAG. Skipping build."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          SHOULD_FORCE="false"
+          if [[ "$FORCE_REBUILD" == "true" && ( "$TARGET" == "all" || "$TARGET" == "sentry" ) ]]; then
+            SHOULD_FORCE="true"
+          fi
+          if [[ "$SHOULD_FORCE" != "true" && -n "$BASE_TAG" ]]; then
+            echo "Checking if $FILE_NAME exists in base release $BASE_TAG..."
+            if gh release view "$BASE_TAG" --repo "${{ github.repository }}" | grep -q "$FILE_NAME"; then
+              echo "Found $FILE_NAME in $BASE_TAG. Copying to $DEPS_TAG..."
+              gh release download "$BASE_TAG" -p "$FILE_NAME" --repo "${{ github.repository }}"
+              gh release upload "$DEPS_TAG" "$FILE_NAME" --clobber --repo "${{ github.repository }}"
+              echo "skip=true" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+          fi
+          echo "skip=false" >> "$GITHUB_OUTPUT"
+
+      - name: Setup MSVC
+        if: steps.check-cache.outputs.skip != 'true'
+        uses: ilammy/msvc-dev-cmd@v1
+
+      - name: Build Sentry
+        if: steps.check-cache.outputs.skip != 'true'
+        shell: pwsh
+        run: |
+          ./scripts/build-deps-windows.ps1 -TargetDir "D:\deps-build" -OutputDir "D:\deps-output" -Target sentry
+
+      - name: Upload Sentry package
+        if: steps.check-cache.outputs.skip != 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
+        run: |
+          gh release view "$DEPS_TAG" --repo "${{ github.repository }}" >/dev/null 2>&1 || {
+            gh release create "$DEPS_TAG" --prerelease --title "$DEPS_TAG" --notes "Pre-compiled dependencies" --repo "${{ github.repository }}"
+          }
+          gh release upload "$DEPS_TAG" "D:/deps-output/sentry-windows-x64.zip" --clobber --repo "${{ github.repository }}"

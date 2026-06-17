@@ -1,6 +1,7 @@
 #include "AppWindow.h"
 #include "ConfigManager.h"
 #include "MediaPlayer.h"
+#include "SentryManager.h"
 #include "SoftwareVideoRenderer.h"
 #include "ThemeManager.h"
 #include "TranslationManager.h"
@@ -29,6 +30,12 @@ int main(int argc, char *argv[]) {
 
   if (runBenchmark) {
     QApplication app(argc, argv);
+    app.setApplicationName("Subtitles Editor");
+#ifndef APP_VERSION
+#define APP_VERSION "1.0.0"
+#endif
+    app.setApplicationVersion(APP_VERSION);
+    SentryManager::instance().initialize();
 
     // Set up MediaPlayer and a dummy SoftwareVideoRenderer to receive frames
     MediaPlayer player;
@@ -285,12 +292,20 @@ int main(int argc, char *argv[]) {
                      });
 
     player.load(benchmarkVideoPath);
-    return app.exec();
+    int ret = app.exec();
+    SentryManager::instance().shutdown();
+    return ret;
   }
 
   QApplication app(argc, argv);
   app.setApplicationName("Subtitles Editor");
+#ifndef APP_VERSION
+#define APP_VERSION "1.0.0"
+#endif
+  app.setApplicationVersion(APP_VERSION);
   app.setWindowIcon(QIcon(":/icon.png"));
+
+  SentryManager::instance().initialize();
 
   // Use Fusion style for better dark theme support and cross-platform
   // consistency
@@ -317,5 +332,7 @@ int main(int argc, char *argv[]) {
                               Q_ARG(QString, filePath));
   }
 
-  return app.exec();
+  int ret = app.exec();
+  SentryManager::instance().shutdown();
+  return ret;
 }

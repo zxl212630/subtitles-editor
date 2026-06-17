@@ -30,7 +30,8 @@
 - 响应式布局，支持面板拖拽调整
 
 ### 🔧 高级功能
-- ASR 语音识别（腾讯云）
+- ASR 语音识别（支持本地离线 Whisper.cpp 识别与腾讯云 ASR 云端识别）
+- 本地 ASR 支持参数微调（如最大字幕长度、智能标点分割及繁简体转换等）
 - 对象存储（腾讯云、阿里云）
 - 多语言国际化支持
 - 项目管理与自动保存
@@ -77,6 +78,7 @@
 |------|------|------|
 | Qt6 | 6.5+ | UI 框架 |
 | FFmpeg | 8.0 | 视频/音频解码 |
+| whisper.cpp | 1.5.0+ | 本地离线 ASR 语音识别引擎 |
 | QWindowKit | - | 自定义标题栏 |
 
 ## 🚀 构建指南
@@ -130,6 +132,7 @@ cmake --build cmake-build-debug --config Debug
 | `-DQt6_ROOT` | Qt6 安装根目录 | `~/Tools/Qt/6.5.7` | `C:/Qt/6.5.7/msvc2019_64` |
 | `-DQWindowKit_ROOT` | QWindowKit 安装根目录 | `~/Tools/Qt/QwindowKit/Qt6` | `C:/Tools/QWindowKit` |
 | `-DFFmpeg_ROOT` | FFmpeg 编译根目录 | `~/Tools/ffmpeg/8.0` | `C:/Tools/ffmpeg` |
+| `-Dwhisper_ROOT` | whisper.cpp 安装根目录 | `~/Tools/whisper` | `C:/Tools/whisper` |
 
 ## 📁 项目结构
 
@@ -153,6 +156,7 @@ subtitles-editor/
 | 时间轴 | `TimelinePanel` | 底部面板，时间轴编辑 |
 | 导出器 | `SubtitleExporter` | 多格式字幕导出 |
 | ASR 服务 | `AsrServiceBase` | 语音识别抽象接口 |
+| 本地 ASR 实现 | `WhisperAsrService` | 基于 whisper.cpp 的本地语音识别服务 |
 
 ## 🎯 使用说明
 
@@ -197,3 +201,7 @@ clang-tidy src/*.cpp -- -std=c++17
    - **项目地址**: [https://ffmpeg.org](https://ffmpeg.org) / [GitHub](https://github.com/FFmpeg/FFmpeg)
    - **许可证**: LGPL / GPL
    - **说明**: 用于高效率的音视频解码与多媒体数据处理。
+5. **whisper.cpp**:
+   - **项目地址**: [https://github.com/ggerganov/whisper.cpp](https://github.com/ggerganov/whisper.cpp)
+   - **许可证**: MIT 许可证
+   - **说明**: 高性能的 C/C++ 端口，用于 OpenAI 的 Whisper 自动语音识别（ASR）模型。

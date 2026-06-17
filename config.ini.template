@@ -21,3 +21,9 @@ secret_id=YOUR_TENCENT_COS_SECRET_ID
 secret_key=YOUR_TENCENT_COS_SECRET_KEY
 bucket=YOUR_TENCENT_COS_BUCKET
 region=ap-shanghai
+
+[sentry]
+# Sentry DSN to report crash logs. Leave empty to use default built-in DSN.
+dsn=YOUR_SENTRY_DSN
+# Enable crash reporting (true/false)
+enabled=true

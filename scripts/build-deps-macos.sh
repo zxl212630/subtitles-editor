@@ -56,8 +56,8 @@ if [[ "$ARCH" != "arm64" && "$ARCH" != "x64" ]]; then
     exit 1
 fi
 
-if [[ "$TARGET" != "all" && "$TARGET" != "ffmpeg" && "$TARGET" != "qt6" && "$TARGET" != "qwindowkit" && "$TARGET" != "whisper" ]]; then
-    echo "Error: --target must be one of all, ffmpeg, qt6, qwindowkit, whisper" >&2
+if [[ "$TARGET" != "all" && "$TARGET" != "ffmpeg" && "$TARGET" != "qt6" && "$TARGET" != "qwindowkit" && "$TARGET" != "whisper" && "$TARGET" != "sentry" ]]; then
+    echo "Error: --target must be one of all, ffmpeg, qt6, qwindowkit, whisper, sentry" >&2
     exit 1
 fi
 
@@ -290,6 +290,45 @@ build_whisper() {
     echo "Whisper.cpp installed to $DEPS_DIR/whisper"
 }
 
+# --- Build Sentry ---
+build_sentry() {
+    echo ""
+    echo "=== Building Sentry-native ==="
+    local src_dir="$OUTPUT_DIR/sentry-src"
+
+    # Clone if not present
+    if [[ ! -d "$src_dir" ]]; then
+        echo "Cloning sentry-native..."
+        git clone --branch 0.7.15 --depth 1 https://github.com/getsentry/sentry-native.git "$src_dir"
+        cd "$src_dir"
+        git submodule update --init --recursive
+        cd -
+    fi
+
+    local build_dir="$OUTPUT_DIR/sentry-build"
+    mkdir -p "$build_dir"
+
+    echo "Configuring Sentry-native..."
+    cd "$build_dir"
+    cmake "$src_dir" \
+        -DCMAKE_INSTALL_PREFIX="$DEPS_DIR/sentry" \
+        -DCMAKE_OSX_DEPLOYMENT_TARGET=12.0 \
+        -DCMAKE_OSX_ARCHITECTURES="$ARCH" \
+        -DSENTRY_BUILD_TESTS=OFF \
+        -DSENTRY_BUILD_EXAMPLES=OFF \
+        -DSENTRY_BUILD_RUN_TESTS=OFF \
+        -DSENTRY_LINK_STATIC=ON \
+        -DCMAKE_BUILD_TYPE=RelWithDebInfo
+
+    echo "Building Sentry-native..."
+    cmake --build . -j"$JOBS"
+    cmake --install .
+
+    cd "$PROJECT_DIR"
+    echo "Sentry-native installed to $DEPS_DIR/sentry"
+}
+
+
 # --- Main ---
 cd "$OUTPUT_DIR"
 
@@ -361,6 +400,19 @@ if [[ "$TARGET" == "all" || "$TARGET" == "whisper" ]]; then
         echo "=== Packaging Whisper ==="
         cd "$OUTPUT_DIR"
         tar -cf - deps/whisper | zstd -T0 -o "$OUTPUT_DIR/whisper-macos-${ARCH}.tar.zst"
+        rm -rf deps
+    fi
+fi
+
+if [[ "$TARGET" == "all" || "$TARGET" == "sentry" ]]; then
+    if [[ -f "$OUTPUT_DIR/sentry-macos-${ARCH}.tar.zst" ]]; then
+        echo "Sentry package already exists, skipping build."
+    else
+        build_sentry
+        echo ""
+        echo "=== Packaging Sentry ==="
+        cd "$OUTPUT_DIR"
+        tar -cf - deps/sentry | zstd -T0 -o "$OUTPUT_DIR/sentry-macos-${ARCH}.tar.zst"
         rm -rf deps
     fi
 fi

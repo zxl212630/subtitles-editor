@@ -316,4 +316,45 @@ if ($Target -eq "all" -or $Target -eq "whisper") {
     Set-Location $OriginalLocation
 }
 
+# 5. 编译 Sentry-native
+if ($Target -eq "all" -or $Target -eq "sentry") {
+    Write-Host "=== Building Sentry-native ==="
+    $SentrySrcDir = Join-Path $TargetDir "sentry-src"
+    if (-not (Test-Path $SentrySrcDir)) {
+        Write-Host "Cloning Sentry-native..."
+        git clone --branch 0.7.15 --depth 1 https://github.com/getsentry/sentry-native.git $SentrySrcDir
+        Set-Location $SentrySrcDir
+        git submodule update --init --recursive
+        Set-Location $OriginalLocation
+    }
+
+    $SentryBuildDir = Join-Path $TargetDir "sentry-build"
+    New-Item -ItemType Directory -Force -Path $SentryBuildDir | Out-Null
+    Set-Location $SentryBuildDir
+
+    $SentryInstallDir = Join-Path $DepsDir "sentry"
+
+    Write-Host "Configuring Sentry..."
+    cmake $SentrySrcDir `
+        -DCMAKE_INSTALL_PREFIX="$SentryInstallDir" `
+        -DSENTRY_BUILD_TESTS=OFF `
+        -DSENTRY_BUILD_EXAMPLES=OFF `
+        -DSENTRY_BUILD_RUN_TESTS=OFF `
+        -DSENTRY_LINK_STATIC=ON `
+        -DCMAKE_BUILD_TYPE=RelWithDebInfo
+
+    Write-Host "Building Sentry..."
+    cmake --build . --config RelWithDebInfo --parallel 8
+    Write-Host "Installing Sentry..."
+    cmake --install . --config RelWithDebInfo
+
+    Set-Location $OriginalLocation
+
+    # Pack Sentry
+    Write-Host "=== Packaging Sentry ==="
+    Set-Location $DepsDir
+    Compress-Archive -Path "sentry" -DestinationPath (Join-Path $OutputDir "sentry-windows-x64.zip") -Force
+    Set-Location $OriginalLocation
+}
+
 Write-Host "=== Done ==="
