@@ -308,12 +308,18 @@ build_sentry() {
     local build_dir="$OUTPUT_DIR/sentry-build"
     mkdir -p "$build_dir"
 
+    local target_arch="$ARCH"
+    if [[ "$ARCH" == "x64" ]]; then
+        target_arch="x86_64"
+    fi
+
     echo "Configuring Sentry-native..."
     cd "$build_dir"
     cmake "$src_dir" \
         -DCMAKE_INSTALL_PREFIX="$DEPS_DIR/sentry" \
         -DCMAKE_OSX_DEPLOYMENT_TARGET=12.0 \
-        -DCMAKE_OSX_ARCHITECTURES="$ARCH" \
+        -DCMAKE_OSX_ARCHITECTURES="$target_arch" \
+        -DCMAKE_OSX_SYSROOT="$(xcrun --sdk macosx --show-sdk-path)" \
         -DSENTRY_BUILD_TESTS=OFF \
         -DSENTRY_BUILD_EXAMPLES=OFF \
         -DSENTRY_BUILD_RUN_TESTS=OFF \
