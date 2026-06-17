@@ -140,4 +140,5 @@ private:
 
   bool isPlaying_ = false;
   qint64 totalDurationMs_ = 0;
+  double videoFps_ = 25.0;
 };

@@ -3,6 +3,12 @@
 #include <QFileInfo>
 #include <QProcess>
 #include <QRegularExpression>
+#include <QDir>
+#include <QStandardPaths>
+#include <QCryptographicHash>
+#include <QTimer>
+#include <QDateTime>
+#include <QDebug>
 
 AudioTranscoder::AudioTranscoder(QObject *parent) : QObject(parent) {
   ffmpegPath_ = ConfigManager::instance().ffmpegPath();
@@ -32,9 +38,18 @@ void AudioTranscoder::abort() {
 
 QString AudioTranscoder::generateOutputPath(const QString &inputPath) {
   QFileInfo info(inputPath);
-  QString basePath = info.absolutePath();
   QString baseName = info.baseName();
-  return basePath + "/" + baseName + "_16k.wav";
+  QString key = info.absoluteFilePath() + "_" + QString::number(info.size()) + "_" +
+                QString::number(info.lastModified().toMSecsSinceEpoch());
+  QByteArray hash = QCryptographicHash::hash(key.toUtf8(), QCryptographicHash::Md5);
+  QString hashHex = hash.toHex();
+
+  QString asrDir =
+      QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation) +
+      "/asr";
+  QDir().mkpath(asrDir);
+
+  return asrDir + "/" + baseName + "-" + hashHex + ".wav";
 }
 
 void AudioTranscoder::parseProgress(const QString &line, int durationMs) {
@@ -64,6 +79,17 @@ void AudioTranscoder::transcode(const QString &inputPath) {
   }
 
   QString outputPath = generateOutputPath(inputPath);
+
+  // Check if cached file already exists and is non-empty
+  if (QFile::exists(outputPath) && QFileInfo(outputPath).size() > 0) {
+    qDebug() << "[AudioTranscoder] Found cached ASR audio file:" << outputPath;
+    emit transcodingStarted();
+    emit progress(100);
+    QTimer::singleShot(50, this, [this, outputPath]() {
+      emit transcodingFinished(outputPath);
+    });
+    return;
+  }
 
   QStringList args;
   args << "-i" << inputPath << "-ar"

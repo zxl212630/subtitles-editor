@@ -14,23 +14,35 @@ ConfigManager &ConfigManager::instance() {
 
 ConfigManager::ConfigManager()
     : configFilePath_([] {
-        QString configDir =
+        QString oldDir =
             QStandardPaths::writableLocation(QStandardPaths::AppConfigLocation);
-        QString standardPath = configDir + "/config.ini";
+        QString oldPath = oldDir + "/config.ini";
+
+        QString newDir =
+            QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation);
+        QString newPath = newDir + "/config.ini";
         QString localPath =
             QCoreApplication::applicationDirPath() + "/config.ini";
 
-        QString finalPath = standardPath;
+        QString finalPath = newPath;
 
-        if (!QFile::exists(standardPath)) {
-          if (QFile::exists(localPath)) {
+        QDir().mkpath(newDir);
+
+        if (!QFile::exists(newPath)) {
+          if (QFile::exists(oldPath)) {
+            // Migrate from old AppConfigLocation
+            if (QFile::copy(oldPath, newPath)) {
+              qDebug() << "[ConfigManager] Migrated config.ini from old path:" << oldPath;
+            } else {
+              qWarning() << "[ConfigManager] Failed to migrate config.ini from old path:" << oldPath;
+            }
+          } else if (QFile::exists(localPath)) {
             finalPath = localPath;
           } else {
-            QDir().mkpath(configDir);
             QString templatePath =
                 QCoreApplication::applicationDirPath() + "/config.ini.template";
             if (QFile::exists(templatePath)) {
-              QFile::copy(templatePath, standardPath);
+              QFile::copy(templatePath, newPath);
             }
           }
         }

@@ -207,7 +207,12 @@ private:
       return 0;
     double r = static_cast<double>(x) / width();
     r = qBound(0.0, r, 1.0);
-    return static_cast<qint64>(r * totalDurationMs_);
+    qint64 ms = static_cast<qint64>(r * totalDurationMs_);
+
+    double frameDuration = 1000.0 / videoFps_;
+    qint64 totalFrames = static_cast<qint64>(std::round(ms / frameDuration));
+    qint64 snappedMs = static_cast<qint64>(std::round(totalFrames * frameDuration));
+    return qBound(0LL, snappedMs, totalDurationMs_);
   }
 
   double ratio_ = 0.0;
@@ -218,9 +223,29 @@ private:
   double videoFps_ = 25.0;
 };
 
-static QString formatTime(qint64 ms) {
-  return QTime::fromMSecsSinceStartOfDay(static_cast<int>(ms))
-      .toString("hh:mm:ss.zzz");
+static QString formatTimeWithFrames(qint64 ms, double fps) {
+  if (fps <= 0.0) {
+    fps = 25.0;
+  }
+  double frameDuration = 1000.0 / fps;
+  qint64 totalFrames = static_cast<qint64>(std::round(ms / frameDuration));
+  int roundedFps = static_cast<int>(std::round(fps));
+  if (roundedFps <= 0) roundedFps = 25;
+
+  qint64 frames = totalFrames % roundedFps;
+  qint64 totalSecs = totalFrames / roundedFps;
+
+  qint64 secs = totalSecs % 60;
+  qint64 totalMins = totalSecs / 60;
+
+  qint64 mins = totalMins % 60;
+  qint64 hours = totalMins / 60;
+
+  return QString("%1:%2:%3:%4")
+      .arg(hours, 2, 10, QChar('0'))
+      .arg(mins, 2, 10, QChar('0'))
+      .arg(secs, 2, 10, QChar('0'))
+      .arg(frames, 2, 10, QChar('0'));
 }
 
 // ==================================================================
@@ -711,7 +736,7 @@ void VideoPreviewPanel::setupUi() {
 
   cbLayout->addSpacing(4);
 
-  currentTimeLabel_ = new QLabel("00:00:00.000 / 00:00:00.000", controlBar);
+  currentTimeLabel_ = new QLabel("00:00:00:00 / 00:00:00:00", controlBar);
   currentTimeLabel_->setObjectName("PreviewCurrentTimeLabel");
   currentTimeLabel_->setFixedWidth(190);
   currentTimeLabel_->setAlignment(Qt::AlignCenter);
@@ -1093,15 +1118,19 @@ void VideoPreviewPanel::seekTo(qint64 ms) {
 }
 
 void VideoPreviewPanel::setVideoFps(double fps) {
+  if (fps > 0.0) {
+    videoFps_ = fps;
+  }
   if (progressBar_)
     progressBar_->setVideoFps(fps);
+  onTimeChanged(mediaPlayer_ ? mediaPlayer_->currentTimeMs() : 0);
 }
 
 void VideoPreviewPanel::onTimeChanged(qint64 ms) {
   if (currentTimeLabel_) {
     currentTimeLabel_->setText(QString("%1 / %2")
-                                   .arg(formatTime(ms))
-                                   .arg(formatTime(totalDurationMs_)));
+                                   .arg(formatTimeWithFrames(ms, videoFps_))
+                                   .arg(formatTimeWithFrames(totalDurationMs_, videoFps_)));
   }
   if (progressBar_) {
     double ratio =

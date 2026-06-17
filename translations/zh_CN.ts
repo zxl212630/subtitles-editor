@@ -577,6 +577,12 @@
         <source>导出字幕失败，请检查文件路径和权限。</source>
         <translation type="vanished">导出字幕失败，请检查文件路径和权限。</translation>
     </message>
+    <message>
+        <location filename="../src/AppWindow.cpp" line="1215"/>
+        <location filename="../src/AppWindow.cpp" line="1331"/>
+        <source>打开数据目录</source>
+        <translation>打开数据目录</translation>
+    </message>
 </context>
 <context>
     <name>AsrConfigDialog</name>

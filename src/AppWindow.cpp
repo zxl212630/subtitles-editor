@@ -50,6 +50,7 @@
 #include <QResizeEvent>
 #include <QScrollBar>
 #include <QShowEvent>
+#include <QStandardPaths>
 #include <QSplitter>
 #include <QStatusBar>
 #include <QTextEdit>
@@ -113,6 +114,7 @@ struct AppWindow::Private {
   QAction *selectAllAction = nullptr;
   QAction *deleteAction = nullptr;
   QAction *configAction = nullptr;
+  QAction *openDataDirAction = nullptr;
   QAction *aboutAction = nullptr;
 
   // ProjectManager
@@ -1211,6 +1213,8 @@ void AppWindow::retranslateUi() {
   // 设置菜单动作
   if (d->configAction)
     d->configAction->setText(tr("配置..."));
+  if (d->openDataDirAction)
+    d->openDataDirAction->setText(tr("打开数据目录"));
 
   // 帮助菜单动作
   if (d->aboutAction)
@@ -1325,6 +1329,15 @@ void AppWindow::setupMenuBar() {
     connect(&dlg, &ConfigDialog::configApplied, this,
             &AppWindow::onConfigApplied);
     dlg.exec();
+  });
+
+  d->openDataDirAction = d->settingsMenu->addAction(tr("打开数据目录"));
+  d->openDataDirAction->setMenuRole(QAction::NoRole);
+  connect(d->openDataDirAction, &QAction::triggered, this, []() {
+    QString dataDir =
+        QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation);
+    QDir().mkpath(dataDir);
+    QDesktopServices::openUrl(QUrl::fromLocalFile(dataDir));
   });
 
   d->langMenu = d->settingsMenu->addMenu(tr("语言"));

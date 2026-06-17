@@ -6,6 +6,12 @@
 #include <QStandardPaths>
 #include <sentry.h>
 
+#include <QFile>
+#include <QMutex>
+#include <QTextStream>
+#include <QDateTime>
+#include <iostream>
+
 #ifndef SENTRY_DSN_DEFAULT
 #define SENTRY_DSN_DEFAULT ""
 #endif
@@ -47,6 +53,33 @@ void SentryManager::initialize() {
   QDir().mkpath(dbPath);
   sentry_options_set_database_path(
       options, QDir::toNativeSeparators(dbPath).toUtf8().constData());
+
+  // Add redirected log file as an attachment
+  QString logPath;
+#ifdef Q_OS_MAC
+  logPath = "/tmp/startup.log";
+#else
+  logPath = QCoreApplication::applicationDirPath() + "/startup.log";
+  if (!QFile::exists(logPath)) {
+    logPath = "startup.log";
+  }
+#endif
+
+  if (QFile::exists(logPath)) {
+    sentry_options_add_attachment(
+        options, QDir::toNativeSeparators(logPath).toUtf8().constData());
+    qDebug() << "[Sentry] Attached redirected log file:" << logPath;
+  } else {
+    // Fallback to unified directory log path
+    QString fallbackLogPath =
+        QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation) +
+        "/logs/app.log";
+    if (QFile::exists(fallbackLogPath)) {
+      sentry_options_add_attachment(
+          options, QDir::toNativeSeparators(fallbackLogPath).toUtf8().constData());
+      qDebug() << "[Sentry] Attached fallback log file:" << fallbackLogPath;
+    }
+  }
 
   // Configure crashpad_handler path (expected to be next to the executable)
   QString appDir = QCoreApplication::applicationDirPath();
