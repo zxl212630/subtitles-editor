@@ -72,6 +72,7 @@ done
 DMG_NAME="SubtitlesEditor-${VERSION}-macOS-${TARGET_ARCH:-$(uname -m)}-unsigned"
 
 # --- Resolve dependencies from --deps-dir ---
+if [[ -n "$DEPS_DIR" ]]; then
     [[ -d "$DEPS_DIR/deps/qt6" ]]     || { echo "Error: $DEPS_DIR/deps/qt6 not found" >&2; exit 1; }
     [[ -d "$DEPS_DIR/deps/qwindowkit" ]] || { echo "Error: $DEPS_DIR/deps/qwindowkit not found" >&2; exit 1; }
     [[ -d "$DEPS_DIR/deps/ffmpeg" ]]   || { echo "Error: $DEPS_DIR/deps/ffmpeg not found" >&2; exit 1; }
