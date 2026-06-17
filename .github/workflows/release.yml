@@ -6,6 +6,10 @@ on:
       - 'v*'
   workflow_dispatch:
     inputs:
+      release_tag:
+        description: 'Release tag (e.g. v1.1.4, leave empty to auto-increment latest vX.Y.Z)'
+        required: false
+        default: ''
       deps_tag:
         description: 'Dependencies release tag (auto-detect if empty)'
         required: false
@@ -15,7 +19,42 @@ permissions:
   contents: write
 
 jobs:
+  setup-env:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.env.outputs.version }}
+      tag_name: ${{ steps.env.outputs.tag_name }}
+    steps:
+      - name: Compute release version
+        id: env
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if [[ "${{ github.ref_type }}" == "tag" ]]; then
+            TAG_NAME="${{ github.ref_name }}"
+            VERSION="${TAG_NAME#v}"
+          elif [[ -n "${{ inputs.release_tag }}" ]]; then
+            TAG_NAME="${{ inputs.release_tag }}"
+            VERSION="${TAG_NAME#v}"
+          else
+            LATEST_TAG=$(gh release list --limit 100 --repo "${{ github.repository }}" | cut -f1 | \
+              grep -E "^v[0-9]" | head -n 1 || true)
+            if [[ -z "$LATEST_TAG" ]]; then
+              TAG_NAME="v1.0.0"
+            else
+              VERSION_PART="${LATEST_TAG#v}"
+              IFS='.' read -r major minor patch <<< "$VERSION_PART"
+              new_patch=$((patch + 1))
+              TAG_NAME="v${major}.${minor}.${new_patch}"
+            fi
+            VERSION="${TAG_NAME#v}"
+          fi
+          echo "tag_name=$TAG_NAME" >> "$GITHUB_OUTPUT"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "tag_name=$TAG_NAME, version=$VERSION"
+
   build:
+    needs: setup-env
     runs-on: ${{ matrix.runner }}
     strategy:
       fail-fast: false
@@ -32,15 +71,6 @@ jobs:
       - name: Install tools
         run: |
           brew install zstd x264 x265
-
-      - name: Extract version from tag
-        id: version
-        run: |
-          if [[ "${{ github.ref_type }}" == "tag" ]]; then
-            echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
-          else
-            echo "version=dev" >> "$GITHUB_OUTPUT"
-          fi
 
       - name: Find deps tag
         id: find-deps
@@ -84,7 +114,7 @@ jobs:
           ./scripts/package-macos.sh \
             --deps-dir "$PWD" \
             --arch "${{ matrix.arch }}" \
-            --version "${{ steps.version.outputs.version }}" \
+            --version "${{ needs.setup-env.outputs.version }}" \
             --sentry-dsn "$SENTRY_DSN"
 
       - name: Upload Debug Symbols to Sentry
@@ -111,19 +141,10 @@ jobs:
 
 
   build-windows:
+    needs: setup-env
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
-
-      - name: Extract version from tag
-        id: version
-        shell: bash
-        run: |
-          if [[ "${{ github.ref_type }}" == "tag" ]]; then
-            echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
-          else
-            echo "version=dev" >> "$GITHUB_OUTPUT"
-          fi
 
       - name: Find deps tag
         id: find-deps
@@ -178,22 +199,22 @@ jobs:
       - name: Package
         shell: bash
         run: |
-          mkdir -p dist/windows/SubtitlesEditor-${{ steps.version.outputs.version }}-Windows-x64
-          cp cmake-build-release/Release/subtitles-editor.exe dist/windows/SubtitlesEditor-${{ steps.version.outputs.version }}-Windows-x64/
+          mkdir -p dist/windows/SubtitlesEditor-${{ needs.setup-env.outputs.version }}-Windows-x64
+          cp cmake-build-release/Release/subtitles-editor.exe dist/windows/SubtitlesEditor-${{ needs.setup-env.outputs.version }}-Windows-x64/
           
           # Copy Sentry crashpad_handler.exe
-          cp $SENTRY_ROOT/bin/crashpad_handler.exe dist/windows/SubtitlesEditor-${{ steps.version.outputs.version }}-Windows-x64/
+          cp $SENTRY_ROOT/bin/crashpad_handler.exe dist/windows/SubtitlesEditor-${{ needs.setup-env.outputs.version }}-Windows-x64/
           
           # Deploy Qt
-          $QT_DIR/bin/windeployqt.exe --release --no-compiler-runtime --no-opengl-sw --no-translations dist/windows/SubtitlesEditor-${{ steps.version.outputs.version }}-Windows-x64/subtitles-editor.exe
+          $QT_DIR/bin/windeployqt.exe --release --no-compiler-runtime --no-opengl-sw --no-translations dist/windows/SubtitlesEditor-${{ needs.setup-env.outputs.version }}-Windows-x64/subtitles-editor.exe
           
           # Copy FFmpeg, QWindowKit and Whisper DLLs
-          cp $FFMPEG_ROOT/bin/*.dll dist/windows/SubtitlesEditor-${{ steps.version.outputs.version }}-Windows-x64/
-          cp $QWindowKit_ROOT/bin/*.dll dist/windows/SubtitlesEditor-${{ steps.version.outputs.version }}-Windows-x64/
-          cp $WHISPER_ROOT/bin/*.dll dist/windows/SubtitlesEditor-${{ steps.version.outputs.version }}-Windows-x64/
+          cp $FFMPEG_ROOT/bin/*.dll dist/windows/SubtitlesEditor-${{ needs.setup-env.outputs.version }}-Windows-x64/
+          cp $QWindowKit_ROOT/bin/*.dll dist/windows/SubtitlesEditor-${{ needs.setup-env.outputs.version }}-Windows-x64/
+          cp $WHISPER_ROOT/bin/*.dll dist/windows/SubtitlesEditor-${{ needs.setup-env.outputs.version }}-Windows-x64/
           
           cd dist/windows
-          tar.exe -a -c -f SubtitlesEditor-${{ steps.version.outputs.version }}-Windows-x64.zip SubtitlesEditor-${{ steps.version.outputs.version }}-Windows-x64
+          tar.exe -a -c -f SubtitlesEditor-${{ needs.setup-env.outputs.version }}-Windows-x64.zip SubtitlesEditor-${{ needs.setup-env.outputs.version }}-Windows-x64
 
       - name: Upload Debug Symbols to Sentry
         shell: bash
@@ -215,7 +236,7 @@ jobs:
           path: dist/windows/*.zip
 
   universal:
-    needs: build
+    needs: [setup-env, build]
     runs-on: macos-14
     steps:
       - uses: actions/checkout@v4
@@ -238,10 +259,6 @@ jobs:
           tar -xf artifacts/arm64/subtitles-editor-arm64.tar -C arm64-build
           tar -xf artifacts/x64/subtitles-editor-x64.tar -C x64-build
 
-      - name: Extract version from tag
-        id: version
-        run: echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
-
       - name: Merge into Universal App Bundle
         run: |
           ./scripts/merge-universal-macos.sh \
@@ -256,7 +273,7 @@ jobs:
           ln -sf /Applications "$STAGING_DIR/Applications"
           mkdir -p dist/macos
 
-          VERSION="${{ steps.version.outputs.version }}"
+          VERSION="${{ needs.setup-env.outputs.version }}"
           DMG_NAME="SubtitlesEditor-${VERSION}-macOS-universal"
           hdiutil create -volname "$DMG_NAME" \
               -srcfolder "$STAGING_DIR" \
@@ -271,7 +288,7 @@ jobs:
           path: dist/macos/*.dmg
 
   release:
-    needs: [universal, build-windows]
+    needs: [setup-env, universal, build-windows]
     runs-on: ubuntu-latest
     steps:
       - name: Download Artifacts
@@ -283,7 +300,7 @@ jobs:
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ github.ref_type == 'tag' && github.ref_name || 'latest-dev' }}
+          tag_name: ${{ needs.setup-env.outputs.tag_name }}
           files: |
             artifacts/**/*.dmg
             artifacts/**/*.zip

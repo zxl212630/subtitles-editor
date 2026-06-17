@@ -37,9 +37,9 @@ on:
         required: false
         default: ''
       deps_tag:
-        description: 'Tag for the dependency release (e.g. deps-v1)'
-        required: true
-        default: 'deps-v1.3'
+        description: 'Tag for the dependency release (leave empty to auto-increment latest deps-vX.Y)'
+        required: false
+        default: ''
       force_rebuild:
         description: 'Force rebuild all dependencies (do not copy/download existing ones)'
         required: false
@@ -47,7 +47,7 @@ on:
         type: boolean
   push:
     tags:
-      - 'trigger-deps-*'
+      - 'deps-v*'
 
 permissions:
   contents: write
@@ -76,16 +76,30 @@ jobs:
             TARGET="${{ inputs.target }}"
           else
             REF_NAME="${{ github.ref_name }}"
-            if [[ "$REF_NAME" =~ ^trigger-deps-(.+)$ ]]; then
-              DEPS_TAG="deps-${BASH_REMATCH[1]}"
+            if [[ "$REF_NAME" =~ ^deps-v(.+)$ ]]; then
+              DEPS_TAG="$REF_NAME"
             else
-              DEPS_TAG="deps-v1.3"
+              DEPS_TAG=""
             fi
             FORCE_REBUILD="false"
             QT_VERSION="6.5.9"
             FFMPEG_VERSION="8.1.1"
             TARGET="all"
           fi
+
+          if [[ -z "$DEPS_TAG" ]]; then
+            LATEST_TAG=$(gh release list --limit 100 --repo "${{ github.repository }}" | cut -f1 | \
+              grep -E "^deps-v" | head -n 1 || true)
+            if [[ -z "$LATEST_TAG" ]]; then
+              DEPS_TAG="deps-v1.0"
+            else
+              VERSION_PART="${LATEST_TAG#deps-v}"
+              IFS='.' read -r major minor <<< "$VERSION_PART"
+              new_minor=$((minor + 1))
+              DEPS_TAG="deps-v${major}.${new_minor}"
+            fi
+          fi
+
           echo "deps_tag=$DEPS_TAG" >> "$GITHUB_OUTPUT"
           echo "force_rebuild=$FORCE_REBUILD" >> "$GITHUB_OUTPUT"
           echo "qt_version=$QT_VERSION" >> "$GITHUB_OUTPUT"
