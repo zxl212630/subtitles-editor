@@ -655,6 +655,12 @@ void VideoPreviewPanel::setupUi() {
 
   tbLayout->addWidget(btnGroup);
 
+  applyToAllBtn_ = new QPushButton(tr("Apply All"), toolbar);
+  applyToAllBtn_->setObjectName("ApplyAllBtn");
+  applyToAllBtn_->setFixedSize(76, 28);
+  applyToAllBtn_->setEnabled(false);
+  tbLayout->addWidget(applyToAllBtn_);
+
   // 连接样式按钮的槽函数
   connect(bBtn_, &QPushButton::clicked, this, [this](bool checked) {
     updateCurrentItemStyle(
@@ -674,6 +680,14 @@ void VideoPreviewPanel::setupUi() {
   connect(alignGroup, &QButtonGroup::idClicked, this, [this](int id) {
     updateCurrentItemStyle([id](SubtitleItem &item) { item.alignment = id; });
     updateSubtitleOverlay();
+  });
+  connect(applyToAllBtn_, &QPushButton::clicked, this, [this]() {
+    if (subtitleTrack_) {
+      const SubtitleItem *sel = subtitleTrack_->selectedItem();
+      if (sel) {
+        subtitleTrack_->applyStyleToAll(sel->id);
+      }
+    }
   });
 
   layout->addWidget(toolbar);
@@ -910,6 +924,10 @@ void VideoPreviewPanel::retranslateUi() {
     qualityCombo_->setCurrentIndex(currentIdx);
     qualityCombo_->blockSignals(false);
   }
+
+  if (applyToAllBtn_) {
+    applyToAllBtn_->setText(tr("Apply All"));
+  }
 }
 
 void VideoPreviewPanel::resizeEvent(QResizeEvent *event) {
@@ -1004,6 +1022,10 @@ void VideoPreviewPanel::setSubtitleTrack(SubtitleTrack *track) {
                 else
                   acBtn_->setChecked(true);
 
+                if (applyToAllBtn_) {
+                  applyToAllBtn_->setEnabled(true);
+                }
+
               } else {
                 // 使用全局默认模板样式
                 int fontIdx =
@@ -1025,6 +1047,10 @@ void VideoPreviewPanel::setSubtitleTrack(SubtitleTrack *track) {
                   ajBtn_->setChecked(true);
                 else
                   acBtn_->setChecked(true);
+
+                if (applyToAllBtn_) {
+                  applyToAllBtn_->setEnabled(false);
+                }
               }
 
               fontCombo_->blockSignals(false);
@@ -1044,6 +1070,13 @@ void VideoPreviewPanel::setSubtitleTrack(SubtitleTrack *track) {
     if (subtitleTrack_->selectedItem()) {
       emit subtitleTrack_->itemSelected(subtitleTrack_->selectedItem()->id);
     } else {
+      if (applyToAllBtn_) {
+        applyToAllBtn_->setEnabled(false);
+      }
+    }
+  } else {
+    if (applyToAllBtn_) {
+      applyToAllBtn_->setEnabled(false);
     }
   }
 }

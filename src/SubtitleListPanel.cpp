@@ -197,9 +197,6 @@ void SubtitleListPanel::retranslateUi() {
   if (savePresetBtn_) {
     savePresetBtn_->setText(tr("+ Save Current Style"));
   }
-  if (applyToAllBtn_) {
-    applyToAllBtn_->setText(tr("Apply All"));
-  }
   if (bubbleImageBrowse_) {
     bubbleImageBrowse_->setText(tr("Browse..."));
   }
@@ -1428,7 +1425,7 @@ QWidget *SubtitleListPanel::createCustomStylePanel() {
   // 初始化显隐状态
   updateFillTypeFields();
 
-  // 两个按钮并排水平放置，宽度都和原全部应用按钮一致（76px宽，28px高）
+  // 保存预设按钮水平居中放置
   auto *btnContainer = new QWidget(mainContainer);
   auto *btnLayout = new QHBoxLayout(btnContainer);
   btnLayout->setContentsMargins(12, 8, 12, 12);
@@ -1443,27 +1440,9 @@ QWidget *SubtitleListPanel::createCustomStylePanel() {
       "border-radius: 4px; color: #eee; font-size: 11px; }"
       "QPushButton:hover { background-color: #3c3c3c; border-color: #555; }");
 
-  applyToAllBtn_ = new QPushButton(tr("Apply All"), btnContainer);
-  applyToAllBtn_->setObjectName("ApplyAllBtn");
-  applyToAllBtn_->setFixedSize(76, 28);
-  applyToAllBtn_->setEnabled(false);
-  applyToAllBtn_->setStyleSheet(
-      "QPushButton { background-color: palette(highlight); border: none; "
-      "border-radius: 4px; color: white; font-size: 11px; font-weight: bold; }"
-      "QPushButton:hover { background-color: #f472b6; }"
-      "QPushButton:disabled { background-color: #3c3c3c; color: #888; }");
-
   btnLayout->addWidget(savePresetBtn_);
-  btnLayout->addWidget(applyToAllBtn_);
 
   mainLayout->addWidget(btnContainer);
-
-  // 全部应用点击逻辑
-  connect(applyToAllBtn_, &QPushButton::clicked, this, [this]() {
-    if (track_ && !currentSelectedId_.isEmpty()) {
-      track_->applyStyleToAll(currentSelectedId_);
-    }
-  });
 
   // 保存为预设点击逻辑
   connect(savePresetBtn_, &QPushButton::clicked, this, [this]() {
@@ -2039,9 +2018,6 @@ void SubtitleListPanel::loadStyleFromItem(const SubtitleItem &item) {
 
   isUpdatingControls_ = false;
 
-  if (applyToAllBtn_) {
-    applyToAllBtn_->setEnabled(track_ && !currentSelectedId_.isEmpty());
-  }
   if (customStyleContainer_) {
     customStyleContainer_->setEnabled(!currentSelectedId_.isEmpty());
   }

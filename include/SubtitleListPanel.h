@@ -159,7 +159,6 @@ private:
   QListWidget *presetListWidget_ = nullptr;
   QListWidget *bubbleListWidget_ = nullptr;
   QPushButton *savePresetBtn_ = nullptr;
-  QPushButton *applyToAllBtn_ = nullptr;
 
   QIcon createPresetIcon(const SubtitleItem &style, const QSize &size);
   QString generateSvgForPreset(const SubtitleItem &style);
