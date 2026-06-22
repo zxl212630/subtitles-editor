@@ -18,8 +18,8 @@ ConfigManager::ConfigManager()
             QStandardPaths::writableLocation(QStandardPaths::AppConfigLocation);
         QString oldPath = oldDir + "/config.ini";
 
-        QString newDir =
-            QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation);
+        QString newDir = QStandardPaths::writableLocation(
+            QStandardPaths::AppLocalDataLocation);
         QString newPath = newDir + "/config.ini";
         QString localPath =
             QCoreApplication::applicationDirPath() + "/config.ini";
@@ -32,9 +32,12 @@ ConfigManager::ConfigManager()
           if (QFile::exists(oldPath)) {
             // Migrate from old AppConfigLocation
             if (QFile::copy(oldPath, newPath)) {
-              qDebug() << "[ConfigManager] Migrated config.ini from old path:" << oldPath;
+              qDebug() << "[ConfigManager] Migrated config.ini from old path:"
+                       << oldPath;
             } else {
-              qWarning() << "[ConfigManager] Failed to migrate config.ini from old path:" << oldPath;
+              qWarning() << "[ConfigManager] Failed to migrate config.ini from "
+                            "old path:"
+                         << oldPath;
             }
           } else if (QFile::exists(localPath)) {
             finalPath = localPath;

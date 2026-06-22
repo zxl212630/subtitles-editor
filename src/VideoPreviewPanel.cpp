@@ -211,7 +211,8 @@ private:
 
     double frameDuration = 1000.0 / videoFps_;
     qint64 totalFrames = static_cast<qint64>(std::round(ms / frameDuration));
-    qint64 snappedMs = static_cast<qint64>(std::round(totalFrames * frameDuration));
+    qint64 snappedMs =
+        static_cast<qint64>(std::round(totalFrames * frameDuration));
     return qBound(0LL, snappedMs, totalDurationMs_);
   }
 
@@ -230,7 +231,8 @@ static QString formatTimeWithFrames(qint64 ms, double fps) {
   double frameDuration = 1000.0 / fps;
   qint64 totalFrames = static_cast<qint64>(std::round(ms / frameDuration));
   int roundedFps = static_cast<int>(std::round(fps));
-  if (roundedFps <= 0) roundedFps = 25;
+  if (roundedFps <= 0)
+    roundedFps = 25;
 
   qint64 frames = totalFrames % roundedFps;
   qint64 totalSecs = totalFrames / roundedFps;
@@ -1128,9 +1130,10 @@ void VideoPreviewPanel::setVideoFps(double fps) {
 
 void VideoPreviewPanel::onTimeChanged(qint64 ms) {
   if (currentTimeLabel_) {
-    currentTimeLabel_->setText(QString("%1 / %2")
-                                   .arg(formatTimeWithFrames(ms, videoFps_))
-                                   .arg(formatTimeWithFrames(totalDurationMs_, videoFps_)));
+    currentTimeLabel_->setText(
+        QString("%1 / %2")
+            .arg(formatTimeWithFrames(ms, videoFps_))
+            .arg(formatTimeWithFrames(totalDurationMs_, videoFps_)));
   }
   if (progressBar_) {
     double ratio =

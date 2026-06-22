@@ -246,13 +246,20 @@ void SubtitleRenderer::renderSubtitle(QPainter &painter, const QString &text,
       int padTop = qRound(style.bubblePaddingTop * scale);
       int padRight = qRound(style.bubblePaddingRight * scale);
       int padBottom = qRound(style.bubblePaddingBottom * scale);
+
+      double tailHeight = 0.0;
+      if (style.bubbleImagePath.startsWith(":/bubbles/")) {
+        tailHeight = 12.0;
+      }
+      int scaledTailHeight = qRound(tailHeight * scale);
+
       int buffer = qRound(5.0 * scale);
       if (buffer < 1)
         buffer = 1;
 
-      QRect bubbleRect =
-          textBounding.adjusted(-padLeft - buffer, -padTop - buffer,
-                                padRight + buffer, padBottom + buffer);
+      QRect bubbleRect = textBounding.adjusted(
+          -padLeft - buffer, -padTop - buffer, padRight + buffer,
+          padBottom + buffer + scaledTailHeight);
 
       int tw = bubbleRect.width();
       int th = bubbleRect.height();

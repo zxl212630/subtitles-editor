@@ -50,8 +50,8 @@
 #include <QResizeEvent>
 #include <QScrollBar>
 #include <QShowEvent>
-#include <QStandardPaths>
 #include <QSplitter>
+#include <QStandardPaths>
 #include <QStatusBar>
 #include <QTextEdit>
 #include <QTime>

@@ -207,8 +207,7 @@ void OssUploader::upload(const QString &localFilePath) {
       QString presignedUrl = generatePresignedUrl(ossPath);
       emit uploadFinished(urlStr, presignedUrl);
     } else {
-      QString errorMsg =
-          tr("Upload failed: %1").arg(reply_->errorString());
+      QString errorMsg = tr("Upload failed: %1").arg(reply_->errorString());
       if (!response.isEmpty()) {
         errorMsg += QString(" | Response: %1").arg(QString::fromUtf8(response));
       }

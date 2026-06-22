@@ -96,6 +96,7 @@ private:
 
   QPushButton *tabSubtitle_ = nullptr;
   QPushButton *tabPreset_ = nullptr;
+  QPushButton *tabBubble_ = nullptr;
   QPushButton *tabCustom_ = nullptr;
   QPushButton *tabAnimation_ = nullptr;
   QLabel *headerTime_ = nullptr;
@@ -156,6 +157,7 @@ private:
 
   QComboBox *presetTypeCombo_ = nullptr;
   QListWidget *presetListWidget_ = nullptr;
+  QListWidget *bubbleListWidget_ = nullptr;
   QPushButton *savePresetBtn_ = nullptr;
   QPushButton *applyToAllBtn_ = nullptr;
 
@@ -163,8 +165,10 @@ private:
   QString generateSvgForPreset(const SubtitleItem &style);
   QString writeSvgPresetFile(const QString &name, const SubtitleItem &style);
   void populatePresets();
+  void populateBubbles();
   QWidget *createCustomStylePanel();
   QWidget *createPresetStylePanel();
+  QWidget *createBubbleStylePanel();
   void loadStyleFromItem(const SubtitleItem &item);
   void updateFillTypeFields();
   void applyCustomStyleToActiveItem();
@@ -172,4 +176,6 @@ private:
   void showPresetContextMenu(int idx, const QPoint &pos);
   void addPresetCard(const QString &name, const SubtitleItem &style,
                      bool isCustom = false, int customIndex = -1);
+  void addBubbleCard(const QString &name, const QString &imagePath, int padLeft,
+                     int padRight, int padTop, int padBottom);
 };

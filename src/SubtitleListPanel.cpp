@@ -168,6 +168,8 @@ void SubtitleListPanel::retranslateUi() {
     tabSubtitle_->setText(tr("Subtitle"));
   if (tabPreset_)
     tabPreset_->setText(tr("Preset"));
+  if (tabBubble_)
+    tabBubble_->setText(tr("Bubble"));
   if (tabCustom_)
     tabCustom_->setText(tr("Custom"));
   if (tabAnimation_)
@@ -279,6 +281,7 @@ void SubtitleListPanel::retranslateUi() {
     lbl->setText(tr("Bottom Padding"));
 
   populatePresets();
+  populateBubbles();
 }
 
 void SubtitleListPanel::setupUi() {
@@ -309,6 +312,12 @@ void SubtitleListPanel::setupUi() {
   tabPreset_->setFixedSize(60, 28);
   phLayout->addWidget(tabPreset_);
 
+  tabBubble_ = new QPushButton(tr("Bubble"), panelHeader);
+  tabBubble_->setObjectName("SubtitleTabBtn");
+  tabBubble_->setProperty("active", false);
+  tabBubble_->setFixedSize(60, 28);
+  phLayout->addWidget(tabBubble_);
+
   tabCustom_ = new QPushButton(tr("Custom"), panelHeader);
   tabCustom_->setObjectName("SubtitleTabBtn");
   tabCustom_->setProperty("active", false);
@@ -323,10 +332,12 @@ void SubtitleListPanel::setupUi() {
 
   tabSubtitle_->setAttribute(Qt::WA_TransparentForMouseEvents, false);
   tabPreset_->setAttribute(Qt::WA_TransparentForMouseEvents, false);
+  tabBubble_->setAttribute(Qt::WA_TransparentForMouseEvents, false);
   tabCustom_->setAttribute(Qt::WA_TransparentForMouseEvents, false);
   tabAnimation_->setAttribute(Qt::WA_TransparentForMouseEvents, true);
 
   tabPreset_->show();
+  tabBubble_->show();
   tabCustom_->show();
   tabAnimation_->hide();
 
@@ -335,11 +346,14 @@ void SubtitleListPanel::setupUi() {
       stackedWidget_->setCurrentIndex(0);
     tabSubtitle_->setProperty("active", true);
     tabPreset_->setProperty("active", false);
+    tabBubble_->setProperty("active", false);
     tabCustom_->setProperty("active", false);
     tabSubtitle_->style()->unpolish(tabSubtitle_);
     tabSubtitle_->style()->polish(tabSubtitle_);
     tabPreset_->style()->unpolish(tabPreset_);
     tabPreset_->style()->polish(tabPreset_);
+    tabBubble_->style()->unpolish(tabBubble_);
+    tabBubble_->style()->polish(tabBubble_);
     tabCustom_->style()->unpolish(tabCustom_);
     tabCustom_->style()->polish(tabCustom_);
   });
@@ -349,18 +363,40 @@ void SubtitleListPanel::setupUi() {
       stackedWidget_->setCurrentIndex(1);
     tabSubtitle_->setProperty("active", false);
     tabPreset_->setProperty("active", true);
+    tabBubble_->setProperty("active", false);
     tabCustom_->setProperty("active", false);
     tabSubtitle_->style()->unpolish(tabSubtitle_);
     tabSubtitle_->style()->polish(tabSubtitle_);
     tabPreset_->style()->unpolish(tabPreset_);
     tabPreset_->style()->polish(tabPreset_);
+    tabBubble_->style()->unpolish(tabBubble_);
+    tabBubble_->style()->polish(tabBubble_);
+    tabCustom_->style()->unpolish(tabCustom_);
+    tabCustom_->style()->polish(tabCustom_);
+  });
+
+  connect(tabBubble_, &QPushButton::clicked, this, [this]() {
+    if (stackedWidget_) {
+      stackedWidget_->setCurrentIndex(2);
+      populateBubbles();
+    }
+    tabSubtitle_->setProperty("active", false);
+    tabPreset_->setProperty("active", false);
+    tabBubble_->setProperty("active", true);
+    tabCustom_->setProperty("active", false);
+    tabSubtitle_->style()->unpolish(tabSubtitle_);
+    tabSubtitle_->style()->polish(tabSubtitle_);
+    tabPreset_->style()->unpolish(tabPreset_);
+    tabPreset_->style()->polish(tabPreset_);
+    tabBubble_->style()->unpolish(tabBubble_);
+    tabBubble_->style()->polish(tabBubble_);
     tabCustom_->style()->unpolish(tabCustom_);
     tabCustom_->style()->polish(tabCustom_);
   });
 
   connect(tabCustom_, &QPushButton::clicked, this, [this]() {
     if (stackedWidget_) {
-      stackedWidget_->setCurrentIndex(2);
+      stackedWidget_->setCurrentIndex(3);
       // Automatically load the active subtitle's style
       if (track_) {
         bool found = false;
@@ -378,11 +414,14 @@ void SubtitleListPanel::setupUi() {
     }
     tabSubtitle_->setProperty("active", false);
     tabPreset_->setProperty("active", false);
+    tabBubble_->setProperty("active", false);
     tabCustom_->setProperty("active", true);
     tabSubtitle_->style()->unpolish(tabSubtitle_);
     tabSubtitle_->style()->polish(tabSubtitle_);
     tabPreset_->style()->unpolish(tabPreset_);
     tabPreset_->style()->polish(tabPreset_);
+    tabBubble_->style()->unpolish(tabBubble_);
+    tabBubble_->style()->polish(tabBubble_);
     tabCustom_->style()->unpolish(tabCustom_);
     tabCustom_->style()->polish(tabCustom_);
   });
@@ -574,6 +613,16 @@ void SubtitleListPanel::setupUi() {
   QWidget *presetPanel = createPresetStylePanel();
   presetWrapperLayout->addWidget(presetPanel);
   stackedWidget_->addWidget(presetWrapper);
+
+  auto *bubbleWrapper = new QFrame(this);
+  bubbleWrapper->setObjectName("SubtitlePanelContent");
+  bubbleWrapper->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
+  auto *bubbleWrapperLayout = new QVBoxLayout(bubbleWrapper);
+  bubbleWrapperLayout->setContentsMargins(12, 12, 12, 12);
+  bubbleWrapperLayout->setSpacing(0);
+  QWidget *bubblePanel = createBubbleStylePanel();
+  bubbleWrapperLayout->addWidget(bubblePanel);
+  stackedWidget_->addWidget(bubbleWrapper);
 
   auto *customWrapper = new QFrame(this);
   customWrapper->setObjectName("SubtitlePanelContent");
@@ -1237,7 +1286,7 @@ QWidget *SubtitleListPanel::createCustomStylePanel() {
   connect(bubbleImageBrowse_, &QPushButton::clicked, this, [this]() {
     QString path =
         QFileDialog::getOpenFileName(this, tr("Select Bubble Image"), QString(),
-                                     tr("Images (*.png *.jpg *.jpeg)"));
+                                     tr("Images (*.png *.jpg *.jpeg *.svg)"));
     if (!path.isEmpty()) {
       bubbleImagePathEdit_->setText(path);
       applyCustomStyleToActiveItem();
@@ -2334,6 +2383,139 @@ void SubtitleListPanel::updateFillTypeFields() {
   setRowVisible(fillForm_, 2, idx == 1); // Gradient 2
   setRowVisible(fillForm_, 3, idx == 1); // Angle
   setRowVisible(fillForm_, 4, true);     // Opacity
+}
+
+QWidget *SubtitleListPanel::createBubbleStylePanel() {
+  auto *container = new QWidget(this);
+  container->setObjectName("BubbleStyleContainer");
+  auto *layout = new QVBoxLayout(container);
+  layout->setContentsMargins(12, 12, 12, 12);
+  layout->setSpacing(12);
+
+  auto *listContainer = new QFrame(container);
+  listContainer->setObjectName("SubtitleListContainer");
+  listContainer->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
+  auto *lcLayout = new QVBoxLayout(listContainer);
+  lcLayout->setContentsMargins(6, 6, 6, 6);
+  lcLayout->setSpacing(0);
+
+  bubbleListWidget_ = new QListWidget(listContainer);
+  bubbleListWidget_->setObjectName("BubbleListWidget");
+  bubbleListWidget_->setViewMode(QListView::IconMode);
+  bubbleListWidget_->setResizeMode(QListView::Adjust);
+  bubbleListWidget_->setMovement(QListView::Static);
+  bubbleListWidget_->setFlow(QListView::LeftToRight);
+  bubbleListWidget_->setWrapping(true);
+  bubbleListWidget_->setSpacing(8);
+  bubbleListWidget_->setUniformItemSizes(true);
+  bubbleListWidget_->setGridSize(QSize(76, 76));
+  bubbleListWidget_->setIconSize(QSize(60, 60));
+  bubbleListWidget_->setVerticalScrollBarPolicy(Qt::ScrollBarAsNeeded);
+  bubbleListWidget_->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+
+  bubbleListWidget_->setStyleSheet(
+      "QListWidget#BubbleListWidget {"
+      "  background-color: transparent;"
+      "  border: none;"
+      "}"
+      "QListWidget#BubbleListWidget::item {"
+      "  background-color: #242424;"
+      "  border: 1px solid #3c3c3c;"
+      "  border-radius: 6px;"
+      "}"
+      "QListWidget#BubbleListWidget::item:hover {"
+      "  background-color: #2e2e2e;"
+      "  border-color: #0088cc;"
+      "}"
+      "QListWidget#BubbleListWidget::item:selected {"
+      "  background-color: #2e2e2e;"
+      "  border-color: #0088cc;"
+      "}");
+
+  lcLayout->addWidget(bubbleListWidget_);
+  layout->addWidget(listContainer);
+
+  connect(bubbleListWidget_, &QListWidget::itemClicked, this,
+          [this](QListWidgetItem *item) {
+            if (!item || !track_)
+              return;
+            QVariantMap data = item->data(Qt::UserRole).toMap();
+            QString imagePath = data["imagePath"].toString();
+            int padLeft = data["padLeft"].toInt();
+            int padRight = data["padRight"].toInt();
+            int padTop = data["padTop"].toInt();
+            int padBottom = data["padBottom"].toInt();
+
+            if (!currentSelectedId_.isEmpty()) {
+              SubtitleItem sItem;
+              for (const auto &it : track_->items()) {
+                if (it.id == currentSelectedId_) {
+                  sItem = it;
+                  break;
+                }
+              }
+              sItem.bubbleEnabled = true;
+              sItem.bubbleImagePath = imagePath;
+              sItem.bubblePaddingLeft = padLeft;
+              sItem.bubblePaddingRight = padRight;
+              sItem.bubblePaddingTop = padTop;
+              sItem.bubblePaddingBottom = padBottom;
+
+              track_->updateItem(currentSelectedId_, sItem);
+              loadStyleFromItem(sItem);
+            } else {
+              SubtitleItem sItem = track_->defaultStyleItem();
+              sItem.bubbleEnabled = true;
+              sItem.bubbleImagePath = imagePath;
+              sItem.bubblePaddingLeft = padLeft;
+              sItem.bubblePaddingRight = padRight;
+              sItem.bubblePaddingTop = padTop;
+              sItem.bubblePaddingBottom = padBottom;
+
+              track_->setDefaultStyleItem(sItem);
+              loadStyleFromItem(sItem);
+            }
+          });
+
+  return container;
+}
+
+void SubtitleListPanel::addBubbleCard(const QString &name,
+                                      const QString &imagePath, int padLeft,
+                                      int padRight, int padTop, int padBottom) {
+  if (!bubbleListWidget_)
+    return;
+
+  auto *item = new QListWidgetItem(bubbleListWidget_);
+  QIcon icon(imagePath);
+  item->setIcon(icon);
+  item->setToolTip(name);
+
+  QVariantMap data;
+  data["imagePath"] = imagePath;
+  data["padLeft"] = padLeft;
+  data["padRight"] = padRight;
+  data["padTop"] = padTop;
+  data["padBottom"] = padBottom;
+  item->setData(Qt::UserRole, data);
+
+  bubbleListWidget_->addItem(item);
+}
+
+void SubtitleListPanel::populateBubbles() {
+  if (!bubbleListWidget_)
+    return;
+
+  bubbleListWidget_->clear();
+
+  addBubbleCard(tr("Glassmorphism"), ":/bubbles/bubble_glass.png", 22, 15, 15,
+                22);
+  addBubbleCard(tr("Dark Box"), ":/bubbles/bubble_dark.png", 22, 15, 15, 22);
+  addBubbleCard(tr("Cyberpunk Neon"), ":/bubbles/bubble_neon.png", 22, 15, 15,
+                22);
+  addBubbleCard(tr("Cute Yellow"), ":/bubbles/bubble_cute.png", 22, 15, 15, 22);
+  addBubbleCard(tr("Minimal Outline"), ":/bubbles/bubble_outline.png", 22, 15,
+                15, 22);
 }
 
 #include "SubtitleListPanel.moc"

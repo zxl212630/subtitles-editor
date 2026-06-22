@@ -1,14 +1,14 @@
 #include "AudioTranscoder.h"
 #include "ConfigManager.h"
+#include <QCryptographicHash>
+#include <QDateTime>
+#include <QDebug>
+#include <QDir>
 #include <QFileInfo>
 #include <QProcess>
 #include <QRegularExpression>
-#include <QDir>
 #include <QStandardPaths>
-#include <QCryptographicHash>
 #include <QTimer>
-#include <QDateTime>
-#include <QDebug>
 
 AudioTranscoder::AudioTranscoder(QObject *parent) : QObject(parent) {
   ffmpegPath_ = ConfigManager::instance().ffmpegPath();
@@ -39,9 +39,10 @@ void AudioTranscoder::abort() {
 QString AudioTranscoder::generateOutputPath(const QString &inputPath) {
   QFileInfo info(inputPath);
   QString baseName = info.baseName();
-  QString key = info.absoluteFilePath() + "_" + QString::number(info.size()) + "_" +
-                QString::number(info.lastModified().toMSecsSinceEpoch());
-  QByteArray hash = QCryptographicHash::hash(key.toUtf8(), QCryptographicHash::Md5);
+  QString key = info.absoluteFilePath() + "_" + QString::number(info.size()) +
+                "_" + QString::number(info.lastModified().toMSecsSinceEpoch());
+  QByteArray hash =
+      QCryptographicHash::hash(key.toUtf8(), QCryptographicHash::Md5);
   QString hashHex = hash.toHex();
 
   QString asrDir =
