@@ -1870,13 +1870,6 @@ QWidget *SubtitleListPanel::createPresetStylePanel() {
               item.bgOffsetX = style.bgOffsetX;
               item.bgOffsetY = style.bgOffsetY;
 
-              item.bubbleEnabled = style.bubbleEnabled;
-              item.bubbleImagePath = style.bubbleImagePath;
-              item.bubblePaddingLeft = style.bubblePaddingLeft;
-              item.bubblePaddingRight = style.bubblePaddingRight;
-              item.bubblePaddingTop = style.bubblePaddingTop;
-              item.bubblePaddingBottom = style.bubblePaddingBottom;
-
               track_->updateItem(currentSelectedId_, item);
               loadStyleFromItem(item);
             } else {
@@ -1909,13 +1902,6 @@ QWidget *SubtitleListPanel::createPresetStylePanel() {
               item.bgPaddingY = style.bgPaddingY;
               item.bgOffsetX = style.bgOffsetX;
               item.bgOffsetY = style.bgOffsetY;
-
-              item.bubbleEnabled = style.bubbleEnabled;
-              item.bubbleImagePath = style.bubbleImagePath;
-              item.bubblePaddingLeft = style.bubblePaddingLeft;
-              item.bubblePaddingRight = style.bubblePaddingRight;
-              item.bubblePaddingTop = style.bubblePaddingTop;
-              item.bubblePaddingBottom = style.bubblePaddingBottom;
 
               track_->setDefaultStyleItem(item);
               loadStyleFromItem(item);
