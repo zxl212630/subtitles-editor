@@ -45,6 +45,34 @@
 #include <QApplication>
 #include <QPainter>
 #include <QStyle>
+#include <QMouseEvent>
+#include <QStyleOptionSlider>
+
+class ClickableSlider : public QSlider {
+  Q_OBJECT
+public:
+  using QSlider::QSlider;
+
+protected:
+  void mousePressEvent(QMouseEvent *event) override {
+    if (event->button() == Qt::LeftButton) {
+      QStyleOptionSlider opt;
+      initStyleOption(&opt);
+      QRect sr = style()->subControlRect(QStyle::CC_Slider, &opt, QStyle::SC_SliderHandle, this);
+
+      if (!sr.contains(event->pos())) {
+        int val;
+        if (orientation() == Qt::Horizontal) {
+          val = QStyle::sliderValueFromPosition(minimum(), maximum(), event->pos().x() - sr.width() / 2, width() - sr.width(), opt.upsideDown);
+        } else {
+          val = QStyle::sliderValueFromPosition(minimum(), maximum(), height() - event->pos().y() - sr.height() / 2, height() - sr.height(), opt.upsideDown);
+        }
+        setValue(val);
+      }
+    }
+    QSlider::mousePressEvent(event);
+  }
+};
 
 class SubtitleActionOverlay : public QWidget {
   Q_OBJECT
@@ -1117,7 +1145,7 @@ QWidget *SubtitleListPanel::createCustomStylePanel() {
   auto *angleLayout = new QHBoxLayout(angleContainer);
   angleLayout->setContentsMargins(0, 0, 0, 0);
   angleLayout->setSpacing(8);
-  fillAngleSlider_ = new QSlider(Qt::Horizontal, angleContainer);
+  fillAngleSlider_ = new ClickableSlider(Qt::Horizontal, angleContainer);
   fillAngleSlider_->setRange(0, 360);
   fillAngleSpin_ = new QSpinBox(angleContainer);
   fillAngleSpin_->setRange(0, 360);
@@ -1125,7 +1153,7 @@ QWidget *SubtitleListPanel::createCustomStylePanel() {
   angleLayout->addWidget(fillAngleSpin_);
   addFormRow(fillForm_, tr("Angle"), "lblFillAngle", angleContainer);
 
-  textOpacitySlider_ = new QSlider(Qt::Horizontal, container);
+  textOpacitySlider_ = new ClickableSlider(Qt::Horizontal, container);
   textOpacitySlider_->setRange(0, 100);
   addFormRow(fillForm_, tr("Opacity"), "lblFillOpacity", textOpacitySlider_);
 
@@ -1145,7 +1173,7 @@ QWidget *SubtitleListPanel::createCustomStylePanel() {
   addFormRow(strokeForm, tr("Thickness"), "lblStrokeThickness",
              strokeWidthSpin_);
 
-  strokeOpacitySlider_ = new QSlider(Qt::Horizontal, container);
+  strokeOpacitySlider_ = new ClickableSlider(Qt::Horizontal, container);
   strokeOpacitySlider_->setRange(0, 100);
   addFormRow(strokeForm, tr("Opacity"), "lblStrokeOpacity",
              strokeOpacitySlider_);
@@ -1172,11 +1200,11 @@ QWidget *SubtitleListPanel::createCustomStylePanel() {
   addFormRow(shadowForm, tr("T/B Offset"), "lblShadowOffsetY",
              shadowOffsetYSpin_);
 
-  shadowBlurSlider_ = new QSlider(Qt::Horizontal, container);
+  shadowBlurSlider_ = new ClickableSlider(Qt::Horizontal, container);
   shadowBlurSlider_->setRange(0, 20);
   addFormRow(shadowForm, tr("Blur"), "lblShadowBlur", shadowBlurSlider_);
 
-  shadowOpacitySlider_ = new QSlider(Qt::Horizontal, container);
+  shadowOpacitySlider_ = new ClickableSlider(Qt::Horizontal, container);
   shadowOpacitySlider_->setRange(0, 100);
   addFormRow(shadowForm, tr("Opacity"), "lblShadowOpacity",
              shadowOpacitySlider_);
@@ -1193,19 +1221,19 @@ QWidget *SubtitleListPanel::createCustomStylePanel() {
   bgColorBtn_ = new ColorButton(container);
   addFormRow(bgForm_, tr("Color"), "lblBgColor", bgColorBtn_);
 
-  bgOpacitySlider_ = new QSlider(Qt::Horizontal, container);
+  bgOpacitySlider_ = new ClickableSlider(Qt::Horizontal, container);
   bgOpacitySlider_->setRange(0, 100);
   addFormRow(bgForm_, tr("Opacity"), "lblBgOpacity", bgOpacitySlider_);
 
-  bgRoundnessSlider_ = new QSlider(Qt::Horizontal, container);
+  bgRoundnessSlider_ = new ClickableSlider(Qt::Horizontal, container);
   bgRoundnessSlider_->setRange(0, 50);
   addFormRow(bgForm_, tr("Roundness"), "lblBgRoundness", bgRoundnessSlider_);
 
-  bgPaddingXSlider_ = new QSlider(Qt::Horizontal, container);
+  bgPaddingXSlider_ = new ClickableSlider(Qt::Horizontal, container);
   bgPaddingXSlider_->setRange(0, 50);
   addFormRow(bgForm_, tr("L/R Padding"), "lblBgPaddingX", bgPaddingXSlider_);
 
-  bgPaddingYSlider_ = new QSlider(Qt::Horizontal, container);
+  bgPaddingYSlider_ = new ClickableSlider(Qt::Horizontal, container);
   bgPaddingYSlider_->setRange(0, 50);
   addFormRow(bgForm_, tr("T/B Padding"), "lblBgPaddingY", bgPaddingYSlider_);
 
