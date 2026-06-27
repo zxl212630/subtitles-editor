@@ -246,20 +246,31 @@ void SubtitleRenderer::renderSubtitle(QPainter &painter, const QString &text,
       int padTop = qRound(style.bubblePaddingTop * scale);
       int padRight = qRound(style.bubblePaddingRight * scale);
       int padBottom = qRound(style.bubblePaddingBottom * scale);
+
+      double tailHeight = 0.0;
+      if (style.bubbleImagePath.startsWith(":/bubbles/")) {
+        tailHeight = 12.0;
+      }
+      int scaledTailHeight = qRound(tailHeight * scale);
+
       int buffer = qRound(5.0 * scale);
       if (buffer < 1)
         buffer = 1;
 
-      QRect bubbleRect =
-          textBounding.adjusted(-padLeft - buffer, -padTop - buffer,
-                                padRight + buffer, padBottom + buffer);
+      QRect bubbleRect = textBounding.adjusted(
+          -padLeft - buffer, -padTop - buffer, padRight + buffer,
+          padBottom + buffer + scaledTailHeight);
 
       int tw = bubbleRect.width();
       int th = bubbleRect.height();
       int sw = bubbleImage.width();
       int sh = bubbleImage.height();
 
-      QMargins bubbleMargins(padLeft, padTop, padRight, padBottom);
+      int sliceLeft = qRound(style.bubbleSliceLeft * scale);
+      int sliceTop = qRound(style.bubbleSliceTop * scale);
+      int sliceRight = qRound(style.bubbleSliceRight * scale);
+      int sliceBottom = qRound(style.bubbleSliceBottom * scale);
+      QMargins bubbleMargins(sliceLeft, sliceTop, sliceRight, sliceBottom);
 
       if (tw < sw && th < sh) {
         double imgScale = qMin((double)tw / sw, (double)th / sh);
@@ -274,16 +285,16 @@ void SubtitleRenderer::renderSubtitle(QPainter &painter, const QString &text,
         QImage scaledSrc =
             bubbleImage.scaledToHeight(th, Qt::SmoothTransformation);
         double ratio = (double)th / sh;
-        int ml = qMax(1, qRound(style.bubblePaddingLeft * ratio * scale));
-        int mr = qMax(1, qRound(style.bubblePaddingRight * ratio * scale));
+        int ml = qMax(1, qRound(style.bubbleSliceLeft * ratio * scale));
+        int mr = qMax(1, qRound(style.bubbleSliceRight * ratio * scale));
         QMargins scaledMargins(ml, 0, mr, 0);
         drawNinePatch(painter, scaledSrc, bubbleRect, scaledMargins);
       } else {
         QImage scaledSrc =
             bubbleImage.scaledToWidth(tw, Qt::SmoothTransformation);
         double ratio = (double)tw / sw;
-        int mt = qMax(1, qRound(style.bubblePaddingTop * ratio * scale));
-        int mb = qMax(1, qRound(style.bubblePaddingBottom * ratio * scale));
+        int mt = qMax(1, qRound(style.bubbleSliceTop * ratio * scale));
+        int mb = qMax(1, qRound(style.bubbleSliceBottom * ratio * scale));
         QMargins scaledMargins(0, mt, 0, mb);
         drawNinePatch(painter, scaledSrc, bubbleRect, scaledMargins);
       }
@@ -293,13 +304,15 @@ void SubtitleRenderer::renderSubtitle(QPainter &painter, const QString &text,
   // Draw custom background box if general style background is enabled and no
   // speaker bg was drawn
   if (!bgDrawn && style.bgType > 0) {
-    int padX = qRound(style.bgPaddingX * scale);
-    int padY = qRound(style.bgPaddingY * scale);
+    int padLeft = qRound(style.bgPaddingLeft * scale);
+    int padRight = qRound(style.bgPaddingRight * scale);
+    int padTop = qRound(style.bgPaddingTop * scale);
+    int padBottom = qRound(style.bgPaddingBottom * scale);
     int offX = qRound(style.bgOffsetX * scale);
     int offY = qRound(style.bgOffsetY * scale);
     int roundness = qRound(style.bgRoundness * scale);
 
-    QRect bgRect = textBounding.adjusted(-padX, -padY, padX, padY);
+    QRect bgRect = textBounding.adjusted(-padLeft, -padTop, padRight, padBottom);
     bgRect.translate(offX, offY);
 
     painter.save();

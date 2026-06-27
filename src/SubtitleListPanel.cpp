@@ -7,6 +7,7 @@
 #include "SubtitleTrack.h"
 #include "ThemeManager.h"
 #include "TranslationManager.h"
+#include <QAbstractItemView>
 #include <QBrush>
 #include <QCheckBox>
 #include <QColorDialog>
@@ -42,8 +43,42 @@
 #include <QVBoxLayout>
 
 #include <QApplication>
+#include <QMouseEvent>
 #include <QPainter>
 #include <QStyle>
+#include <QStyleOptionSlider>
+
+class ClickableSlider : public QSlider {
+  Q_OBJECT
+public:
+  using QSlider::QSlider;
+
+protected:
+  void mousePressEvent(QMouseEvent *event) override {
+    if (event->button() == Qt::LeftButton) {
+      QStyleOptionSlider opt;
+      initStyleOption(&opt);
+      QRect sr = style()->subControlRect(QStyle::CC_Slider, &opt,
+                                         QStyle::SC_SliderHandle, this);
+
+      if (!sr.contains(event->pos())) {
+        int val;
+        if (orientation() == Qt::Horizontal) {
+          val = QStyle::sliderValueFromPosition(
+              minimum(), maximum(), event->pos().x() - sr.width() / 2,
+              width() - sr.width(), opt.upsideDown);
+        } else {
+          val = QStyle::sliderValueFromPosition(
+              minimum(), maximum(),
+              height() - event->pos().y() - sr.height() / 2,
+              height() - sr.height(), opt.upsideDown);
+        }
+        setValue(val);
+      }
+    }
+    QSlider::mousePressEvent(event);
+  }
+};
 
 class SubtitleActionOverlay : public QWidget {
   Q_OBJECT
@@ -168,6 +203,8 @@ void SubtitleListPanel::retranslateUi() {
     tabSubtitle_->setText(tr("Subtitle"));
   if (tabPreset_)
     tabPreset_->setText(tr("Preset"));
+  if (tabBubble_)
+    tabBubble_->setText(tr("Bubble"));
   if (tabCustom_)
     tabCustom_->setText(tr("Custom"));
   if (tabAnimation_)
@@ -194,9 +231,6 @@ void SubtitleListPanel::retranslateUi() {
   }
   if (savePresetBtn_) {
     savePresetBtn_->setText(tr("+ Save Current Style"));
-  }
-  if (applyToAllBtn_) {
-    applyToAllBtn_->setText(tr("Apply All"));
   }
   if (bubbleImageBrowse_) {
     bubbleImageBrowse_->setText(tr("Browse..."));
@@ -277,8 +311,47 @@ void SubtitleListPanel::retranslateUi() {
     lbl->setText(tr("Top Padding"));
   if (auto *lbl = findChild<QLabel *>("lblBubblePaddingBottom"))
     lbl->setText(tr("Bottom Padding"));
+  if (auto *lbl = findChild<QLabel *>("lblBubbleSliceLeft"))
+    lbl->setText(tr("Left Slice"));
+  if (auto *lbl = findChild<QLabel *>("lblBubbleSliceRight"))
+    lbl->setText(tr("Right Slice"));
+  if (auto *lbl = findChild<QLabel *>("lblBubbleSliceTop"))
+    lbl->setText(tr("Top Slice"));
+  if (auto *lbl = findChild<QLabel *>("lblBubbleSliceBottom"))
+    lbl->setText(tr("Bottom Slice"));
+
+  if (auto *lbl = findChild<QLabel *>("lblBgPaddingUniformTitle"))
+    lbl->setText(tr("Background Padding"));
+  if (auto *lbl = findChild<QLabel *>("lblBgPaddingGroupHeaderTitle")) {
+    lbl->setText(tr("Background Padding"));
+    if (auto *btn = findChild<QPushButton *>("BgPaddingGroupHeaderBtn")) {
+      int w = lbl->fontMetrics().horizontalAdvance(lbl->text()) + 6 + 12 + 8;
+      btn->setGeometry(12, 6, w, 20);
+    }
+  }
+
+  if (auto *lbl = findChild<QLabel *>("lblBubblePaddingUniformTitle"))
+    lbl->setText(tr("Text Padding"));
+  if (auto *lbl = findChild<QLabel *>("lblBubblePaddingGroupHeaderTitle")) {
+    lbl->setText(tr("Text Padding"));
+    if (auto *btn = findChild<QPushButton *>("BubblePaddingGroupHeaderBtn")) {
+      int w = lbl->fontMetrics().horizontalAdvance(lbl->text()) + 6 + 12 + 8;
+      btn->setGeometry(12, 6, w, 20);
+    }
+  }
+
+  if (auto *lbl = findChild<QLabel *>("lblBubbleSliceUniformTitle"))
+    lbl->setText(tr("9-Patch Stretch"));
+  if (auto *lbl = findChild<QLabel *>("lblBubbleSliceGroupHeaderTitle")) {
+    lbl->setText(tr("9-Patch Stretch"));
+    if (auto *btn = findChild<QPushButton *>("BubbleSliceGroupHeaderBtn")) {
+      int w = lbl->fontMetrics().horizontalAdvance(lbl->text()) + 6 + 12 + 8;
+      btn->setGeometry(12, 6, w, 20);
+    }
+  }
 
   populatePresets();
+  populateBubbles();
 }
 
 void SubtitleListPanel::setupUi() {
@@ -309,6 +382,12 @@ void SubtitleListPanel::setupUi() {
   tabPreset_->setFixedSize(60, 28);
   phLayout->addWidget(tabPreset_);
 
+  tabBubble_ = new QPushButton(tr("Bubble"), panelHeader);
+  tabBubble_->setObjectName("SubtitleTabBtn");
+  tabBubble_->setProperty("active", false);
+  tabBubble_->setFixedSize(60, 28);
+  phLayout->addWidget(tabBubble_);
+
   tabCustom_ = new QPushButton(tr("Custom"), panelHeader);
   tabCustom_->setObjectName("SubtitleTabBtn");
   tabCustom_->setProperty("active", false);
@@ -323,10 +402,12 @@ void SubtitleListPanel::setupUi() {
 
   tabSubtitle_->setAttribute(Qt::WA_TransparentForMouseEvents, false);
   tabPreset_->setAttribute(Qt::WA_TransparentForMouseEvents, false);
+  tabBubble_->setAttribute(Qt::WA_TransparentForMouseEvents, false);
   tabCustom_->setAttribute(Qt::WA_TransparentForMouseEvents, false);
   tabAnimation_->setAttribute(Qt::WA_TransparentForMouseEvents, true);
 
   tabPreset_->show();
+  tabBubble_->show();
   tabCustom_->show();
   tabAnimation_->hide();
 
@@ -335,11 +416,14 @@ void SubtitleListPanel::setupUi() {
       stackedWidget_->setCurrentIndex(0);
     tabSubtitle_->setProperty("active", true);
     tabPreset_->setProperty("active", false);
+    tabBubble_->setProperty("active", false);
     tabCustom_->setProperty("active", false);
     tabSubtitle_->style()->unpolish(tabSubtitle_);
     tabSubtitle_->style()->polish(tabSubtitle_);
     tabPreset_->style()->unpolish(tabPreset_);
     tabPreset_->style()->polish(tabPreset_);
+    tabBubble_->style()->unpolish(tabBubble_);
+    tabBubble_->style()->polish(tabBubble_);
     tabCustom_->style()->unpolish(tabCustom_);
     tabCustom_->style()->polish(tabCustom_);
   });
@@ -349,18 +433,40 @@ void SubtitleListPanel::setupUi() {
       stackedWidget_->setCurrentIndex(1);
     tabSubtitle_->setProperty("active", false);
     tabPreset_->setProperty("active", true);
+    tabBubble_->setProperty("active", false);
     tabCustom_->setProperty("active", false);
     tabSubtitle_->style()->unpolish(tabSubtitle_);
     tabSubtitle_->style()->polish(tabSubtitle_);
     tabPreset_->style()->unpolish(tabPreset_);
     tabPreset_->style()->polish(tabPreset_);
+    tabBubble_->style()->unpolish(tabBubble_);
+    tabBubble_->style()->polish(tabBubble_);
+    tabCustom_->style()->unpolish(tabCustom_);
+    tabCustom_->style()->polish(tabCustom_);
+  });
+
+  connect(tabBubble_, &QPushButton::clicked, this, [this]() {
+    if (stackedWidget_) {
+      stackedWidget_->setCurrentIndex(2);
+      populateBubbles();
+    }
+    tabSubtitle_->setProperty("active", false);
+    tabPreset_->setProperty("active", false);
+    tabBubble_->setProperty("active", true);
+    tabCustom_->setProperty("active", false);
+    tabSubtitle_->style()->unpolish(tabSubtitle_);
+    tabSubtitle_->style()->polish(tabSubtitle_);
+    tabPreset_->style()->unpolish(tabPreset_);
+    tabPreset_->style()->polish(tabPreset_);
+    tabBubble_->style()->unpolish(tabBubble_);
+    tabBubble_->style()->polish(tabBubble_);
     tabCustom_->style()->unpolish(tabCustom_);
     tabCustom_->style()->polish(tabCustom_);
   });
 
   connect(tabCustom_, &QPushButton::clicked, this, [this]() {
     if (stackedWidget_) {
-      stackedWidget_->setCurrentIndex(2);
+      stackedWidget_->setCurrentIndex(3);
       // Automatically load the active subtitle's style
       if (track_) {
         bool found = false;
@@ -378,11 +484,14 @@ void SubtitleListPanel::setupUi() {
     }
     tabSubtitle_->setProperty("active", false);
     tabPreset_->setProperty("active", false);
+    tabBubble_->setProperty("active", false);
     tabCustom_->setProperty("active", true);
     tabSubtitle_->style()->unpolish(tabSubtitle_);
     tabSubtitle_->style()->polish(tabSubtitle_);
     tabPreset_->style()->unpolish(tabPreset_);
     tabPreset_->style()->polish(tabPreset_);
+    tabBubble_->style()->unpolish(tabBubble_);
+    tabBubble_->style()->polish(tabBubble_);
     tabCustom_->style()->unpolish(tabCustom_);
     tabCustom_->style()->polish(tabCustom_);
   });
@@ -574,6 +683,16 @@ void SubtitleListPanel::setupUi() {
   QWidget *presetPanel = createPresetStylePanel();
   presetWrapperLayout->addWidget(presetPanel);
   stackedWidget_->addWidget(presetWrapper);
+
+  auto *bubbleWrapper = new QFrame(this);
+  bubbleWrapper->setObjectName("SubtitlePanelContent");
+  bubbleWrapper->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
+  auto *bubbleWrapperLayout = new QVBoxLayout(bubbleWrapper);
+  bubbleWrapperLayout->setContentsMargins(12, 12, 12, 12);
+  bubbleWrapperLayout->setSpacing(0);
+  QWidget *bubblePanel = createBubbleStylePanel();
+  bubbleWrapperLayout->addWidget(bubblePanel);
+  stackedWidget_->addWidget(bubbleWrapper);
 
   auto *customWrapper = new QFrame(this);
   customWrapper->setObjectName("SubtitlePanelContent");
@@ -1044,6 +1163,44 @@ QWidget *SubtitleListPanel::createCustomStylePanel() {
     form->addRow(label, field);
   };
 
+  auto setupCollapsibleGroupBoxHeader = [&](QGroupBox *groupBox, const QString &titleText,
+                                            const QPixmap &iconPixmap, std::function<void()> collapseCallback) {
+    groupBox->setTitle("");
+    groupBox->setStyleSheet("QGroupBox::title { background: transparent; padding: 0px; margin: 0px; }");
+
+    auto *headerBtn = new QPushButton(groupBox);
+    headerBtn->setObjectName(groupBox->objectName() + "HeaderBtn");
+    headerBtn->setFlat(true);
+    headerBtn->setFixedHeight(20);
+    headerBtn->setCursor(Qt::PointingHandCursor);
+    headerBtn->setStyleSheet(
+        "QPushButton { border: none; background-color: palette(window); padding: 0px; }");
+
+    auto *headerLayout = new QHBoxLayout(headerBtn);
+    headerLayout->setContentsMargins(4, 0, 4, 0);
+    headerLayout->setSpacing(6);
+
+    auto *lblTitle = new QLabel(titleText, headerBtn);
+    lblTitle->setObjectName("lbl" + groupBox->objectName() + "HeaderTitle");
+    lblTitle->setStyleSheet("font-weight: bold; font-size: 13px; color: palette(text); background: transparent;");
+
+    auto *lblIcon = new QLabel(headerBtn);
+    lblIcon->setFixedSize(12, 12);
+    lblIcon->setScaledContents(true);
+    lblIcon->setPixmap(iconPixmap);
+    lblIcon->setStyleSheet("background: transparent;");
+
+    headerLayout->addWidget(lblTitle, 0, Qt::AlignVCenter);
+    headerLayout->addWidget(lblIcon, 0, Qt::AlignVCenter);
+    headerLayout->addStretch();
+
+    int textW = lblTitle->fontMetrics().horizontalAdvance(titleText);
+    int totalW = textW + 6 + 12 + 8; // 6 spacing, 12 icon width, 8 padding (4px each side)
+    headerBtn->setGeometry(12, 6, totalW, 20);
+
+    connect(headerBtn, &QPushButton::clicked, this, collapseCallback);
+  };
+
   // --- TEXT FILL GROUP ---
   fillForm_ = new QFormLayout();
   fillForm_->setContentsMargins(0, 0, 0, 0);
@@ -1051,6 +1208,13 @@ QWidget *SubtitleListPanel::createCustomStylePanel() {
 
   fillTypeCombo_ = new QComboBox(container);
   fillTypeCombo_->addItems({tr("Color Fill"), tr("Gradient Fill")});
+  if (auto *view = fillTypeCombo_->view()) {
+    if (QWidget *w = view->window()) {
+      w->setWindowFlags(Qt::Popup | Qt::FramelessWindowHint |
+                        Qt::NoDropShadowWindowHint);
+      w->setAttribute(Qt::WA_TranslucentBackground);
+    }
+  }
   addFormRow(fillForm_, tr("Type"), "lblFillType", fillTypeCombo_);
 
   fillColorBtn_ = new ColorButton(container);
@@ -1063,7 +1227,7 @@ QWidget *SubtitleListPanel::createCustomStylePanel() {
   auto *angleLayout = new QHBoxLayout(angleContainer);
   angleLayout->setContentsMargins(0, 0, 0, 0);
   angleLayout->setSpacing(8);
-  fillAngleSlider_ = new QSlider(Qt::Horizontal, angleContainer);
+  fillAngleSlider_ = new ClickableSlider(Qt::Horizontal, angleContainer);
   fillAngleSlider_->setRange(0, 360);
   fillAngleSpin_ = new QSpinBox(angleContainer);
   fillAngleSpin_->setRange(0, 360);
@@ -1071,7 +1235,7 @@ QWidget *SubtitleListPanel::createCustomStylePanel() {
   angleLayout->addWidget(fillAngleSpin_);
   addFormRow(fillForm_, tr("Angle"), "lblFillAngle", angleContainer);
 
-  textOpacitySlider_ = new QSlider(Qt::Horizontal, container);
+  textOpacitySlider_ = new ClickableSlider(Qt::Horizontal, container);
   textOpacitySlider_->setRange(0, 100);
   addFormRow(fillForm_, tr("Opacity"), "lblFillOpacity", textOpacitySlider_);
 
@@ -1091,7 +1255,7 @@ QWidget *SubtitleListPanel::createCustomStylePanel() {
   addFormRow(strokeForm, tr("Thickness"), "lblStrokeThickness",
              strokeWidthSpin_);
 
-  strokeOpacitySlider_ = new QSlider(Qt::Horizontal, container);
+  strokeOpacitySlider_ = new ClickableSlider(Qt::Horizontal, container);
   strokeOpacitySlider_->setRange(0, 100);
   addFormRow(strokeForm, tr("Opacity"), "lblStrokeOpacity",
              strokeOpacitySlider_);
@@ -1118,11 +1282,11 @@ QWidget *SubtitleListPanel::createCustomStylePanel() {
   addFormRow(shadowForm, tr("T/B Offset"), "lblShadowOffsetY",
              shadowOffsetYSpin_);
 
-  shadowBlurSlider_ = new QSlider(Qt::Horizontal, container);
+  shadowBlurSlider_ = new ClickableSlider(Qt::Horizontal, container);
   shadowBlurSlider_->setRange(0, 20);
   addFormRow(shadowForm, tr("Blur"), "lblShadowBlur", shadowBlurSlider_);
 
-  shadowOpacitySlider_ = new QSlider(Qt::Horizontal, container);
+  shadowOpacitySlider_ = new ClickableSlider(Qt::Horizontal, container);
   shadowOpacitySlider_->setRange(0, 100);
   addFormRow(shadowForm, tr("Opacity"), "lblShadowOpacity",
              shadowOpacitySlider_);
@@ -1139,38 +1303,137 @@ QWidget *SubtitleListPanel::createCustomStylePanel() {
   bgColorBtn_ = new ColorButton(container);
   addFormRow(bgForm_, tr("Color"), "lblBgColor", bgColorBtn_);
 
-  bgOpacitySlider_ = new QSlider(Qt::Horizontal, container);
+  bgOpacitySlider_ = new ClickableSlider(Qt::Horizontal, container);
   bgOpacitySlider_->setRange(0, 100);
   addFormRow(bgForm_, tr("Opacity"), "lblBgOpacity", bgOpacitySlider_);
 
-  bgRoundnessSlider_ = new QSlider(Qt::Horizontal, container);
+  bgRoundnessSlider_ = new ClickableSlider(Qt::Horizontal, container);
   bgRoundnessSlider_->setRange(0, 50);
   addFormRow(bgForm_, tr("Roundness"), "lblBgRoundness", bgRoundnessSlider_);
 
-  bgPaddingXSlider_ = new QSlider(Qt::Horizontal, container);
-  bgPaddingXSlider_->setRange(0, 50);
-  addFormRow(bgForm_, tr("L/R Padding"), "lblBgPaddingX", bgPaddingXSlider_);
+  auto *bgOffsetContainer = new QWidget(container);
+  auto *bgOffsetLayout = new QHBoxLayout(bgOffsetContainer);
+  bgOffsetLayout->setContentsMargins(0, 0, 0, 0);
+  bgOffsetLayout->setSpacing(8);
 
-  bgPaddingYSlider_ = new QSlider(Qt::Horizontal, container);
-  bgPaddingYSlider_->setRange(0, 50);
-  addFormRow(bgForm_, tr("T/B Padding"), "lblBgPaddingY", bgPaddingYSlider_);
-
-  bgOffsetXSpin_ = new QSpinBox(container);
+  bgOffsetXSpin_ = new QSpinBox(bgOffsetContainer);
   bgOffsetXSpin_->setRange(-200, 200);
-  addFormRow(bgForm_, tr("L/R Offset"), "lblBgOffsetX", bgOffsetXSpin_);
 
-  bgOffsetYSpin_ = new QSpinBox(container);
+  bgOffsetYSpin_ = new QSpinBox(bgOffsetContainer);
   bgOffsetYSpin_->setRange(-200, 200);
-  addFormRow(bgForm_, tr("T/B Offset"), "lblBgOffsetY", bgOffsetYSpin_);
+
+  auto *lblBgOffsetX = new QLabel(tr("L/R Offset"), bgOffsetContainer);
+  lblBgOffsetX->setObjectName("lblBgOffsetX");
+
+  auto *lblBgOffsetY = new QLabel(tr("T/B Offset"), bgOffsetContainer);
+  lblBgOffsetY->setObjectName("lblBgOffsetY");
+
+  bgOffsetLayout->addWidget(lblBgOffsetX);
+  bgOffsetLayout->addWidget(bgOffsetXSpin_, 1);
+  bgOffsetLayout->addSpacing(16);
+  bgOffsetLayout->addWidget(lblBgOffsetY);
+  bgOffsetLayout->addWidget(bgOffsetYSpin_, 1);
+
+  bgForm_->addRow(bgOffsetContainer);
+
+  bgPaddingUniformContainer_ = new QWidget(container);
+  auto *bgPaddingUniformLayout = new QHBoxLayout(bgPaddingUniformContainer_);
+  bgPaddingUniformLayout->setContentsMargins(0, 0, 0, 0);
+  bgPaddingUniformLayout->setSpacing(8);
+
+  bgPaddingUniformSpin_ = new QSpinBox(bgPaddingUniformContainer_);
+  bgPaddingUniformSpin_->setRange(0, 200);
+
+  auto *btnExpandBgPadding = new QPushButton(bgPaddingUniformContainer_);
+  btnExpandBgPadding->setFixedWidth(20);
+  btnExpandBgPadding->setFlat(true);
+  btnExpandBgPadding->setIcon(QIcon(rightArrowPixmap));
+  btnExpandBgPadding->setIconSize(QSize(12, 12));
+  btnExpandBgPadding->setStyleSheet("QPushButton { border: none; background: transparent; }");
+
+  bgPaddingUniformLayout->addWidget(bgPaddingUniformSpin_, 1);
+  bgPaddingUniformLayout->addWidget(btnExpandBgPadding);
+
+  addFormRow(bgForm_, tr("Background Padding"), "lblBgPaddingUniformTitle", bgPaddingUniformContainer_);
+
+  bgPaddingGroup_ = new QGroupBox(tr("Background Padding"), container);
+  bgPaddingGroup_->setObjectName("BgPaddingGroup");
+  auto *bgPgLayout = new QVBoxLayout(bgPaddingGroup_);
+  bgPgLayout->setContentsMargins(6, 12, 6, 6);
+  bgPgLayout->setSpacing(6);
+
+  auto *bgLrContainer = new QWidget(bgPaddingGroup_);
+  auto *bgLrLayout = new QHBoxLayout(bgLrContainer);
+  bgLrLayout->setContentsMargins(0, 0, 0, 0);
+  bgLrLayout->setSpacing(8);
+  bgPaddingLeftSpin_ = new QSpinBox(bgLrContainer);
+  bgPaddingLeftSpin_->setRange(0, 200);
+  bgPaddingRightSpin_ = new QSpinBox(bgLrContainer);
+  bgPaddingRightSpin_->setRange(0, 200);
+  auto *lblBgPaddingLeft = new QLabel(tr("Left Padding"), bgLrContainer);
+  lblBgPaddingLeft->setObjectName("lblBgPaddingLeft");
+  auto *lblBgPaddingRight = new QLabel(tr("Right Padding"), bgLrContainer);
+  lblBgPaddingRight->setObjectName("lblBgPaddingRight");
+  bgLrLayout->addWidget(lblBgPaddingLeft);
+  bgLrLayout->addWidget(bgPaddingLeftSpin_, 1);
+  bgLrLayout->addSpacing(16);
+  bgLrLayout->addWidget(lblBgPaddingRight);
+  bgLrLayout->addWidget(bgPaddingRightSpin_, 1);
+  bgPgLayout->addWidget(bgLrContainer);
+
+  auto *bgTbContainer = new QWidget(bgPaddingGroup_);
+  auto *bgTbLayout = new QHBoxLayout(bgTbContainer);
+  bgTbLayout->setContentsMargins(0, 0, 0, 0);
+  bgTbLayout->setSpacing(8);
+  bgPaddingTopSpin_ = new QSpinBox(bgTbContainer);
+  bgPaddingTopSpin_->setRange(0, 200);
+  bgPaddingBottomSpin_ = new QSpinBox(bgTbContainer);
+  bgPaddingBottomSpin_->setRange(0, 200);
+  auto *lblBgPaddingTop = new QLabel(tr("Top Padding"), bgTbContainer);
+  lblBgPaddingTop->setObjectName("lblBgPaddingTop");
+  auto *lblBgPaddingBottom = new QLabel(tr("Bottom Padding"), bgTbContainer);
+  lblBgPaddingBottom->setObjectName("lblBgPaddingBottom");
+  bgTbLayout->addWidget(lblBgPaddingTop);
+  bgTbLayout->addWidget(bgPaddingTopSpin_, 1);
+  bgTbLayout->addSpacing(16);
+  bgTbLayout->addWidget(lblBgPaddingBottom);
+  bgTbLayout->addWidget(bgPaddingBottomSpin_, 1);
+  bgPgLayout->addWidget(bgTbContainer);
+
+  bgForm_->addRow(bgPaddingGroup_);
+
+  auto toggleBgPaddingMode = [this](bool expand) {
+    bgPaddingUniformContainer_->setVisible(!expand);
+    if (auto *lbl = bgForm_->labelForField(bgPaddingUniformContainer_))
+      lbl->setVisible(!expand);
+    bgPaddingGroup_->setVisible(expand);
+  };
+
+  connect(btnExpandBgPadding, &QPushButton::clicked, this, [toggleBgPaddingMode]() {
+    toggleBgPaddingMode(true);
+  });
+
+  setupCollapsibleGroupBoxHeader(bgPaddingGroup_, tr("Background Padding"), downArrowPixmap, [this, toggleBgPaddingMode]() {
+    toggleBgPaddingMode(false);
+  });
+
+  connect(bgPaddingUniformSpin_, QOverload<int>::of(&QSpinBox::valueChanged), this,
+          [this](int val) {
+            bgPaddingLeftSpin_->setValue(val);
+            bgPaddingRightSpin_->setValue(val);
+            bgPaddingTopSpin_->setValue(val);
+            bgPaddingBottomSpin_->setValue(val);
+          });
+  toggleBgPaddingMode(false);
 
   bgEnableCheck_ = new QCheckBox(container);
   createCollapsibleGroup(tr("Background"), "Background", bgForm_,
                          bgEnableCheck_, false);
 
   // --- BUBBLE GROUP ---
-  auto *bubbleForm = new QFormLayout();
-  bubbleForm->setContentsMargins(0, 0, 0, 0);
-  bubbleForm->setSpacing(8);
+  bubbleForm_ = new QFormLayout();
+  bubbleForm_->setContentsMargins(0, 0, 0, 0);
+  bubbleForm_->setSpacing(8);
 
   auto *bubbleImageContainer = new QWidget(container);
   auto *bubbleImageLayout = new QHBoxLayout(bubbleImageContainer);
@@ -1184,9 +1447,35 @@ QWidget *SubtitleListPanel::createCustomStylePanel() {
   bubbleImageBrowse_->setFixedWidth(80);
   bubbleImageLayout->addWidget(bubbleImagePathEdit_);
   bubbleImageLayout->addWidget(bubbleImageBrowse_);
-  addFormRow(bubbleForm, tr("Image"), "lblBubbleImage", bubbleImageContainer);
+  addFormRow(bubbleForm_, tr("Image"), "lblBubbleImage", bubbleImageContainer);
 
-  auto *lrContainer = new QWidget(container);
+  bubblePaddingUniformContainer_ = new QWidget(container);
+  auto *bubblePaddingUniformLayout = new QHBoxLayout(bubblePaddingUniformContainer_);
+  bubblePaddingUniformLayout->setContentsMargins(0, 0, 0, 0);
+  bubblePaddingUniformLayout->setSpacing(8);
+
+  bubblePaddingUniformSpin_ = new QSpinBox(bubblePaddingUniformContainer_);
+  bubblePaddingUniformSpin_->setRange(0, 200);
+
+  auto *btnExpandBubblePadding = new QPushButton(bubblePaddingUniformContainer_);
+  btnExpandBubblePadding->setFixedWidth(20);
+  btnExpandBubblePadding->setFlat(true);
+  btnExpandBubblePadding->setIcon(QIcon(rightArrowPixmap));
+  btnExpandBubblePadding->setIconSize(QSize(12, 12));
+  btnExpandBubblePadding->setStyleSheet("QPushButton { border: none; background: transparent; }");
+
+  bubblePaddingUniformLayout->addWidget(bubblePaddingUniformSpin_, 1);
+  bubblePaddingUniformLayout->addWidget(btnExpandBubblePadding);
+
+  addFormRow(bubbleForm_, tr("Text Padding"), "lblBubblePaddingUniformTitle", bubblePaddingUniformContainer_);
+
+  bubblePaddingGroup_ = new QGroupBox(tr("Text Padding"), container);
+  bubblePaddingGroup_->setObjectName("BubblePaddingGroup");
+  auto *pgLayout = new QVBoxLayout(bubblePaddingGroup_);
+  pgLayout->setContentsMargins(6, 12, 6, 6);
+  pgLayout->setSpacing(6);
+
+  auto *lrContainer = new QWidget(bubblePaddingGroup_);
   auto *lrLayout = new QHBoxLayout(lrContainer);
   lrLayout->setContentsMargins(0, 0, 0, 0);
   lrLayout->setSpacing(8);
@@ -1203,9 +1492,9 @@ QWidget *SubtitleListPanel::createCustomStylePanel() {
   lrLayout->addSpacing(16);
   lrLayout->addWidget(lblBubblePaddingRight);
   lrLayout->addWidget(bubblePaddingRightSpin_, 1);
-  bubbleForm->addRow(lrContainer);
+  pgLayout->addWidget(lrContainer);
 
-  auto *tbContainer = new QWidget(container);
+  auto *tbContainer = new QWidget(bubblePaddingGroup_);
   auto *tbLayout = new QHBoxLayout(tbContainer);
   tbLayout->setContentsMargins(0, 0, 0, 0);
   tbLayout->setSpacing(8);
@@ -1222,10 +1511,126 @@ QWidget *SubtitleListPanel::createCustomStylePanel() {
   tbLayout->addSpacing(16);
   tbLayout->addWidget(lblBubblePaddingBottom);
   tbLayout->addWidget(bubblePaddingBottomSpin_, 1);
-  bubbleForm->addRow(tbContainer);
+  pgLayout->addWidget(tbContainer);
+
+  bubbleForm_->addRow(bubblePaddingGroup_);
+
+  auto toggleBubblePaddingMode = [this](bool expand) {
+    bubblePaddingUniformContainer_->setVisible(!expand);
+    if (auto *lbl = bubbleForm_->labelForField(bubblePaddingUniformContainer_))
+      lbl->setVisible(!expand);
+    bubblePaddingGroup_->setVisible(expand);
+  };
+
+  connect(btnExpandBubblePadding, &QPushButton::clicked, this, [toggleBubblePaddingMode]() {
+    toggleBubblePaddingMode(true);
+  });
+
+  setupCollapsibleGroupBoxHeader(bubblePaddingGroup_, tr("Text Padding"), downArrowPixmap, [this, toggleBubblePaddingMode]() {
+    toggleBubblePaddingMode(false);
+  });
+
+  connect(bubblePaddingUniformSpin_, QOverload<int>::of(&QSpinBox::valueChanged), this,
+          [this](int val) {
+            bubblePaddingLeftSpin_->setValue(val);
+            bubblePaddingRightSpin_->setValue(val);
+            bubblePaddingTopSpin_->setValue(val);
+            bubblePaddingBottomSpin_->setValue(val);
+          });
+  toggleBubblePaddingMode(false);
+
+  bubbleSliceUniformContainer_ = new QWidget(container);
+  auto *bubbleSliceUniformLayout = new QHBoxLayout(bubbleSliceUniformContainer_);
+  bubbleSliceUniformLayout->setContentsMargins(0, 0, 0, 0);
+  bubbleSliceUniformLayout->setSpacing(8);
+
+  bubbleSliceUniformSpin_ = new QSpinBox(bubbleSliceUniformContainer_);
+  bubbleSliceUniformSpin_->setRange(0, 200);
+
+  auto *btnExpandBubbleSlice = new QPushButton(bubbleSliceUniformContainer_);
+  btnExpandBubbleSlice->setFixedWidth(20);
+  btnExpandBubbleSlice->setFlat(true);
+  btnExpandBubbleSlice->setIcon(QIcon(rightArrowPixmap));
+  btnExpandBubbleSlice->setIconSize(QSize(12, 12));
+  btnExpandBubbleSlice->setStyleSheet("QPushButton { border: none; background: transparent; }");
+
+  bubbleSliceUniformLayout->addWidget(bubbleSliceUniformSpin_, 1);
+  bubbleSliceUniformLayout->addWidget(btnExpandBubbleSlice);
+
+  addFormRow(bubbleForm_, tr("9-Patch Stretch"), "lblBubbleSliceUniformTitle", bubbleSliceUniformContainer_);
+
+  bubbleSliceGroup_ = new QGroupBox(tr("9-Patch Stretch"), container);
+  bubbleSliceGroup_->setObjectName("BubbleSliceGroup");
+  auto *sgLayout = new QVBoxLayout(bubbleSliceGroup_);
+  sgLayout->setContentsMargins(6, 12, 6, 6);
+  sgLayout->setSpacing(6);
+
+  auto *sliceLrContainer = new QWidget(bubbleSliceGroup_);
+  auto *sliceLrLayout = new QHBoxLayout(sliceLrContainer);
+  sliceLrLayout->setContentsMargins(0, 0, 0, 0);
+  sliceLrLayout->setSpacing(8);
+  bubbleSliceLeftSpin_ = new QSpinBox(sliceLrContainer);
+  bubbleSliceLeftSpin_->setRange(0, 200);
+  bubbleSliceRightSpin_ = new QSpinBox(sliceLrContainer);
+  bubbleSliceRightSpin_->setRange(0, 200);
+  auto *lblBubbleSliceLeft = new QLabel(tr("Left Slice"), sliceLrContainer);
+  lblBubbleSliceLeft->setObjectName("lblBubbleSliceLeft");
+  auto *lblBubbleSliceRight = new QLabel(tr("Right Slice"), sliceLrContainer);
+  lblBubbleSliceRight->setObjectName("lblBubbleSliceRight");
+  sliceLrLayout->addWidget(lblBubbleSliceLeft);
+  sliceLrLayout->addWidget(bubbleSliceLeftSpin_, 1);
+  sliceLrLayout->addSpacing(16);
+  sliceLrLayout->addWidget(lblBubbleSliceRight);
+  sliceLrLayout->addWidget(bubbleSliceRightSpin_, 1);
+  sgLayout->addWidget(sliceLrContainer);
+
+  auto *sliceTbContainer = new QWidget(bubbleSliceGroup_);
+  auto *sliceTbLayout = new QHBoxLayout(sliceTbContainer);
+  sliceTbLayout->setContentsMargins(0, 0, 0, 0);
+  sliceTbLayout->setSpacing(8);
+  bubbleSliceTopSpin_ = new QSpinBox(sliceTbContainer);
+  bubbleSliceTopSpin_->setRange(0, 200);
+  bubbleSliceBottomSpin_ = new QSpinBox(sliceTbContainer);
+  bubbleSliceBottomSpin_->setRange(0, 200);
+  auto *lblBubbleSliceTop = new QLabel(tr("Top Slice"), sliceTbContainer);
+  lblBubbleSliceTop->setObjectName("lblBubbleSliceTop");
+  auto *lblBubbleSliceBottom = new QLabel(tr("Bottom Slice"), sliceTbContainer);
+  lblBubbleSliceBottom->setObjectName("lblBubbleSliceBottom");
+  sliceTbLayout->addWidget(lblBubbleSliceTop);
+  sliceTbLayout->addWidget(bubbleSliceTopSpin_, 1);
+  sliceTbLayout->addSpacing(16);
+  sliceTbLayout->addWidget(lblBubbleSliceBottom);
+  sliceTbLayout->addWidget(bubbleSliceBottomSpin_, 1);
+  sgLayout->addWidget(sliceTbContainer);
+
+  bubbleForm_->addRow(bubbleSliceGroup_);
+
+  auto toggleBubbleSliceMode = [this](bool expand) {
+    bubbleSliceUniformContainer_->setVisible(!expand);
+    if (auto *lbl = bubbleForm_->labelForField(bubbleSliceUniformContainer_))
+      lbl->setVisible(!expand);
+    bubbleSliceGroup_->setVisible(expand);
+  };
+
+  connect(btnExpandBubbleSlice, &QPushButton::clicked, this, [toggleBubbleSliceMode]() {
+    toggleBubbleSliceMode(true);
+  });
+
+  setupCollapsibleGroupBoxHeader(bubbleSliceGroup_, tr("9-Patch Stretch"), downArrowPixmap, [this, toggleBubbleSliceMode]() {
+    toggleBubbleSliceMode(false);
+  });
+
+  connect(bubbleSliceUniformSpin_, QOverload<int>::of(&QSpinBox::valueChanged), this,
+          [this](int val) {
+            bubbleSliceLeftSpin_->setValue(val);
+            bubbleSliceRightSpin_->setValue(val);
+            bubbleSliceTopSpin_->setValue(val);
+            bubbleSliceBottomSpin_->setValue(val);
+          });
+  toggleBubbleSliceMode(false);
 
   bubbleEnableCheck_ = new QCheckBox(container);
-  createCollapsibleGroup(tr("Bubble"), "Bubble", bubbleForm, bubbleEnableCheck_,
+  createCollapsibleGroup(tr("Bubble"), "Bubble", bubbleForm_, bubbleEnableCheck_,
                          false);
 
   // Connect Slider and Spinbox for Angle
@@ -1237,7 +1642,7 @@ QWidget *SubtitleListPanel::createCustomStylePanel() {
   connect(bubbleImageBrowse_, &QPushButton::clicked, this, [this]() {
     QString path =
         QFileDialog::getOpenFileName(this, tr("Select Bubble Image"), QString(),
-                                     tr("Images (*.png *.jpg *.jpeg)"));
+                                     tr("Images (*.png *.jpg *.jpeg *.svg)"));
     if (!path.isEmpty()) {
       bubbleImagePathEdit_->setText(path);
       applyCustomStyleToActiveItem();
@@ -1278,8 +1683,14 @@ QWidget *SubtitleListPanel::createCustomStylePanel() {
   connect(bgColorBtn_, &ColorButton::colorChanged, this, triggerUpdate);
   connect(bgOpacitySlider_, &QSlider::valueChanged, this, triggerUpdate);
   connect(bgRoundnessSlider_, &QSlider::valueChanged, this, triggerUpdate);
-  connect(bgPaddingXSlider_, &QSlider::valueChanged, this, triggerUpdate);
-  connect(bgPaddingYSlider_, &QSlider::valueChanged, this, triggerUpdate);
+  connect(bgPaddingLeftSpin_, QOverload<int>::of(&QSpinBox::valueChanged), this,
+          triggerUpdate);
+  connect(bgPaddingRightSpin_, QOverload<int>::of(&QSpinBox::valueChanged), this,
+          triggerUpdate);
+  connect(bgPaddingTopSpin_, QOverload<int>::of(&QSpinBox::valueChanged), this,
+          triggerUpdate);
+  connect(bgPaddingBottomSpin_, QOverload<int>::of(&QSpinBox::valueChanged), this,
+          triggerUpdate);
   connect(bgOffsetXSpin_, QOverload<int>::of(&QSpinBox::valueChanged), this,
           triggerUpdate);
   connect(bgOffsetYSpin_, QOverload<int>::of(&QSpinBox::valueChanged), this,
@@ -1294,6 +1705,18 @@ QWidget *SubtitleListPanel::createCustomStylePanel() {
           this, triggerUpdate);
   connect(bubblePaddingBottomSpin_, QOverload<int>::of(&QSpinBox::valueChanged),
           this, triggerUpdate);
+  connect(bubbleSliceLeftSpin_, QOverload<int>::of(&QSpinBox::valueChanged),
+          this, triggerUpdate);
+  connect(bubbleSliceRightSpin_, QOverload<int>::of(&QSpinBox::valueChanged),
+          this, triggerUpdate);
+  connect(bubbleSliceTopSpin_, QOverload<int>::of(&QSpinBox::valueChanged),
+          this, triggerUpdate);
+  connect(bubbleSliceBottomSpin_, QOverload<int>::of(&QSpinBox::valueChanged),
+          this, triggerUpdate);
+
+  connect(bgPaddingUniformSpin_, QOverload<int>::of(&QSpinBox::valueChanged), this, triggerUpdate);
+  connect(bubblePaddingUniformSpin_, QOverload<int>::of(&QSpinBox::valueChanged), this, triggerUpdate);
+  connect(bubbleSliceUniformSpin_, QOverload<int>::of(&QSpinBox::valueChanged), this, triggerUpdate);
 
   // Undo support on slider release / spinbox edit finished
   auto recordUndoState = [this]() {
@@ -1331,8 +1754,10 @@ QWidget *SubtitleListPanel::createCustomStylePanel() {
       item.bgColor = bgColorBtn_->color().name();
       item.bgOpacity = bgOpacitySlider_->value() / 100.0;
       item.bgRoundness = bgRoundnessSlider_->value();
-      item.bgPaddingX = bgPaddingXSlider_->value();
-      item.bgPaddingY = bgPaddingYSlider_->value();
+      item.bgPaddingLeft = bgPaddingLeftSpin_->value();
+      item.bgPaddingRight = bgPaddingRightSpin_->value();
+      item.bgPaddingTop = bgPaddingTopSpin_->value();
+      item.bgPaddingBottom = bgPaddingBottomSpin_->value();
       item.bgOffsetX = bgOffsetXSpin_->value();
       item.bgOffsetY = bgOffsetYSpin_->value();
 
@@ -1342,6 +1767,10 @@ QWidget *SubtitleListPanel::createCustomStylePanel() {
       item.bubblePaddingRight = bubblePaddingRightSpin_->value();
       item.bubblePaddingTop = bubblePaddingTopSpin_->value();
       item.bubblePaddingBottom = bubblePaddingBottomSpin_->value();
+      item.bubbleSliceLeft = bubbleSliceLeftSpin_->value();
+      item.bubbleSliceRight = bubbleSliceRightSpin_->value();
+      item.bubbleSliceTop = bubbleSliceTopSpin_->value();
+      item.bubbleSliceBottom = bubbleSliceBottomSpin_->value();
 
       track_->updateItem(currentSelectedId_, item);
     }
@@ -1356,9 +1785,11 @@ QWidget *SubtitleListPanel::createCustomStylePanel() {
           recordUndoState);
   connect(bgOpacitySlider_, &QSlider::sliderReleased, this, recordUndoState);
   connect(bgRoundnessSlider_, &QSlider::sliderReleased, this, recordUndoState);
-  connect(bgPaddingXSlider_, &QSlider::sliderReleased, this, recordUndoState);
-  connect(bgPaddingYSlider_, &QSlider::sliderReleased, this, recordUndoState);
 
+  connect(bgPaddingLeftSpin_, &QSpinBox::editingFinished, this, recordUndoState);
+  connect(bgPaddingRightSpin_, &QSpinBox::editingFinished, this, recordUndoState);
+  connect(bgPaddingTopSpin_, &QSpinBox::editingFinished, this, recordUndoState);
+  connect(bgPaddingBottomSpin_, &QSpinBox::editingFinished, this, recordUndoState);
   connect(bgOffsetXSpin_, &QSpinBox::editingFinished, this, recordUndoState);
   connect(bgOffsetYSpin_, &QSpinBox::editingFinished, this, recordUndoState);
   connect(bubblePaddingLeftSpin_, &QSpinBox::editingFinished, this,
@@ -1369,6 +1800,18 @@ QWidget *SubtitleListPanel::createCustomStylePanel() {
           recordUndoState);
   connect(bubblePaddingBottomSpin_, &QSpinBox::editingFinished, this,
           recordUndoState);
+  connect(bubbleSliceLeftSpin_, &QSpinBox::editingFinished, this,
+          recordUndoState);
+  connect(bubbleSliceRightSpin_, &QSpinBox::editingFinished, this,
+          recordUndoState);
+  connect(bubbleSliceTopSpin_, &QSpinBox::editingFinished, this,
+          recordUndoState);
+  connect(bubbleSliceBottomSpin_, &QSpinBox::editingFinished, this,
+          recordUndoState);
+
+  connect(bgPaddingUniformSpin_, &QSpinBox::editingFinished, this, recordUndoState);
+  connect(bubblePaddingUniformSpin_, &QSpinBox::editingFinished, this, recordUndoState);
+  connect(bubbleSliceUniformSpin_, &QSpinBox::editingFinished, this, recordUndoState);
 
   // 添加拉伸弹簧，确保多余空间由底部弹簧吸收，从而使各展开组高度固定，不被强制拉伸
   layout->addStretch();
@@ -1379,7 +1822,7 @@ QWidget *SubtitleListPanel::createCustomStylePanel() {
   // 初始化显隐状态
   updateFillTypeFields();
 
-  // 两个按钮并排水平放置，宽度都和原全部应用按钮一致（76px宽，28px高）
+  // 保存预设按钮水平居中放置
   auto *btnContainer = new QWidget(mainContainer);
   auto *btnLayout = new QHBoxLayout(btnContainer);
   btnLayout->setContentsMargins(12, 8, 12, 12);
@@ -1394,27 +1837,9 @@ QWidget *SubtitleListPanel::createCustomStylePanel() {
       "border-radius: 4px; color: #eee; font-size: 11px; }"
       "QPushButton:hover { background-color: #3c3c3c; border-color: #555; }");
 
-  applyToAllBtn_ = new QPushButton(tr("Apply All"), btnContainer);
-  applyToAllBtn_->setObjectName("ApplyAllBtn");
-  applyToAllBtn_->setFixedSize(76, 28);
-  applyToAllBtn_->setEnabled(false);
-  applyToAllBtn_->setStyleSheet(
-      "QPushButton { background-color: palette(highlight); border: none; "
-      "border-radius: 4px; color: white; font-size: 11px; font-weight: bold; }"
-      "QPushButton:hover { background-color: #f472b6; }"
-      "QPushButton:disabled { background-color: #3c3c3c; color: #888; }");
-
   btnLayout->addWidget(savePresetBtn_);
-  btnLayout->addWidget(applyToAllBtn_);
 
   mainLayout->addWidget(btnContainer);
-
-  // 全部应用点击逻辑
-  connect(applyToAllBtn_, &QPushButton::clicked, this, [this]() {
-    if (track_ && !currentSelectedId_.isEmpty()) {
-      track_->applyStyleToAll(currentSelectedId_);
-    }
-  });
 
   // 保存为预设点击逻辑
   connect(savePresetBtn_, &QPushButton::clicked, this, [this]() {
@@ -1474,8 +1899,10 @@ QWidget *SubtitleListPanel::createCustomStylePanel() {
     styleObj["bgColor"] = item.bgColor;
     styleObj["bgOpacity"] = item.bgOpacity;
     styleObj["bgRoundness"] = item.bgRoundness;
-    styleObj["bgPaddingX"] = item.bgPaddingX;
-    styleObj["bgPaddingY"] = item.bgPaddingY;
+    styleObj["bgPaddingLeft"] = item.bgPaddingLeft;
+    styleObj["bgPaddingRight"] = item.bgPaddingRight;
+    styleObj["bgPaddingTop"] = item.bgPaddingTop;
+    styleObj["bgPaddingBottom"] = item.bgPaddingBottom;
     styleObj["bgOffsetX"] = item.bgOffsetX;
     styleObj["bgOffsetY"] = item.bgOffsetY;
 
@@ -1485,6 +1912,10 @@ QWidget *SubtitleListPanel::createCustomStylePanel() {
     styleObj["bubblePaddingRight"] = item.bubblePaddingRight;
     styleObj["bubblePaddingTop"] = item.bubblePaddingTop;
     styleObj["bubblePaddingBottom"] = item.bubblePaddingBottom;
+    styleObj["bubbleSliceLeft"] = item.bubbleSliceLeft;
+    styleObj["bubbleSliceRight"] = item.bubbleSliceRight;
+    styleObj["bubbleSliceTop"] = item.bubbleSliceTop;
+    styleObj["bubbleSliceBottom"] = item.bubbleSliceBottom;
 
     presetObj["style"] = styleObj;
     array.append(presetObj);
@@ -1700,12 +2131,14 @@ QWidget *SubtitleListPanel::createPresetStylePanel() {
   presetTypeCombo_ = new QComboBox(container);
   presetTypeCombo_->addItem(tr("System Presets"), 0);
   presetTypeCombo_->addItem(tr("Custom Presets"), 1);
-  presetTypeCombo_->setStyleSheet(
-      "QComboBox { background-color: #2c2c2c; border: 1px solid #444; "
-      "border-radius: 4px; padding: 4px 8px; color: #eee; }"
-      "QComboBox::drop-down { border: none; }"
-      "QComboBox QAbstractItemView { background-color: #2c2c2c; "
-      "selection-background-color: #0088cc; }");
+  presetTypeCombo_->setFixedHeight(32);
+  if (auto *view = presetTypeCombo_->view()) {
+    if (QWidget *w = view->window()) {
+      w->setWindowFlags(Qt::Popup | Qt::FramelessWindowHint |
+                        Qt::NoDropShadowWindowHint);
+      w->setAttribute(Qt::WA_TranslucentBackground);
+    }
+  }
   layout->addWidget(presetTypeCombo_);
 
   // 列表容器：提供与字幕列表一致的背景色和边框
@@ -1792,8 +2225,10 @@ QWidget *SubtitleListPanel::createPresetStylePanel() {
             style.bgColor = styleObj["bgColor"].toString("#000000");
             style.bgOpacity = styleObj["bgOpacity"].toDouble(0.6);
             style.bgRoundness = styleObj["bgRoundness"].toInt(4);
-            style.bgPaddingX = styleObj["bgPaddingX"].toInt(15);
-            style.bgPaddingY = styleObj["bgPaddingY"].toInt(10);
+            style.bgPaddingLeft = styleObj["bgPaddingLeft"].toInt(styleObj["bgPaddingX"].toInt(15));
+            style.bgPaddingRight = styleObj["bgPaddingRight"].toInt(styleObj["bgPaddingX"].toInt(15));
+            style.bgPaddingTop = styleObj["bgPaddingTop"].toInt(styleObj["bgPaddingY"].toInt(10));
+            style.bgPaddingBottom = styleObj["bgPaddingBottom"].toInt(styleObj["bgPaddingY"].toInt(10));
             style.bgOffsetX = styleObj["bgOffsetX"].toInt(0);
             style.bgOffsetY = styleObj["bgOffsetY"].toInt(0);
 
@@ -1804,6 +2239,14 @@ QWidget *SubtitleListPanel::createPresetStylePanel() {
             style.bubblePaddingTop = styleObj["bubblePaddingTop"].toInt(10);
             style.bubblePaddingBottom =
                 styleObj["bubblePaddingBottom"].toInt(10);
+            style.bubbleSliceLeft =
+                styleObj["bubbleSliceLeft"].toInt(style.bubblePaddingLeft);
+            style.bubbleSliceRight =
+                styleObj["bubbleSliceRight"].toInt(style.bubblePaddingRight);
+            style.bubbleSliceTop =
+                styleObj["bubbleSliceTop"].toInt(style.bubblePaddingTop);
+            style.bubbleSliceBottom =
+                styleObj["bubbleSliceBottom"].toInt(style.bubblePaddingBottom);
 
             if (!currentSelectedId_.isEmpty()) {
               SubtitleItem item;
@@ -1837,17 +2280,22 @@ QWidget *SubtitleListPanel::createPresetStylePanel() {
               item.bgColor = style.bgColor;
               item.bgOpacity = style.bgOpacity;
               item.bgRoundness = style.bgRoundness;
-              item.bgPaddingX = style.bgPaddingX;
-              item.bgPaddingY = style.bgPaddingY;
+              item.bgPaddingLeft = style.bgPaddingLeft;
+              item.bgPaddingRight = style.bgPaddingRight;
+              item.bgPaddingTop = style.bgPaddingTop;
+              item.bgPaddingBottom = style.bgPaddingBottom;
               item.bgOffsetX = style.bgOffsetX;
               item.bgOffsetY = style.bgOffsetY;
-
               item.bubbleEnabled = style.bubbleEnabled;
               item.bubbleImagePath = style.bubbleImagePath;
               item.bubblePaddingLeft = style.bubblePaddingLeft;
               item.bubblePaddingRight = style.bubblePaddingRight;
               item.bubblePaddingTop = style.bubblePaddingTop;
               item.bubblePaddingBottom = style.bubblePaddingBottom;
+              item.bubbleSliceLeft = style.bubbleSliceLeft;
+              item.bubbleSliceRight = style.bubbleSliceRight;
+              item.bubbleSliceTop = style.bubbleSliceTop;
+              item.bubbleSliceBottom = style.bubbleSliceBottom;
 
               track_->updateItem(currentSelectedId_, item);
               loadStyleFromItem(item);
@@ -1877,17 +2325,22 @@ QWidget *SubtitleListPanel::createPresetStylePanel() {
               item.bgColor = style.bgColor;
               item.bgOpacity = style.bgOpacity;
               item.bgRoundness = style.bgRoundness;
-              item.bgPaddingX = style.bgPaddingX;
-              item.bgPaddingY = style.bgPaddingY;
+              item.bgPaddingLeft = style.bgPaddingLeft;
+              item.bgPaddingRight = style.bgPaddingRight;
+              item.bgPaddingTop = style.bgPaddingTop;
+              item.bgPaddingBottom = style.bgPaddingBottom;
               item.bgOffsetX = style.bgOffsetX;
               item.bgOffsetY = style.bgOffsetY;
-
               item.bubbleEnabled = style.bubbleEnabled;
               item.bubbleImagePath = style.bubbleImagePath;
               item.bubblePaddingLeft = style.bubblePaddingLeft;
               item.bubblePaddingRight = style.bubblePaddingRight;
               item.bubblePaddingTop = style.bubblePaddingTop;
               item.bubblePaddingBottom = style.bubblePaddingBottom;
+              item.bubbleSliceLeft = style.bubbleSliceLeft;
+              item.bubbleSliceRight = style.bubbleSliceRight;
+              item.bubbleSliceTop = style.bubbleSliceTop;
+              item.bubbleSliceBottom = style.bubbleSliceBottom;
 
               track_->setDefaultStyleItem(item);
               loadStyleFromItem(item);
@@ -1966,10 +2419,25 @@ void SubtitleListPanel::loadStyleFromItem(const SubtitleItem &item) {
     bgOpacitySlider_->setValue(qRound(item.bgOpacity * 100.0));
   if (bgRoundnessSlider_)
     bgRoundnessSlider_->setValue(item.bgRoundness);
-  if (bgPaddingXSlider_)
-    bgPaddingXSlider_->setValue(item.bgPaddingX);
-  if (bgPaddingYSlider_)
-    bgPaddingYSlider_->setValue(item.bgPaddingY);
+  if (bgPaddingLeftSpin_)
+    bgPaddingLeftSpin_->setValue(item.bgPaddingLeft);
+  if (bgPaddingRightSpin_)
+    bgPaddingRightSpin_->setValue(item.bgPaddingRight);
+  if (bgPaddingTopSpin_)
+    bgPaddingTopSpin_->setValue(item.bgPaddingTop);
+  if (bgPaddingBottomSpin_)
+    bgPaddingBottomSpin_->setValue(item.bgPaddingBottom);
+  if (bgPaddingUniformSpin_) {
+    bool bgUniform = (item.bgPaddingLeft == item.bgPaddingRight &&
+                      item.bgPaddingLeft == item.bgPaddingTop &&
+                      item.bgPaddingLeft == item.bgPaddingBottom);
+    bool expand = !bgUniform;
+    bgPaddingUniformSpin_->setValue(item.bgPaddingLeft);
+    bgPaddingUniformContainer_->setVisible(!expand);
+    if (auto *lbl = bgForm_->labelForField(bgPaddingUniformContainer_))
+      lbl->setVisible(!expand);
+    bgPaddingGroup_->setVisible(expand);
+  }
   if (bgOffsetXSpin_)
     bgOffsetXSpin_->setValue(item.bgOffsetX);
   if (bgOffsetYSpin_)
@@ -1988,11 +2456,41 @@ void SubtitleListPanel::loadStyleFromItem(const SubtitleItem &item) {
   if (bubblePaddingBottomSpin_)
     bubblePaddingBottomSpin_->setValue(item.bubblePaddingBottom);
 
+  if (bubblePaddingUniformSpin_) {
+    bool bubblePadUniform = (item.bubblePaddingLeft == item.bubblePaddingRight &&
+                             item.bubblePaddingLeft == item.bubblePaddingTop &&
+                             item.bubblePaddingLeft == item.bubblePaddingBottom);
+    bool expand = !bubblePadUniform;
+    bubblePaddingUniformSpin_->setValue(item.bubblePaddingLeft);
+    bubblePaddingUniformContainer_->setVisible(!expand);
+    if (auto *lbl = bubbleForm_->labelForField(bubblePaddingUniformContainer_))
+      lbl->setVisible(!expand);
+    bubblePaddingGroup_->setVisible(expand);
+  }
+
+  if (bubbleSliceLeftSpin_)
+    bubbleSliceLeftSpin_->setValue(item.bubbleSliceLeft);
+  if (bubbleSliceRightSpin_)
+    bubbleSliceRightSpin_->setValue(item.bubbleSliceRight);
+  if (bubbleSliceTopSpin_)
+    bubbleSliceTopSpin_->setValue(item.bubbleSliceTop);
+  if (bubbleSliceBottomSpin_)
+    bubbleSliceBottomSpin_->setValue(item.bubbleSliceBottom);
+
+  if (bubbleSliceUniformSpin_) {
+    bool bubbleSliceUniform = (item.bubbleSliceLeft == item.bubbleSliceRight &&
+                               item.bubbleSliceLeft == item.bubbleSliceTop &&
+                               item.bubbleSliceLeft == item.bubbleSliceBottom);
+    bool expand = !bubbleSliceUniform;
+    bubbleSliceUniformSpin_->setValue(item.bubbleSliceLeft);
+    bubbleSliceUniformContainer_->setVisible(!expand);
+    if (auto *lbl = bubbleForm_->labelForField(bubbleSliceUniformContainer_))
+      lbl->setVisible(!expand);
+    bubbleSliceGroup_->setVisible(expand);
+  }
+
   isUpdatingControls_ = false;
 
-  if (applyToAllBtn_) {
-    applyToAllBtn_->setEnabled(track_ && !currentSelectedId_.isEmpty());
-  }
   if (customStyleContainer_) {
     customStyleContainer_->setEnabled(!currentSelectedId_.isEmpty());
   }
@@ -2051,8 +2549,10 @@ void SubtitleListPanel::applyCustomStyleToActiveItem() {
   item.bgColor = bgColorBtn_->color().name();
   item.bgOpacity = bgOpacitySlider_->value() / 100.0;
   item.bgRoundness = bgRoundnessSlider_->value();
-  item.bgPaddingX = bgPaddingXSlider_->value();
-  item.bgPaddingY = bgPaddingYSlider_->value();
+  item.bgPaddingLeft = bgPaddingLeftSpin_->value();
+  item.bgPaddingRight = bgPaddingRightSpin_->value();
+  item.bgPaddingTop = bgPaddingTopSpin_->value();
+  item.bgPaddingBottom = bgPaddingBottomSpin_->value();
   item.bgOffsetX = bgOffsetXSpin_->value();
   item.bgOffsetY = bgOffsetYSpin_->value();
 
@@ -2062,6 +2562,10 @@ void SubtitleListPanel::applyCustomStyleToActiveItem() {
   item.bubblePaddingRight = bubblePaddingRightSpin_->value();
   item.bubblePaddingTop = bubblePaddingTopSpin_->value();
   item.bubblePaddingBottom = bubblePaddingBottomSpin_->value();
+  item.bubbleSliceLeft = bubbleSliceLeftSpin_->value();
+  item.bubbleSliceRight = bubbleSliceRightSpin_->value();
+  item.bubbleSliceTop = bubbleSliceTopSpin_->value();
+  item.bubbleSliceBottom = bubbleSliceBottomSpin_->value();
 
   if (found) {
     track_->updateItemDirect(activeId, item);
@@ -2112,8 +2616,22 @@ void SubtitleListPanel::loadCustomPresets() {
     item.bgColor = styleObj["bgColor"].toString("#000000");
     item.bgOpacity = styleObj["bgOpacity"].toDouble(0.6);
     item.bgRoundness = styleObj["bgRoundness"].toInt(4);
-    item.bgPaddingX = styleObj["bgPaddingX"].toInt(15);
-    item.bgPaddingY = styleObj["bgPaddingY"].toInt(10);
+    if (styleObj.contains("bgPaddingLeft")) {
+      item.bgPaddingLeft = styleObj["bgPaddingLeft"].toInt(15);
+      item.bgPaddingRight = styleObj["bgPaddingRight"].toInt(15);
+    } else {
+      int padX = styleObj["bgPaddingX"].toInt(15);
+      item.bgPaddingLeft = padX;
+      item.bgPaddingRight = padX;
+    }
+    if (styleObj.contains("bgPaddingTop")) {
+      item.bgPaddingTop = styleObj["bgPaddingTop"].toInt(10);
+      item.bgPaddingBottom = styleObj["bgPaddingBottom"].toInt(10);
+    } else {
+      int padY = styleObj["bgPaddingY"].toInt(10);
+      item.bgPaddingTop = padY;
+      item.bgPaddingBottom = padY;
+    }
     item.bgOffsetX = styleObj["bgOffsetX"].toInt(0);
     item.bgOffsetY = styleObj["bgOffsetY"].toInt(0);
 
@@ -2123,6 +2641,10 @@ void SubtitleListPanel::loadCustomPresets() {
     item.bubblePaddingRight = styleObj["bubblePaddingRight"].toInt(15);
     item.bubblePaddingTop = styleObj["bubblePaddingTop"].toInt(10);
     item.bubblePaddingBottom = styleObj["bubblePaddingBottom"].toInt(10);
+    item.bubbleSliceLeft = styleObj["bubbleSliceLeft"].toInt(item.bubblePaddingLeft);
+    item.bubbleSliceRight = styleObj["bubbleSliceRight"].toInt(item.bubblePaddingRight);
+    item.bubbleSliceTop = styleObj["bubbleSliceTop"].toInt(item.bubblePaddingTop);
+    item.bubbleSliceBottom = styleObj["bubbleSliceBottom"].toInt(item.bubblePaddingBottom);
 
     addPresetCard(name, item, true, i);
   }
@@ -2191,8 +2713,10 @@ void SubtitleListPanel::addPresetCard(const QString &name,
   styleObj["bgColor"] = style.bgColor;
   styleObj["bgOpacity"] = style.bgOpacity;
   styleObj["bgRoundness"] = style.bgRoundness;
-  styleObj["bgPaddingX"] = style.bgPaddingX;
-  styleObj["bgPaddingY"] = style.bgPaddingY;
+  styleObj["bgPaddingLeft"] = style.bgPaddingLeft;
+  styleObj["bgPaddingRight"] = style.bgPaddingRight;
+  styleObj["bgPaddingTop"] = style.bgPaddingTop;
+  styleObj["bgPaddingBottom"] = style.bgPaddingBottom;
   styleObj["bgOffsetX"] = style.bgOffsetX;
   styleObj["bgOffsetY"] = style.bgOffsetY;
 
@@ -2202,6 +2726,10 @@ void SubtitleListPanel::addPresetCard(const QString &name,
   styleObj["bubblePaddingRight"] = style.bubblePaddingRight;
   styleObj["bubblePaddingTop"] = style.bubblePaddingTop;
   styleObj["bubblePaddingBottom"] = style.bubblePaddingBottom;
+  styleObj["bubbleSliceLeft"] = style.bubbleSliceLeft;
+  styleObj["bubbleSliceRight"] = style.bubbleSliceRight;
+  styleObj["bubbleSliceTop"] = style.bubbleSliceTop;
+  styleObj["bubbleSliceBottom"] = style.bubbleSliceBottom;
 
   QJsonDocument doc(styleObj);
   item->setData(Qt::UserRole, doc.toJson(QJsonDocument::Compact));
@@ -2283,8 +2811,10 @@ void SubtitleListPanel::populatePresets() {
     p5.bgColor = "#000000";
     p5.bgOpacity = 0.6;
     p5.bgRoundness = 4;
-    p5.bgPaddingX = 15;
-    p5.bgPaddingY = 10;
+    p5.bgPaddingLeft = 15;
+    p5.bgPaddingRight = 15;
+    p5.bgPaddingTop = 10;
+    p5.bgPaddingBottom = 10;
 
     // 6. Silver Gradient (银渐变)
     SubtitleItem p6;
@@ -2334,6 +2864,159 @@ void SubtitleListPanel::updateFillTypeFields() {
   setRowVisible(fillForm_, 2, idx == 1); // Gradient 2
   setRowVisible(fillForm_, 3, idx == 1); // Angle
   setRowVisible(fillForm_, 4, true);     // Opacity
+}
+
+QWidget *SubtitleListPanel::createBubbleStylePanel() {
+  auto *container = new QWidget(this);
+  container->setObjectName("BubbleStyleContainer");
+  auto *layout = new QVBoxLayout(container);
+  layout->setContentsMargins(12, 12, 12, 12);
+  layout->setSpacing(12);
+
+  auto *listContainer = new QFrame(container);
+  listContainer->setObjectName("SubtitleListContainer");
+  listContainer->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
+  auto *lcLayout = new QVBoxLayout(listContainer);
+  lcLayout->setContentsMargins(6, 6, 6, 6);
+  lcLayout->setSpacing(0);
+
+  bubbleListWidget_ = new QListWidget(listContainer);
+  bubbleListWidget_->setObjectName("BubbleListWidget");
+  bubbleListWidget_->setViewMode(QListView::IconMode);
+  bubbleListWidget_->setResizeMode(QListView::Adjust);
+  bubbleListWidget_->setMovement(QListView::Static);
+  bubbleListWidget_->setFlow(QListView::LeftToRight);
+  bubbleListWidget_->setWrapping(true);
+  bubbleListWidget_->setSpacing(8);
+  bubbleListWidget_->setUniformItemSizes(true);
+  bubbleListWidget_->setGridSize(QSize(76, 76));
+  bubbleListWidget_->setIconSize(QSize(60, 60));
+  bubbleListWidget_->setVerticalScrollBarPolicy(Qt::ScrollBarAsNeeded);
+  bubbleListWidget_->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+
+  bubbleListWidget_->setStyleSheet(
+      "QListWidget#BubbleListWidget {"
+      "  background-color: transparent;"
+      "  border: none;"
+      "}"
+      "QListWidget#BubbleListWidget::item {"
+      "  background-color: #242424;"
+      "  border: 1px solid #3c3c3c;"
+      "  border-radius: 6px;"
+      "}"
+      "QListWidget#BubbleListWidget::item:hover {"
+      "  background-color: #2e2e2e;"
+      "  border-color: #0088cc;"
+      "}"
+      "QListWidget#BubbleListWidget::item:selected {"
+      "  background-color: #2e2e2e;"
+      "  border-color: #0088cc;"
+      "}");
+
+  lcLayout->addWidget(bubbleListWidget_);
+  layout->addWidget(listContainer);
+
+  connect(bubbleListWidget_, &QListWidget::itemClicked, this,
+          [this](QListWidgetItem *item) {
+            if (!item || !track_)
+              return;
+            QVariantMap data = item->data(Qt::UserRole).toMap();
+            QString imagePath = data["imagePath"].toString();
+            int padLeft = data["padLeft"].toInt();
+            int padRight = data["padRight"].toInt();
+            int padTop = data["padTop"].toInt();
+            int padBottom = data["padBottom"].toInt();
+            int sliceLeft = data["sliceLeft"].toInt();
+            int sliceRight = data["sliceRight"].toInt();
+            int sliceTop = data["sliceTop"].toInt();
+            int sliceBottom = data["sliceBottom"].toInt();
+
+            if (!currentSelectedId_.isEmpty()) {
+              SubtitleItem sItem;
+              for (const auto &it : track_->items()) {
+                if (it.id == currentSelectedId_) {
+                  sItem = it;
+                  break;
+                }
+              }
+              sItem.bubbleEnabled = true;
+              sItem.bubbleImagePath = imagePath;
+              sItem.bubblePaddingLeft = padLeft;
+              sItem.bubblePaddingRight = padRight;
+              sItem.bubblePaddingTop = padTop;
+              sItem.bubblePaddingBottom = padBottom;
+              sItem.bubbleSliceLeft = sliceLeft;
+              sItem.bubbleSliceRight = sliceRight;
+              sItem.bubbleSliceTop = sliceTop;
+              sItem.bubbleSliceBottom = sliceBottom;
+
+              track_->updateItem(currentSelectedId_, sItem);
+              loadStyleFromItem(sItem);
+            } else {
+              SubtitleItem sItem = track_->defaultStyleItem();
+              sItem.bubbleEnabled = true;
+              sItem.bubbleImagePath = imagePath;
+              sItem.bubblePaddingLeft = padLeft;
+              sItem.bubblePaddingRight = padRight;
+              sItem.bubblePaddingTop = padTop;
+              sItem.bubblePaddingBottom = padBottom;
+              sItem.bubbleSliceLeft = sliceLeft;
+              sItem.bubbleSliceRight = sliceRight;
+              sItem.bubbleSliceTop = sliceTop;
+              sItem.bubbleSliceBottom = sliceBottom;
+
+              track_->setDefaultStyleItem(sItem);
+              loadStyleFromItem(sItem);
+            }
+          });
+
+  return container;
+}
+
+void SubtitleListPanel::addBubbleCard(const QString &name,
+                                      const QString &imagePath, int padLeft,
+                                      int padRight, int padTop, int padBottom,
+                                      int sliceLeft, int sliceRight, int sliceTop,
+                                      int sliceBottom) {
+  if (!bubbleListWidget_)
+    return;
+
+  auto *item = new QListWidgetItem(bubbleListWidget_);
+  QIcon icon(imagePath);
+  item->setIcon(icon);
+  item->setToolTip(name);
+
+  QVariantMap data;
+  data["imagePath"] = imagePath;
+  data["padLeft"] = padLeft;
+  data["padRight"] = padRight;
+  data["padTop"] = padTop;
+  data["padBottom"] = padBottom;
+  data["sliceLeft"] = sliceLeft;
+  data["sliceRight"] = sliceRight;
+  data["sliceTop"] = sliceTop;
+  data["sliceBottom"] = sliceBottom;
+  item->setData(Qt::UserRole, data);
+
+  bubbleListWidget_->addItem(item);
+}
+
+void SubtitleListPanel::populateBubbles() {
+  if (!bubbleListWidget_)
+    return;
+
+  bubbleListWidget_->clear();
+
+  addBubbleCard(tr("Glassmorphism"), ":/bubbles/bubble_glass.png", 10, 10, 10,
+                10, 40, 40, 40, 40);
+  addBubbleCard(tr("Dark Box"), ":/bubbles/bubble_dark.png", 10, 10, 10,
+                10, 40, 40, 40, 40);
+  addBubbleCard(tr("Cyberpunk Neon"), ":/bubbles/bubble_neon.png", 10, 10, 10,
+                10, 40, 40, 40, 40);
+  addBubbleCard(tr("Cute Yellow"), ":/bubbles/bubble_cute.png", 10, 10, 10,
+                10, 40, 40, 40, 40);
+  addBubbleCard(tr("Minimal Outline"), ":/bubbles/bubble_outline.png", 10, 10,
+                10, 10, 40, 40, 40, 40);
 }
 
 #include "SubtitleListPanel.moc"

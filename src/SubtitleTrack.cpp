@@ -464,8 +464,10 @@ void SubtitleTrack::applyStyleToAllDirect(const QString &sourceId) {
       items_[i].bgColor = source->bgColor;
       items_[i].bgOpacity = source->bgOpacity;
       items_[i].bgRoundness = source->bgRoundness;
-      items_[i].bgPaddingX = source->bgPaddingX;
-      items_[i].bgPaddingY = source->bgPaddingY;
+      items_[i].bgPaddingLeft = source->bgPaddingLeft;
+      items_[i].bgPaddingRight = source->bgPaddingRight;
+      items_[i].bgPaddingTop = source->bgPaddingTop;
+      items_[i].bgPaddingBottom = source->bgPaddingBottom;
       items_[i].bgImagePath = source->bgImagePath;
       items_[i].bgImage9Patch = source->bgImage9Patch;
       items_[i].bgOffsetX = source->bgOffsetX;
@@ -476,6 +478,10 @@ void SubtitleTrack::applyStyleToAllDirect(const QString &sourceId) {
       items_[i].bubblePaddingRight = source->bubblePaddingRight;
       items_[i].bubblePaddingTop = source->bubblePaddingTop;
       items_[i].bubblePaddingBottom = source->bubblePaddingBottom;
+      items_[i].bubbleSliceLeft = source->bubbleSliceLeft;
+      items_[i].bubbleSliceRight = source->bubbleSliceRight;
+      items_[i].bubbleSliceTop = source->bubbleSliceTop;
+      items_[i].bubbleSliceBottom = source->bubbleSliceBottom;
 
       emit itemUpdated(items_[i].id);
       changed = true;
@@ -656,8 +662,10 @@ SubtitleItem SubtitleTrack::defaultStyleItem() const {
   item.bgColor = defaultBgColor_;
   item.bgOpacity = defaultBgOpacity_;
   item.bgRoundness = defaultBgRoundness_;
-  item.bgPaddingX = defaultBgPaddingX_;
-  item.bgPaddingY = defaultBgPaddingY_;
+  item.bgPaddingLeft = defaultBgPaddingLeft_;
+  item.bgPaddingRight = defaultBgPaddingRight_;
+  item.bgPaddingTop = defaultBgPaddingTop_;
+  item.bgPaddingBottom = defaultBgPaddingBottom_;
   item.bgImagePath = defaultBgImagePath_;
   item.bgImage9Patch = defaultBgImage9Patch_;
   item.bgOffsetX = defaultBgOffsetX_;
@@ -668,6 +676,10 @@ SubtitleItem SubtitleTrack::defaultStyleItem() const {
   item.bubblePaddingRight = defaultBubblePaddingRight_;
   item.bubblePaddingTop = defaultBubblePaddingTop_;
   item.bubblePaddingBottom = defaultBubblePaddingBottom_;
+  item.bubbleSliceLeft = defaultBubbleSliceLeft_;
+  item.bubbleSliceRight = defaultBubbleSliceRight_;
+  item.bubbleSliceTop = defaultBubbleSliceTop_;
+  item.bubbleSliceBottom = defaultBubbleSliceBottom_;
 
   return item;
 }
@@ -706,8 +718,10 @@ void SubtitleTrack::setDefaultStyleItem(const SubtitleItem &item) {
   defaultBgColor_ = item.bgColor;
   defaultBgOpacity_ = item.bgOpacity;
   defaultBgRoundness_ = item.bgRoundness;
-  defaultBgPaddingX_ = item.bgPaddingX;
-  defaultBgPaddingY_ = item.bgPaddingY;
+  defaultBgPaddingLeft_ = item.bgPaddingLeft;
+  defaultBgPaddingRight_ = item.bgPaddingRight;
+  defaultBgPaddingTop_ = item.bgPaddingTop;
+  defaultBgPaddingBottom_ = item.bgPaddingBottom;
   defaultBgImagePath_ = item.bgImagePath;
   defaultBgImage9Patch_ = item.bgImage9Patch;
   defaultBgOffsetX_ = item.bgOffsetX;
@@ -718,6 +732,10 @@ void SubtitleTrack::setDefaultStyleItem(const SubtitleItem &item) {
   defaultBubblePaddingRight_ = item.bubblePaddingRight;
   defaultBubblePaddingTop_ = item.bubblePaddingTop;
   defaultBubblePaddingBottom_ = item.bubblePaddingBottom;
+  defaultBubbleSliceLeft_ = item.bubbleSliceLeft;
+  defaultBubbleSliceRight_ = item.bubbleSliceRight;
+  defaultBubbleSliceTop_ = item.bubbleSliceTop;
+  defaultBubbleSliceBottom_ = item.bubbleSliceBottom;
 }
 
 void SubtitleTrack::loadGlobalSettings() {
@@ -767,8 +785,23 @@ void SubtitleTrack::loadGlobalSettings() {
   defaultBgColor_ = cfg.getString("subtitle", "bgColor", "#000000");
   defaultBgOpacity_ = cfg.getDouble("subtitle", "bgOpacity", 1.0);
   defaultBgRoundness_ = cfg.getInt("subtitle", "bgRoundness", 10);
-  defaultBgPaddingX_ = cfg.getInt("subtitle", "bgPaddingX", 0);
-  defaultBgPaddingY_ = cfg.getInt("subtitle", "bgPaddingY", 0);
+  defaultBgPaddingLeft_ = cfg.getInt("subtitle", "bgPaddingLeft", -1);
+  if (defaultBgPaddingLeft_ == -1) {
+    int padX = cfg.getInt("subtitle", "bgPaddingX", 0);
+    defaultBgPaddingLeft_ = padX;
+    defaultBgPaddingRight_ = padX;
+  } else {
+    defaultBgPaddingRight_ = cfg.getInt("subtitle", "bgPaddingRight", 0);
+  }
+
+  defaultBgPaddingTop_ = cfg.getInt("subtitle", "bgPaddingTop", -1);
+  if (defaultBgPaddingTop_ == -1) {
+    int padY = cfg.getInt("subtitle", "bgPaddingY", 0);
+    defaultBgPaddingTop_ = padY;
+    defaultBgPaddingBottom_ = padY;
+  } else {
+    defaultBgPaddingBottom_ = cfg.getInt("subtitle", "bgPaddingBottom", 0);
+  }
   defaultBgImagePath_ = cfg.getString("subtitle", "bgImagePath", "");
   defaultBgImage9Patch_ = cfg.getBool("subtitle", "bgImage9Patch", true);
   defaultBgOffsetX_ = cfg.getInt("subtitle", "bgOffsetX", 0);
@@ -781,6 +814,10 @@ void SubtitleTrack::loadGlobalSettings() {
   defaultBubblePaddingTop_ = cfg.getInt("subtitle", "bubblePaddingTop", 10);
   defaultBubblePaddingBottom_ =
       cfg.getInt("subtitle", "bubblePaddingBottom", 10);
+  defaultBubbleSliceLeft_ = cfg.getInt("subtitle", "bubbleSliceLeft", 10);
+  defaultBubbleSliceRight_ = cfg.getInt("subtitle", "bubbleSliceRight", 10);
+  defaultBubbleSliceTop_ = cfg.getInt("subtitle", "bubbleSliceTop", 10);
+  defaultBubbleSliceBottom_ = cfg.getInt("subtitle", "bubbleSliceBottom", 10);
 }
 
 void SubtitleTrack::saveGlobalSettings() {
@@ -828,8 +865,10 @@ void SubtitleTrack::saveGlobalSettings() {
   cfg.setValue("subtitle", "bgColor", defaultBgColor_);
   cfg.setValue("subtitle", "bgOpacity", defaultBgOpacity_);
   cfg.setValue("subtitle", "bgRoundness", defaultBgRoundness_);
-  cfg.setValue("subtitle", "bgPaddingX", defaultBgPaddingX_);
-  cfg.setValue("subtitle", "bgPaddingY", defaultBgPaddingY_);
+  cfg.setValue("subtitle", "bgPaddingLeft", defaultBgPaddingLeft_);
+  cfg.setValue("subtitle", "bgPaddingRight", defaultBgPaddingRight_);
+  cfg.setValue("subtitle", "bgPaddingTop", defaultBgPaddingTop_);
+  cfg.setValue("subtitle", "bgPaddingBottom", defaultBgPaddingBottom_);
   cfg.setValue("subtitle", "bgImagePath", defaultBgImagePath_);
   cfg.setValue("subtitle", "bgImage9Patch", defaultBgImage9Patch_);
   cfg.setValue("subtitle", "bgOffsetX", defaultBgOffsetX_);
@@ -841,6 +880,10 @@ void SubtitleTrack::saveGlobalSettings() {
   cfg.setValue("subtitle", "bubblePaddingRight", defaultBubblePaddingRight_);
   cfg.setValue("subtitle", "bubblePaddingTop", defaultBubblePaddingTop_);
   cfg.setValue("subtitle", "bubblePaddingBottom", defaultBubblePaddingBottom_);
+  cfg.setValue("subtitle", "bubbleSliceLeft", defaultBubbleSliceLeft_);
+  cfg.setValue("subtitle", "bubbleSliceRight", defaultBubbleSliceRight_);
+  cfg.setValue("subtitle", "bubbleSliceTop", defaultBubbleSliceTop_);
+  cfg.setValue("subtitle", "bubbleSliceBottom", defaultBubbleSliceBottom_);
 
   cfg.sync();
 }
@@ -890,8 +933,10 @@ QJsonObject SubtitleTrack::toJsonObject() const {
     styleObj["bgColor"] = item.bgColor;
     styleObj["bgOpacity"] = item.bgOpacity;
     styleObj["bgRoundness"] = item.bgRoundness;
-    styleObj["bgPaddingX"] = item.bgPaddingX;
-    styleObj["bgPaddingY"] = item.bgPaddingY;
+    styleObj["bgPaddingLeft"] = item.bgPaddingLeft;
+    styleObj["bgPaddingRight"] = item.bgPaddingRight;
+    styleObj["bgPaddingTop"] = item.bgPaddingTop;
+    styleObj["bgPaddingBottom"] = item.bgPaddingBottom;
     styleObj["bgImagePath"] = item.bgImagePath;
     styleObj["bgImage9Patch"] = item.bgImage9Patch;
     styleObj["bgOffsetX"] = item.bgOffsetX;
@@ -902,6 +947,10 @@ QJsonObject SubtitleTrack::toJsonObject() const {
     styleObj["bubblePaddingRight"] = item.bubblePaddingRight;
     styleObj["bubblePaddingTop"] = item.bubblePaddingTop;
     styleObj["bubblePaddingBottom"] = item.bubblePaddingBottom;
+    styleObj["bubbleSliceLeft"] = item.bubbleSliceLeft;
+    styleObj["bubbleSliceRight"] = item.bubbleSliceRight;
+    styleObj["bubbleSliceTop"] = item.bubbleSliceTop;
+    styleObj["bubbleSliceBottom"] = item.bubbleSliceBottom;
 
     itemObj["style"] = styleObj;
 
@@ -986,8 +1035,23 @@ void SubtitleTrack::fromJsonObject(const QJsonObject &obj) {
     item.bgColor = styleObj["bgColor"].toString(defaultBgColor_);
     item.bgOpacity = styleObj["bgOpacity"].toDouble(defaultBgOpacity_);
     item.bgRoundness = styleObj["bgRoundness"].toInt(defaultBgRoundness_);
-    item.bgPaddingX = styleObj["bgPaddingX"].toInt(defaultBgPaddingX_);
-    item.bgPaddingY = styleObj["bgPaddingY"].toInt(defaultBgPaddingY_);
+    if (styleObj.contains("bgPaddingLeft")) {
+      item.bgPaddingLeft = styleObj["bgPaddingLeft"].toInt(defaultBgPaddingLeft_);
+      item.bgPaddingRight = styleObj["bgPaddingRight"].toInt(defaultBgPaddingRight_);
+    } else {
+      int padX = styleObj["bgPaddingX"].toInt(defaultBgPaddingLeft_);
+      item.bgPaddingLeft = padX;
+      item.bgPaddingRight = padX;
+    }
+
+    if (styleObj.contains("bgPaddingTop")) {
+      item.bgPaddingTop = styleObj["bgPaddingTop"].toInt(defaultBgPaddingTop_);
+      item.bgPaddingBottom = styleObj["bgPaddingBottom"].toInt(defaultBgPaddingBottom_);
+    } else {
+      int padY = styleObj["bgPaddingY"].toInt(defaultBgPaddingTop_);
+      item.bgPaddingTop = padY;
+      item.bgPaddingBottom = padY;
+    }
     item.bgImagePath = styleObj["bgImagePath"].toString(defaultBgImagePath_);
     item.bgImage9Patch =
         styleObj["bgImage9Patch"].toBool(defaultBgImage9Patch_);
@@ -1005,6 +1069,14 @@ void SubtitleTrack::fromJsonObject(const QJsonObject &obj) {
         styleObj["bubblePaddingTop"].toInt(defaultBubblePaddingTop_);
     item.bubblePaddingBottom =
         styleObj["bubblePaddingBottom"].toInt(defaultBubblePaddingBottom_);
+    item.bubbleSliceLeft =
+        styleObj["bubbleSliceLeft"].toInt(defaultBubbleSliceLeft_);
+    item.bubbleSliceRight =
+        styleObj["bubbleSliceRight"].toInt(defaultBubbleSliceRight_);
+    item.bubbleSliceTop =
+        styleObj["bubbleSliceTop"].toInt(defaultBubbleSliceTop_);
+    item.bubbleSliceBottom =
+        styleObj["bubbleSliceBottom"].toInt(defaultBubbleSliceBottom_);
 
     QJsonObject posObj = itemObj["position"].toObject();
     item.rectX = posObj["x"].toDouble(defaultSubtitleRect_.x());

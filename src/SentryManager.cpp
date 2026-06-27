@@ -6,10 +6,10 @@
 #include <QStandardPaths>
 #include <sentry.h>
 
+#include <QDateTime>
 #include <QFile>
 #include <QMutex>
 #include <QTextStream>
-#include <QDateTime>
 #include <iostream>
 
 #ifndef SENTRY_DSN_DEFAULT
@@ -76,7 +76,8 @@ void SentryManager::initialize() {
         "/logs/app.log";
     if (QFile::exists(fallbackLogPath)) {
       sentry_options_add_attachment(
-          options, QDir::toNativeSeparators(fallbackLogPath).toUtf8().constData());
+          options,
+          QDir::toNativeSeparators(fallbackLogPath).toUtf8().constData());
       qDebug() << "[Sentry] Attached fallback log file:" << fallbackLogPath;
     }
   }

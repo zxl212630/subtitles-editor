@@ -54,6 +54,11 @@
         <file>icons/zoom-out.svg</file>
         <file>icons/zoom-in.svg</file>
         <file>themes/theme.qss</file>
+        <file>bubbles/bubble_glass.png</file>
+        <file>bubbles/bubble_dark.png</file>
+        <file>bubbles/bubble_neon.png</file>
+        <file>bubbles/bubble_cute.png</file>
+        <file>bubbles/bubble_outline.png</file>
         <file>icon.svg</file>
         <file>icon.png</file>
     </qresource>

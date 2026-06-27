@@ -211,7 +211,8 @@ private:
 
     double frameDuration = 1000.0 / videoFps_;
     qint64 totalFrames = static_cast<qint64>(std::round(ms / frameDuration));
-    qint64 snappedMs = static_cast<qint64>(std::round(totalFrames * frameDuration));
+    qint64 snappedMs =
+        static_cast<qint64>(std::round(totalFrames * frameDuration));
     return qBound(0LL, snappedMs, totalDurationMs_);
   }
 
@@ -230,7 +231,8 @@ static QString formatTimeWithFrames(qint64 ms, double fps) {
   double frameDuration = 1000.0 / fps;
   qint64 totalFrames = static_cast<qint64>(std::round(ms / frameDuration));
   int roundedFps = static_cast<int>(std::round(fps));
-  if (roundedFps <= 0) roundedFps = 25;
+  if (roundedFps <= 0)
+    roundedFps = 25;
 
   qint64 frames = totalFrames % roundedFps;
   qint64 totalSecs = totalFrames / roundedFps;
@@ -653,6 +655,12 @@ void VideoPreviewPanel::setupUi() {
 
   tbLayout->addWidget(btnGroup);
 
+  applyToAllBtn_ = new QPushButton(tr("Apply All"), toolbar);
+  applyToAllBtn_->setObjectName("ApplyAllBtn");
+  applyToAllBtn_->setFixedSize(76, 28);
+  applyToAllBtn_->setEnabled(false);
+  tbLayout->addWidget(applyToAllBtn_);
+
   // 连接样式按钮的槽函数
   connect(bBtn_, &QPushButton::clicked, this, [this](bool checked) {
     updateCurrentItemStyle(
@@ -672,6 +680,14 @@ void VideoPreviewPanel::setupUi() {
   connect(alignGroup, &QButtonGroup::idClicked, this, [this](int id) {
     updateCurrentItemStyle([id](SubtitleItem &item) { item.alignment = id; });
     updateSubtitleOverlay();
+  });
+  connect(applyToAllBtn_, &QPushButton::clicked, this, [this]() {
+    if (subtitleTrack_) {
+      const SubtitleItem *sel = subtitleTrack_->selectedItem();
+      if (sel) {
+        subtitleTrack_->applyStyleToAll(sel->id);
+      }
+    }
   });
 
   layout->addWidget(toolbar);
@@ -908,6 +924,10 @@ void VideoPreviewPanel::retranslateUi() {
     qualityCombo_->setCurrentIndex(currentIdx);
     qualityCombo_->blockSignals(false);
   }
+
+  if (applyToAllBtn_) {
+    applyToAllBtn_->setText(tr("Apply All"));
+  }
 }
 
 void VideoPreviewPanel::resizeEvent(QResizeEvent *event) {
@@ -1002,6 +1022,10 @@ void VideoPreviewPanel::setSubtitleTrack(SubtitleTrack *track) {
                 else
                   acBtn_->setChecked(true);
 
+                if (applyToAllBtn_) {
+                  applyToAllBtn_->setEnabled(true);
+                }
+
               } else {
                 // 使用全局默认模板样式
                 int fontIdx =
@@ -1023,6 +1047,10 @@ void VideoPreviewPanel::setSubtitleTrack(SubtitleTrack *track) {
                   ajBtn_->setChecked(true);
                 else
                   acBtn_->setChecked(true);
+
+                if (applyToAllBtn_) {
+                  applyToAllBtn_->setEnabled(false);
+                }
               }
 
               fontCombo_->blockSignals(false);
@@ -1042,6 +1070,13 @@ void VideoPreviewPanel::setSubtitleTrack(SubtitleTrack *track) {
     if (subtitleTrack_->selectedItem()) {
       emit subtitleTrack_->itemSelected(subtitleTrack_->selectedItem()->id);
     } else {
+      if (applyToAllBtn_) {
+        applyToAllBtn_->setEnabled(false);
+      }
+    }
+  } else {
+    if (applyToAllBtn_) {
+      applyToAllBtn_->setEnabled(false);
     }
   }
 }
@@ -1128,9 +1163,10 @@ void VideoPreviewPanel::setVideoFps(double fps) {
 
 void VideoPreviewPanel::onTimeChanged(qint64 ms) {
   if (currentTimeLabel_) {
-    currentTimeLabel_->setText(QString("%1 / %2")
-                                   .arg(formatTimeWithFrames(ms, videoFps_))
-                                   .arg(formatTimeWithFrames(totalDurationMs_, videoFps_)));
+    currentTimeLabel_->setText(
+        QString("%1 / %2")
+            .arg(formatTimeWithFrames(ms, videoFps_))
+            .arg(formatTimeWithFrames(totalDurationMs_, videoFps_)));
   }
   if (progressBar_) {
     double ratio =

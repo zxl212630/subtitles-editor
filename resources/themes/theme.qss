@@ -358,6 +358,22 @@ QPushButton#PreviewIconBtn:checked {
 QPushButton#PreviewIconBtn:checked:hover {
     background-color: @primary_hover;
 }
+
+QPushButton#ApplyAllBtn {
+    background-color: @primary_color;
+    border: none;
+    border-radius: 4px;
+    color: white;
+    font-size: 11px;
+    font-weight: bold;
+}
+QPushButton#ApplyAllBtn:hover {
+    background-color: @primary_hover;
+}
+QPushButton#ApplyAllBtn:disabled {
+    background-color: @border_dark;
+    color: @text_muted;
+}
 QComboBox#PreviewFontCombo, QComboBox#PreviewSizeCombo {
     padding: 0px 16px 0px 6px;
     font-family: Inter, sans-serif;

@@ -47,8 +47,10 @@ struct SubtitleItem {
   QString bgColor = "#000000";
   double bgOpacity = 1.0;
   int bgRoundness = 10;
-  int bgPaddingX = 0;
-  int bgPaddingY = 0;
+  int bgPaddingLeft = 0;
+  int bgPaddingRight = 0;
+  int bgPaddingTop = 0;
+  int bgPaddingBottom = 0;
   QString bgImagePath;
   bool bgImage9Patch = true;
   int bgOffsetX = 0;
@@ -61,6 +63,10 @@ struct SubtitleItem {
   int bubblePaddingRight = 10;
   int bubblePaddingTop = 10;
   int bubblePaddingBottom = 10;
+  int bubbleSliceLeft = 10;
+  int bubbleSliceRight = 10;
+  int bubbleSliceTop = 10;
+  int bubbleSliceBottom = 10;
 
   // 归一化排版坐标，默认底部区域 (x: 10%, y: 75%, width: 80%, height: 20%)
   double rectX = 0.1;

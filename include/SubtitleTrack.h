@@ -187,8 +187,10 @@ private:
   QString defaultBgColor_ = "#000000";
   double defaultBgOpacity_ = 1.0;
   int defaultBgRoundness_ = 10;
-  int defaultBgPaddingX_ = 0;
-  int defaultBgPaddingY_ = 0;
+  int defaultBgPaddingLeft_ = 0;
+  int defaultBgPaddingRight_ = 0;
+  int defaultBgPaddingTop_ = 0;
+  int defaultBgPaddingBottom_ = 0;
   QString defaultBgImagePath_ = "";
   bool defaultBgImage9Patch_ = true;
   int defaultBgOffsetX_ = 0;
@@ -199,6 +201,10 @@ private:
   int defaultBubblePaddingRight_ = 10;
   int defaultBubblePaddingTop_ = 10;
   int defaultBubblePaddingBottom_ = 10;
+  int defaultBubbleSliceLeft_ = 10;
+  int defaultBubbleSliceRight_ = 10;
+  int defaultBubbleSliceTop_ = 10;
+  int defaultBubbleSliceBottom_ = 10;
 
   int refHeight_ = 1080;
 

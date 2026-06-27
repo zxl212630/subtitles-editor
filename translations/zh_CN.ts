@@ -53,7 +53,7 @@
         <translation type="vanished">取消</translation>
     </message>
     <message>
-        <location filename="../src/AppWindow.cpp" line="137"/>
+        <location filename="../src/AppWindow.cpp" line="139"/>
         <source>配置缺失</source>
         <translation>配置缺失</translation>
     </message>
@@ -72,61 +72,61 @@
 确保包含 ffmpeg、腾讯云 ASR 和阿里云 OSS 的必要配置项。</translation>
     </message>
     <message>
-        <location filename="../src/AppWindow.cpp" line="185"/>
-        <location filename="../src/AppWindow.cpp" line="383"/>
-        <location filename="../src/AppWindow.cpp" line="1156"/>
-        <location filename="../src/AppWindow.cpp" line="1157"/>
-        <location filename="../src/AppWindow.cpp" line="1363"/>
-        <location filename="../src/AppWindow.cpp" line="1588"/>
+        <location filename="../src/AppWindow.cpp" line="187"/>
+        <location filename="../src/AppWindow.cpp" line="385"/>
+        <location filename="../src/AppWindow.cpp" line="1158"/>
+        <location filename="../src/AppWindow.cpp" line="1159"/>
+        <location filename="../src/AppWindow.cpp" line="1376"/>
+        <location filename="../src/AppWindow.cpp" line="1601"/>
         <source>字幕编辑</source>
         <translation>字幕编辑</translation>
     </message>
     <message>
-        <location filename="../src/AppWindow.cpp" line="332"/>
+        <location filename="../src/AppWindow.cpp" line="334"/>
         <source>向下还原</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/AppWindow.cpp" line="335"/>
-        <location filename="../src/AppWindow.cpp" line="473"/>
+        <location filename="../src/AppWindow.cpp" line="337"/>
+        <location filename="../src/AppWindow.cpp" line="475"/>
         <source>最大化</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/AppWindow.cpp" line="423"/>
-        <location filename="../src/AppWindow.cpp" line="1161"/>
-        <location filename="../src/AppWindow.cpp" line="1173"/>
-        <location filename="../src/AppWindow.cpp" line="1319"/>
+        <location filename="../src/AppWindow.cpp" line="425"/>
+        <location filename="../src/AppWindow.cpp" line="1163"/>
+        <location filename="../src/AppWindow.cpp" line="1175"/>
+        <location filename="../src/AppWindow.cpp" line="1323"/>
         <source>设置</source>
         <translation>设置</translation>
     </message>
     <message>
-        <location filename="../src/AppWindow.cpp" line="472"/>
+        <location filename="../src/AppWindow.cpp" line="474"/>
         <source>最小化</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/AppWindow.cpp" line="474"/>
+        <location filename="../src/AppWindow.cpp" line="476"/>
         <source>关闭</source>
         <translation type="unfinished">关闭</translation>
     </message>
     <message>
-        <location filename="../src/AppWindow.cpp" line="536"/>
+        <location filename="../src/AppWindow.cpp" line="538"/>
         <source>导入视频</source>
         <translation>导入视频</translation>
     </message>
     <message>
-        <location filename="../src/AppWindow.cpp" line="537"/>
+        <location filename="../src/AppWindow.cpp" line="539"/>
         <source>媒体文件 (*.mp4 *.mkv *.avi *.mov *.srt);;视频文件 (*.mp4 *.mkv *.avi *.mov);;字幕文件 (*.srt);;所有文件 (*)</source>
         <translation>媒体文件 (*.mp4 *.mkv *.avi *.mov *.srt);;视频文件 (*.mp4 *.mkv *.avi *.mov);;字幕文件 (*.srt);;所有文件 (*)</translation>
     </message>
     <message>
-        <location filename="../src/AppWindow.cpp" line="722"/>
+        <location filename="../src/AppWindow.cpp" line="724"/>
         <source>撤销 %1</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/AppWindow.cpp" line="727"/>
+        <location filename="../src/AppWindow.cpp" line="729"/>
         <source>重做 %1</source>
         <translation type="unfinished"></translation>
     </message>
@@ -135,146 +135,146 @@
         <translation type="vanished">工程已自动保存</translation>
     </message>
     <message>
-        <location filename="../src/AppWindow.cpp" line="777"/>
-        <location filename="../src/AppWindow.cpp" line="849"/>
+        <location filename="../src/AppWindow.cpp" line="779"/>
+        <location filename="../src/AppWindow.cpp" line="851"/>
         <source>确认覆盖</source>
         <translation>确认覆盖</translation>
     </message>
     <message>
-        <location filename="../src/AppWindow.cpp" line="778"/>
+        <location filename="../src/AppWindow.cpp" line="780"/>
         <source>字幕轨道已有内容，继续导入将清空现有字幕，是否继续？</source>
         <translation>字幕轨道已有内容，继续导入将清空现有字幕，是否继续？</translation>
     </message>
     <message>
-        <location filename="../src/AppWindow.cpp" line="818"/>
+        <location filename="../src/AppWindow.cpp" line="820"/>
         <source>字幕文件格式错误</source>
         <translation>字幕文件格式错误</translation>
     </message>
     <message>
-        <location filename="../src/AppWindow.cpp" line="819"/>
+        <location filename="../src/AppWindow.cpp" line="821"/>
         <source>无法解析字幕文件，请检查文件格式。</source>
         <translation>无法解析字幕文件，请检查文件格式。</translation>
     </message>
     <message>
-        <location filename="../src/AppWindow.cpp" line="825"/>
+        <location filename="../src/AppWindow.cpp" line="827"/>
         <source>导入字幕文件</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/AppWindow.cpp" line="850"/>
+        <location filename="../src/AppWindow.cpp" line="852"/>
         <source>字幕轨道已有内容，语音识别将清空现有字幕，是否继续？</source>
         <translation>字幕轨道已有内容，语音识别将清空现有字幕，是否继续？</translation>
     </message>
     <message>
-        <location filename="../src/AppWindow.cpp" line="890"/>
+        <location filename="../src/AppWindow.cpp" line="892"/>
         <source>名称</source>
         <translation>名称</translation>
     </message>
     <message>
-        <location filename="../src/AppWindow.cpp" line="891"/>
+        <location filename="../src/AppWindow.cpp" line="893"/>
         <source>位置</source>
         <translation>位置</translation>
     </message>
     <message>
-        <location filename="../src/AppWindow.cpp" line="893"/>
+        <location filename="../src/AppWindow.cpp" line="895"/>
         <source>文件大小</source>
         <translation>文件大小</translation>
     </message>
     <message>
-        <location filename="../src/AppWindow.cpp" line="907"/>
+        <location filename="../src/AppWindow.cpp" line="909"/>
         <source>时长</source>
         <translation>时长</translation>
     </message>
     <message>
-        <location filename="../src/AppWindow.cpp" line="915"/>
+        <location filename="../src/AppWindow.cpp" line="917"/>
         <source>创建日期</source>
         <translation>创建日期</translation>
     </message>
     <message>
-        <location filename="../src/AppWindow.cpp" line="918"/>
+        <location filename="../src/AppWindow.cpp" line="920"/>
         <source>导入时间</source>
         <translation>导入时间</translation>
     </message>
     <message>
-        <location filename="../src/AppWindow.cpp" line="925"/>
+        <location filename="../src/AppWindow.cpp" line="927"/>
         <source>创建媒体时间</source>
         <translation>创建媒体时间</translation>
     </message>
     <message>
-        <location filename="../src/AppWindow.cpp" line="929"/>
+        <location filename="../src/AppWindow.cpp" line="931"/>
         <source>基本信息</source>
         <translation>基本信息</translation>
     </message>
     <message>
-        <location filename="../src/AppWindow.cpp" line="935"/>
-        <location filename="../src/AppWindow.cpp" line="957"/>
+        <location filename="../src/AppWindow.cpp" line="937"/>
+        <location filename="../src/AppWindow.cpp" line="959"/>
         <source>编译码器</source>
         <translation>编译码器</translation>
     </message>
     <message>
-        <location filename="../src/AppWindow.cpp" line="939"/>
+        <location filename="../src/AppWindow.cpp" line="941"/>
         <source>分辨率</source>
         <translation>分辨率</translation>
     </message>
     <message>
-        <location filename="../src/AppWindow.cpp" line="943"/>
+        <location filename="../src/AppWindow.cpp" line="945"/>
         <source>帧率</source>
         <translation>帧率</translation>
     </message>
     <message>
-        <location filename="../src/AppWindow.cpp" line="947"/>
-        <location filename="../src/AppWindow.cpp" line="975"/>
+        <location filename="../src/AppWindow.cpp" line="949"/>
+        <location filename="../src/AppWindow.cpp" line="977"/>
         <source>码率</source>
         <translation>码率</translation>
     </message>
     <message>
-        <location filename="../src/AppWindow.cpp" line="949"/>
+        <location filename="../src/AppWindow.cpp" line="951"/>
         <source>传输特性</source>
         <translation>传输特性</translation>
     </message>
     <message>
-        <location filename="../src/AppWindow.cpp" line="951"/>
+        <location filename="../src/AppWindow.cpp" line="953"/>
         <source>视频信息</source>
         <translation>视频信息</translation>
     </message>
     <message>
-        <location filename="../src/AppWindow.cpp" line="961"/>
+        <location filename="../src/AppWindow.cpp" line="963"/>
         <source>声道</source>
         <translation>声道</translation>
     </message>
     <message>
-        <location filename="../src/AppWindow.cpp" line="967"/>
-        <location filename="../src/AppWindow.cpp" line="970"/>
+        <location filename="../src/AppWindow.cpp" line="969"/>
+        <location filename="../src/AppWindow.cpp" line="972"/>
         <source>采样率</source>
         <translation>采样率</translation>
     </message>
     <message>
-        <location filename="../src/AppWindow.cpp" line="977"/>
+        <location filename="../src/AppWindow.cpp" line="979"/>
         <source>音频信息</source>
         <translation>音频信息</translation>
     </message>
     <message>
-        <location filename="../src/AppWindow.cpp" line="1136"/>
+        <location filename="../src/AppWindow.cpp" line="1138"/>
         <source>视频导出失败：%1</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/AppWindow.cpp" line="1417"/>
+        <location filename="../src/AppWindow.cpp" line="1430"/>
         <source>确认打开</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/AppWindow.cpp" line="1417"/>
+        <location filename="../src/AppWindow.cpp" line="1430"/>
         <source>当前工程有未保存的更改，是否继续打开？</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/AppWindow.cpp" line="1490"/>
+        <location filename="../src/AppWindow.cpp" line="1503"/>
         <source>删除选中字幕</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/AppWindow.cpp" line="1574"/>
+        <location filename="../src/AppWindow.cpp" line="1587"/>
         <source>字幕编辑器 v1.0.0
 
 一个简单易用的视频字幕编辑工具。
@@ -290,228 +290,228 @@
         <translation type="vanished">SRT 字幕 (*.srt);;纯文本 (*.txt);;Premiere XML [实验] (*.xml);;Final Cut Pro XML [实验] (*.fcpxml)</translation>
     </message>
     <message>
-        <location filename="../src/AppWindow.cpp" line="1169"/>
-        <location filename="../src/AppWindow.cpp" line="1224"/>
+        <location filename="../src/AppWindow.cpp" line="1171"/>
+        <location filename="../src/AppWindow.cpp" line="1228"/>
         <source>文件</source>
         <translation>文件</translation>
     </message>
     <message>
-        <location filename="../src/AppWindow.cpp" line="1185"/>
-        <location filename="../src/AppWindow.cpp" line="1226"/>
+        <location filename="../src/AppWindow.cpp" line="1187"/>
+        <location filename="../src/AppWindow.cpp" line="1230"/>
         <source>新建工程</source>
         <translation>新建工程</translation>
     </message>
     <message>
-        <location filename="../src/AppWindow.cpp" line="1187"/>
-        <location filename="../src/AppWindow.cpp" line="1230"/>
+        <location filename="../src/AppWindow.cpp" line="1189"/>
+        <location filename="../src/AppWindow.cpp" line="1234"/>
         <source>打开工程...</source>
         <translation>打开工程...</translation>
     </message>
     <message>
-        <location filename="../src/AppWindow.cpp" line="1189"/>
-        <location filename="../src/AppWindow.cpp" line="1234"/>
+        <location filename="../src/AppWindow.cpp" line="1191"/>
+        <location filename="../src/AppWindow.cpp" line="1238"/>
         <source>保存工程</source>
         <translation>保存工程</translation>
     </message>
     <message>
-        <location filename="../src/AppWindow.cpp" line="1191"/>
-        <location filename="../src/AppWindow.cpp" line="1238"/>
+        <location filename="../src/AppWindow.cpp" line="1193"/>
+        <location filename="../src/AppWindow.cpp" line="1242"/>
         <source>另存为...</source>
         <translation>另存为...</translation>
     </message>
     <message>
-        <location filename="../src/AppWindow.cpp" line="1177"/>
-        <location filename="../src/AppWindow.cpp" line="1246"/>
+        <location filename="../src/AppWindow.cpp" line="1179"/>
+        <location filename="../src/AppWindow.cpp" line="1250"/>
         <source>最近打开</source>
         <translation>最近打开</translation>
     </message>
     <message>
-        <location filename="../src/AppWindow.cpp" line="1251"/>
+        <location filename="../src/AppWindow.cpp" line="1255"/>
         <source>无最近文件</source>
         <translation>无最近文件</translation>
     </message>
     <message>
-        <location filename="../src/AppWindow.cpp" line="1262"/>
+        <location filename="../src/AppWindow.cpp" line="1266"/>
         <source>清除最近</source>
         <translation>清除最近</translation>
     </message>
     <message>
-        <location filename="../src/AppWindow.cpp" line="1193"/>
-        <location filename="../src/AppWindow.cpp" line="1278"/>
+        <location filename="../src/AppWindow.cpp" line="1195"/>
+        <location filename="../src/AppWindow.cpp" line="1282"/>
         <source>退出</source>
         <translation>退出</translation>
     </message>
     <message>
-        <location filename="../src/AppWindow.cpp" line="1171"/>
-        <location filename="../src/AppWindow.cpp" line="1282"/>
+        <location filename="../src/AppWindow.cpp" line="1173"/>
+        <location filename="../src/AppWindow.cpp" line="1286"/>
         <source>编辑</source>
         <translation>编辑</translation>
     </message>
     <message>
-        <location filename="../src/AppWindow.cpp" line="721"/>
-        <location filename="../src/AppWindow.cpp" line="1197"/>
-        <location filename="../src/AppWindow.cpp" line="1284"/>
+        <location filename="../src/AppWindow.cpp" line="723"/>
+        <location filename="../src/AppWindow.cpp" line="1199"/>
+        <location filename="../src/AppWindow.cpp" line="1288"/>
         <source>撤销</source>
         <translation>撤销</translation>
     </message>
     <message>
-        <location filename="../src/AppWindow.cpp" line="726"/>
-        <location filename="../src/AppWindow.cpp" line="1199"/>
-        <location filename="../src/AppWindow.cpp" line="1288"/>
+        <location filename="../src/AppWindow.cpp" line="728"/>
+        <location filename="../src/AppWindow.cpp" line="1201"/>
+        <location filename="../src/AppWindow.cpp" line="1292"/>
         <source>重做</source>
         <translation>重做</translation>
     </message>
     <message>
-        <location filename="../src/AppWindow.cpp" line="1201"/>
-        <location filename="../src/AppWindow.cpp" line="1294"/>
+        <location filename="../src/AppWindow.cpp" line="1203"/>
+        <location filename="../src/AppWindow.cpp" line="1298"/>
         <source>剪切</source>
         <translation>剪切</translation>
     </message>
     <message>
-        <location filename="../src/AppWindow.cpp" line="1203"/>
-        <location filename="../src/AppWindow.cpp" line="1298"/>
+        <location filename="../src/AppWindow.cpp" line="1205"/>
+        <location filename="../src/AppWindow.cpp" line="1302"/>
         <source>复制</source>
         <translation>复制</translation>
     </message>
     <message>
-        <location filename="../src/AppWindow.cpp" line="1205"/>
-        <location filename="../src/AppWindow.cpp" line="1302"/>
+        <location filename="../src/AppWindow.cpp" line="1207"/>
+        <location filename="../src/AppWindow.cpp" line="1306"/>
         <source>粘贴</source>
         <translation>粘贴</translation>
     </message>
     <message>
-        <location filename="../src/AppWindow.cpp" line="1207"/>
-        <location filename="../src/AppWindow.cpp" line="1308"/>
+        <location filename="../src/AppWindow.cpp" line="1209"/>
+        <location filename="../src/AppWindow.cpp" line="1312"/>
         <source>全选</source>
         <translation>全选</translation>
     </message>
     <message>
-        <location filename="../src/AppWindow.cpp" line="1209"/>
-        <location filename="../src/AppWindow.cpp" line="1313"/>
+        <location filename="../src/AppWindow.cpp" line="1211"/>
+        <location filename="../src/AppWindow.cpp" line="1317"/>
         <source>删除选中</source>
         <translation>删除选中</translation>
     </message>
     <message>
-        <location filename="../src/AppWindow.cpp" line="1213"/>
-        <location filename="../src/AppWindow.cpp" line="1321"/>
+        <location filename="../src/AppWindow.cpp" line="1215"/>
+        <location filename="../src/AppWindow.cpp" line="1325"/>
         <source>配置...</source>
         <translation>配置...</translation>
     </message>
     <message>
-        <location filename="../src/AppWindow.cpp" line="1181"/>
-        <location filename="../src/AppWindow.cpp" line="1330"/>
+        <location filename="../src/AppWindow.cpp" line="1183"/>
+        <location filename="../src/AppWindow.cpp" line="1343"/>
         <source>语言</source>
         <translation>语言</translation>
     </message>
     <message>
-        <location filename="../src/AppWindow.cpp" line="1331"/>
+        <location filename="../src/AppWindow.cpp" line="1344"/>
         <source>中文</source>
         <translation>中文</translation>
     </message>
     <message>
-        <location filename="../src/AppWindow.cpp" line="1175"/>
-        <location filename="../src/AppWindow.cpp" line="1339"/>
+        <location filename="../src/AppWindow.cpp" line="1177"/>
+        <location filename="../src/AppWindow.cpp" line="1352"/>
         <source>帮助</source>
         <translation>帮助</translation>
     </message>
     <message>
-        <location filename="../src/AppWindow.cpp" line="138"/>
+        <location filename="../src/AppWindow.cpp" line="140"/>
         <source>未检测到有效配置，部分功能（如语音识别）将无法使用。
 
 请打开“设置”窗口配置 ASR 和云存储的必要参数。</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/AppWindow.cpp" line="1090"/>
+        <location filename="../src/AppWindow.cpp" line="1092"/>
         <source>字幕文件导出失败，请检查保存路径和权限。</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/AppWindow.cpp" line="1098"/>
+        <location filename="../src/AppWindow.cpp" line="1100"/>
         <source>字幕文件已成功导出到：
 %1</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/AppWindow.cpp" line="1122"/>
+        <location filename="../src/AppWindow.cpp" line="1124"/>
         <source>视频已成功导出到：
 %1</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/AppWindow.cpp" line="1124"/>
+        <location filename="../src/AppWindow.cpp" line="1126"/>
         <source>
 
 关联字幕文件已一并输出。</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/AppWindow.cpp" line="1179"/>
-        <location filename="../src/AppWindow.cpp" line="1271"/>
+        <location filename="../src/AppWindow.cpp" line="1181"/>
+        <location filename="../src/AppWindow.cpp" line="1275"/>
         <source>导出...</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/AppWindow.cpp" line="1217"/>
-        <location filename="../src/AppWindow.cpp" line="1341"/>
-        <location filename="../src/AppWindow.cpp" line="1573"/>
+        <location filename="../src/AppWindow.cpp" line="1221"/>
+        <location filename="../src/AppWindow.cpp" line="1354"/>
+        <location filename="../src/AppWindow.cpp" line="1586"/>
         <source>关于</source>
         <translation>关于</translation>
     </message>
     <message>
-        <location filename="../src/AppWindow.cpp" line="1349"/>
+        <location filename="../src/AppWindow.cpp" line="1362"/>
         <source>确认新建</source>
         <translation>确认新建</translation>
     </message>
     <message>
-        <location filename="../src/AppWindow.cpp" line="1349"/>
+        <location filename="../src/AppWindow.cpp" line="1362"/>
         <source>当前工程有未保存的更改，是否继续新建？</source>
         <translation>当前工程有未保存的更改，是否继续新建？</translation>
     </message>
     <message>
-        <location filename="../src/AppWindow.cpp" line="1368"/>
+        <location filename="../src/AppWindow.cpp" line="1381"/>
         <source>打开工程</source>
         <translation>打开工程</translation>
     </message>
     <message>
-        <location filename="../src/AppWindow.cpp" line="1369"/>
+        <location filename="../src/AppWindow.cpp" line="1382"/>
         <source>字幕编辑工程 (*.sedit);;所有文件 (*)</source>
         <translation>字幕编辑工程 (*.sedit);;所有文件 (*)</translation>
     </message>
     <message>
-        <location filename="../src/AppWindow.cpp" line="1400"/>
-        <location filename="../src/AppWindow.cpp" line="1424"/>
-        <location filename="../src/AppWindow.cpp" line="1590"/>
+        <location filename="../src/AppWindow.cpp" line="1413"/>
+        <location filename="../src/AppWindow.cpp" line="1437"/>
+        <location filename="../src/AppWindow.cpp" line="1603"/>
         <source>字幕编辑 - %1</source>
         <translation>字幕编辑 - %1</translation>
     </message>
     <message>
-        <location filename="../src/AppWindow.cpp" line="1458"/>
+        <location filename="../src/AppWindow.cpp" line="1471"/>
         <source>打开失败</source>
         <translation>打开失败</translation>
     </message>
     <message>
-        <location filename="../src/AppWindow.cpp" line="1459"/>
+        <location filename="../src/AppWindow.cpp" line="1472"/>
         <source>无法打开工程文件，请检查文件格式。</source>
         <translation>无法打开工程文件，请检查文件格式。</translation>
     </message>
     <message>
-        <location filename="../src/AppWindow.cpp" line="1388"/>
+        <location filename="../src/AppWindow.cpp" line="1401"/>
         <source>另存为</source>
         <translation>另存为</translation>
     </message>
     <message>
-        <location filename="../src/AppWindow.cpp" line="1389"/>
+        <location filename="../src/AppWindow.cpp" line="1402"/>
         <source>字幕编辑工程 (*.sedit)</source>
         <translation>字幕编辑工程 (*.sedit)</translation>
     </message>
     <message>
-        <location filename="../src/AppWindow.cpp" line="1402"/>
+        <location filename="../src/AppWindow.cpp" line="1415"/>
         <source>保存失败</source>
         <translation>保存失败</translation>
     </message>
     <message>
-        <location filename="../src/AppWindow.cpp" line="1403"/>
+        <location filename="../src/AppWindow.cpp" line="1416"/>
         <source>无法保存工程文件，请检查磁盘空间。</source>
         <translation>无法保存工程文件，请检查磁盘空间。</translation>
     </message>
@@ -524,8 +524,8 @@
         <translation type="vanished">SRT 字幕 (*.srt)</translation>
     </message>
     <message>
-        <location filename="../src/AppWindow.cpp" line="1097"/>
-        <location filename="../src/AppWindow.cpp" line="1126"/>
+        <location filename="../src/AppWindow.cpp" line="1099"/>
+        <location filename="../src/AppWindow.cpp" line="1128"/>
         <source>导出成功</source>
         <translation>导出成功</translation>
     </message>
@@ -554,8 +554,8 @@
 一个简单易用的视频字幕编辑工具。</translation>
     </message>
     <message>
-        <location filename="../src/AppWindow.cpp" line="433"/>
-        <location filename="../src/AppWindow.cpp" line="1159"/>
+        <location filename="../src/AppWindow.cpp" line="435"/>
+        <location filename="../src/AppWindow.cpp" line="1161"/>
         <source>导出字幕</source>
         <translation>导出字幕</translation>
     </message>
@@ -568,8 +568,8 @@
         <translation type="vanished">SRT 字幕 (*.srt);;纯文本 (*.txt)</translation>
     </message>
     <message>
-        <location filename="../src/AppWindow.cpp" line="1089"/>
-        <location filename="../src/AppWindow.cpp" line="1135"/>
+        <location filename="../src/AppWindow.cpp" line="1091"/>
+        <location filename="../src/AppWindow.cpp" line="1137"/>
         <source>导出失败</source>
         <translation>导出失败</translation>
     </message>
@@ -578,8 +578,8 @@
         <translation type="vanished">导出字幕失败，请检查文件路径和权限。</translation>
     </message>
     <message>
-        <location filename="../src/AppWindow.cpp" line="1215"/>
-        <location filename="../src/AppWindow.cpp" line="1331"/>
+        <location filename="../src/AppWindow.cpp" line="1217"/>
+        <location filename="../src/AppWindow.cpp" line="1334"/>
         <source>打开数据目录</source>
         <translation>打开数据目录</translation>
     </message>
@@ -953,22 +953,22 @@
 <context>
     <name>AudioTranscoder</name>
     <message>
-        <location filename="../src/AudioTranscoder.cpp" line="29"/>
+        <location filename="../src/AudioTranscoder.cpp" line="35"/>
         <source>用户已取消转码</source>
         <translation>用户已取消转码</translation>
     </message>
     <message>
-        <location filename="../src/AudioTranscoder.cpp" line="62"/>
+        <location filename="../src/AudioTranscoder.cpp" line="78"/>
         <source>转码任务正在进行中</source>
         <translation>转码任务正在进行中</translation>
     </message>
     <message>
-        <location filename="../src/AudioTranscoder.cpp" line="125"/>
+        <location filename="../src/AudioTranscoder.cpp" line="152"/>
         <source>转码失败: </source>
         <translation>转码失败: </translation>
     </message>
     <message>
-        <location filename="../src/AudioTranscoder.cpp" line="135"/>
+        <location filename="../src/AudioTranscoder.cpp" line="162"/>
         <source>进程错误: </source>
         <translation>进程错误: </translation>
     </message>
@@ -1974,7 +1974,7 @@
         <translation>用户已取消上传</translation>
     </message>
     <message>
-        <location filename="../src/OssUploader.cpp" line="211"/>
+        <location filename="../src/OssUploader.cpp" line="210"/>
         <source>Upload failed: %1</source>
         <translation>上传失败：%1</translation>
     </message>
@@ -2187,21 +2187,21 @@
     </message>
     <message>
         <location filename="../src/SubtitleListPanel.cpp" line="164"/>
-        <location filename="../src/SubtitleListPanel.cpp" line="426"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="461"/>
         <source>Search...</source>
         <translation>搜索...</translation>
     </message>
     <message>
         <location filename="../src/SubtitleListPanel.cpp" line="166"/>
-        <location filename="../src/SubtitleListPanel.cpp" line="435"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="469"/>
         <source>Clear</source>
         <translation>清空</translation>
     </message>
     <message>
         <location filename="../src/SubtitleListPanel.cpp" line="168"/>
-        <location filename="../src/SubtitleListPanel.cpp" line="180"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="182"/>
         <location filename="../src/SubtitleListPanel.cpp" line="300"/>
-        <location filename="../src/SubtitleListPanel.cpp" line="485"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="519"/>
         <source>Subtitle</source>
         <translation>字幕</translation>
     </message>
@@ -2212,77 +2212,104 @@
         <translation>预设</translation>
     </message>
     <message>
-        <location filename="../src/SubtitleListPanel.cpp" line="172"/>
-        <location filename="../src/SubtitleListPanel.cpp" line="312"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="174"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="318"/>
         <source>Custom</source>
         <translation>自定义</translation>
     </message>
     <message>
-        <location filename="../src/SubtitleListPanel.cpp" line="174"/>
-        <location filename="../src/SubtitleListPanel.cpp" line="318"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="176"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="324"/>
         <source>Animation</source>
         <translation>动画</translation>
     </message>
     <message>
-        <location filename="../src/SubtitleListPanel.cpp" line="176"/>
-        <location filename="../src/SubtitleListPanel.cpp" line="475"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="178"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="509"/>
         <source>Timecode</source>
         <translation>时间码</translation>
     </message>
     <message>
-        <location filename="../src/SubtitleListPanel.cpp" line="178"/>
-        <location filename="../src/SubtitleListPanel.cpp" line="480"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="180"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="514"/>
         <source>Speaker</source>
         <translation>说话人</translation>
     </message>
     <message>
-        <location filename="../src/SubtitleListPanel.cpp" line="182"/>
-        <location filename="../src/SubtitleListPanel.cpp" line="492"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="184"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="526"/>
         <source>Action</source>
         <translation>操作</translation>
     </message>
     <message>
-        <location filename="../src/SubtitleListPanel.cpp" line="861"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="905"/>
         <source>Unassigned</source>
         <translation>未分配</translation>
     </message>
     <message>
-        <location filename="../src/SubtitleListPanel.cpp" line="875"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="919"/>
         <source>+ New Speaker...</source>
         <translation>+ 新建说话人...</translation>
     </message>
     <message>
-        <location filename="../src/SubtitleListPanel.cpp" line="876"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="920"/>
         <source>⚙️ Manage Speakers...</source>
         <translation>⚙️ 管理说话人...</translation>
     </message>
     <message>
-        <location filename="../src/SubtitleListPanel.cpp" line="216"/>
-        <location filename="../src/SubtitleListPanel.cpp" line="1081"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="2487"/>
+        <source>Glassmorphism</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/SubtitleListPanel.cpp" line="2489"/>
+        <source>Dark Box</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/SubtitleListPanel.cpp" line="2490"/>
+        <source>Cyberpunk Neon</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/SubtitleListPanel.cpp" line="2492"/>
+        <source>Cute Yellow</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/SubtitleListPanel.cpp" line="2493"/>
+        <source>Minimal Outline</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/SubtitleListPanel.cpp" line="215"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="1125"/>
         <source>Fill</source>
         <translation>填充</translation>
     </message>
     <message>
-        <location filename="../src/SubtitleListPanel.cpp" line="218"/>
-        <location filename="../src/SubtitleListPanel.cpp" line="1102"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="217"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="1146"/>
         <source>Outline</source>
         <translation>描边</translation>
     </message>
     <message>
-        <location filename="../src/SubtitleListPanel.cpp" line="220"/>
-        <location filename="../src/SubtitleListPanel.cpp" line="1133"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="219"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="1177"/>
         <source>Shadow</source>
         <translation>阴影</translation>
     </message>
     <message>
-        <location filename="../src/SubtitleListPanel.cpp" line="222"/>
-        <location filename="../src/SubtitleListPanel.cpp" line="1169"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="221"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="1213"/>
         <source>Background</source>
         <translation>背景</translation>
     </message>
     <message>
-        <location filename="../src/SubtitleListPanel.cpp" line="224"/>
-        <location filename="../src/SubtitleListPanel.cpp" line="1230"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="172"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="223"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="312"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="1274"/>
         <source>Bubble</source>
         <translation>气泡</translation>
     </message>
@@ -2303,12 +2330,12 @@
         <translation type="vanished">贴图图片</translation>
     </message>
     <message>
-        <location filename="../src/SubtitleListPanel.cpp" line="238"/>
-        <location filename="../src/SubtitleListPanel.cpp" line="245"/>
-        <location filename="../src/SubtitleListPanel.cpp" line="256"/>
-        <location filename="../src/SubtitleListPanel.cpp" line="1089"/>
-        <location filename="../src/SubtitleListPanel.cpp" line="1111"/>
-        <location filename="../src/SubtitleListPanel.cpp" line="1142"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="237"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="244"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="255"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="1133"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="1155"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="1186"/>
         <source>Color</source>
         <translation>颜色</translation>
     </message>
@@ -2317,14 +2344,14 @@
         <translation type="vanished">渐变色 2</translation>
     </message>
     <message>
-        <location filename="../src/SubtitleListPanel.cpp" line="233"/>
-        <location filename="../src/SubtitleListPanel.cpp" line="1074"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="232"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="1118"/>
         <source>Angle</source>
         <translation>角度</translation>
     </message>
     <message>
-        <location filename="../src/SubtitleListPanel.cpp" line="271"/>
-        <location filename="../src/SubtitleListPanel.cpp" line="1189"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="270"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="1233"/>
         <source>Image</source>
         <translation>贴图</translation>
     </message>
@@ -2337,20 +2364,20 @@
         <translation type="vanished">平铺图片</translation>
     </message>
     <message>
-        <location filename="../src/SubtitleListPanel.cpp" line="235"/>
-        <location filename="../src/SubtitleListPanel.cpp" line="242"/>
-        <location filename="../src/SubtitleListPanel.cpp" line="253"/>
-        <location filename="../src/SubtitleListPanel.cpp" line="258"/>
-        <location filename="../src/SubtitleListPanel.cpp" line="1078"/>
-        <location filename="../src/SubtitleListPanel.cpp" line="1098"/>
-        <location filename="../src/SubtitleListPanel.cpp" line="1129"/>
-        <location filename="../src/SubtitleListPanel.cpp" line="1146"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="234"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="241"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="252"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="257"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="1122"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="1142"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="1173"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="1190"/>
         <source>Opacity</source>
         <translation>不透明度</translation>
     </message>
     <message>
-        <location filename="../src/SubtitleListPanel.cpp" line="240"/>
-        <location filename="../src/SubtitleListPanel.cpp" line="1093"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="239"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="1137"/>
         <source>Thickness</source>
         <translation>粗细</translation>
     </message>
@@ -2359,14 +2386,14 @@
         <translation type="vanished">偏移</translation>
     </message>
     <message>
-        <location filename="../src/SubtitleListPanel.cpp" line="251"/>
-        <location filename="../src/SubtitleListPanel.cpp" line="1125"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="250"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="1169"/>
         <source>Blur</source>
         <translation>模糊</translation>
     </message>
     <message>
-        <location filename="../src/SubtitleListPanel.cpp" line="260"/>
-        <location filename="../src/SubtitleListPanel.cpp" line="1150"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="259"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="1194"/>
         <source>Roundness</source>
         <translation>圆角</translation>
     </message>
@@ -2375,171 +2402,209 @@
         <translation type="vanished">边距</translation>
     </message>
     <message>
-        <location filename="../src/SubtitleListPanel.cpp" line="262"/>
-        <location filename="../src/SubtitleListPanel.cpp" line="1154"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="261"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="1198"/>
         <source>L/R Padding</source>
         <translation>左右边距</translation>
     </message>
     <message>
-        <location filename="../src/SubtitleListPanel.cpp" line="264"/>
-        <location filename="../src/SubtitleListPanel.cpp" line="1158"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="263"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="1202"/>
         <source>T/B Padding</source>
         <translation>上下边距</translation>
     </message>
     <message>
-        <location filename="../src/SubtitleListPanel.cpp" line="196"/>
-        <location filename="../src/SubtitleListPanel.cpp" line="1391"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="198"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="1435"/>
         <source>+ Save Current Style</source>
         <translation>+ 保存为预设</translation>
     </message>
     <message>
-        <location filename="../src/SubtitleListPanel.cpp" line="199"/>
-        <location filename="../src/SubtitleListPanel.cpp" line="1399"/>
         <source>Apply All</source>
-        <translation>全部应用</translation>
+        <translation type="vanished">全部应用</translation>
     </message>
     <message>
-        <location filename="../src/SubtitleListPanel.cpp" line="190"/>
-        <location filename="../src/SubtitleListPanel.cpp" line="1703"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="192"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="1729"/>
         <source>System Presets</source>
         <translation>系统预设</translation>
     </message>
     <message>
-        <location filename="../src/SubtitleListPanel.cpp" line="191"/>
-        <location filename="../src/SubtitleListPanel.cpp" line="1704"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="193"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="1730"/>
         <source>Custom Presets</source>
         <translation>自定义预设</translation>
     </message>
     <message>
-        <location filename="../src/SubtitleListPanel.cpp" line="227"/>
-        <location filename="../src/SubtitleListPanel.cpp" line="1056"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="226"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="1100"/>
         <source>Type</source>
         <translation>类型</translation>
     </message>
     <message>
-        <location filename="../src/SubtitleListPanel.cpp" line="210"/>
-        <location filename="../src/SubtitleListPanel.cpp" line="1055"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="209"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="1099"/>
         <source>Color Fill</source>
         <translation>颜色填充</translation>
     </message>
     <message>
-        <location filename="../src/SubtitleListPanel.cpp" line="210"/>
-        <location filename="../src/SubtitleListPanel.cpp" line="1055"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="209"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="1099"/>
         <source>Gradient Fill</source>
         <translation>渐变填充</translation>
     </message>
     <message>
-        <location filename="../src/SubtitleListPanel.cpp" line="273"/>
-        <location filename="../src/SubtitleListPanel.cpp" line="1199"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="272"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="1243"/>
         <source>Left Padding</source>
         <translation>左边距</translation>
     </message>
     <message>
-        <location filename="../src/SubtitleListPanel.cpp" line="275"/>
-        <location filename="../src/SubtitleListPanel.cpp" line="1201"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="274"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="1245"/>
         <source>Right Padding</source>
         <translation>右边距</translation>
     </message>
     <message>
-        <location filename="../src/SubtitleListPanel.cpp" line="277"/>
-        <location filename="../src/SubtitleListPanel.cpp" line="1218"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="276"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="1262"/>
         <source>Top Padding</source>
         <translation>上边距</translation>
     </message>
     <message>
-        <location filename="../src/SubtitleListPanel.cpp" line="279"/>
-        <location filename="../src/SubtitleListPanel.cpp" line="1220"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="278"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="1264"/>
         <source>Bottom Padding</source>
         <translation>下边距</translation>
     </message>
     <message>
-        <location filename="../src/SubtitleListPanel.cpp" line="229"/>
-        <location filename="../src/SubtitleListPanel.cpp" line="1059"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="228"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="1103"/>
         <source>Color 1</source>
         <translation>颜色1</translation>
     </message>
     <message>
-        <location filename="../src/SubtitleListPanel.cpp" line="231"/>
-        <location filename="../src/SubtitleListPanel.cpp" line="1062"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="230"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="1106"/>
         <source>Color 2</source>
         <translation>颜色2</translation>
     </message>
     <message>
-        <location filename="../src/SubtitleListPanel.cpp" line="247"/>
-        <location filename="../src/SubtitleListPanel.cpp" line="266"/>
-        <location filename="../src/SubtitleListPanel.cpp" line="1115"/>
-        <location filename="../src/SubtitleListPanel.cpp" line="1162"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="246"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="265"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="1159"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="1206"/>
         <source>L/R Offset</source>
         <translation>左右偏移</translation>
     </message>
     <message>
-        <location filename="../src/SubtitleListPanel.cpp" line="249"/>
-        <location filename="../src/SubtitleListPanel.cpp" line="268"/>
-        <location filename="../src/SubtitleListPanel.cpp" line="1120"/>
-        <location filename="../src/SubtitleListPanel.cpp" line="1166"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="248"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="267"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="1164"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="1210"/>
         <source>T/B Offset</source>
         <translation>上下偏移</translation>
     </message>
     <message>
-        <location filename="../src/SubtitleListPanel.cpp" line="202"/>
-        <location filename="../src/SubtitleListPanel.cpp" line="1184"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="201"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="1228"/>
         <source>Browse...</source>
         <translation>浏览...</translation>
     </message>
     <message>
-        <location filename="../src/SubtitleListPanel.cpp" line="2305"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="1286"/>
+        <source>Images (*.png *.jpg *.jpeg *.svg)</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/SubtitleListPanel.cpp" line="2328"/>
         <source>Default White</source>
         <translation>默认白</translation>
     </message>
     <message>
-        <location filename="../src/SubtitleListPanel.cpp" line="2306"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="2329"/>
         <source>Classic Yellow</source>
         <translation>经典黄</translation>
     </message>
     <message>
-        <location filename="../src/SubtitleListPanel.cpp" line="2307"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="2330"/>
         <source>Soft Shadow</source>
         <translation>柔和阴影</translation>
     </message>
     <message>
-        <location filename="../src/SubtitleListPanel.cpp" line="2308"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="2331"/>
         <source>Neon Glow</source>
         <translation>霓虹光</translation>
     </message>
     <message>
-        <location filename="../src/SubtitleListPanel.cpp" line="2309"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="2332"/>
         <source>Translucent Box</source>
         <translation>半透背景</translation>
     </message>
     <message>
-        <location filename="../src/SubtitleListPanel.cpp" line="2310"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="2333"/>
         <source>Silver Gradient</source>
         <translation>银渐变</translation>
     </message>
     <message>
-        <location filename="../src/SubtitleListPanel.cpp" line="1241"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="1285"/>
         <source>Select Bubble Image</source>
         <translation>选择气泡图片</translation>
     </message>
     <message>
-        <location filename="../src/SubtitleListPanel.cpp" line="1242"/>
         <source>Images (*.png *.jpg *.jpeg)</source>
-        <translation>图片文件 (*.png *.jpg *.jpeg)</translation>
+        <translation type="vanished">图片文件 (*.png *.jpg *.jpeg)</translation>
     </message>
     <message>
-        <location filename="../src/SubtitleListPanel.cpp" line="2135"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="2158"/>
         <source>Delete</source>
         <translation>删除</translation>
     </message>
     <message>
-        <location filename="../src/SubtitleListPanel.cpp" line="2139"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="2162"/>
         <source>Delete Preset</source>
         <translation>删除预设</translation>
     </message>
     <message>
-        <location filename="../src/SubtitleListPanel.cpp" line="2140"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="2163"/>
         <source>Are you sure you want to delete this preset?</source>
         <translation>您确定要删除这个预设吗？</translation>
+    </message>
+    <message>
+        <source>Left Slice</source>
+        <translation>左拉伸</translation>
+    </message>
+    <message>
+        <source>Right Slice</source>
+        <translation>右拉伸</translation>
+    </message>
+    <message>
+        <source>Top Slice</source>
+        <translation>上拉伸</translation>
+    </message>
+    <message>
+        <source>Bottom Slice</source>
+        <translation>下拉伸</translation>
+    </message>
+    <message>
+        <source>Text Padding</source>
+        <translation>文字边距</translation>
+    </message>
+    <message>
+        <source>9-Patch Stretch</source>
+        <translation>九宫格拉伸</translation>
+    </message>
+    <message>
+        <source>Uniform</source>
+        <translation>统一数值</translation>
+    </message>
+    <message>
+        <source>Value</source>
+        <translation>数值</translation>
+    </message>
+    <message>
+        <source>Background Padding</source>
+        <translation>背景边距</translation>
     </message>
 </context>
 <context>
@@ -2986,49 +3051,55 @@
 <context>
     <name>VideoPreviewPanel</name>
     <message>
-        <location filename="../src/VideoPreviewPanel.cpp" line="581"/>
-        <location filename="../src/VideoPreviewPanel.cpp" line="863"/>
+        <location filename="../src/VideoPreviewPanel.cpp" line="608"/>
+        <location filename="../src/VideoPreviewPanel.cpp" line="904"/>
         <source>加粗</source>
         <translation>加粗</translation>
     </message>
     <message>
-        <location filename="../src/VideoPreviewPanel.cpp" line="587"/>
-        <location filename="../src/VideoPreviewPanel.cpp" line="864"/>
+        <location filename="../src/VideoPreviewPanel.cpp" line="614"/>
+        <location filename="../src/VideoPreviewPanel.cpp" line="905"/>
         <source>斜体</source>
         <translation>斜体</translation>
     </message>
     <message>
-        <location filename="../src/VideoPreviewPanel.cpp" line="593"/>
-        <location filename="../src/VideoPreviewPanel.cpp" line="865"/>
+        <location filename="../src/VideoPreviewPanel.cpp" line="620"/>
+        <location filename="../src/VideoPreviewPanel.cpp" line="906"/>
         <source>下划线</source>
         <translation>下划线</translation>
     </message>
     <message>
-        <location filename="../src/VideoPreviewPanel.cpp" line="600"/>
-        <location filename="../src/VideoPreviewPanel.cpp" line="866"/>
+        <location filename="../src/VideoPreviewPanel.cpp" line="627"/>
+        <location filename="../src/VideoPreviewPanel.cpp" line="907"/>
         <source>左对齐</source>
         <translation>左对齐</translation>
     </message>
     <message>
-        <location filename="../src/VideoPreviewPanel.cpp" line="606"/>
-        <location filename="../src/VideoPreviewPanel.cpp" line="867"/>
+        <location filename="../src/VideoPreviewPanel.cpp" line="633"/>
+        <location filename="../src/VideoPreviewPanel.cpp" line="908"/>
         <source>居中对齐</source>
         <translation>居中对齐</translation>
     </message>
     <message>
-        <location filename="../src/VideoPreviewPanel.cpp" line="612"/>
-        <location filename="../src/VideoPreviewPanel.cpp" line="868"/>
+        <location filename="../src/VideoPreviewPanel.cpp" line="639"/>
+        <location filename="../src/VideoPreviewPanel.cpp" line="909"/>
         <source>右对齐</source>
         <translation>右对齐</translation>
     </message>
     <message>
-        <location filename="../src/VideoPreviewPanel.cpp" line="618"/>
-        <location filename="../src/VideoPreviewPanel.cpp" line="869"/>
+        <location filename="../src/VideoPreviewPanel.cpp" line="645"/>
+        <location filename="../src/VideoPreviewPanel.cpp" line="910"/>
         <source>分散对齐</source>
         <translation>分散对齐</translation>
     </message>
     <message>
-        <location filename="../src/VideoPreviewPanel.cpp" line="879"/>
+        <location filename="../src/VideoPreviewPanel.cpp" line="658"/>
+        <location filename="../src/VideoPreviewPanel.cpp" line="929"/>
+        <source>Apply All</source>
+        <translation type="unfinished">全部应用</translation>
+    </message>
+    <message>
+        <location filename="../src/VideoPreviewPanel.cpp" line="920"/>
         <source>原画</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3041,8 +3112,8 @@
         <translation type="vanished">将当前字幕的字体、字号、样式和位置应用到所有字幕项</translation>
     </message>
     <message>
-        <location filename="../src/VideoPreviewPanel.cpp" line="756"/>
-        <location filename="../src/VideoPreviewPanel.cpp" line="870"/>
+        <location filename="../src/VideoPreviewPanel.cpp" line="797"/>
+        <location filename="../src/VideoPreviewPanel.cpp" line="911"/>
         <source>音量 / 静音</source>
         <translation>音量 / 静音</translation>
     </message>
@@ -3085,8 +3156,8 @@
         <location filename="../src/WhisperAsrService.cpp" line="51"/>
         <location filename="../src/WhisperAsrService.cpp" line="128"/>
         <location filename="../src/WhisperAsrService.cpp" line="166"/>
-        <location filename="../src/WhisperAsrService.cpp" line="219"/>
-        <location filename="../src/WhisperAsrService.cpp" line="255"/>
+        <location filename="../src/WhisperAsrService.cpp" line="226"/>
+        <location filename="../src/WhisperAsrService.cpp" line="385"/>
         <source>识别已被用户取消</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3121,7 +3192,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/WhisperAsrService.cpp" line="227"/>
+        <location filename="../src/WhisperAsrService.cpp" line="234"/>
         <source>Whisper 语音推理执行失败，代码: %1</source>
         <translation type="unfinished"></translation>
     </message>

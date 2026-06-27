@@ -53,7 +53,7 @@
         <translation type="vanished">Cancel</translation>
     </message>
     <message>
-        <location filename="../src/AppWindow.cpp" line="137"/>
+        <location filename="../src/AppWindow.cpp" line="139"/>
         <source>配置缺失</source>
         <translation>Configuration Missing</translation>
     </message>
@@ -72,61 +72,61 @@ Please create or edit the configuration file at:
 Make sure to include the necessary settings for FFmpeg, Tencent Cloud ASR, and Alibaba Cloud OSS.</translation>
     </message>
     <message>
-        <location filename="../src/AppWindow.cpp" line="185"/>
-        <location filename="../src/AppWindow.cpp" line="383"/>
-        <location filename="../src/AppWindow.cpp" line="1156"/>
-        <location filename="../src/AppWindow.cpp" line="1157"/>
-        <location filename="../src/AppWindow.cpp" line="1363"/>
-        <location filename="../src/AppWindow.cpp" line="1588"/>
+        <location filename="../src/AppWindow.cpp" line="187"/>
+        <location filename="../src/AppWindow.cpp" line="385"/>
+        <location filename="../src/AppWindow.cpp" line="1158"/>
+        <location filename="../src/AppWindow.cpp" line="1159"/>
+        <location filename="../src/AppWindow.cpp" line="1376"/>
+        <location filename="../src/AppWindow.cpp" line="1601"/>
         <source>字幕编辑</source>
         <translation>Subtitle Editor</translation>
     </message>
     <message>
-        <location filename="../src/AppWindow.cpp" line="332"/>
+        <location filename="../src/AppWindow.cpp" line="334"/>
         <source>向下还原</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/AppWindow.cpp" line="335"/>
-        <location filename="../src/AppWindow.cpp" line="473"/>
+        <location filename="../src/AppWindow.cpp" line="337"/>
+        <location filename="../src/AppWindow.cpp" line="475"/>
         <source>最大化</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/AppWindow.cpp" line="423"/>
-        <location filename="../src/AppWindow.cpp" line="1161"/>
-        <location filename="../src/AppWindow.cpp" line="1173"/>
-        <location filename="../src/AppWindow.cpp" line="1319"/>
+        <location filename="../src/AppWindow.cpp" line="425"/>
+        <location filename="../src/AppWindow.cpp" line="1163"/>
+        <location filename="../src/AppWindow.cpp" line="1175"/>
+        <location filename="../src/AppWindow.cpp" line="1323"/>
         <source>设置</source>
         <translation>Settings</translation>
     </message>
     <message>
-        <location filename="../src/AppWindow.cpp" line="472"/>
+        <location filename="../src/AppWindow.cpp" line="474"/>
         <source>最小化</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/AppWindow.cpp" line="474"/>
+        <location filename="../src/AppWindow.cpp" line="476"/>
         <source>关闭</source>
         <translation type="unfinished">Close</translation>
     </message>
     <message>
-        <location filename="../src/AppWindow.cpp" line="536"/>
+        <location filename="../src/AppWindow.cpp" line="538"/>
         <source>导入视频</source>
         <translation>Import Media</translation>
     </message>
     <message>
-        <location filename="../src/AppWindow.cpp" line="537"/>
+        <location filename="../src/AppWindow.cpp" line="539"/>
         <source>媒体文件 (*.mp4 *.mkv *.avi *.mov *.srt);;视频文件 (*.mp4 *.mkv *.avi *.mov);;字幕文件 (*.srt);;所有文件 (*)</source>
         <translation>Media Files (*.mp4 *.mkv *.avi *.mov *.srt);;Video Files (*.mp4 *.mkv *.avi *.mov);;Subtitle Files (*.srt);;All Files (*)</translation>
     </message>
     <message>
-        <location filename="../src/AppWindow.cpp" line="722"/>
+        <location filename="../src/AppWindow.cpp" line="724"/>
         <source>撤销 %1</source>
         <translation>Undo %1</translation>
     </message>
     <message>
-        <location filename="../src/AppWindow.cpp" line="727"/>
+        <location filename="../src/AppWindow.cpp" line="729"/>
         <source>重做 %1</source>
         <translation>Redo %1</translation>
     </message>
@@ -135,146 +135,146 @@ Make sure to include the necessary settings for FFmpeg, Tencent Cloud ASR, and A
         <translation type="vanished">Project auto-saved</translation>
     </message>
     <message>
-        <location filename="../src/AppWindow.cpp" line="777"/>
-        <location filename="../src/AppWindow.cpp" line="849"/>
+        <location filename="../src/AppWindow.cpp" line="779"/>
+        <location filename="../src/AppWindow.cpp" line="851"/>
         <source>确认覆盖</source>
         <translation>Confirm Overwrite</translation>
     </message>
     <message>
-        <location filename="../src/AppWindow.cpp" line="778"/>
+        <location filename="../src/AppWindow.cpp" line="780"/>
         <source>字幕轨道已有内容，继续导入将清空现有字幕，是否继续？</source>
         <translation>The subtitle track already has content. Importing will clear all existing subtitles. Continue?</translation>
     </message>
     <message>
-        <location filename="../src/AppWindow.cpp" line="818"/>
+        <location filename="../src/AppWindow.cpp" line="820"/>
         <source>字幕文件格式错误</source>
         <translation>Subtitle File Format Error</translation>
     </message>
     <message>
-        <location filename="../src/AppWindow.cpp" line="819"/>
+        <location filename="../src/AppWindow.cpp" line="821"/>
         <source>无法解析字幕文件，请检查文件格式。</source>
         <translation>Unable to parse the subtitle file. Please check the file format.</translation>
     </message>
     <message>
-        <location filename="../src/AppWindow.cpp" line="825"/>
+        <location filename="../src/AppWindow.cpp" line="827"/>
         <source>导入字幕文件</source>
         <translation>Import Subtitle File</translation>
     </message>
     <message>
-        <location filename="../src/AppWindow.cpp" line="850"/>
+        <location filename="../src/AppWindow.cpp" line="852"/>
         <source>字幕轨道已有内容，语音识别将清空现有字幕，是否继续？</source>
         <translation>The subtitle track already has content. Speech recognition will clear all existing subtitles. Continue?</translation>
     </message>
     <message>
-        <location filename="../src/AppWindow.cpp" line="890"/>
+        <location filename="../src/AppWindow.cpp" line="892"/>
         <source>名称</source>
         <translation>Name</translation>
     </message>
     <message>
-        <location filename="../src/AppWindow.cpp" line="891"/>
+        <location filename="../src/AppWindow.cpp" line="893"/>
         <source>位置</source>
         <translation>Location</translation>
     </message>
     <message>
-        <location filename="../src/AppWindow.cpp" line="893"/>
+        <location filename="../src/AppWindow.cpp" line="895"/>
         <source>文件大小</source>
         <translation>File Size</translation>
     </message>
     <message>
-        <location filename="../src/AppWindow.cpp" line="907"/>
+        <location filename="../src/AppWindow.cpp" line="909"/>
         <source>时长</source>
         <translation>Duration</translation>
     </message>
     <message>
-        <location filename="../src/AppWindow.cpp" line="915"/>
+        <location filename="../src/AppWindow.cpp" line="917"/>
         <source>创建日期</source>
         <translation>Created</translation>
     </message>
     <message>
-        <location filename="../src/AppWindow.cpp" line="918"/>
+        <location filename="../src/AppWindow.cpp" line="920"/>
         <source>导入时间</source>
         <translation>Imported</translation>
     </message>
     <message>
-        <location filename="../src/AppWindow.cpp" line="925"/>
+        <location filename="../src/AppWindow.cpp" line="927"/>
         <source>创建媒体时间</source>
         <translation>Media Created</translation>
     </message>
     <message>
-        <location filename="../src/AppWindow.cpp" line="929"/>
+        <location filename="../src/AppWindow.cpp" line="931"/>
         <source>基本信息</source>
         <translation>Basic Info</translation>
     </message>
     <message>
-        <location filename="../src/AppWindow.cpp" line="935"/>
-        <location filename="../src/AppWindow.cpp" line="957"/>
+        <location filename="../src/AppWindow.cpp" line="937"/>
+        <location filename="../src/AppWindow.cpp" line="959"/>
         <source>编译码器</source>
         <translation>Codec</translation>
     </message>
     <message>
-        <location filename="../src/AppWindow.cpp" line="939"/>
+        <location filename="../src/AppWindow.cpp" line="941"/>
         <source>分辨率</source>
         <translation>Resolution</translation>
     </message>
     <message>
-        <location filename="../src/AppWindow.cpp" line="943"/>
+        <location filename="../src/AppWindow.cpp" line="945"/>
         <source>帧率</source>
         <translation>Frame Rate</translation>
     </message>
     <message>
-        <location filename="../src/AppWindow.cpp" line="947"/>
-        <location filename="../src/AppWindow.cpp" line="975"/>
+        <location filename="../src/AppWindow.cpp" line="949"/>
+        <location filename="../src/AppWindow.cpp" line="977"/>
         <source>码率</source>
         <translation>Bitrate</translation>
     </message>
     <message>
-        <location filename="../src/AppWindow.cpp" line="949"/>
+        <location filename="../src/AppWindow.cpp" line="951"/>
         <source>传输特性</source>
         <translation>Transport</translation>
     </message>
     <message>
-        <location filename="../src/AppWindow.cpp" line="951"/>
+        <location filename="../src/AppWindow.cpp" line="953"/>
         <source>视频信息</source>
         <translation>Video Info</translation>
     </message>
     <message>
-        <location filename="../src/AppWindow.cpp" line="961"/>
+        <location filename="../src/AppWindow.cpp" line="963"/>
         <source>声道</source>
         <translation>Channels</translation>
     </message>
     <message>
-        <location filename="../src/AppWindow.cpp" line="967"/>
-        <location filename="../src/AppWindow.cpp" line="970"/>
+        <location filename="../src/AppWindow.cpp" line="969"/>
+        <location filename="../src/AppWindow.cpp" line="972"/>
         <source>采样率</source>
         <translation>Sample Rate</translation>
     </message>
     <message>
-        <location filename="../src/AppWindow.cpp" line="977"/>
+        <location filename="../src/AppWindow.cpp" line="979"/>
         <source>音频信息</source>
         <translation>Audio Info</translation>
     </message>
     <message>
-        <location filename="../src/AppWindow.cpp" line="1136"/>
+        <location filename="../src/AppWindow.cpp" line="1138"/>
         <source>视频导出失败：%1</source>
         <translation type="unfinished">Video export failed: %1</translation>
     </message>
     <message>
-        <location filename="../src/AppWindow.cpp" line="1417"/>
+        <location filename="../src/AppWindow.cpp" line="1430"/>
         <source>确认打开</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/AppWindow.cpp" line="1417"/>
+        <location filename="../src/AppWindow.cpp" line="1430"/>
         <source>当前工程有未保存的更改，是否继续打开？</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/AppWindow.cpp" line="1490"/>
+        <location filename="../src/AppWindow.cpp" line="1503"/>
         <source>删除选中字幕</source>
         <translation>Delete Selected Subtitles</translation>
     </message>
     <message>
-        <location filename="../src/AppWindow.cpp" line="1574"/>
+        <location filename="../src/AppWindow.cpp" line="1587"/>
         <source>字幕编辑器 v1.0.0
 
 一个简单易用的视频字幕编辑工具。
@@ -297,158 +297,158 @@ Third-party Libraries:
         <translation type="vanished">SRT Subtitles (*.srt);;Plain Text (*.txt);;Premiere XML [Experimental] (*.xml);;Final Cut Pro XML [Experimental] (*.fcpxml)</translation>
     </message>
     <message>
-        <location filename="../src/AppWindow.cpp" line="1169"/>
-        <location filename="../src/AppWindow.cpp" line="1224"/>
+        <location filename="../src/AppWindow.cpp" line="1171"/>
+        <location filename="../src/AppWindow.cpp" line="1228"/>
         <source>文件</source>
         <translation>File</translation>
     </message>
     <message>
-        <location filename="../src/AppWindow.cpp" line="1185"/>
-        <location filename="../src/AppWindow.cpp" line="1226"/>
+        <location filename="../src/AppWindow.cpp" line="1187"/>
+        <location filename="../src/AppWindow.cpp" line="1230"/>
         <source>新建工程</source>
         <translation>New Project</translation>
     </message>
     <message>
-        <location filename="../src/AppWindow.cpp" line="1187"/>
-        <location filename="../src/AppWindow.cpp" line="1230"/>
+        <location filename="../src/AppWindow.cpp" line="1189"/>
+        <location filename="../src/AppWindow.cpp" line="1234"/>
         <source>打开工程...</source>
         <translation>Open Project...</translation>
     </message>
     <message>
-        <location filename="../src/AppWindow.cpp" line="1189"/>
-        <location filename="../src/AppWindow.cpp" line="1234"/>
+        <location filename="../src/AppWindow.cpp" line="1191"/>
+        <location filename="../src/AppWindow.cpp" line="1238"/>
         <source>保存工程</source>
         <translation>Save Project</translation>
     </message>
     <message>
-        <location filename="../src/AppWindow.cpp" line="1191"/>
-        <location filename="../src/AppWindow.cpp" line="1238"/>
+        <location filename="../src/AppWindow.cpp" line="1193"/>
+        <location filename="../src/AppWindow.cpp" line="1242"/>
         <source>另存为...</source>
         <translation>Save As...</translation>
     </message>
     <message>
-        <location filename="../src/AppWindow.cpp" line="1177"/>
-        <location filename="../src/AppWindow.cpp" line="1246"/>
+        <location filename="../src/AppWindow.cpp" line="1179"/>
+        <location filename="../src/AppWindow.cpp" line="1250"/>
         <source>最近打开</source>
         <translation>Recent Files</translation>
     </message>
     <message>
-        <location filename="../src/AppWindow.cpp" line="1251"/>
+        <location filename="../src/AppWindow.cpp" line="1255"/>
         <source>无最近文件</source>
         <translation>No Recent Files</translation>
     </message>
     <message>
-        <location filename="../src/AppWindow.cpp" line="1262"/>
+        <location filename="../src/AppWindow.cpp" line="1266"/>
         <source>清除最近</source>
         <translation>Clear Recent</translation>
     </message>
     <message>
-        <location filename="../src/AppWindow.cpp" line="1193"/>
-        <location filename="../src/AppWindow.cpp" line="1278"/>
+        <location filename="../src/AppWindow.cpp" line="1195"/>
+        <location filename="../src/AppWindow.cpp" line="1282"/>
         <source>退出</source>
         <translation>Exit</translation>
     </message>
     <message>
-        <location filename="../src/AppWindow.cpp" line="1171"/>
-        <location filename="../src/AppWindow.cpp" line="1282"/>
+        <location filename="../src/AppWindow.cpp" line="1173"/>
+        <location filename="../src/AppWindow.cpp" line="1286"/>
         <source>编辑</source>
         <translation>Edit</translation>
     </message>
     <message>
-        <location filename="../src/AppWindow.cpp" line="721"/>
-        <location filename="../src/AppWindow.cpp" line="1197"/>
-        <location filename="../src/AppWindow.cpp" line="1284"/>
+        <location filename="../src/AppWindow.cpp" line="723"/>
+        <location filename="../src/AppWindow.cpp" line="1199"/>
+        <location filename="../src/AppWindow.cpp" line="1288"/>
         <source>撤销</source>
         <translation>Undo</translation>
     </message>
     <message>
-        <location filename="../src/AppWindow.cpp" line="726"/>
-        <location filename="../src/AppWindow.cpp" line="1199"/>
-        <location filename="../src/AppWindow.cpp" line="1288"/>
+        <location filename="../src/AppWindow.cpp" line="728"/>
+        <location filename="../src/AppWindow.cpp" line="1201"/>
+        <location filename="../src/AppWindow.cpp" line="1292"/>
         <source>重做</source>
         <translation>Redo</translation>
     </message>
     <message>
-        <location filename="../src/AppWindow.cpp" line="1201"/>
-        <location filename="../src/AppWindow.cpp" line="1294"/>
+        <location filename="../src/AppWindow.cpp" line="1203"/>
+        <location filename="../src/AppWindow.cpp" line="1298"/>
         <source>剪切</source>
         <translation>Cut</translation>
     </message>
     <message>
-        <location filename="../src/AppWindow.cpp" line="1203"/>
-        <location filename="../src/AppWindow.cpp" line="1298"/>
+        <location filename="../src/AppWindow.cpp" line="1205"/>
+        <location filename="../src/AppWindow.cpp" line="1302"/>
         <source>复制</source>
         <translation>Copy</translation>
     </message>
     <message>
-        <location filename="../src/AppWindow.cpp" line="1205"/>
-        <location filename="../src/AppWindow.cpp" line="1302"/>
+        <location filename="../src/AppWindow.cpp" line="1207"/>
+        <location filename="../src/AppWindow.cpp" line="1306"/>
         <source>粘贴</source>
         <translation>Paste</translation>
     </message>
     <message>
-        <location filename="../src/AppWindow.cpp" line="1207"/>
-        <location filename="../src/AppWindow.cpp" line="1308"/>
+        <location filename="../src/AppWindow.cpp" line="1209"/>
+        <location filename="../src/AppWindow.cpp" line="1312"/>
         <source>全选</source>
         <translation>Select All</translation>
     </message>
     <message>
-        <location filename="../src/AppWindow.cpp" line="1209"/>
-        <location filename="../src/AppWindow.cpp" line="1313"/>
+        <location filename="../src/AppWindow.cpp" line="1211"/>
+        <location filename="../src/AppWindow.cpp" line="1317"/>
         <source>删除选中</source>
         <translation>Delete Selected</translation>
     </message>
     <message>
-        <location filename="../src/AppWindow.cpp" line="1213"/>
-        <location filename="../src/AppWindow.cpp" line="1321"/>
+        <location filename="../src/AppWindow.cpp" line="1215"/>
+        <location filename="../src/AppWindow.cpp" line="1325"/>
         <source>配置...</source>
         <translation>Configure...</translation>
     </message>
     <message>
-        <location filename="../src/AppWindow.cpp" line="1181"/>
-        <location filename="../src/AppWindow.cpp" line="1330"/>
+        <location filename="../src/AppWindow.cpp" line="1183"/>
+        <location filename="../src/AppWindow.cpp" line="1343"/>
         <source>语言</source>
         <translation>Language</translation>
     </message>
     <message>
-        <location filename="../src/AppWindow.cpp" line="1331"/>
+        <location filename="../src/AppWindow.cpp" line="1344"/>
         <source>中文</source>
         <translation>Chinese</translation>
     </message>
     <message>
-        <location filename="../src/AppWindow.cpp" line="1175"/>
-        <location filename="../src/AppWindow.cpp" line="1339"/>
+        <location filename="../src/AppWindow.cpp" line="1177"/>
+        <location filename="../src/AppWindow.cpp" line="1352"/>
         <source>帮助</source>
         <translation>Help​</translation>
     </message>
     <message>
-        <location filename="../src/AppWindow.cpp" line="138"/>
+        <location filename="../src/AppWindow.cpp" line="140"/>
         <source>未检测到有效配置，部分功能（如语音识别）将无法使用。
 
 请打开“设置”窗口配置 ASR 和云存储的必要参数。</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/AppWindow.cpp" line="1090"/>
+        <location filename="../src/AppWindow.cpp" line="1092"/>
         <source>字幕文件导出失败，请检查保存路径和权限。</source>
         <translation>Failed to export subtitle file. Please check the save path and permissions.</translation>
     </message>
     <message>
-        <location filename="../src/AppWindow.cpp" line="1098"/>
+        <location filename="../src/AppWindow.cpp" line="1100"/>
         <source>字幕文件已成功导出到：
 %1</source>
         <translation>Subtitle file exported successfully to:
 %1</translation>
     </message>
     <message>
-        <location filename="../src/AppWindow.cpp" line="1122"/>
+        <location filename="../src/AppWindow.cpp" line="1124"/>
         <source>视频已成功导出到：
 %1</source>
         <translation>Video exported successfully to:
 %1</translation>
     </message>
     <message>
-        <location filename="../src/AppWindow.cpp" line="1124"/>
+        <location filename="../src/AppWindow.cpp" line="1126"/>
         <source>
 
 关联字幕文件已一并输出。</source>
@@ -457,72 +457,72 @@ Third-party Libraries:
 Associated subtitle file has also been exported.</translation>
     </message>
     <message>
-        <location filename="../src/AppWindow.cpp" line="1179"/>
-        <location filename="../src/AppWindow.cpp" line="1271"/>
+        <location filename="../src/AppWindow.cpp" line="1181"/>
+        <location filename="../src/AppWindow.cpp" line="1275"/>
         <source>导出...</source>
         <translation>Export...</translation>
     </message>
     <message>
-        <location filename="../src/AppWindow.cpp" line="1217"/>
-        <location filename="../src/AppWindow.cpp" line="1341"/>
-        <location filename="../src/AppWindow.cpp" line="1573"/>
+        <location filename="../src/AppWindow.cpp" line="1221"/>
+        <location filename="../src/AppWindow.cpp" line="1354"/>
+        <location filename="../src/AppWindow.cpp" line="1586"/>
         <source>关于</source>
         <translation>About</translation>
     </message>
     <message>
-        <location filename="../src/AppWindow.cpp" line="1349"/>
+        <location filename="../src/AppWindow.cpp" line="1362"/>
         <source>确认新建</source>
         <translation>Confirm New</translation>
     </message>
     <message>
-        <location filename="../src/AppWindow.cpp" line="1349"/>
+        <location filename="../src/AppWindow.cpp" line="1362"/>
         <source>当前工程有未保存的更改，是否继续新建？</source>
         <translation>The current project has unsaved changes. Continue anyway?</translation>
     </message>
     <message>
-        <location filename="../src/AppWindow.cpp" line="1368"/>
+        <location filename="../src/AppWindow.cpp" line="1381"/>
         <source>打开工程</source>
         <translation>Open Project</translation>
     </message>
     <message>
-        <location filename="../src/AppWindow.cpp" line="1369"/>
+        <location filename="../src/AppWindow.cpp" line="1382"/>
         <source>字幕编辑工程 (*.sedit);;所有文件 (*)</source>
         <translation>Subtitle Editor Project (*.sedit);;All Files (*)</translation>
     </message>
     <message>
-        <location filename="../src/AppWindow.cpp" line="1400"/>
-        <location filename="../src/AppWindow.cpp" line="1424"/>
-        <location filename="../src/AppWindow.cpp" line="1590"/>
+        <location filename="../src/AppWindow.cpp" line="1413"/>
+        <location filename="../src/AppWindow.cpp" line="1437"/>
+        <location filename="../src/AppWindow.cpp" line="1603"/>
         <source>字幕编辑 - %1</source>
         <translation>Subtitle Editor - %1</translation>
     </message>
     <message>
-        <location filename="../src/AppWindow.cpp" line="1458"/>
+        <location filename="../src/AppWindow.cpp" line="1471"/>
         <source>打开失败</source>
         <translation>Open Failed</translation>
     </message>
     <message>
-        <location filename="../src/AppWindow.cpp" line="1459"/>
+        <location filename="../src/AppWindow.cpp" line="1472"/>
         <source>无法打开工程文件，请检查文件格式。</source>
         <translation>Cannot open the project file. Please check the file format.</translation>
     </message>
     <message>
-        <location filename="../src/AppWindow.cpp" line="1388"/>
+        <location filename="../src/AppWindow.cpp" line="1401"/>
         <source>另存为</source>
         <translation>Save As</translation>
     </message>
     <message>
-        <location filename="../src/AppWindow.cpp" line="1389"/>
+        <location filename="../src/AppWindow.cpp" line="1402"/>
         <source>字幕编辑工程 (*.sedit)</source>
         <translation>Subtitle Editor Project (*.sedit)</translation>
     </message>
     <message>
-        <location filename="../src/AppWindow.cpp" line="1402"/>
+        <location filename="../src/AppWindow.cpp" line="1415"/>
         <source>保存失败</source>
         <translation>Save Failed</translation>
     </message>
     <message>
-        <location filename="../src/AppWindow.cpp" line="1403"/>
+        <location filename="../src/AppWindow.cpp" line="1416"/>
         <source>无法保存工程文件，请检查磁盘空间。</source>
         <translation>Cannot save the project file. Please check disk space.</translation>
     </message>
@@ -535,8 +535,8 @@ Associated subtitle file has also been exported.</translation>
         <translation type="vanished">SRT Subtitles (*.srt)</translation>
     </message>
     <message>
-        <location filename="../src/AppWindow.cpp" line="1097"/>
-        <location filename="../src/AppWindow.cpp" line="1126"/>
+        <location filename="../src/AppWindow.cpp" line="1099"/>
+        <location filename="../src/AppWindow.cpp" line="1128"/>
         <source>导出成功</source>
         <translation>Export Successful</translation>
     </message>
@@ -565,8 +565,8 @@ Associated subtitle file has also been exported.</translation>
 A simple and easy-to-use video subtitle editing tool.</translation>
     </message>
     <message>
-        <location filename="../src/AppWindow.cpp" line="433"/>
-        <location filename="../src/AppWindow.cpp" line="1159"/>
+        <location filename="../src/AppWindow.cpp" line="435"/>
+        <location filename="../src/AppWindow.cpp" line="1161"/>
         <source>导出字幕</source>
         <translation>Export Subtitles</translation>
     </message>
@@ -579,8 +579,8 @@ A simple and easy-to-use video subtitle editing tool.</translation>
         <translation type="vanished">SRT Subtitle (*.srt);;Plain Text (*.txt)</translation>
     </message>
     <message>
-        <location filename="../src/AppWindow.cpp" line="1089"/>
-        <location filename="../src/AppWindow.cpp" line="1135"/>
+        <location filename="../src/AppWindow.cpp" line="1091"/>
+        <location filename="../src/AppWindow.cpp" line="1137"/>
         <source>导出失败</source>
         <translation>Export Failed</translation>
     </message>
@@ -589,8 +589,8 @@ A simple and easy-to-use video subtitle editing tool.</translation>
         <translation type="vanished">Failed to export subtitles. Please check the file path and permissions.</translation>
     </message>
     <message>
-        <location filename="../src/AppWindow.cpp" line="1215"/>
-        <location filename="../src/AppWindow.cpp" line="1331"/>
+        <location filename="../src/AppWindow.cpp" line="1217"/>
+        <location filename="../src/AppWindow.cpp" line="1334"/>
         <source>打开数据目录</source>
         <translation>Open Data Directory</translation>
     </message>
@@ -964,22 +964,22 @@ A simple and easy-to-use video subtitle editing tool.</translation>
 <context>
     <name>AudioTranscoder</name>
     <message>
-        <location filename="../src/AudioTranscoder.cpp" line="29"/>
+        <location filename="../src/AudioTranscoder.cpp" line="35"/>
         <source>用户已取消转码</source>
         <translation>Transcoding cancelled by user</translation>
     </message>
     <message>
-        <location filename="../src/AudioTranscoder.cpp" line="62"/>
+        <location filename="../src/AudioTranscoder.cpp" line="78"/>
         <source>转码任务正在进行中</source>
         <translation>Transcoding task is in progress</translation>
     </message>
     <message>
-        <location filename="../src/AudioTranscoder.cpp" line="125"/>
+        <location filename="../src/AudioTranscoder.cpp" line="152"/>
         <source>转码失败: </source>
         <translation>Transcoding failed: </translation>
     </message>
     <message>
-        <location filename="../src/AudioTranscoder.cpp" line="135"/>
+        <location filename="../src/AudioTranscoder.cpp" line="162"/>
         <source>进程错误: </source>
         <translation>Process error: </translation>
     </message>
@@ -1965,7 +1965,7 @@ A simple and easy-to-use video subtitle editing tool.</translation>
         <translation>Upload cancelled by user</translation>
     </message>
     <message>
-        <location filename="../src/OssUploader.cpp" line="211"/>
+        <location filename="../src/OssUploader.cpp" line="210"/>
         <source>Upload failed: %1</source>
         <translation>Upload failed: %1</translation>
     </message>
@@ -2178,21 +2178,21 @@ A simple and easy-to-use video subtitle editing tool.</translation>
     </message>
     <message>
         <location filename="../src/SubtitleListPanel.cpp" line="164"/>
-        <location filename="../src/SubtitleListPanel.cpp" line="426"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="461"/>
         <source>Search...</source>
         <translation>Search...</translation>
     </message>
     <message>
         <location filename="../src/SubtitleListPanel.cpp" line="166"/>
-        <location filename="../src/SubtitleListPanel.cpp" line="435"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="469"/>
         <source>Clear</source>
         <translation>Clear</translation>
     </message>
     <message>
         <location filename="../src/SubtitleListPanel.cpp" line="168"/>
-        <location filename="../src/SubtitleListPanel.cpp" line="180"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="182"/>
         <location filename="../src/SubtitleListPanel.cpp" line="300"/>
-        <location filename="../src/SubtitleListPanel.cpp" line="485"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="519"/>
         <source>Subtitle</source>
         <translation>Subtitle</translation>
     </message>
@@ -2203,298 +2203,355 @@ A simple and easy-to-use video subtitle editing tool.</translation>
         <translation>Preset</translation>
     </message>
     <message>
-        <location filename="../src/SubtitleListPanel.cpp" line="172"/>
-        <location filename="../src/SubtitleListPanel.cpp" line="312"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="174"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="318"/>
         <source>Custom</source>
         <translation>Custom</translation>
     </message>
     <message>
-        <location filename="../src/SubtitleListPanel.cpp" line="174"/>
-        <location filename="../src/SubtitleListPanel.cpp" line="318"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="176"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="324"/>
         <source>Animation</source>
         <translation>Animation</translation>
     </message>
     <message>
-        <location filename="../src/SubtitleListPanel.cpp" line="176"/>
-        <location filename="../src/SubtitleListPanel.cpp" line="475"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="178"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="509"/>
         <source>Timecode</source>
         <translation>Timecode</translation>
     </message>
     <message>
-        <location filename="../src/SubtitleListPanel.cpp" line="178"/>
-        <location filename="../src/SubtitleListPanel.cpp" line="480"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="180"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="514"/>
         <source>Speaker</source>
         <translation>Speaker</translation>
     </message>
     <message>
-        <location filename="../src/SubtitleListPanel.cpp" line="182"/>
-        <location filename="../src/SubtitleListPanel.cpp" line="492"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="184"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="526"/>
         <source>Action</source>
         <translation>Action</translation>
     </message>
     <message>
-        <location filename="../src/SubtitleListPanel.cpp" line="190"/>
-        <location filename="../src/SubtitleListPanel.cpp" line="1703"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="192"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="1729"/>
         <source>System Presets</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/SubtitleListPanel.cpp" line="191"/>
-        <location filename="../src/SubtitleListPanel.cpp" line="1704"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="193"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="1730"/>
         <source>Custom Presets</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/SubtitleListPanel.cpp" line="196"/>
-        <location filename="../src/SubtitleListPanel.cpp" line="1391"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="198"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="1435"/>
         <source>+ Save Current Style</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/SubtitleListPanel.cpp" line="199"/>
-        <location filename="../src/SubtitleListPanel.cpp" line="1399"/>
-        <source>Apply All</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../src/SubtitleListPanel.cpp" line="202"/>
-        <location filename="../src/SubtitleListPanel.cpp" line="1184"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="201"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="1228"/>
         <source>Browse...</source>
         <translation type="unfinished">Browse...</translation>
     </message>
     <message>
-        <location filename="../src/SubtitleListPanel.cpp" line="210"/>
-        <location filename="../src/SubtitleListPanel.cpp" line="1055"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="209"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="1099"/>
         <source>Color Fill</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/SubtitleListPanel.cpp" line="210"/>
-        <location filename="../src/SubtitleListPanel.cpp" line="1055"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="209"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="1099"/>
         <source>Gradient Fill</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/SubtitleListPanel.cpp" line="216"/>
-        <location filename="../src/SubtitleListPanel.cpp" line="1081"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="215"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="1125"/>
         <source>Fill</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/SubtitleListPanel.cpp" line="218"/>
-        <location filename="../src/SubtitleListPanel.cpp" line="1102"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="217"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="1146"/>
         <source>Outline</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/SubtitleListPanel.cpp" line="220"/>
-        <location filename="../src/SubtitleListPanel.cpp" line="1133"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="219"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="1177"/>
         <source>Shadow</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/SubtitleListPanel.cpp" line="222"/>
-        <location filename="../src/SubtitleListPanel.cpp" line="1169"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="221"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="1213"/>
         <source>Background</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/SubtitleListPanel.cpp" line="224"/>
-        <location filename="../src/SubtitleListPanel.cpp" line="1230"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="172"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="223"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="312"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="1274"/>
         <source>Bubble</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/SubtitleListPanel.cpp" line="227"/>
-        <location filename="../src/SubtitleListPanel.cpp" line="1056"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="226"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="1100"/>
         <source>Type</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/SubtitleListPanel.cpp" line="229"/>
-        <location filename="../src/SubtitleListPanel.cpp" line="1059"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="228"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="1103"/>
         <source>Color 1</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/SubtitleListPanel.cpp" line="231"/>
-        <location filename="../src/SubtitleListPanel.cpp" line="1062"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="230"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="1106"/>
         <source>Color 2</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/SubtitleListPanel.cpp" line="233"/>
-        <location filename="../src/SubtitleListPanel.cpp" line="1074"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="232"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="1118"/>
         <source>Angle</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/SubtitleListPanel.cpp" line="235"/>
-        <location filename="../src/SubtitleListPanel.cpp" line="242"/>
-        <location filename="../src/SubtitleListPanel.cpp" line="253"/>
-        <location filename="../src/SubtitleListPanel.cpp" line="258"/>
-        <location filename="../src/SubtitleListPanel.cpp" line="1078"/>
-        <location filename="../src/SubtitleListPanel.cpp" line="1098"/>
-        <location filename="../src/SubtitleListPanel.cpp" line="1129"/>
-        <location filename="../src/SubtitleListPanel.cpp" line="1146"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="234"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="241"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="252"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="257"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="1122"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="1142"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="1173"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="1190"/>
         <source>Opacity</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/SubtitleListPanel.cpp" line="238"/>
-        <location filename="../src/SubtitleListPanel.cpp" line="245"/>
-        <location filename="../src/SubtitleListPanel.cpp" line="256"/>
-        <location filename="../src/SubtitleListPanel.cpp" line="1089"/>
-        <location filename="../src/SubtitleListPanel.cpp" line="1111"/>
-        <location filename="../src/SubtitleListPanel.cpp" line="1142"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="237"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="244"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="255"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="1133"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="1155"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="1186"/>
         <source>Color</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/SubtitleListPanel.cpp" line="240"/>
-        <location filename="../src/SubtitleListPanel.cpp" line="1093"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="239"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="1137"/>
         <source>Thickness</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/SubtitleListPanel.cpp" line="247"/>
-        <location filename="../src/SubtitleListPanel.cpp" line="266"/>
-        <location filename="../src/SubtitleListPanel.cpp" line="1115"/>
-        <location filename="../src/SubtitleListPanel.cpp" line="1162"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="246"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="265"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="1159"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="1206"/>
         <source>L/R Offset</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/SubtitleListPanel.cpp" line="249"/>
-        <location filename="../src/SubtitleListPanel.cpp" line="268"/>
-        <location filename="../src/SubtitleListPanel.cpp" line="1120"/>
-        <location filename="../src/SubtitleListPanel.cpp" line="1166"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="248"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="267"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="1164"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="1210"/>
         <source>T/B Offset</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/SubtitleListPanel.cpp" line="251"/>
-        <location filename="../src/SubtitleListPanel.cpp" line="1125"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="250"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="1169"/>
         <source>Blur</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/SubtitleListPanel.cpp" line="260"/>
-        <location filename="../src/SubtitleListPanel.cpp" line="1150"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="259"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="1194"/>
         <source>Roundness</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/SubtitleListPanel.cpp" line="262"/>
-        <location filename="../src/SubtitleListPanel.cpp" line="1154"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="261"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="1198"/>
         <source>L/R Padding</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/SubtitleListPanel.cpp" line="264"/>
-        <location filename="../src/SubtitleListPanel.cpp" line="1158"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="263"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="1202"/>
         <source>T/B Padding</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/SubtitleListPanel.cpp" line="271"/>
-        <location filename="../src/SubtitleListPanel.cpp" line="1189"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="270"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="1233"/>
         <source>Image</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/SubtitleListPanel.cpp" line="273"/>
-        <location filename="../src/SubtitleListPanel.cpp" line="1199"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="272"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="1243"/>
         <source>Left Padding</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/SubtitleListPanel.cpp" line="275"/>
-        <location filename="../src/SubtitleListPanel.cpp" line="1201"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="274"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="1245"/>
         <source>Right Padding</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/SubtitleListPanel.cpp" line="277"/>
-        <location filename="../src/SubtitleListPanel.cpp" line="1218"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="276"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="1262"/>
         <source>Top Padding</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/SubtitleListPanel.cpp" line="279"/>
-        <location filename="../src/SubtitleListPanel.cpp" line="1220"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="278"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="1264"/>
         <source>Bottom Padding</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/SubtitleListPanel.cpp" line="861"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="905"/>
         <source>Unassigned</source>
         <translation>Unassigned</translation>
     </message>
     <message>
-        <location filename="../src/SubtitleListPanel.cpp" line="875"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="919"/>
         <source>+ New Speaker...</source>
         <translation>+ New Speaker...</translation>
     </message>
     <message>
-        <location filename="../src/SubtitleListPanel.cpp" line="876"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="920"/>
         <source>⚙️ Manage Speakers...</source>
         <translation>⚙️ Manage Speakers...</translation>
     </message>
     <message>
-        <location filename="../src/SubtitleListPanel.cpp" line="1241"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="1285"/>
         <source>Select Bubble Image</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/SubtitleListPanel.cpp" line="1242"/>
-        <source>Images (*.png *.jpg *.jpeg)</source>
+        <location filename="../src/SubtitleListPanel.cpp" line="1286"/>
+        <source>Images (*.png *.jpg *.jpeg *.svg)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/SubtitleListPanel.cpp" line="2135"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="2487"/>
+        <source>Glassmorphism</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/SubtitleListPanel.cpp" line="2489"/>
+        <source>Dark Box</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/SubtitleListPanel.cpp" line="2490"/>
+        <source>Cyberpunk Neon</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/SubtitleListPanel.cpp" line="2492"/>
+        <source>Cute Yellow</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/SubtitleListPanel.cpp" line="2493"/>
+        <source>Minimal Outline</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/SubtitleListPanel.cpp" line="2158"/>
         <source>Delete</source>
         <translation type="unfinished">Delete</translation>
     </message>
     <message>
-        <location filename="../src/SubtitleListPanel.cpp" line="2139"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="2162"/>
         <source>Delete Preset</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/SubtitleListPanel.cpp" line="2140"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="2163"/>
         <source>Are you sure you want to delete this preset?</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/SubtitleListPanel.cpp" line="2305"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="2328"/>
         <source>Default White</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/SubtitleListPanel.cpp" line="2306"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="2329"/>
         <source>Classic Yellow</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/SubtitleListPanel.cpp" line="2307"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="2330"/>
         <source>Soft Shadow</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/SubtitleListPanel.cpp" line="2308"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="2331"/>
         <source>Neon Glow</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/SubtitleListPanel.cpp" line="2309"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="2332"/>
         <source>Translucent Box</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/SubtitleListPanel.cpp" line="2310"/>
+        <location filename="../src/SubtitleListPanel.cpp" line="2333"/>
         <source>Silver Gradient</source>
         <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Left Slice</source>
+        <translation>Left Slice</translation>
+    </message>
+    <message>
+        <source>Right Slice</source>
+        <translation>Right Slice</translation>
+    </message>
+    <message>
+        <source>Top Slice</source>
+        <translation>Top Slice</translation>
+    </message>
+    <message>
+        <source>Bottom Slice</source>
+        <translation>Bottom Slice</translation>
+    </message>
+    <message>
+        <source>Text Padding</source>
+        <translation>Text Padding</translation>
+    </message>
+    <message>
+        <source>9-Patch Stretch</source>
+        <translation>9-Patch Stretch</translation>
+    </message>
+    <message>
+        <source>Background Padding</source>
+        <translation>Background Padding</translation>
+    </message>
+    <message>
+        <source>Uniform</source>
+        <translation>Uniform</translation>
+    </message>
+    <message>
+        <source>Value</source>
+        <translation>Value</translation>
     </message>
 </context>
 <context>
@@ -2945,46 +3002,52 @@ A simple and easy-to-use video subtitle editing tool.</translation>
 <context>
     <name>VideoPreviewPanel</name>
     <message>
-        <location filename="../src/VideoPreviewPanel.cpp" line="581"/>
-        <location filename="../src/VideoPreviewPanel.cpp" line="863"/>
+        <location filename="../src/VideoPreviewPanel.cpp" line="608"/>
+        <location filename="../src/VideoPreviewPanel.cpp" line="904"/>
         <source>加粗</source>
         <translation>Bold</translation>
     </message>
     <message>
-        <location filename="../src/VideoPreviewPanel.cpp" line="587"/>
-        <location filename="../src/VideoPreviewPanel.cpp" line="864"/>
+        <location filename="../src/VideoPreviewPanel.cpp" line="614"/>
+        <location filename="../src/VideoPreviewPanel.cpp" line="905"/>
         <source>斜体</source>
         <translation>Italic</translation>
     </message>
     <message>
-        <location filename="../src/VideoPreviewPanel.cpp" line="593"/>
-        <location filename="../src/VideoPreviewPanel.cpp" line="865"/>
+        <location filename="../src/VideoPreviewPanel.cpp" line="620"/>
+        <location filename="../src/VideoPreviewPanel.cpp" line="906"/>
         <source>下划线</source>
         <translation>Underline</translation>
     </message>
     <message>
-        <location filename="../src/VideoPreviewPanel.cpp" line="600"/>
-        <location filename="../src/VideoPreviewPanel.cpp" line="866"/>
+        <location filename="../src/VideoPreviewPanel.cpp" line="627"/>
+        <location filename="../src/VideoPreviewPanel.cpp" line="907"/>
         <source>左对齐</source>
         <translation>Left Align</translation>
     </message>
     <message>
-        <location filename="../src/VideoPreviewPanel.cpp" line="606"/>
-        <location filename="../src/VideoPreviewPanel.cpp" line="867"/>
+        <location filename="../src/VideoPreviewPanel.cpp" line="633"/>
+        <location filename="../src/VideoPreviewPanel.cpp" line="908"/>
         <source>居中对齐</source>
         <translation>Center Align</translation>
     </message>
     <message>
-        <location filename="../src/VideoPreviewPanel.cpp" line="612"/>
-        <location filename="../src/VideoPreviewPanel.cpp" line="868"/>
+        <location filename="../src/VideoPreviewPanel.cpp" line="639"/>
+        <location filename="../src/VideoPreviewPanel.cpp" line="909"/>
         <source>右对齐</source>
         <translation>Right Align</translation>
     </message>
     <message>
-        <location filename="../src/VideoPreviewPanel.cpp" line="618"/>
-        <location filename="../src/VideoPreviewPanel.cpp" line="869"/>
+        <location filename="../src/VideoPreviewPanel.cpp" line="645"/>
+        <location filename="../src/VideoPreviewPanel.cpp" line="910"/>
         <source>分散对齐</source>
         <translation>Justify</translation>
+    </message>
+    <message>
+        <location filename="../src/VideoPreviewPanel.cpp" line="658"/>
+        <location filename="../src/VideoPreviewPanel.cpp" line="929"/>
+        <source>Apply All</source>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <source>全部应用</source>
@@ -2995,13 +3058,13 @@ A simple and easy-to-use video subtitle editing tool.</translation>
         <translation type="vanished">Apply current subtitle font, size, style and position to all items</translation>
     </message>
     <message>
-        <location filename="../src/VideoPreviewPanel.cpp" line="756"/>
-        <location filename="../src/VideoPreviewPanel.cpp" line="870"/>
+        <location filename="../src/VideoPreviewPanel.cpp" line="797"/>
+        <location filename="../src/VideoPreviewPanel.cpp" line="911"/>
         <source>音量 / 静音</source>
         <translation>Volume / Mute</translation>
     </message>
     <message>
-        <location filename="../src/VideoPreviewPanel.cpp" line="879"/>
+        <location filename="../src/VideoPreviewPanel.cpp" line="920"/>
         <source>原画</source>
         <translation>Full</translation>
     </message>
@@ -3044,8 +3107,8 @@ A simple and easy-to-use video subtitle editing tool.</translation>
         <location filename="../src/WhisperAsrService.cpp" line="51"/>
         <location filename="../src/WhisperAsrService.cpp" line="128"/>
         <location filename="../src/WhisperAsrService.cpp" line="166"/>
-        <location filename="../src/WhisperAsrService.cpp" line="219"/>
-        <location filename="../src/WhisperAsrService.cpp" line="255"/>
+        <location filename="../src/WhisperAsrService.cpp" line="226"/>
+        <location filename="../src/WhisperAsrService.cpp" line="385"/>
         <source>识别已被用户取消</source>
         <translation type="unfinished"></translation>
     </message>
@@ -3080,7 +3143,7 @@ A simple and easy-to-use video subtitle editing tool.</translation>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/WhisperAsrService.cpp" line="227"/>
+        <location filename="../src/WhisperAsrService.cpp" line="234"/>
         <source>Whisper 语音推理执行失败，代码: %1</source>
         <translation type="unfinished"></translation>
     </message>
