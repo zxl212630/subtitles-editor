@@ -7,11 +7,11 @@
 #include "SubtitleTrack.h"
 #include "ThemeManager.h"
 #include "TranslationManager.h"
+#include <QAbstractItemView>
 #include <QBrush>
 #include <QCheckBox>
 #include <QColorDialog>
 #include <QComboBox>
-#include <QAbstractItemView>
 #include <QDir>
 #include <QFile>
 #include <QFileDialog>
@@ -43,9 +43,9 @@
 #include <QVBoxLayout>
 
 #include <QApplication>
+#include <QMouseEvent>
 #include <QPainter>
 #include <QStyle>
-#include <QMouseEvent>
 #include <QStyleOptionSlider>
 
 class ClickableSlider : public QSlider {
@@ -58,14 +58,20 @@ protected:
     if (event->button() == Qt::LeftButton) {
       QStyleOptionSlider opt;
       initStyleOption(&opt);
-      QRect sr = style()->subControlRect(QStyle::CC_Slider, &opt, QStyle::SC_SliderHandle, this);
+      QRect sr = style()->subControlRect(QStyle::CC_Slider, &opt,
+                                         QStyle::SC_SliderHandle, this);
 
       if (!sr.contains(event->pos())) {
         int val;
         if (orientation() == Qt::Horizontal) {
-          val = QStyle::sliderValueFromPosition(minimum(), maximum(), event->pos().x() - sr.width() / 2, width() - sr.width(), opt.upsideDown);
+          val = QStyle::sliderValueFromPosition(
+              minimum(), maximum(), event->pos().x() - sr.width() / 2,
+              width() - sr.width(), opt.upsideDown);
         } else {
-          val = QStyle::sliderValueFromPosition(minimum(), maximum(), height() - event->pos().y() - sr.height() / 2, height() - sr.height(), opt.upsideDown);
+          val = QStyle::sliderValueFromPosition(
+              minimum(), maximum(),
+              height() - event->pos().y() - sr.height() / 2,
+              height() - sr.height(), opt.upsideDown);
         }
         setValue(val);
       }
@@ -1229,13 +1235,30 @@ QWidget *SubtitleListPanel::createCustomStylePanel() {
   bgRoundnessSlider_->setRange(0, 50);
   addFormRow(bgForm_, tr("Roundness"), "lblBgRoundness", bgRoundnessSlider_);
 
-  bgPaddingXSlider_ = new ClickableSlider(Qt::Horizontal, container);
-  bgPaddingXSlider_->setRange(0, 50);
-  addFormRow(bgForm_, tr("L/R Padding"), "lblBgPaddingX", bgPaddingXSlider_);
+  auto *bgPaddingContainer = new QWidget(container);
+  auto *bgPaddingLayout = new QHBoxLayout(bgPaddingContainer);
+  bgPaddingLayout->setContentsMargins(0, 0, 0, 0);
+  bgPaddingLayout->setSpacing(8);
 
-  bgPaddingYSlider_ = new ClickableSlider(Qt::Horizontal, container);
-  bgPaddingYSlider_->setRange(0, 50);
-  addFormRow(bgForm_, tr("T/B Padding"), "lblBgPaddingY", bgPaddingYSlider_);
+  bgPaddingXSpin_ = new QSpinBox(bgPaddingContainer);
+  bgPaddingXSpin_->setRange(0, 200);
+
+  bgPaddingYSpin_ = new QSpinBox(bgPaddingContainer);
+  bgPaddingYSpin_->setRange(0, 200);
+
+  auto *lblBgPaddingX = new QLabel(tr("L/R Padding"), bgPaddingContainer);
+  lblBgPaddingX->setObjectName("lblBgPaddingX");
+
+  auto *lblBgPaddingY = new QLabel(tr("T/B Padding"), bgPaddingContainer);
+  lblBgPaddingY->setObjectName("lblBgPaddingY");
+
+  bgPaddingLayout->addWidget(lblBgPaddingX);
+  bgPaddingLayout->addWidget(bgPaddingXSpin_, 1);
+  bgPaddingLayout->addSpacing(16);
+  bgPaddingLayout->addWidget(lblBgPaddingY);
+  bgPaddingLayout->addWidget(bgPaddingYSpin_, 1);
+
+  bgForm_->addRow(bgPaddingContainer);
 
   auto *bgOffsetContainer = new QWidget(container);
   auto *bgOffsetLayout = new QHBoxLayout(bgOffsetContainer);
@@ -1377,8 +1400,10 @@ QWidget *SubtitleListPanel::createCustomStylePanel() {
   connect(bgColorBtn_, &ColorButton::colorChanged, this, triggerUpdate);
   connect(bgOpacitySlider_, &QSlider::valueChanged, this, triggerUpdate);
   connect(bgRoundnessSlider_, &QSlider::valueChanged, this, triggerUpdate);
-  connect(bgPaddingXSlider_, &QSlider::valueChanged, this, triggerUpdate);
-  connect(bgPaddingYSlider_, &QSlider::valueChanged, this, triggerUpdate);
+  connect(bgPaddingXSpin_, QOverload<int>::of(&QSpinBox::valueChanged), this,
+          triggerUpdate);
+  connect(bgPaddingYSpin_, QOverload<int>::of(&QSpinBox::valueChanged), this,
+          triggerUpdate);
   connect(bgOffsetXSpin_, QOverload<int>::of(&QSpinBox::valueChanged), this,
           triggerUpdate);
   connect(bgOffsetYSpin_, QOverload<int>::of(&QSpinBox::valueChanged), this,
@@ -1430,8 +1455,8 @@ QWidget *SubtitleListPanel::createCustomStylePanel() {
       item.bgColor = bgColorBtn_->color().name();
       item.bgOpacity = bgOpacitySlider_->value() / 100.0;
       item.bgRoundness = bgRoundnessSlider_->value();
-      item.bgPaddingX = bgPaddingXSlider_->value();
-      item.bgPaddingY = bgPaddingYSlider_->value();
+      item.bgPaddingX = bgPaddingXSpin_->value();
+      item.bgPaddingY = bgPaddingYSpin_->value();
       item.bgOffsetX = bgOffsetXSpin_->value();
       item.bgOffsetY = bgOffsetYSpin_->value();
 
@@ -1455,9 +1480,9 @@ QWidget *SubtitleListPanel::createCustomStylePanel() {
           recordUndoState);
   connect(bgOpacitySlider_, &QSlider::sliderReleased, this, recordUndoState);
   connect(bgRoundnessSlider_, &QSlider::sliderReleased, this, recordUndoState);
-  connect(bgPaddingXSlider_, &QSlider::sliderReleased, this, recordUndoState);
-  connect(bgPaddingYSlider_, &QSlider::sliderReleased, this, recordUndoState);
 
+  connect(bgPaddingXSpin_, &QSpinBox::editingFinished, this, recordUndoState);
+  connect(bgPaddingYSpin_, &QSpinBox::editingFinished, this, recordUndoState);
   connect(bgOffsetXSpin_, &QSpinBox::editingFinished, this, recordUndoState);
   connect(bgOffsetYSpin_, &QSpinBox::editingFinished, this, recordUndoState);
   connect(bubblePaddingLeftSpin_, &QSpinBox::editingFinished, this,
@@ -2035,10 +2060,10 @@ void SubtitleListPanel::loadStyleFromItem(const SubtitleItem &item) {
     bgOpacitySlider_->setValue(qRound(item.bgOpacity * 100.0));
   if (bgRoundnessSlider_)
     bgRoundnessSlider_->setValue(item.bgRoundness);
-  if (bgPaddingXSlider_)
-    bgPaddingXSlider_->setValue(item.bgPaddingX);
-  if (bgPaddingYSlider_)
-    bgPaddingYSlider_->setValue(item.bgPaddingY);
+  if (bgPaddingXSpin_)
+    bgPaddingXSpin_->setValue(item.bgPaddingX);
+  if (bgPaddingYSpin_)
+    bgPaddingYSpin_->setValue(item.bgPaddingY);
   if (bgOffsetXSpin_)
     bgOffsetXSpin_->setValue(item.bgOffsetX);
   if (bgOffsetYSpin_)
@@ -2117,8 +2142,8 @@ void SubtitleListPanel::applyCustomStyleToActiveItem() {
   item.bgColor = bgColorBtn_->color().name();
   item.bgOpacity = bgOpacitySlider_->value() / 100.0;
   item.bgRoundness = bgRoundnessSlider_->value();
-  item.bgPaddingX = bgPaddingXSlider_->value();
-  item.bgPaddingY = bgPaddingYSlider_->value();
+  item.bgPaddingX = bgPaddingXSpin_->value();
+  item.bgPaddingY = bgPaddingYSpin_->value();
   item.bgOffsetX = bgOffsetXSpin_->value();
   item.bgOffsetY = bgOffsetYSpin_->value();
 
