@@ -290,10 +290,8 @@ void SubtitleListPanel::retranslateUi() {
     lbl->setText(tr("L/R Padding"));
   if (auto *lbl = findChild<QLabel *>("lblBgPaddingY"))
     lbl->setText(tr("T/B Padding"));
-  if (auto *lbl = findChild<QLabel *>("lblBgOffsetX"))
-    lbl->setText(tr("L/R Offset"));
-  if (auto *lbl = findChild<QLabel *>("lblBgOffsetY"))
-    lbl->setText(tr("T/B Offset"));
+  if (auto *lbl = findChild<QLabel *>("lblBgOffset"))
+    lbl->setText(tr("Offset"));
 
   if (auto *lbl = findChild<QLabel *>("lblBubbleImage"))
     lbl->setText(tr("Image"));
@@ -1237,13 +1235,22 @@ QWidget *SubtitleListPanel::createCustomStylePanel() {
   bgPaddingYSlider_->setRange(0, 50);
   addFormRow(bgForm_, tr("T/B Padding"), "lblBgPaddingY", bgPaddingYSlider_);
 
-  bgOffsetXSpin_ = new QSpinBox(container);
-  bgOffsetXSpin_->setRange(-200, 200);
-  addFormRow(bgForm_, tr("L/R Offset"), "lblBgOffsetX", bgOffsetXSpin_);
+  auto *bgOffsetContainer = new QWidget(container);
+  auto *bgOffsetLayout = new QHBoxLayout(bgOffsetContainer);
+  bgOffsetLayout->setContentsMargins(0, 0, 0, 0);
+  bgOffsetLayout->setSpacing(8);
 
-  bgOffsetYSpin_ = new QSpinBox(container);
+  bgOffsetXSpin_ = new QSpinBox(bgOffsetContainer);
+  bgOffsetXSpin_->setRange(-200, 200);
+  bgOffsetXSpin_->setPrefix("X: ");
+
+  bgOffsetYSpin_ = new QSpinBox(bgOffsetContainer);
   bgOffsetYSpin_->setRange(-200, 200);
-  addFormRow(bgForm_, tr("T/B Offset"), "lblBgOffsetY", bgOffsetYSpin_);
+  bgOffsetYSpin_->setPrefix("Y: ");
+
+  bgOffsetLayout->addWidget(bgOffsetXSpin_);
+  bgOffsetLayout->addWidget(bgOffsetYSpin_);
+  addFormRow(bgForm_, tr("Offset"), "lblBgOffset", bgOffsetContainer);
 
   bgEnableCheck_ = new QCheckBox(container);
   createCollapsibleGroup(tr("Background"), "Background", bgForm_,
