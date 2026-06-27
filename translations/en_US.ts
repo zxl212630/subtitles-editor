@@ -2533,6 +2533,14 @@ A simple and easy-to-use video subtitle editing tool.</translation>
         <source>Bottom Slice</source>
         <translation>Bottom Slice</translation>
     </message>
+    <message>
+        <source>Text Padding</source>
+        <translation>Text Padding</translation>
+    </message>
+    <message>
+        <source>Stretch Protection</source>
+        <translation>Stretch Protection</translation>
+    </message>
 </context>
 <context>
     <name>SubtitleTrack</name>

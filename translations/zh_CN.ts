@@ -2586,6 +2586,14 @@
         <source>Bottom Slice</source>
         <translation>下拉伸</translation>
     </message>
+    <message>
+        <source>Text Padding</source>
+        <translation>文字边距</translation>
+    </message>
+    <message>
+        <source>Stretch Protection</source>
+        <translation>拉伸保护</translation>
+    </message>
 </context>
 <context>
     <name>SubtitleTrack</name>

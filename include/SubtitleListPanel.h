@@ -180,5 +180,6 @@ private:
   void addPresetCard(const QString &name, const SubtitleItem &style,
                      bool isCustom = false, int customIndex = -1);
   void addBubbleCard(const QString &name, const QString &imagePath, int padLeft,
-                     int padRight, int padTop, int padBottom);
+                     int padRight, int padTop, int padBottom, int sliceLeft,
+                     int sliceRight, int sliceTop, int sliceBottom);
 };

@@ -320,6 +320,11 @@ void SubtitleListPanel::retranslateUi() {
   if (auto *lbl = findChild<QLabel *>("lblBubbleSliceBottom"))
     lbl->setText(tr("Bottom Slice"));
 
+  if (auto *gp = findChild<QGroupBox *>("BubblePaddingGroup"))
+    gp->setTitle(tr("Text Padding"));
+  if (auto *gp = findChild<QGroupBox *>("BubbleSliceGroup"))
+    gp->setTitle(tr("Stretch Protection"));
+
   populatePresets();
   populateBubbles();
 }
@@ -1316,7 +1321,13 @@ QWidget *SubtitleListPanel::createCustomStylePanel() {
   bubbleImageLayout->addWidget(bubbleImageBrowse_);
   addFormRow(bubbleForm, tr("Image"), "lblBubbleImage", bubbleImageContainer);
 
-  auto *lrContainer = new QWidget(container);
+  auto *paddingGroup = new QGroupBox(tr("Text Padding"), container);
+  paddingGroup->setObjectName("BubblePaddingGroup");
+  auto *pgLayout = new QVBoxLayout(paddingGroup);
+  pgLayout->setContentsMargins(6, 12, 6, 6);
+  pgLayout->setSpacing(6);
+
+  auto *lrContainer = new QWidget(paddingGroup);
   auto *lrLayout = new QHBoxLayout(lrContainer);
   lrLayout->setContentsMargins(0, 0, 0, 0);
   lrLayout->setSpacing(8);
@@ -1333,9 +1344,9 @@ QWidget *SubtitleListPanel::createCustomStylePanel() {
   lrLayout->addSpacing(16);
   lrLayout->addWidget(lblBubblePaddingRight);
   lrLayout->addWidget(bubblePaddingRightSpin_, 1);
-  bubbleForm->addRow(lrContainer);
+  pgLayout->addWidget(lrContainer);
 
-  auto *tbContainer = new QWidget(container);
+  auto *tbContainer = new QWidget(paddingGroup);
   auto *tbLayout = new QHBoxLayout(tbContainer);
   tbLayout->setContentsMargins(0, 0, 0, 0);
   tbLayout->setSpacing(8);
@@ -1352,9 +1363,17 @@ QWidget *SubtitleListPanel::createCustomStylePanel() {
   tbLayout->addSpacing(16);
   tbLayout->addWidget(lblBubblePaddingBottom);
   tbLayout->addWidget(bubblePaddingBottomSpin_, 1);
-  bubbleForm->addRow(tbContainer);
+  pgLayout->addWidget(tbContainer);
 
-  auto *sliceLrContainer = new QWidget(container);
+  bubbleForm->addRow(paddingGroup);
+
+  auto *sliceGroup = new QGroupBox(tr("Stretch Protection"), container);
+  sliceGroup->setObjectName("BubbleSliceGroup");
+  auto *sgLayout = new QVBoxLayout(sliceGroup);
+  sgLayout->setContentsMargins(6, 12, 6, 6);
+  sgLayout->setSpacing(6);
+
+  auto *sliceLrContainer = new QWidget(sliceGroup);
   auto *sliceLrLayout = new QHBoxLayout(sliceLrContainer);
   sliceLrLayout->setContentsMargins(0, 0, 0, 0);
   sliceLrLayout->setSpacing(8);
@@ -1371,9 +1390,9 @@ QWidget *SubtitleListPanel::createCustomStylePanel() {
   sliceLrLayout->addSpacing(16);
   sliceLrLayout->addWidget(lblBubbleSliceRight);
   sliceLrLayout->addWidget(bubbleSliceRightSpin_, 1);
-  bubbleForm->addRow(sliceLrContainer);
+  sgLayout->addWidget(sliceLrContainer);
 
-  auto *sliceTbContainer = new QWidget(container);
+  auto *sliceTbContainer = new QWidget(sliceGroup);
   auto *sliceTbLayout = new QHBoxLayout(sliceTbContainer);
   sliceTbLayout->setContentsMargins(0, 0, 0, 0);
   sliceTbLayout->setSpacing(8);
@@ -1390,7 +1409,9 @@ QWidget *SubtitleListPanel::createCustomStylePanel() {
   sliceTbLayout->addSpacing(16);
   sliceTbLayout->addWidget(lblBubbleSliceBottom);
   sliceTbLayout->addWidget(bubbleSliceBottomSpin_, 1);
-  bubbleForm->addRow(sliceTbContainer);
+  sgLayout->addWidget(sliceTbContainer);
+
+  bubbleForm->addRow(sliceGroup);
 
   bubbleEnableCheck_ = new QCheckBox(container);
   createCollapsibleGroup(tr("Bubble"), "Bubble", bubbleForm, bubbleEnableCheck_,
@@ -2605,6 +2626,10 @@ QWidget *SubtitleListPanel::createBubbleStylePanel() {
             int padRight = data["padRight"].toInt();
             int padTop = data["padTop"].toInt();
             int padBottom = data["padBottom"].toInt();
+            int sliceLeft = data["sliceLeft"].toInt();
+            int sliceRight = data["sliceRight"].toInt();
+            int sliceTop = data["sliceTop"].toInt();
+            int sliceBottom = data["sliceBottom"].toInt();
 
             if (!currentSelectedId_.isEmpty()) {
               SubtitleItem sItem;
@@ -2620,10 +2645,10 @@ QWidget *SubtitleListPanel::createBubbleStylePanel() {
               sItem.bubblePaddingRight = padRight;
               sItem.bubblePaddingTop = padTop;
               sItem.bubblePaddingBottom = padBottom;
-              sItem.bubbleSliceLeft = padLeft;
-              sItem.bubbleSliceRight = padRight;
-              sItem.bubbleSliceTop = padTop;
-              sItem.bubbleSliceBottom = padBottom;
+              sItem.bubbleSliceLeft = sliceLeft;
+              sItem.bubbleSliceRight = sliceRight;
+              sItem.bubbleSliceTop = sliceTop;
+              sItem.bubbleSliceBottom = sliceBottom;
 
               track_->updateItem(currentSelectedId_, sItem);
               loadStyleFromItem(sItem);
@@ -2635,10 +2660,10 @@ QWidget *SubtitleListPanel::createBubbleStylePanel() {
               sItem.bubblePaddingRight = padRight;
               sItem.bubblePaddingTop = padTop;
               sItem.bubblePaddingBottom = padBottom;
-              sItem.bubbleSliceLeft = padLeft;
-              sItem.bubbleSliceRight = padRight;
-              sItem.bubbleSliceTop = padTop;
-              sItem.bubbleSliceBottom = padBottom;
+              sItem.bubbleSliceLeft = sliceLeft;
+              sItem.bubbleSliceRight = sliceRight;
+              sItem.bubbleSliceTop = sliceTop;
+              sItem.bubbleSliceBottom = sliceBottom;
 
               track_->setDefaultStyleItem(sItem);
               loadStyleFromItem(sItem);
@@ -2650,7 +2675,9 @@ QWidget *SubtitleListPanel::createBubbleStylePanel() {
 
 void SubtitleListPanel::addBubbleCard(const QString &name,
                                       const QString &imagePath, int padLeft,
-                                      int padRight, int padTop, int padBottom) {
+                                      int padRight, int padTop, int padBottom,
+                                      int sliceLeft, int sliceRight, int sliceTop,
+                                      int sliceBottom) {
   if (!bubbleListWidget_)
     return;
 
@@ -2665,6 +2692,10 @@ void SubtitleListPanel::addBubbleCard(const QString &name,
   data["padRight"] = padRight;
   data["padTop"] = padTop;
   data["padBottom"] = padBottom;
+  data["sliceLeft"] = sliceLeft;
+  data["sliceRight"] = sliceRight;
+  data["sliceTop"] = sliceTop;
+  data["sliceBottom"] = sliceBottom;
   item->setData(Qt::UserRole, data);
 
   bubbleListWidget_->addItem(item);
@@ -2676,14 +2707,16 @@ void SubtitleListPanel::populateBubbles() {
 
   bubbleListWidget_->clear();
 
-  addBubbleCard(tr("Glassmorphism"), ":/bubbles/bubble_glass.png", 22, 15, 15,
-                22);
-  addBubbleCard(tr("Dark Box"), ":/bubbles/bubble_dark.png", 22, 15, 15, 22);
-  addBubbleCard(tr("Cyberpunk Neon"), ":/bubbles/bubble_neon.png", 22, 15, 15,
-                22);
-  addBubbleCard(tr("Cute Yellow"), ":/bubbles/bubble_cute.png", 22, 15, 15, 22);
-  addBubbleCard(tr("Minimal Outline"), ":/bubbles/bubble_outline.png", 22, 15,
-                15, 22);
+  addBubbleCard(tr("Glassmorphism"), ":/bubbles/bubble_glass.png", 10, 10, 10,
+                10, 40, 40, 40, 40);
+  addBubbleCard(tr("Dark Box"), ":/bubbles/bubble_dark.png", 10, 10, 10,
+                10, 40, 40, 40, 40);
+  addBubbleCard(tr("Cyberpunk Neon"), ":/bubbles/bubble_neon.png", 10, 10, 10,
+                10, 40, 40, 40, 40);
+  addBubbleCard(tr("Cute Yellow"), ":/bubbles/bubble_cute.png", 10, 10, 10,
+                10, 40, 40, 40, 40);
+  addBubbleCard(tr("Minimal Outline"), ":/bubbles/bubble_outline.png", 10, 10,
+                10, 10, 40, 40, 40, 40);
 }
 
 #include "SubtitleListPanel.moc"
