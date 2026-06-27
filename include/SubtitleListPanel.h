@@ -154,6 +154,10 @@ private:
   QSpinBox *bubblePaddingRightSpin_ = nullptr;
   QSpinBox *bubblePaddingTopSpin_ = nullptr;
   QSpinBox *bubblePaddingBottomSpin_ = nullptr;
+  QSpinBox *bubbleSliceLeftSpin_ = nullptr;
+  QSpinBox *bubbleSliceRightSpin_ = nullptr;
+  QSpinBox *bubbleSliceTopSpin_ = nullptr;
+  QSpinBox *bubbleSliceBottomSpin_ = nullptr;
 
   QComboBox *presetTypeCombo_ = nullptr;
   QListWidget *presetListWidget_ = nullptr;

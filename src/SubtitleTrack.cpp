@@ -476,6 +476,10 @@ void SubtitleTrack::applyStyleToAllDirect(const QString &sourceId) {
       items_[i].bubblePaddingRight = source->bubblePaddingRight;
       items_[i].bubblePaddingTop = source->bubblePaddingTop;
       items_[i].bubblePaddingBottom = source->bubblePaddingBottom;
+      items_[i].bubbleSliceLeft = source->bubbleSliceLeft;
+      items_[i].bubbleSliceRight = source->bubbleSliceRight;
+      items_[i].bubbleSliceTop = source->bubbleSliceTop;
+      items_[i].bubbleSliceBottom = source->bubbleSliceBottom;
 
       emit itemUpdated(items_[i].id);
       changed = true;
@@ -668,6 +672,10 @@ SubtitleItem SubtitleTrack::defaultStyleItem() const {
   item.bubblePaddingRight = defaultBubblePaddingRight_;
   item.bubblePaddingTop = defaultBubblePaddingTop_;
   item.bubblePaddingBottom = defaultBubblePaddingBottom_;
+  item.bubbleSliceLeft = defaultBubbleSliceLeft_;
+  item.bubbleSliceRight = defaultBubbleSliceRight_;
+  item.bubbleSliceTop = defaultBubbleSliceTop_;
+  item.bubbleSliceBottom = defaultBubbleSliceBottom_;
 
   return item;
 }
@@ -718,6 +726,10 @@ void SubtitleTrack::setDefaultStyleItem(const SubtitleItem &item) {
   defaultBubblePaddingRight_ = item.bubblePaddingRight;
   defaultBubblePaddingTop_ = item.bubblePaddingTop;
   defaultBubblePaddingBottom_ = item.bubblePaddingBottom;
+  defaultBubbleSliceLeft_ = item.bubbleSliceLeft;
+  defaultBubbleSliceRight_ = item.bubbleSliceRight;
+  defaultBubbleSliceTop_ = item.bubbleSliceTop;
+  defaultBubbleSliceBottom_ = item.bubbleSliceBottom;
 }
 
 void SubtitleTrack::loadGlobalSettings() {
@@ -781,6 +793,10 @@ void SubtitleTrack::loadGlobalSettings() {
   defaultBubblePaddingTop_ = cfg.getInt("subtitle", "bubblePaddingTop", 10);
   defaultBubblePaddingBottom_ =
       cfg.getInt("subtitle", "bubblePaddingBottom", 10);
+  defaultBubbleSliceLeft_ = cfg.getInt("subtitle", "bubbleSliceLeft", 10);
+  defaultBubbleSliceRight_ = cfg.getInt("subtitle", "bubbleSliceRight", 10);
+  defaultBubbleSliceTop_ = cfg.getInt("subtitle", "bubbleSliceTop", 10);
+  defaultBubbleSliceBottom_ = cfg.getInt("subtitle", "bubbleSliceBottom", 10);
 }
 
 void SubtitleTrack::saveGlobalSettings() {
@@ -841,6 +857,10 @@ void SubtitleTrack::saveGlobalSettings() {
   cfg.setValue("subtitle", "bubblePaddingRight", defaultBubblePaddingRight_);
   cfg.setValue("subtitle", "bubblePaddingTop", defaultBubblePaddingTop_);
   cfg.setValue("subtitle", "bubblePaddingBottom", defaultBubblePaddingBottom_);
+  cfg.setValue("subtitle", "bubbleSliceLeft", defaultBubbleSliceLeft_);
+  cfg.setValue("subtitle", "bubbleSliceRight", defaultBubbleSliceRight_);
+  cfg.setValue("subtitle", "bubbleSliceTop", defaultBubbleSliceTop_);
+  cfg.setValue("subtitle", "bubbleSliceBottom", defaultBubbleSliceBottom_);
 
   cfg.sync();
 }
@@ -902,6 +922,10 @@ QJsonObject SubtitleTrack::toJsonObject() const {
     styleObj["bubblePaddingRight"] = item.bubblePaddingRight;
     styleObj["bubblePaddingTop"] = item.bubblePaddingTop;
     styleObj["bubblePaddingBottom"] = item.bubblePaddingBottom;
+    styleObj["bubbleSliceLeft"] = item.bubbleSliceLeft;
+    styleObj["bubbleSliceRight"] = item.bubbleSliceRight;
+    styleObj["bubbleSliceTop"] = item.bubbleSliceTop;
+    styleObj["bubbleSliceBottom"] = item.bubbleSliceBottom;
 
     itemObj["style"] = styleObj;
 
@@ -1005,6 +1029,14 @@ void SubtitleTrack::fromJsonObject(const QJsonObject &obj) {
         styleObj["bubblePaddingTop"].toInt(defaultBubblePaddingTop_);
     item.bubblePaddingBottom =
         styleObj["bubblePaddingBottom"].toInt(defaultBubblePaddingBottom_);
+    item.bubbleSliceLeft =
+        styleObj["bubbleSliceLeft"].toInt(defaultBubbleSliceLeft_);
+    item.bubbleSliceRight =
+        styleObj["bubbleSliceRight"].toInt(defaultBubbleSliceRight_);
+    item.bubbleSliceTop =
+        styleObj["bubbleSliceTop"].toInt(defaultBubbleSliceTop_);
+    item.bubbleSliceBottom =
+        styleObj["bubbleSliceBottom"].toInt(defaultBubbleSliceBottom_);
 
     QJsonObject posObj = itemObj["position"].toObject();
     item.rectX = posObj["x"].toDouble(defaultSubtitleRect_.x());

@@ -2517,6 +2517,22 @@ A simple and easy-to-use video subtitle editing tool.</translation>
         <source>Silver Gradient</source>
         <translation type="unfinished"></translation>
     </message>
+    <message>
+        <source>Left Slice</source>
+        <translation>Left Slice</translation>
+    </message>
+    <message>
+        <source>Right Slice</source>
+        <translation>Right Slice</translation>
+    </message>
+    <message>
+        <source>Top Slice</source>
+        <translation>Top Slice</translation>
+    </message>
+    <message>
+        <source>Bottom Slice</source>
+        <translation>Bottom Slice</translation>
+    </message>
 </context>
 <context>
     <name>SubtitleTrack</name>

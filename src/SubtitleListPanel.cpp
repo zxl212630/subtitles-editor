@@ -311,6 +311,14 @@ void SubtitleListPanel::retranslateUi() {
     lbl->setText(tr("Top Padding"));
   if (auto *lbl = findChild<QLabel *>("lblBubblePaddingBottom"))
     lbl->setText(tr("Bottom Padding"));
+  if (auto *lbl = findChild<QLabel *>("lblBubbleSliceLeft"))
+    lbl->setText(tr("Left Slice"));
+  if (auto *lbl = findChild<QLabel *>("lblBubbleSliceRight"))
+    lbl->setText(tr("Right Slice"));
+  if (auto *lbl = findChild<QLabel *>("lblBubbleSliceTop"))
+    lbl->setText(tr("Top Slice"));
+  if (auto *lbl = findChild<QLabel *>("lblBubbleSliceBottom"))
+    lbl->setText(tr("Bottom Slice"));
 
   populatePresets();
   populateBubbles();
@@ -1346,6 +1354,44 @@ QWidget *SubtitleListPanel::createCustomStylePanel() {
   tbLayout->addWidget(bubblePaddingBottomSpin_, 1);
   bubbleForm->addRow(tbContainer);
 
+  auto *sliceLrContainer = new QWidget(container);
+  auto *sliceLrLayout = new QHBoxLayout(sliceLrContainer);
+  sliceLrLayout->setContentsMargins(0, 0, 0, 0);
+  sliceLrLayout->setSpacing(8);
+  bubbleSliceLeftSpin_ = new QSpinBox(sliceLrContainer);
+  bubbleSliceLeftSpin_->setRange(0, 200);
+  bubbleSliceRightSpin_ = new QSpinBox(sliceLrContainer);
+  bubbleSliceRightSpin_->setRange(0, 200);
+  auto *lblBubbleSliceLeft = new QLabel(tr("Left Slice"), sliceLrContainer);
+  lblBubbleSliceLeft->setObjectName("lblBubbleSliceLeft");
+  auto *lblBubbleSliceRight = new QLabel(tr("Right Slice"), sliceLrContainer);
+  lblBubbleSliceRight->setObjectName("lblBubbleSliceRight");
+  sliceLrLayout->addWidget(lblBubbleSliceLeft);
+  sliceLrLayout->addWidget(bubbleSliceLeftSpin_, 1);
+  sliceLrLayout->addSpacing(16);
+  sliceLrLayout->addWidget(lblBubbleSliceRight);
+  sliceLrLayout->addWidget(bubbleSliceRightSpin_, 1);
+  bubbleForm->addRow(sliceLrContainer);
+
+  auto *sliceTbContainer = new QWidget(container);
+  auto *sliceTbLayout = new QHBoxLayout(sliceTbContainer);
+  sliceTbLayout->setContentsMargins(0, 0, 0, 0);
+  sliceTbLayout->setSpacing(8);
+  bubbleSliceTopSpin_ = new QSpinBox(sliceTbContainer);
+  bubbleSliceTopSpin_->setRange(0, 200);
+  bubbleSliceBottomSpin_ = new QSpinBox(sliceTbContainer);
+  bubbleSliceBottomSpin_->setRange(0, 200);
+  auto *lblBubbleSliceTop = new QLabel(tr("Top Slice"), sliceTbContainer);
+  lblBubbleSliceTop->setObjectName("lblBubbleSliceTop");
+  auto *lblBubbleSliceBottom = new QLabel(tr("Bottom Slice"), sliceTbContainer);
+  lblBubbleSliceBottom->setObjectName("lblBubbleSliceBottom");
+  sliceTbLayout->addWidget(lblBubbleSliceTop);
+  sliceTbLayout->addWidget(bubbleSliceTopSpin_, 1);
+  sliceTbLayout->addSpacing(16);
+  sliceTbLayout->addWidget(lblBubbleSliceBottom);
+  sliceTbLayout->addWidget(bubbleSliceBottomSpin_, 1);
+  bubbleForm->addRow(sliceTbContainer);
+
   bubbleEnableCheck_ = new QCheckBox(container);
   createCollapsibleGroup(tr("Bubble"), "Bubble", bubbleForm, bubbleEnableCheck_,
                          false);
@@ -1418,6 +1464,14 @@ QWidget *SubtitleListPanel::createCustomStylePanel() {
           this, triggerUpdate);
   connect(bubblePaddingBottomSpin_, QOverload<int>::of(&QSpinBox::valueChanged),
           this, triggerUpdate);
+  connect(bubbleSliceLeftSpin_, QOverload<int>::of(&QSpinBox::valueChanged),
+          this, triggerUpdate);
+  connect(bubbleSliceRightSpin_, QOverload<int>::of(&QSpinBox::valueChanged),
+          this, triggerUpdate);
+  connect(bubbleSliceTopSpin_, QOverload<int>::of(&QSpinBox::valueChanged),
+          this, triggerUpdate);
+  connect(bubbleSliceBottomSpin_, QOverload<int>::of(&QSpinBox::valueChanged),
+          this, triggerUpdate);
 
   // Undo support on slider release / spinbox edit finished
   auto recordUndoState = [this]() {
@@ -1466,6 +1520,10 @@ QWidget *SubtitleListPanel::createCustomStylePanel() {
       item.bubblePaddingRight = bubblePaddingRightSpin_->value();
       item.bubblePaddingTop = bubblePaddingTopSpin_->value();
       item.bubblePaddingBottom = bubblePaddingBottomSpin_->value();
+      item.bubbleSliceLeft = bubbleSliceLeftSpin_->value();
+      item.bubbleSliceRight = bubbleSliceRightSpin_->value();
+      item.bubbleSliceTop = bubbleSliceTopSpin_->value();
+      item.bubbleSliceBottom = bubbleSliceBottomSpin_->value();
 
       track_->updateItem(currentSelectedId_, item);
     }
@@ -1492,6 +1550,14 @@ QWidget *SubtitleListPanel::createCustomStylePanel() {
   connect(bubblePaddingTopSpin_, &QSpinBox::editingFinished, this,
           recordUndoState);
   connect(bubblePaddingBottomSpin_, &QSpinBox::editingFinished, this,
+          recordUndoState);
+  connect(bubbleSliceLeftSpin_, &QSpinBox::editingFinished, this,
+          recordUndoState);
+  connect(bubbleSliceRightSpin_, &QSpinBox::editingFinished, this,
+          recordUndoState);
+  connect(bubbleSliceTopSpin_, &QSpinBox::editingFinished, this,
+          recordUndoState);
+  connect(bubbleSliceBottomSpin_, &QSpinBox::editingFinished, this,
           recordUndoState);
 
   // 添加拉伸弹簧，确保多余空间由底部弹簧吸收，从而使各展开组高度固定，不被强制拉伸
@@ -1591,6 +1657,10 @@ QWidget *SubtitleListPanel::createCustomStylePanel() {
     styleObj["bubblePaddingRight"] = item.bubblePaddingRight;
     styleObj["bubblePaddingTop"] = item.bubblePaddingTop;
     styleObj["bubblePaddingBottom"] = item.bubblePaddingBottom;
+    styleObj["bubbleSliceLeft"] = item.bubbleSliceLeft;
+    styleObj["bubbleSliceRight"] = item.bubbleSliceRight;
+    styleObj["bubbleSliceTop"] = item.bubbleSliceTop;
+    styleObj["bubbleSliceBottom"] = item.bubbleSliceBottom;
 
     presetObj["style"] = styleObj;
     array.append(presetObj);
@@ -1912,6 +1982,14 @@ QWidget *SubtitleListPanel::createPresetStylePanel() {
             style.bubblePaddingTop = styleObj["bubblePaddingTop"].toInt(10);
             style.bubblePaddingBottom =
                 styleObj["bubblePaddingBottom"].toInt(10);
+            style.bubbleSliceLeft =
+                styleObj["bubbleSliceLeft"].toInt(style.bubblePaddingLeft);
+            style.bubbleSliceRight =
+                styleObj["bubbleSliceRight"].toInt(style.bubblePaddingRight);
+            style.bubbleSliceTop =
+                styleObj["bubbleSliceTop"].toInt(style.bubblePaddingTop);
+            style.bubbleSliceBottom =
+                styleObj["bubbleSliceBottom"].toInt(style.bubblePaddingBottom);
 
             if (!currentSelectedId_.isEmpty()) {
               SubtitleItem item;
@@ -1949,6 +2027,16 @@ QWidget *SubtitleListPanel::createPresetStylePanel() {
               item.bgPaddingY = style.bgPaddingY;
               item.bgOffsetX = style.bgOffsetX;
               item.bgOffsetY = style.bgOffsetY;
+              item.bubbleEnabled = style.bubbleEnabled;
+              item.bubbleImagePath = style.bubbleImagePath;
+              item.bubblePaddingLeft = style.bubblePaddingLeft;
+              item.bubblePaddingRight = style.bubblePaddingRight;
+              item.bubblePaddingTop = style.bubblePaddingTop;
+              item.bubblePaddingBottom = style.bubblePaddingBottom;
+              item.bubbleSliceLeft = style.bubbleSliceLeft;
+              item.bubbleSliceRight = style.bubbleSliceRight;
+              item.bubbleSliceTop = style.bubbleSliceTop;
+              item.bubbleSliceBottom = style.bubbleSliceBottom;
 
               track_->updateItem(currentSelectedId_, item);
               loadStyleFromItem(item);
@@ -1982,6 +2070,16 @@ QWidget *SubtitleListPanel::createPresetStylePanel() {
               item.bgPaddingY = style.bgPaddingY;
               item.bgOffsetX = style.bgOffsetX;
               item.bgOffsetY = style.bgOffsetY;
+              item.bubbleEnabled = style.bubbleEnabled;
+              item.bubbleImagePath = style.bubbleImagePath;
+              item.bubblePaddingLeft = style.bubblePaddingLeft;
+              item.bubblePaddingRight = style.bubblePaddingRight;
+              item.bubblePaddingTop = style.bubblePaddingTop;
+              item.bubblePaddingBottom = style.bubblePaddingBottom;
+              item.bubbleSliceLeft = style.bubbleSliceLeft;
+              item.bubbleSliceRight = style.bubbleSliceRight;
+              item.bubbleSliceTop = style.bubbleSliceTop;
+              item.bubbleSliceBottom = style.bubbleSliceBottom;
 
               track_->setDefaultStyleItem(item);
               loadStyleFromItem(item);
@@ -2081,6 +2179,14 @@ void SubtitleListPanel::loadStyleFromItem(const SubtitleItem &item) {
     bubblePaddingTopSpin_->setValue(item.bubblePaddingTop);
   if (bubblePaddingBottomSpin_)
     bubblePaddingBottomSpin_->setValue(item.bubblePaddingBottom);
+  if (bubbleSliceLeftSpin_)
+    bubbleSliceLeftSpin_->setValue(item.bubbleSliceLeft);
+  if (bubbleSliceRightSpin_)
+    bubbleSliceRightSpin_->setValue(item.bubbleSliceRight);
+  if (bubbleSliceTopSpin_)
+    bubbleSliceTopSpin_->setValue(item.bubbleSliceTop);
+  if (bubbleSliceBottomSpin_)
+    bubbleSliceBottomSpin_->setValue(item.bubbleSliceBottom);
 
   isUpdatingControls_ = false;
 
@@ -2153,6 +2259,10 @@ void SubtitleListPanel::applyCustomStyleToActiveItem() {
   item.bubblePaddingRight = bubblePaddingRightSpin_->value();
   item.bubblePaddingTop = bubblePaddingTopSpin_->value();
   item.bubblePaddingBottom = bubblePaddingBottomSpin_->value();
+  item.bubbleSliceLeft = bubbleSliceLeftSpin_->value();
+  item.bubbleSliceRight = bubbleSliceRightSpin_->value();
+  item.bubbleSliceTop = bubbleSliceTopSpin_->value();
+  item.bubbleSliceBottom = bubbleSliceBottomSpin_->value();
 
   if (found) {
     track_->updateItemDirect(activeId, item);
@@ -2214,6 +2324,10 @@ void SubtitleListPanel::loadCustomPresets() {
     item.bubblePaddingRight = styleObj["bubblePaddingRight"].toInt(15);
     item.bubblePaddingTop = styleObj["bubblePaddingTop"].toInt(10);
     item.bubblePaddingBottom = styleObj["bubblePaddingBottom"].toInt(10);
+    item.bubbleSliceLeft = styleObj["bubbleSliceLeft"].toInt(item.bubblePaddingLeft);
+    item.bubbleSliceRight = styleObj["bubbleSliceRight"].toInt(item.bubblePaddingRight);
+    item.bubbleSliceTop = styleObj["bubbleSliceTop"].toInt(item.bubblePaddingTop);
+    item.bubbleSliceBottom = styleObj["bubbleSliceBottom"].toInt(item.bubblePaddingBottom);
 
     addPresetCard(name, item, true, i);
   }
@@ -2293,6 +2407,10 @@ void SubtitleListPanel::addPresetCard(const QString &name,
   styleObj["bubblePaddingRight"] = style.bubblePaddingRight;
   styleObj["bubblePaddingTop"] = style.bubblePaddingTop;
   styleObj["bubblePaddingBottom"] = style.bubblePaddingBottom;
+  styleObj["bubbleSliceLeft"] = style.bubbleSliceLeft;
+  styleObj["bubbleSliceRight"] = style.bubbleSliceRight;
+  styleObj["bubbleSliceTop"] = style.bubbleSliceTop;
+  styleObj["bubbleSliceBottom"] = style.bubbleSliceBottom;
 
   QJsonDocument doc(styleObj);
   item->setData(Qt::UserRole, doc.toJson(QJsonDocument::Compact));
@@ -2502,6 +2620,10 @@ QWidget *SubtitleListPanel::createBubbleStylePanel() {
               sItem.bubblePaddingRight = padRight;
               sItem.bubblePaddingTop = padTop;
               sItem.bubblePaddingBottom = padBottom;
+              sItem.bubbleSliceLeft = padLeft;
+              sItem.bubbleSliceRight = padRight;
+              sItem.bubbleSliceTop = padTop;
+              sItem.bubbleSliceBottom = padBottom;
 
               track_->updateItem(currentSelectedId_, sItem);
               loadStyleFromItem(sItem);
@@ -2513,6 +2635,10 @@ QWidget *SubtitleListPanel::createBubbleStylePanel() {
               sItem.bubblePaddingRight = padRight;
               sItem.bubblePaddingTop = padTop;
               sItem.bubblePaddingBottom = padBottom;
+              sItem.bubbleSliceLeft = padLeft;
+              sItem.bubbleSliceRight = padRight;
+              sItem.bubbleSliceTop = padTop;
+              sItem.bubbleSliceBottom = padBottom;
 
               track_->setDefaultStyleItem(sItem);
               loadStyleFromItem(sItem);

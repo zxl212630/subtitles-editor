@@ -266,7 +266,11 @@ void SubtitleRenderer::renderSubtitle(QPainter &painter, const QString &text,
       int sw = bubbleImage.width();
       int sh = bubbleImage.height();
 
-      QMargins bubbleMargins(padLeft, padTop, padRight, padBottom);
+      int sliceLeft = qRound(style.bubbleSliceLeft * scale);
+      int sliceTop = qRound(style.bubbleSliceTop * scale);
+      int sliceRight = qRound(style.bubbleSliceRight * scale);
+      int sliceBottom = qRound(style.bubbleSliceBottom * scale);
+      QMargins bubbleMargins(sliceLeft, sliceTop, sliceRight, sliceBottom);
 
       if (tw < sw && th < sh) {
         double imgScale = qMin((double)tw / sw, (double)th / sh);
@@ -281,16 +285,16 @@ void SubtitleRenderer::renderSubtitle(QPainter &painter, const QString &text,
         QImage scaledSrc =
             bubbleImage.scaledToHeight(th, Qt::SmoothTransformation);
         double ratio = (double)th / sh;
-        int ml = qMax(1, qRound(style.bubblePaddingLeft * ratio * scale));
-        int mr = qMax(1, qRound(style.bubblePaddingRight * ratio * scale));
+        int ml = qMax(1, qRound(style.bubbleSliceLeft * ratio * scale));
+        int mr = qMax(1, qRound(style.bubbleSliceRight * ratio * scale));
         QMargins scaledMargins(ml, 0, mr, 0);
         drawNinePatch(painter, scaledSrc, bubbleRect, scaledMargins);
       } else {
         QImage scaledSrc =
             bubbleImage.scaledToWidth(tw, Qt::SmoothTransformation);
         double ratio = (double)tw / sw;
-        int mt = qMax(1, qRound(style.bubblePaddingTop * ratio * scale));
-        int mb = qMax(1, qRound(style.bubblePaddingBottom * ratio * scale));
+        int mt = qMax(1, qRound(style.bubbleSliceTop * ratio * scale));
+        int mb = qMax(1, qRound(style.bubbleSliceBottom * ratio * scale));
         QMargins scaledMargins(0, mt, 0, mb);
         drawNinePatch(painter, scaledSrc, bubbleRect, scaledMargins);
       }

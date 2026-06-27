@@ -2570,6 +2570,22 @@
         <source>Are you sure you want to delete this preset?</source>
         <translation>您确定要删除这个预设吗？</translation>
     </message>
+    <message>
+        <source>Left Slice</source>
+        <translation>左拉伸</translation>
+    </message>
+    <message>
+        <source>Right Slice</source>
+        <translation>右拉伸</translation>
+    </message>
+    <message>
+        <source>Top Slice</source>
+        <translation>上拉伸</translation>
+    </message>
+    <message>
+        <source>Bottom Slice</source>
+        <translation>下拉伸</translation>
+    </message>
 </context>
 <context>
     <name>SubtitleTrack</name>

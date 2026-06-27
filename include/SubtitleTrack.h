@@ -199,6 +199,10 @@ private:
   int defaultBubblePaddingRight_ = 10;
   int defaultBubblePaddingTop_ = 10;
   int defaultBubblePaddingBottom_ = 10;
+  int defaultBubbleSliceLeft_ = 10;
+  int defaultBubbleSliceRight_ = 10;
+  int defaultBubbleSliceTop_ = 10;
+  int defaultBubbleSliceBottom_ = 10;
 
   int refHeight_ = 1080;
 
