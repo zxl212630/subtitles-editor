@@ -304,13 +304,15 @@ void SubtitleRenderer::renderSubtitle(QPainter &painter, const QString &text,
   // Draw custom background box if general style background is enabled and no
   // speaker bg was drawn
   if (!bgDrawn && style.bgType > 0) {
-    int padX = qRound(style.bgPaddingX * scale);
-    int padY = qRound(style.bgPaddingY * scale);
+    int padLeft = qRound(style.bgPaddingLeft * scale);
+    int padRight = qRound(style.bgPaddingRight * scale);
+    int padTop = qRound(style.bgPaddingTop * scale);
+    int padBottom = qRound(style.bgPaddingBottom * scale);
     int offX = qRound(style.bgOffsetX * scale);
     int offY = qRound(style.bgOffsetY * scale);
     int roundness = qRound(style.bgRoundness * scale);
 
-    QRect bgRect = textBounding.adjusted(-padX, -padY, padX, padY);
+    QRect bgRect = textBounding.adjusted(-padLeft, -padTop, padRight, padBottom);
     bgRect.translate(offX, offY);
 
     painter.save();

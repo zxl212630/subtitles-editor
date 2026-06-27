@@ -141,8 +141,10 @@ private:
   ColorButton *bgColorBtn_ = nullptr;
   QSlider *bgOpacitySlider_ = nullptr;
   QSlider *bgRoundnessSlider_ = nullptr;
-  QSpinBox *bgPaddingXSpin_ = nullptr;
-  QSpinBox *bgPaddingYSpin_ = nullptr;
+  QSpinBox *bgPaddingLeftSpin_ = nullptr;
+  QSpinBox *bgPaddingRightSpin_ = nullptr;
+  QSpinBox *bgPaddingTopSpin_ = nullptr;
+  QSpinBox *bgPaddingBottomSpin_ = nullptr;
   QSpinBox *bgOffsetXSpin_ = nullptr;
   QSpinBox *bgOffsetYSpin_ = nullptr;
 

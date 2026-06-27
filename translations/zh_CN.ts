@@ -2591,8 +2591,12 @@
         <translation>文字边距</translation>
     </message>
     <message>
-        <source>Stretch Protection</source>
-        <translation>拉伸保护</translation>
+        <source>9-Patch Stretch</source>
+        <translation>九宫格拉伸</translation>
+    </message>
+    <message>
+        <source>Background Padding</source>
+        <translation>背景边距</translation>
     </message>
 </context>
 <context>

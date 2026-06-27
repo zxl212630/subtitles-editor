@@ -47,8 +47,10 @@ struct SubtitleItem {
   QString bgColor = "#000000";
   double bgOpacity = 1.0;
   int bgRoundness = 10;
-  int bgPaddingX = 0;
-  int bgPaddingY = 0;
+  int bgPaddingLeft = 0;
+  int bgPaddingRight = 0;
+  int bgPaddingTop = 0;
+  int bgPaddingBottom = 0;
   QString bgImagePath;
   bool bgImage9Patch = true;
   int bgOffsetX = 0;

@@ -2538,8 +2538,12 @@ A simple and easy-to-use video subtitle editing tool.</translation>
         <translation>Text Padding</translation>
     </message>
     <message>
-        <source>Stretch Protection</source>
-        <translation>Stretch Protection</translation>
+        <source>9-Patch Stretch</source>
+        <translation>9-Patch Stretch</translation>
+    </message>
+    <message>
+        <source>Background Padding</source>
+        <translation>Background Padding</translation>
     </message>
 </context>
 <context>

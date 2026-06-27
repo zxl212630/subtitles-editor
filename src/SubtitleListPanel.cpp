@@ -323,7 +323,9 @@ void SubtitleListPanel::retranslateUi() {
   if (auto *gp = findChild<QGroupBox *>("BubblePaddingGroup"))
     gp->setTitle(tr("Text Padding"));
   if (auto *gp = findChild<QGroupBox *>("BubbleSliceGroup"))
-    gp->setTitle(tr("Stretch Protection"));
+    gp->setTitle(tr("9-Patch Stretch"));
+  if (auto *gp = findChild<QGroupBox *>("BgPaddingGroup"))
+    gp->setTitle(tr("Background Padding"));
 
   populatePresets();
   populateBubbles();
@@ -1248,31 +1250,6 @@ QWidget *SubtitleListPanel::createCustomStylePanel() {
   bgRoundnessSlider_->setRange(0, 50);
   addFormRow(bgForm_, tr("Roundness"), "lblBgRoundness", bgRoundnessSlider_);
 
-  auto *bgPaddingContainer = new QWidget(container);
-  auto *bgPaddingLayout = new QHBoxLayout(bgPaddingContainer);
-  bgPaddingLayout->setContentsMargins(0, 0, 0, 0);
-  bgPaddingLayout->setSpacing(8);
-
-  bgPaddingXSpin_ = new QSpinBox(bgPaddingContainer);
-  bgPaddingXSpin_->setRange(0, 200);
-
-  bgPaddingYSpin_ = new QSpinBox(bgPaddingContainer);
-  bgPaddingYSpin_->setRange(0, 200);
-
-  auto *lblBgPaddingX = new QLabel(tr("L/R Padding"), bgPaddingContainer);
-  lblBgPaddingX->setObjectName("lblBgPaddingX");
-
-  auto *lblBgPaddingY = new QLabel(tr("T/B Padding"), bgPaddingContainer);
-  lblBgPaddingY->setObjectName("lblBgPaddingY");
-
-  bgPaddingLayout->addWidget(lblBgPaddingX);
-  bgPaddingLayout->addWidget(bgPaddingXSpin_, 1);
-  bgPaddingLayout->addSpacing(16);
-  bgPaddingLayout->addWidget(lblBgPaddingY);
-  bgPaddingLayout->addWidget(bgPaddingYSpin_, 1);
-
-  bgForm_->addRow(bgPaddingContainer);
-
   auto *bgOffsetContainer = new QWidget(container);
   auto *bgOffsetLayout = new QHBoxLayout(bgOffsetContainer);
   bgOffsetLayout->setContentsMargins(0, 0, 0, 0);
@@ -1297,6 +1274,52 @@ QWidget *SubtitleListPanel::createCustomStylePanel() {
   bgOffsetLayout->addWidget(bgOffsetYSpin_, 1);
 
   bgForm_->addRow(bgOffsetContainer);
+
+  auto *bgPaddingGroup = new QGroupBox(tr("Background Padding"), container);
+  bgPaddingGroup->setObjectName("BgPaddingGroup");
+  auto *bgPgLayout = new QVBoxLayout(bgPaddingGroup);
+  bgPgLayout->setContentsMargins(6, 12, 6, 6);
+  bgPgLayout->setSpacing(6);
+
+  auto *bgLrContainer = new QWidget(bgPaddingGroup);
+  auto *bgLrLayout = new QHBoxLayout(bgLrContainer);
+  bgLrLayout->setContentsMargins(0, 0, 0, 0);
+  bgLrLayout->setSpacing(8);
+  bgPaddingLeftSpin_ = new QSpinBox(bgLrContainer);
+  bgPaddingLeftSpin_->setRange(0, 200);
+  bgPaddingRightSpin_ = new QSpinBox(bgLrContainer);
+  bgPaddingRightSpin_->setRange(0, 200);
+  auto *lblBgPaddingLeft = new QLabel(tr("Left Padding"), bgLrContainer);
+  lblBgPaddingLeft->setObjectName("lblBgPaddingLeft");
+  auto *lblBgPaddingRight = new QLabel(tr("Right Padding"), bgLrContainer);
+  lblBgPaddingRight->setObjectName("lblBgPaddingRight");
+  bgLrLayout->addWidget(lblBgPaddingLeft);
+  bgLrLayout->addWidget(bgPaddingLeftSpin_, 1);
+  bgLrLayout->addSpacing(16);
+  bgLrLayout->addWidget(lblBgPaddingRight);
+  bgLrLayout->addWidget(bgPaddingRightSpin_, 1);
+  bgPgLayout->addWidget(bgLrContainer);
+
+  auto *bgTbContainer = new QWidget(bgPaddingGroup);
+  auto *bgTbLayout = new QHBoxLayout(bgTbContainer);
+  bgTbLayout->setContentsMargins(0, 0, 0, 0);
+  bgTbLayout->setSpacing(8);
+  bgPaddingTopSpin_ = new QSpinBox(bgTbContainer);
+  bgPaddingTopSpin_->setRange(0, 200);
+  bgPaddingBottomSpin_ = new QSpinBox(bgTbContainer);
+  bgPaddingBottomSpin_->setRange(0, 200);
+  auto *lblBgPaddingTop = new QLabel(tr("Top Padding"), bgTbContainer);
+  lblBgPaddingTop->setObjectName("lblBgPaddingTop");
+  auto *lblBgPaddingBottom = new QLabel(tr("Bottom Padding"), bgTbContainer);
+  lblBgPaddingBottom->setObjectName("lblBgPaddingBottom");
+  bgTbLayout->addWidget(lblBgPaddingTop);
+  bgTbLayout->addWidget(bgPaddingTopSpin_, 1);
+  bgTbLayout->addSpacing(16);
+  bgTbLayout->addWidget(lblBgPaddingBottom);
+  bgTbLayout->addWidget(bgPaddingBottomSpin_, 1);
+  bgPgLayout->addWidget(bgTbContainer);
+
+  bgForm_->addRow(bgPaddingGroup);
 
   bgEnableCheck_ = new QCheckBox(container);
   createCollapsibleGroup(tr("Background"), "Background", bgForm_,
@@ -1367,7 +1390,7 @@ QWidget *SubtitleListPanel::createCustomStylePanel() {
 
   bubbleForm->addRow(paddingGroup);
 
-  auto *sliceGroup = new QGroupBox(tr("Stretch Protection"), container);
+  auto *sliceGroup = new QGroupBox(tr("9-Patch Stretch"), container);
   sliceGroup->setObjectName("BubbleSliceGroup");
   auto *sgLayout = new QVBoxLayout(sliceGroup);
   sgLayout->setContentsMargins(6, 12, 6, 6);
@@ -1467,9 +1490,13 @@ QWidget *SubtitleListPanel::createCustomStylePanel() {
   connect(bgColorBtn_, &ColorButton::colorChanged, this, triggerUpdate);
   connect(bgOpacitySlider_, &QSlider::valueChanged, this, triggerUpdate);
   connect(bgRoundnessSlider_, &QSlider::valueChanged, this, triggerUpdate);
-  connect(bgPaddingXSpin_, QOverload<int>::of(&QSpinBox::valueChanged), this,
+  connect(bgPaddingLeftSpin_, QOverload<int>::of(&QSpinBox::valueChanged), this,
           triggerUpdate);
-  connect(bgPaddingYSpin_, QOverload<int>::of(&QSpinBox::valueChanged), this,
+  connect(bgPaddingRightSpin_, QOverload<int>::of(&QSpinBox::valueChanged), this,
+          triggerUpdate);
+  connect(bgPaddingTopSpin_, QOverload<int>::of(&QSpinBox::valueChanged), this,
+          triggerUpdate);
+  connect(bgPaddingBottomSpin_, QOverload<int>::of(&QSpinBox::valueChanged), this,
           triggerUpdate);
   connect(bgOffsetXSpin_, QOverload<int>::of(&QSpinBox::valueChanged), this,
           triggerUpdate);
@@ -1530,8 +1557,10 @@ QWidget *SubtitleListPanel::createCustomStylePanel() {
       item.bgColor = bgColorBtn_->color().name();
       item.bgOpacity = bgOpacitySlider_->value() / 100.0;
       item.bgRoundness = bgRoundnessSlider_->value();
-      item.bgPaddingX = bgPaddingXSpin_->value();
-      item.bgPaddingY = bgPaddingYSpin_->value();
+      item.bgPaddingLeft = bgPaddingLeftSpin_->value();
+      item.bgPaddingRight = bgPaddingRightSpin_->value();
+      item.bgPaddingTop = bgPaddingTopSpin_->value();
+      item.bgPaddingBottom = bgPaddingBottomSpin_->value();
       item.bgOffsetX = bgOffsetXSpin_->value();
       item.bgOffsetY = bgOffsetYSpin_->value();
 
@@ -1560,8 +1589,10 @@ QWidget *SubtitleListPanel::createCustomStylePanel() {
   connect(bgOpacitySlider_, &QSlider::sliderReleased, this, recordUndoState);
   connect(bgRoundnessSlider_, &QSlider::sliderReleased, this, recordUndoState);
 
-  connect(bgPaddingXSpin_, &QSpinBox::editingFinished, this, recordUndoState);
-  connect(bgPaddingYSpin_, &QSpinBox::editingFinished, this, recordUndoState);
+  connect(bgPaddingLeftSpin_, &QSpinBox::editingFinished, this, recordUndoState);
+  connect(bgPaddingRightSpin_, &QSpinBox::editingFinished, this, recordUndoState);
+  connect(bgPaddingTopSpin_, &QSpinBox::editingFinished, this, recordUndoState);
+  connect(bgPaddingBottomSpin_, &QSpinBox::editingFinished, this, recordUndoState);
   connect(bgOffsetXSpin_, &QSpinBox::editingFinished, this, recordUndoState);
   connect(bgOffsetYSpin_, &QSpinBox::editingFinished, this, recordUndoState);
   connect(bubblePaddingLeftSpin_, &QSpinBox::editingFinished, this,
@@ -1667,8 +1698,10 @@ QWidget *SubtitleListPanel::createCustomStylePanel() {
     styleObj["bgColor"] = item.bgColor;
     styleObj["bgOpacity"] = item.bgOpacity;
     styleObj["bgRoundness"] = item.bgRoundness;
-    styleObj["bgPaddingX"] = item.bgPaddingX;
-    styleObj["bgPaddingY"] = item.bgPaddingY;
+    styleObj["bgPaddingLeft"] = item.bgPaddingLeft;
+    styleObj["bgPaddingRight"] = item.bgPaddingRight;
+    styleObj["bgPaddingTop"] = item.bgPaddingTop;
+    styleObj["bgPaddingBottom"] = item.bgPaddingBottom;
     styleObj["bgOffsetX"] = item.bgOffsetX;
     styleObj["bgOffsetY"] = item.bgOffsetY;
 
@@ -1991,8 +2024,10 @@ QWidget *SubtitleListPanel::createPresetStylePanel() {
             style.bgColor = styleObj["bgColor"].toString("#000000");
             style.bgOpacity = styleObj["bgOpacity"].toDouble(0.6);
             style.bgRoundness = styleObj["bgRoundness"].toInt(4);
-            style.bgPaddingX = styleObj["bgPaddingX"].toInt(15);
-            style.bgPaddingY = styleObj["bgPaddingY"].toInt(10);
+            style.bgPaddingLeft = styleObj["bgPaddingLeft"].toInt(styleObj["bgPaddingX"].toInt(15));
+            style.bgPaddingRight = styleObj["bgPaddingRight"].toInt(styleObj["bgPaddingX"].toInt(15));
+            style.bgPaddingTop = styleObj["bgPaddingTop"].toInt(styleObj["bgPaddingY"].toInt(10));
+            style.bgPaddingBottom = styleObj["bgPaddingBottom"].toInt(styleObj["bgPaddingY"].toInt(10));
             style.bgOffsetX = styleObj["bgOffsetX"].toInt(0);
             style.bgOffsetY = styleObj["bgOffsetY"].toInt(0);
 
@@ -2044,8 +2079,10 @@ QWidget *SubtitleListPanel::createPresetStylePanel() {
               item.bgColor = style.bgColor;
               item.bgOpacity = style.bgOpacity;
               item.bgRoundness = style.bgRoundness;
-              item.bgPaddingX = style.bgPaddingX;
-              item.bgPaddingY = style.bgPaddingY;
+              item.bgPaddingLeft = style.bgPaddingLeft;
+              item.bgPaddingRight = style.bgPaddingRight;
+              item.bgPaddingTop = style.bgPaddingTop;
+              item.bgPaddingBottom = style.bgPaddingBottom;
               item.bgOffsetX = style.bgOffsetX;
               item.bgOffsetY = style.bgOffsetY;
               item.bubbleEnabled = style.bubbleEnabled;
@@ -2087,8 +2124,10 @@ QWidget *SubtitleListPanel::createPresetStylePanel() {
               item.bgColor = style.bgColor;
               item.bgOpacity = style.bgOpacity;
               item.bgRoundness = style.bgRoundness;
-              item.bgPaddingX = style.bgPaddingX;
-              item.bgPaddingY = style.bgPaddingY;
+              item.bgPaddingLeft = style.bgPaddingLeft;
+              item.bgPaddingRight = style.bgPaddingRight;
+              item.bgPaddingTop = style.bgPaddingTop;
+              item.bgPaddingBottom = style.bgPaddingBottom;
               item.bgOffsetX = style.bgOffsetX;
               item.bgOffsetY = style.bgOffsetY;
               item.bubbleEnabled = style.bubbleEnabled;
@@ -2179,10 +2218,14 @@ void SubtitleListPanel::loadStyleFromItem(const SubtitleItem &item) {
     bgOpacitySlider_->setValue(qRound(item.bgOpacity * 100.0));
   if (bgRoundnessSlider_)
     bgRoundnessSlider_->setValue(item.bgRoundness);
-  if (bgPaddingXSpin_)
-    bgPaddingXSpin_->setValue(item.bgPaddingX);
-  if (bgPaddingYSpin_)
-    bgPaddingYSpin_->setValue(item.bgPaddingY);
+  if (bgPaddingLeftSpin_)
+    bgPaddingLeftSpin_->setValue(item.bgPaddingLeft);
+  if (bgPaddingRightSpin_)
+    bgPaddingRightSpin_->setValue(item.bgPaddingRight);
+  if (bgPaddingTopSpin_)
+    bgPaddingTopSpin_->setValue(item.bgPaddingTop);
+  if (bgPaddingBottomSpin_)
+    bgPaddingBottomSpin_->setValue(item.bgPaddingBottom);
   if (bgOffsetXSpin_)
     bgOffsetXSpin_->setValue(item.bgOffsetX);
   if (bgOffsetYSpin_)
@@ -2269,8 +2312,10 @@ void SubtitleListPanel::applyCustomStyleToActiveItem() {
   item.bgColor = bgColorBtn_->color().name();
   item.bgOpacity = bgOpacitySlider_->value() / 100.0;
   item.bgRoundness = bgRoundnessSlider_->value();
-  item.bgPaddingX = bgPaddingXSpin_->value();
-  item.bgPaddingY = bgPaddingYSpin_->value();
+  item.bgPaddingLeft = bgPaddingLeftSpin_->value();
+  item.bgPaddingRight = bgPaddingRightSpin_->value();
+  item.bgPaddingTop = bgPaddingTopSpin_->value();
+  item.bgPaddingBottom = bgPaddingBottomSpin_->value();
   item.bgOffsetX = bgOffsetXSpin_->value();
   item.bgOffsetY = bgOffsetYSpin_->value();
 
@@ -2334,8 +2379,22 @@ void SubtitleListPanel::loadCustomPresets() {
     item.bgColor = styleObj["bgColor"].toString("#000000");
     item.bgOpacity = styleObj["bgOpacity"].toDouble(0.6);
     item.bgRoundness = styleObj["bgRoundness"].toInt(4);
-    item.bgPaddingX = styleObj["bgPaddingX"].toInt(15);
-    item.bgPaddingY = styleObj["bgPaddingY"].toInt(10);
+    if (styleObj.contains("bgPaddingLeft")) {
+      item.bgPaddingLeft = styleObj["bgPaddingLeft"].toInt(15);
+      item.bgPaddingRight = styleObj["bgPaddingRight"].toInt(15);
+    } else {
+      int padX = styleObj["bgPaddingX"].toInt(15);
+      item.bgPaddingLeft = padX;
+      item.bgPaddingRight = padX;
+    }
+    if (styleObj.contains("bgPaddingTop")) {
+      item.bgPaddingTop = styleObj["bgPaddingTop"].toInt(10);
+      item.bgPaddingBottom = styleObj["bgPaddingBottom"].toInt(10);
+    } else {
+      int padY = styleObj["bgPaddingY"].toInt(10);
+      item.bgPaddingTop = padY;
+      item.bgPaddingBottom = padY;
+    }
     item.bgOffsetX = styleObj["bgOffsetX"].toInt(0);
     item.bgOffsetY = styleObj["bgOffsetY"].toInt(0);
 
@@ -2417,8 +2476,10 @@ void SubtitleListPanel::addPresetCard(const QString &name,
   styleObj["bgColor"] = style.bgColor;
   styleObj["bgOpacity"] = style.bgOpacity;
   styleObj["bgRoundness"] = style.bgRoundness;
-  styleObj["bgPaddingX"] = style.bgPaddingX;
-  styleObj["bgPaddingY"] = style.bgPaddingY;
+  styleObj["bgPaddingLeft"] = style.bgPaddingLeft;
+  styleObj["bgPaddingRight"] = style.bgPaddingRight;
+  styleObj["bgPaddingTop"] = style.bgPaddingTop;
+  styleObj["bgPaddingBottom"] = style.bgPaddingBottom;
   styleObj["bgOffsetX"] = style.bgOffsetX;
   styleObj["bgOffsetY"] = style.bgOffsetY;
 
@@ -2513,8 +2574,10 @@ void SubtitleListPanel::populatePresets() {
     p5.bgColor = "#000000";
     p5.bgOpacity = 0.6;
     p5.bgRoundness = 4;
-    p5.bgPaddingX = 15;
-    p5.bgPaddingY = 10;
+    p5.bgPaddingLeft = 15;
+    p5.bgPaddingRight = 15;
+    p5.bgPaddingTop = 10;
+    p5.bgPaddingBottom = 10;
 
     // 6. Silver Gradient (银渐变)
     SubtitleItem p6;
