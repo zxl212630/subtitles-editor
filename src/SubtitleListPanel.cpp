@@ -11,6 +11,7 @@
 #include <QCheckBox>
 #include <QColorDialog>
 #include <QComboBox>
+#include <QAbstractItemView>
 #include <QDir>
 #include <QFile>
 #include <QFileDialog>
@@ -1097,6 +1098,13 @@ QWidget *SubtitleListPanel::createCustomStylePanel() {
 
   fillTypeCombo_ = new QComboBox(container);
   fillTypeCombo_->addItems({tr("Color Fill"), tr("Gradient Fill")});
+  if (auto *view = fillTypeCombo_->view()) {
+    if (QWidget *w = view->window()) {
+      w->setWindowFlags(Qt::Popup | Qt::FramelessWindowHint |
+                        Qt::NoDropShadowWindowHint);
+      w->setAttribute(Qt::WA_TranslucentBackground);
+    }
+  }
   addFormRow(fillForm_, tr("Type"), "lblFillType", fillTypeCombo_);
 
   fillColorBtn_ = new ColorButton(container);
@@ -1728,12 +1736,14 @@ QWidget *SubtitleListPanel::createPresetStylePanel() {
   presetTypeCombo_ = new QComboBox(container);
   presetTypeCombo_->addItem(tr("System Presets"), 0);
   presetTypeCombo_->addItem(tr("Custom Presets"), 1);
-  presetTypeCombo_->setStyleSheet(
-      "QComboBox { background-color: #2c2c2c; border: 1px solid #444; "
-      "border-radius: 4px; padding: 4px 8px; color: #eee; }"
-      "QComboBox::drop-down { border: none; }"
-      "QComboBox QAbstractItemView { background-color: #2c2c2c; "
-      "selection-background-color: #0088cc; }");
+  presetTypeCombo_->setFixedHeight(32);
+  if (auto *view = presetTypeCombo_->view()) {
+    if (QWidget *w = view->window()) {
+      w->setWindowFlags(Qt::Popup | Qt::FramelessWindowHint |
+                        Qt::NoDropShadowWindowHint);
+      w->setAttribute(Qt::WA_TranslucentBackground);
+    }
+  }
   layout->addWidget(presetTypeCombo_);
 
   // 列表容器：提供与字幕列表一致的背景色和边框
