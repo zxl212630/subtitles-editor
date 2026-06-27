@@ -2595,6 +2595,14 @@
         <translation>九宫格拉伸</translation>
     </message>
     <message>
+        <source>Uniform</source>
+        <translation>统一数值</translation>
+    </message>
+    <message>
+        <source>Value</source>
+        <translation>数值</translation>
+    </message>
+    <message>
         <source>Background Padding</source>
         <translation>背景边距</translation>
     </message>

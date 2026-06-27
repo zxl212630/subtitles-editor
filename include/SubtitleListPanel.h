@@ -19,6 +19,7 @@ class SubtitleListModel;
 class SubtitleListDelegate;
 class QListView;
 class QLabel;
+class QGroupBox;
 class SubtitleActionOverlay;
 
 class ColorButton : public QPushButton {
@@ -118,6 +119,7 @@ private:
   QCheckBox *fillEnableCheck_ = nullptr;
   class QFormLayout *fillForm_ = nullptr;
   class QFormLayout *bgForm_ = nullptr;
+  class QFormLayout *bubbleForm_ = nullptr;
   QComboBox *fillTypeCombo_ = nullptr;
   ColorButton *fillColorBtn_ = nullptr;
   ColorButton *fillColor2Btn_ = nullptr;
@@ -147,15 +149,24 @@ private:
   QSpinBox *bgPaddingBottomSpin_ = nullptr;
   QSpinBox *bgOffsetXSpin_ = nullptr;
   QSpinBox *bgOffsetYSpin_ = nullptr;
+  QWidget *bgPaddingUniformContainer_ = nullptr;
+  QSpinBox *bgPaddingUniformSpin_ = nullptr;
+  QGroupBox *bgPaddingGroup_ = nullptr;
 
   // 气泡控件成员
   QCheckBox *bubbleEnableCheck_ = nullptr;
   QLineEdit *bubbleImagePathEdit_ = nullptr;
   QPushButton *bubbleImageBrowse_ = nullptr;
+  QWidget *bubblePaddingUniformContainer_ = nullptr;
+  QSpinBox *bubblePaddingUniformSpin_ = nullptr;
+  QGroupBox *bubblePaddingGroup_ = nullptr;
   QSpinBox *bubblePaddingLeftSpin_ = nullptr;
   QSpinBox *bubblePaddingRightSpin_ = nullptr;
   QSpinBox *bubblePaddingTopSpin_ = nullptr;
   QSpinBox *bubblePaddingBottomSpin_ = nullptr;
+  QWidget *bubbleSliceUniformContainer_ = nullptr;
+  QSpinBox *bubbleSliceUniformSpin_ = nullptr;
+  QGroupBox *bubbleSliceGroup_ = nullptr;
   QSpinBox *bubbleSliceLeftSpin_ = nullptr;
   QSpinBox *bubbleSliceRightSpin_ = nullptr;
   QSpinBox *bubbleSliceTopSpin_ = nullptr;

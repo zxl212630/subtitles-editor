@@ -320,12 +320,35 @@ void SubtitleListPanel::retranslateUi() {
   if (auto *lbl = findChild<QLabel *>("lblBubbleSliceBottom"))
     lbl->setText(tr("Bottom Slice"));
 
-  if (auto *gp = findChild<QGroupBox *>("BubblePaddingGroup"))
-    gp->setTitle(tr("Text Padding"));
-  if (auto *gp = findChild<QGroupBox *>("BubbleSliceGroup"))
-    gp->setTitle(tr("9-Patch Stretch"));
-  if (auto *gp = findChild<QGroupBox *>("BgPaddingGroup"))
-    gp->setTitle(tr("Background Padding"));
+  if (auto *lbl = findChild<QLabel *>("lblBgPaddingUniformTitle"))
+    lbl->setText(tr("Background Padding"));
+  if (auto *lbl = findChild<QLabel *>("lblBgPaddingGroupHeaderTitle")) {
+    lbl->setText(tr("Background Padding"));
+    if (auto *btn = findChild<QPushButton *>("BgPaddingGroupHeaderBtn")) {
+      int w = lbl->fontMetrics().horizontalAdvance(lbl->text()) + 6 + 12 + 8;
+      btn->setGeometry(12, 6, w, 20);
+    }
+  }
+
+  if (auto *lbl = findChild<QLabel *>("lblBubblePaddingUniformTitle"))
+    lbl->setText(tr("Text Padding"));
+  if (auto *lbl = findChild<QLabel *>("lblBubblePaddingGroupHeaderTitle")) {
+    lbl->setText(tr("Text Padding"));
+    if (auto *btn = findChild<QPushButton *>("BubblePaddingGroupHeaderBtn")) {
+      int w = lbl->fontMetrics().horizontalAdvance(lbl->text()) + 6 + 12 + 8;
+      btn->setGeometry(12, 6, w, 20);
+    }
+  }
+
+  if (auto *lbl = findChild<QLabel *>("lblBubbleSliceUniformTitle"))
+    lbl->setText(tr("9-Patch Stretch"));
+  if (auto *lbl = findChild<QLabel *>("lblBubbleSliceGroupHeaderTitle")) {
+    lbl->setText(tr("9-Patch Stretch"));
+    if (auto *btn = findChild<QPushButton *>("BubbleSliceGroupHeaderBtn")) {
+      int w = lbl->fontMetrics().horizontalAdvance(lbl->text()) + 6 + 12 + 8;
+      btn->setGeometry(12, 6, w, 20);
+    }
+  }
 
   populatePresets();
   populateBubbles();
@@ -1140,6 +1163,44 @@ QWidget *SubtitleListPanel::createCustomStylePanel() {
     form->addRow(label, field);
   };
 
+  auto setupCollapsibleGroupBoxHeader = [&](QGroupBox *groupBox, const QString &titleText,
+                                            const QPixmap &iconPixmap, std::function<void()> collapseCallback) {
+    groupBox->setTitle("");
+    groupBox->setStyleSheet("QGroupBox::title { background: transparent; padding: 0px; margin: 0px; }");
+
+    auto *headerBtn = new QPushButton(groupBox);
+    headerBtn->setObjectName(groupBox->objectName() + "HeaderBtn");
+    headerBtn->setFlat(true);
+    headerBtn->setFixedHeight(20);
+    headerBtn->setCursor(Qt::PointingHandCursor);
+    headerBtn->setStyleSheet(
+        "QPushButton { border: none; background-color: palette(window); padding: 0px; }");
+
+    auto *headerLayout = new QHBoxLayout(headerBtn);
+    headerLayout->setContentsMargins(4, 0, 4, 0);
+    headerLayout->setSpacing(6);
+
+    auto *lblTitle = new QLabel(titleText, headerBtn);
+    lblTitle->setObjectName("lbl" + groupBox->objectName() + "HeaderTitle");
+    lblTitle->setStyleSheet("font-weight: bold; font-size: 13px; color: palette(text); background: transparent;");
+
+    auto *lblIcon = new QLabel(headerBtn);
+    lblIcon->setFixedSize(12, 12);
+    lblIcon->setScaledContents(true);
+    lblIcon->setPixmap(iconPixmap);
+    lblIcon->setStyleSheet("background: transparent;");
+
+    headerLayout->addWidget(lblTitle, 0, Qt::AlignVCenter);
+    headerLayout->addWidget(lblIcon, 0, Qt::AlignVCenter);
+    headerLayout->addStretch();
+
+    int textW = lblTitle->fontMetrics().horizontalAdvance(titleText);
+    int totalW = textW + 6 + 12 + 8; // 6 spacing, 12 icon width, 8 padding (4px each side)
+    headerBtn->setGeometry(12, 6, totalW, 20);
+
+    connect(headerBtn, &QPushButton::clicked, this, collapseCallback);
+  };
+
   // --- TEXT FILL GROUP ---
   fillForm_ = new QFormLayout();
   fillForm_->setContentsMargins(0, 0, 0, 0);
@@ -1275,13 +1336,33 @@ QWidget *SubtitleListPanel::createCustomStylePanel() {
 
   bgForm_->addRow(bgOffsetContainer);
 
-  auto *bgPaddingGroup = new QGroupBox(tr("Background Padding"), container);
-  bgPaddingGroup->setObjectName("BgPaddingGroup");
-  auto *bgPgLayout = new QVBoxLayout(bgPaddingGroup);
+  bgPaddingUniformContainer_ = new QWidget(container);
+  auto *bgPaddingUniformLayout = new QHBoxLayout(bgPaddingUniformContainer_);
+  bgPaddingUniformLayout->setContentsMargins(0, 0, 0, 0);
+  bgPaddingUniformLayout->setSpacing(8);
+
+  bgPaddingUniformSpin_ = new QSpinBox(bgPaddingUniformContainer_);
+  bgPaddingUniformSpin_->setRange(0, 200);
+
+  auto *btnExpandBgPadding = new QPushButton(bgPaddingUniformContainer_);
+  btnExpandBgPadding->setFixedWidth(20);
+  btnExpandBgPadding->setFlat(true);
+  btnExpandBgPadding->setIcon(QIcon(rightArrowPixmap));
+  btnExpandBgPadding->setIconSize(QSize(12, 12));
+  btnExpandBgPadding->setStyleSheet("QPushButton { border: none; background: transparent; }");
+
+  bgPaddingUniformLayout->addWidget(bgPaddingUniformSpin_, 1);
+  bgPaddingUniformLayout->addWidget(btnExpandBgPadding);
+
+  addFormRow(bgForm_, tr("Background Padding"), "lblBgPaddingUniformTitle", bgPaddingUniformContainer_);
+
+  bgPaddingGroup_ = new QGroupBox(tr("Background Padding"), container);
+  bgPaddingGroup_->setObjectName("BgPaddingGroup");
+  auto *bgPgLayout = new QVBoxLayout(bgPaddingGroup_);
   bgPgLayout->setContentsMargins(6, 12, 6, 6);
   bgPgLayout->setSpacing(6);
 
-  auto *bgLrContainer = new QWidget(bgPaddingGroup);
+  auto *bgLrContainer = new QWidget(bgPaddingGroup_);
   auto *bgLrLayout = new QHBoxLayout(bgLrContainer);
   bgLrLayout->setContentsMargins(0, 0, 0, 0);
   bgLrLayout->setSpacing(8);
@@ -1300,7 +1381,7 @@ QWidget *SubtitleListPanel::createCustomStylePanel() {
   bgLrLayout->addWidget(bgPaddingRightSpin_, 1);
   bgPgLayout->addWidget(bgLrContainer);
 
-  auto *bgTbContainer = new QWidget(bgPaddingGroup);
+  auto *bgTbContainer = new QWidget(bgPaddingGroup_);
   auto *bgTbLayout = new QHBoxLayout(bgTbContainer);
   bgTbLayout->setContentsMargins(0, 0, 0, 0);
   bgTbLayout->setSpacing(8);
@@ -1319,16 +1400,40 @@ QWidget *SubtitleListPanel::createCustomStylePanel() {
   bgTbLayout->addWidget(bgPaddingBottomSpin_, 1);
   bgPgLayout->addWidget(bgTbContainer);
 
-  bgForm_->addRow(bgPaddingGroup);
+  bgForm_->addRow(bgPaddingGroup_);
+
+  auto toggleBgPaddingMode = [this](bool expand) {
+    bgPaddingUniformContainer_->setVisible(!expand);
+    if (auto *lbl = bgForm_->labelForField(bgPaddingUniformContainer_))
+      lbl->setVisible(!expand);
+    bgPaddingGroup_->setVisible(expand);
+  };
+
+  connect(btnExpandBgPadding, &QPushButton::clicked, this, [toggleBgPaddingMode]() {
+    toggleBgPaddingMode(true);
+  });
+
+  setupCollapsibleGroupBoxHeader(bgPaddingGroup_, tr("Background Padding"), downArrowPixmap, [this, toggleBgPaddingMode]() {
+    toggleBgPaddingMode(false);
+  });
+
+  connect(bgPaddingUniformSpin_, QOverload<int>::of(&QSpinBox::valueChanged), this,
+          [this](int val) {
+            bgPaddingLeftSpin_->setValue(val);
+            bgPaddingRightSpin_->setValue(val);
+            bgPaddingTopSpin_->setValue(val);
+            bgPaddingBottomSpin_->setValue(val);
+          });
+  toggleBgPaddingMode(false);
 
   bgEnableCheck_ = new QCheckBox(container);
   createCollapsibleGroup(tr("Background"), "Background", bgForm_,
                          bgEnableCheck_, false);
 
   // --- BUBBLE GROUP ---
-  auto *bubbleForm = new QFormLayout();
-  bubbleForm->setContentsMargins(0, 0, 0, 0);
-  bubbleForm->setSpacing(8);
+  bubbleForm_ = new QFormLayout();
+  bubbleForm_->setContentsMargins(0, 0, 0, 0);
+  bubbleForm_->setSpacing(8);
 
   auto *bubbleImageContainer = new QWidget(container);
   auto *bubbleImageLayout = new QHBoxLayout(bubbleImageContainer);
@@ -1342,15 +1447,35 @@ QWidget *SubtitleListPanel::createCustomStylePanel() {
   bubbleImageBrowse_->setFixedWidth(80);
   bubbleImageLayout->addWidget(bubbleImagePathEdit_);
   bubbleImageLayout->addWidget(bubbleImageBrowse_);
-  addFormRow(bubbleForm, tr("Image"), "lblBubbleImage", bubbleImageContainer);
+  addFormRow(bubbleForm_, tr("Image"), "lblBubbleImage", bubbleImageContainer);
 
-  auto *paddingGroup = new QGroupBox(tr("Text Padding"), container);
-  paddingGroup->setObjectName("BubblePaddingGroup");
-  auto *pgLayout = new QVBoxLayout(paddingGroup);
+  bubblePaddingUniformContainer_ = new QWidget(container);
+  auto *bubblePaddingUniformLayout = new QHBoxLayout(bubblePaddingUniformContainer_);
+  bubblePaddingUniformLayout->setContentsMargins(0, 0, 0, 0);
+  bubblePaddingUniformLayout->setSpacing(8);
+
+  bubblePaddingUniformSpin_ = new QSpinBox(bubblePaddingUniformContainer_);
+  bubblePaddingUniformSpin_->setRange(0, 200);
+
+  auto *btnExpandBubblePadding = new QPushButton(bubblePaddingUniformContainer_);
+  btnExpandBubblePadding->setFixedWidth(20);
+  btnExpandBubblePadding->setFlat(true);
+  btnExpandBubblePadding->setIcon(QIcon(rightArrowPixmap));
+  btnExpandBubblePadding->setIconSize(QSize(12, 12));
+  btnExpandBubblePadding->setStyleSheet("QPushButton { border: none; background: transparent; }");
+
+  bubblePaddingUniformLayout->addWidget(bubblePaddingUniformSpin_, 1);
+  bubblePaddingUniformLayout->addWidget(btnExpandBubblePadding);
+
+  addFormRow(bubbleForm_, tr("Text Padding"), "lblBubblePaddingUniformTitle", bubblePaddingUniformContainer_);
+
+  bubblePaddingGroup_ = new QGroupBox(tr("Text Padding"), container);
+  bubblePaddingGroup_->setObjectName("BubblePaddingGroup");
+  auto *pgLayout = new QVBoxLayout(bubblePaddingGroup_);
   pgLayout->setContentsMargins(6, 12, 6, 6);
   pgLayout->setSpacing(6);
 
-  auto *lrContainer = new QWidget(paddingGroup);
+  auto *lrContainer = new QWidget(bubblePaddingGroup_);
   auto *lrLayout = new QHBoxLayout(lrContainer);
   lrLayout->setContentsMargins(0, 0, 0, 0);
   lrLayout->setSpacing(8);
@@ -1369,7 +1494,7 @@ QWidget *SubtitleListPanel::createCustomStylePanel() {
   lrLayout->addWidget(bubblePaddingRightSpin_, 1);
   pgLayout->addWidget(lrContainer);
 
-  auto *tbContainer = new QWidget(paddingGroup);
+  auto *tbContainer = new QWidget(bubblePaddingGroup_);
   auto *tbLayout = new QHBoxLayout(tbContainer);
   tbLayout->setContentsMargins(0, 0, 0, 0);
   tbLayout->setSpacing(8);
@@ -1388,15 +1513,59 @@ QWidget *SubtitleListPanel::createCustomStylePanel() {
   tbLayout->addWidget(bubblePaddingBottomSpin_, 1);
   pgLayout->addWidget(tbContainer);
 
-  bubbleForm->addRow(paddingGroup);
+  bubbleForm_->addRow(bubblePaddingGroup_);
 
-  auto *sliceGroup = new QGroupBox(tr("9-Patch Stretch"), container);
-  sliceGroup->setObjectName("BubbleSliceGroup");
-  auto *sgLayout = new QVBoxLayout(sliceGroup);
+  auto toggleBubblePaddingMode = [this](bool expand) {
+    bubblePaddingUniformContainer_->setVisible(!expand);
+    if (auto *lbl = bubbleForm_->labelForField(bubblePaddingUniformContainer_))
+      lbl->setVisible(!expand);
+    bubblePaddingGroup_->setVisible(expand);
+  };
+
+  connect(btnExpandBubblePadding, &QPushButton::clicked, this, [toggleBubblePaddingMode]() {
+    toggleBubblePaddingMode(true);
+  });
+
+  setupCollapsibleGroupBoxHeader(bubblePaddingGroup_, tr("Text Padding"), downArrowPixmap, [this, toggleBubblePaddingMode]() {
+    toggleBubblePaddingMode(false);
+  });
+
+  connect(bubblePaddingUniformSpin_, QOverload<int>::of(&QSpinBox::valueChanged), this,
+          [this](int val) {
+            bubblePaddingLeftSpin_->setValue(val);
+            bubblePaddingRightSpin_->setValue(val);
+            bubblePaddingTopSpin_->setValue(val);
+            bubblePaddingBottomSpin_->setValue(val);
+          });
+  toggleBubblePaddingMode(false);
+
+  bubbleSliceUniformContainer_ = new QWidget(container);
+  auto *bubbleSliceUniformLayout = new QHBoxLayout(bubbleSliceUniformContainer_);
+  bubbleSliceUniformLayout->setContentsMargins(0, 0, 0, 0);
+  bubbleSliceUniformLayout->setSpacing(8);
+
+  bubbleSliceUniformSpin_ = new QSpinBox(bubbleSliceUniformContainer_);
+  bubbleSliceUniformSpin_->setRange(0, 200);
+
+  auto *btnExpandBubbleSlice = new QPushButton(bubbleSliceUniformContainer_);
+  btnExpandBubbleSlice->setFixedWidth(20);
+  btnExpandBubbleSlice->setFlat(true);
+  btnExpandBubbleSlice->setIcon(QIcon(rightArrowPixmap));
+  btnExpandBubbleSlice->setIconSize(QSize(12, 12));
+  btnExpandBubbleSlice->setStyleSheet("QPushButton { border: none; background: transparent; }");
+
+  bubbleSliceUniformLayout->addWidget(bubbleSliceUniformSpin_, 1);
+  bubbleSliceUniformLayout->addWidget(btnExpandBubbleSlice);
+
+  addFormRow(bubbleForm_, tr("9-Patch Stretch"), "lblBubbleSliceUniformTitle", bubbleSliceUniformContainer_);
+
+  bubbleSliceGroup_ = new QGroupBox(tr("9-Patch Stretch"), container);
+  bubbleSliceGroup_->setObjectName("BubbleSliceGroup");
+  auto *sgLayout = new QVBoxLayout(bubbleSliceGroup_);
   sgLayout->setContentsMargins(6, 12, 6, 6);
   sgLayout->setSpacing(6);
 
-  auto *sliceLrContainer = new QWidget(sliceGroup);
+  auto *sliceLrContainer = new QWidget(bubbleSliceGroup_);
   auto *sliceLrLayout = new QHBoxLayout(sliceLrContainer);
   sliceLrLayout->setContentsMargins(0, 0, 0, 0);
   sliceLrLayout->setSpacing(8);
@@ -1415,7 +1584,7 @@ QWidget *SubtitleListPanel::createCustomStylePanel() {
   sliceLrLayout->addWidget(bubbleSliceRightSpin_, 1);
   sgLayout->addWidget(sliceLrContainer);
 
-  auto *sliceTbContainer = new QWidget(sliceGroup);
+  auto *sliceTbContainer = new QWidget(bubbleSliceGroup_);
   auto *sliceTbLayout = new QHBoxLayout(sliceTbContainer);
   sliceTbLayout->setContentsMargins(0, 0, 0, 0);
   sliceTbLayout->setSpacing(8);
@@ -1434,10 +1603,34 @@ QWidget *SubtitleListPanel::createCustomStylePanel() {
   sliceTbLayout->addWidget(bubbleSliceBottomSpin_, 1);
   sgLayout->addWidget(sliceTbContainer);
 
-  bubbleForm->addRow(sliceGroup);
+  bubbleForm_->addRow(bubbleSliceGroup_);
+
+  auto toggleBubbleSliceMode = [this](bool expand) {
+    bubbleSliceUniformContainer_->setVisible(!expand);
+    if (auto *lbl = bubbleForm_->labelForField(bubbleSliceUniformContainer_))
+      lbl->setVisible(!expand);
+    bubbleSliceGroup_->setVisible(expand);
+  };
+
+  connect(btnExpandBubbleSlice, &QPushButton::clicked, this, [toggleBubbleSliceMode]() {
+    toggleBubbleSliceMode(true);
+  });
+
+  setupCollapsibleGroupBoxHeader(bubbleSliceGroup_, tr("9-Patch Stretch"), downArrowPixmap, [this, toggleBubbleSliceMode]() {
+    toggleBubbleSliceMode(false);
+  });
+
+  connect(bubbleSliceUniformSpin_, QOverload<int>::of(&QSpinBox::valueChanged), this,
+          [this](int val) {
+            bubbleSliceLeftSpin_->setValue(val);
+            bubbleSliceRightSpin_->setValue(val);
+            bubbleSliceTopSpin_->setValue(val);
+            bubbleSliceBottomSpin_->setValue(val);
+          });
+  toggleBubbleSliceMode(false);
 
   bubbleEnableCheck_ = new QCheckBox(container);
-  createCollapsibleGroup(tr("Bubble"), "Bubble", bubbleForm, bubbleEnableCheck_,
+  createCollapsibleGroup(tr("Bubble"), "Bubble", bubbleForm_, bubbleEnableCheck_,
                          false);
 
   // Connect Slider and Spinbox for Angle
@@ -1520,6 +1713,10 @@ QWidget *SubtitleListPanel::createCustomStylePanel() {
           this, triggerUpdate);
   connect(bubbleSliceBottomSpin_, QOverload<int>::of(&QSpinBox::valueChanged),
           this, triggerUpdate);
+
+  connect(bgPaddingUniformSpin_, QOverload<int>::of(&QSpinBox::valueChanged), this, triggerUpdate);
+  connect(bubblePaddingUniformSpin_, QOverload<int>::of(&QSpinBox::valueChanged), this, triggerUpdate);
+  connect(bubbleSliceUniformSpin_, QOverload<int>::of(&QSpinBox::valueChanged), this, triggerUpdate);
 
   // Undo support on slider release / spinbox edit finished
   auto recordUndoState = [this]() {
@@ -1611,6 +1808,10 @@ QWidget *SubtitleListPanel::createCustomStylePanel() {
           recordUndoState);
   connect(bubbleSliceBottomSpin_, &QSpinBox::editingFinished, this,
           recordUndoState);
+
+  connect(bgPaddingUniformSpin_, &QSpinBox::editingFinished, this, recordUndoState);
+  connect(bubblePaddingUniformSpin_, &QSpinBox::editingFinished, this, recordUndoState);
+  connect(bubbleSliceUniformSpin_, &QSpinBox::editingFinished, this, recordUndoState);
 
   // 添加拉伸弹簧，确保多余空间由底部弹簧吸收，从而使各展开组高度固定，不被强制拉伸
   layout->addStretch();
@@ -2226,6 +2427,17 @@ void SubtitleListPanel::loadStyleFromItem(const SubtitleItem &item) {
     bgPaddingTopSpin_->setValue(item.bgPaddingTop);
   if (bgPaddingBottomSpin_)
     bgPaddingBottomSpin_->setValue(item.bgPaddingBottom);
+  if (bgPaddingUniformSpin_) {
+    bool bgUniform = (item.bgPaddingLeft == item.bgPaddingRight &&
+                      item.bgPaddingLeft == item.bgPaddingTop &&
+                      item.bgPaddingLeft == item.bgPaddingBottom);
+    bool expand = !bgUniform;
+    bgPaddingUniformSpin_->setValue(item.bgPaddingLeft);
+    bgPaddingUniformContainer_->setVisible(!expand);
+    if (auto *lbl = bgForm_->labelForField(bgPaddingUniformContainer_))
+      lbl->setVisible(!expand);
+    bgPaddingGroup_->setVisible(expand);
+  }
   if (bgOffsetXSpin_)
     bgOffsetXSpin_->setValue(item.bgOffsetX);
   if (bgOffsetYSpin_)
@@ -2243,6 +2455,19 @@ void SubtitleListPanel::loadStyleFromItem(const SubtitleItem &item) {
     bubblePaddingTopSpin_->setValue(item.bubblePaddingTop);
   if (bubblePaddingBottomSpin_)
     bubblePaddingBottomSpin_->setValue(item.bubblePaddingBottom);
+
+  if (bubblePaddingUniformSpin_) {
+    bool bubblePadUniform = (item.bubblePaddingLeft == item.bubblePaddingRight &&
+                             item.bubblePaddingLeft == item.bubblePaddingTop &&
+                             item.bubblePaddingLeft == item.bubblePaddingBottom);
+    bool expand = !bubblePadUniform;
+    bubblePaddingUniformSpin_->setValue(item.bubblePaddingLeft);
+    bubblePaddingUniformContainer_->setVisible(!expand);
+    if (auto *lbl = bubbleForm_->labelForField(bubblePaddingUniformContainer_))
+      lbl->setVisible(!expand);
+    bubblePaddingGroup_->setVisible(expand);
+  }
+
   if (bubbleSliceLeftSpin_)
     bubbleSliceLeftSpin_->setValue(item.bubbleSliceLeft);
   if (bubbleSliceRightSpin_)
@@ -2251,6 +2476,18 @@ void SubtitleListPanel::loadStyleFromItem(const SubtitleItem &item) {
     bubbleSliceTopSpin_->setValue(item.bubbleSliceTop);
   if (bubbleSliceBottomSpin_)
     bubbleSliceBottomSpin_->setValue(item.bubbleSliceBottom);
+
+  if (bubbleSliceUniformSpin_) {
+    bool bubbleSliceUniform = (item.bubbleSliceLeft == item.bubbleSliceRight &&
+                               item.bubbleSliceLeft == item.bubbleSliceTop &&
+                               item.bubbleSliceLeft == item.bubbleSliceBottom);
+    bool expand = !bubbleSliceUniform;
+    bubbleSliceUniformSpin_->setValue(item.bubbleSliceLeft);
+    bubbleSliceUniformContainer_->setVisible(!expand);
+    if (auto *lbl = bubbleForm_->labelForField(bubbleSliceUniformContainer_))
+      lbl->setVisible(!expand);
+    bubbleSliceGroup_->setVisible(expand);
+  }
 
   isUpdatingControls_ = false;
 

@@ -2545,6 +2545,14 @@ A simple and easy-to-use video subtitle editing tool.</translation>
         <source>Background Padding</source>
         <translation>Background Padding</translation>
     </message>
+    <message>
+        <source>Uniform</source>
+        <translation>Uniform</translation>
+    </message>
+    <message>
+        <source>Value</source>
+        <translation>Value</translation>
+    </message>
 </context>
 <context>
     <name>SubtitleTrack</name>
