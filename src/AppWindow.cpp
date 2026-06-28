@@ -1584,12 +1584,12 @@ void AppWindow::updateShortcuts() {
 
 void AppWindow::onAbout() {
   AppMessageBox::information(this, tr("关于"),
-                             tr("字幕编辑器 v1.0.0\n\n"
+                             tr("字幕编辑器 v%1\n\n"
                                 "一个简单易用的视频字幕编辑工具。\n\n"
                                 "三方库:\n"
                                 "• Qt 6 - 跨平台UI框架\n"
                                 "• FFmpeg - 音视频处理\n"
-                                "• QWindowKit - 自定义窗口"));
+                                "• QWindowKit - 自定义窗口").arg(qApp->applicationVersion()));
 }
 
 void AppWindow::updateWindowTitle() {

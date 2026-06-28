@@ -275,7 +275,7 @@ Make sure to include the necessary settings for FFmpeg, Tencent Cloud ASR, and A
     </message>
     <message>
         <location filename="../src/AppWindow.cpp" line="1587"/>
-        <source>字幕编辑器 v1.0.0
+        <source>字幕编辑器 v%1
 
 一个简单易用的视频字幕编辑工具。
 
@@ -283,7 +283,7 @@ Make sure to include the necessary settings for FFmpeg, Tencent Cloud ASR, and A
 • Qt 6 - 跨平台UI框架
 • FFmpeg - 音视频处理
 • QWindowKit - 自定义窗口</source>
-        <translation>Subtitle Editor v1.0.0
+        <translation>Subtitle Editor v%1
 
 A simple and easy-to-use video subtitle editing tool.
 

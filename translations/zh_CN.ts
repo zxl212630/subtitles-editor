@@ -275,7 +275,7 @@
     </message>
     <message>
         <location filename="../src/AppWindow.cpp" line="1587"/>
-        <source>字幕编辑器 v1.0.0
+        <source>字幕编辑器 v%1
 
 一个简单易用的视频字幕编辑工具。
 
