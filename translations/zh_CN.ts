@@ -911,183 +911,183 @@
     </message>
     <message>
         <location filename="../src/ConfigDialog.cpp" line="691"/>
-        <location filename="../src/ConfigDialog.cpp" line="894"/>
+        <location filename="../src/ConfigDialog.cpp" line="898"/>
         <source>常规配置</source>
         <translation>常规配置</translation>
     </message>
     <message>
         <location filename="../src/ConfigDialog.cpp" line="693"/>
-        <location filename="../src/ConfigDialog.cpp" line="895"/>
+        <location filename="../src/ConfigDialog.cpp" line="899"/>
         <source>对象存储</source>
         <translation>对象存储</translation>
     </message>
     <message>
         <location filename="../src/ConfigDialog.cpp" line="695"/>
-        <location filename="../src/ConfigDialog.cpp" line="896"/>
+        <location filename="../src/ConfigDialog.cpp" line="900"/>
         <source>语音识别</source>
         <translation>语音识别</translation>
     </message>
     <message>
         <location filename="../src/ConfigDialog.cpp" line="698"/>
-        <location filename="../src/ConfigDialog.cpp" line="912"/>
+        <location filename="../src/ConfigDialog.cpp" line="916"/>
         <source>界面语言 (Language)</source>
         <translation>语言</translation>
     </message>
     <message>
         <location filename="../src/ConfigDialog.cpp" line="701"/>
-        <location filename="../src/ConfigDialog.cpp" line="918"/>
+        <location filename="../src/ConfigDialog.cpp" line="922"/>
         <source>简体中文</source>
         <translation>简体中文</translation>
     </message>
     <message>
         <location filename="../src/ConfigDialog.cpp" line="702"/>
-        <location filename="../src/ConfigDialog.cpp" line="919"/>
+        <location filename="../src/ConfigDialog.cpp" line="923"/>
         <source>English</source>
         <translation>English</translation>
     </message>
     <message>
         <location filename="../src/ConfigDialog.cpp" line="699"/>
-        <location filename="../src/ConfigDialog.cpp" line="922"/>
+        <location filename="../src/ConfigDialog.cpp" line="926"/>
         <source>主题模式 (Theme)</source>
         <translation>主题模式</translation>
     </message>
     <message>
         <location filename="../src/ConfigDialog.cpp" line="700"/>
-        <location filename="../src/ConfigDialog.cpp" line="932"/>
+        <location filename="../src/ConfigDialog.cpp" line="936"/>
         <source>主色调 (Primary Color)</source>
         <translation>主色调</translation>
     </message>
     <message>
         <location filename="../src/ConfigDialog.cpp" line="705"/>
-        <location filename="../src/ConfigDialog.cpp" line="960"/>
+        <location filename="../src/ConfigDialog.cpp" line="964"/>
         <source>存储提供商</source>
         <translation>存储提供商</translation>
     </message>
     <message>
         <location filename="../src/ConfigDialog.cpp" line="708"/>
-        <location filename="../src/ConfigDialog.cpp" line="966"/>
+        <location filename="../src/ConfigDialog.cpp" line="970"/>
         <source>阿里云 OSS</source>
         <translation>阿里云 OSS</translation>
     </message>
     <message>
         <location filename="../src/ConfigDialog.cpp" line="706"/>
-        <location filename="../src/ConfigDialog.cpp" line="970"/>
+        <location filename="../src/ConfigDialog.cpp" line="974"/>
         <source>存储桶 (Bucket)</source>
         <translation>存储桶</translation>
     </message>
     <message>
         <location filename="../src/ConfigDialog.cpp" line="707"/>
-        <location filename="../src/ConfigDialog.cpp" line="978"/>
+        <location filename="../src/ConfigDialog.cpp" line="982"/>
         <source>地域 (Region)</source>
         <translation>地域</translation>
     </message>
     <message>
         <location filename="../src/ConfigDialog.cpp" line="815"/>
-        <location filename="../src/ConfigDialog.cpp" line="1364"/>
+        <location filename="../src/ConfigDialog.cpp" line="1368"/>
         <source>X (%):</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../src/ConfigDialog.cpp" line="816"/>
-        <location filename="../src/ConfigDialog.cpp" line="1373"/>
+        <location filename="../src/ConfigDialog.cpp" line="1377"/>
         <source>Y (%):</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../src/ConfigDialog.cpp" line="817"/>
-        <location filename="../src/ConfigDialog.cpp" line="1382"/>
+        <location filename="../src/ConfigDialog.cpp" line="1386"/>
         <source>宽度 (%):</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../src/ConfigDialog.cpp" line="818"/>
-        <location filename="../src/ConfigDialog.cpp" line="1391"/>
+        <location filename="../src/ConfigDialog.cpp" line="1395"/>
         <source>高度 (%):</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../src/ConfigDialog.cpp" line="819"/>
-        <location filename="../src/ConfigDialog.cpp" line="1400"/>
+        <location filename="../src/ConfigDialog.cpp" line="1404"/>
         <source>旋转 (°):</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ConfigDialog.cpp" line="986"/>
-        <location filename="../src/ConfigDialog.cpp" line="1594"/>
+        <location filename="../src/ConfigDialog.cpp" line="990"/>
+        <location filename="../src/ConfigDialog.cpp" line="1598"/>
         <source>访问密钥 ID (Access Key ID)</source>
         <translation>访问密钥 ID</translation>
     </message>
     <message>
-        <location filename="../src/ConfigDialog.cpp" line="994"/>
-        <location filename="../src/ConfigDialog.cpp" line="1595"/>
+        <location filename="../src/ConfigDialog.cpp" line="998"/>
+        <location filename="../src/ConfigDialog.cpp" line="1599"/>
         <source>访问密钥 (Access Key Secret)</source>
         <translation>访问密钥</translation>
     </message>
     <message>
         <location filename="../src/ConfigDialog.cpp" line="713"/>
-        <location filename="../src/ConfigDialog.cpp" line="1029"/>
+        <location filename="../src/ConfigDialog.cpp" line="1033"/>
         <source>识别提供商</source>
         <translation>识别提供商</translation>
     </message>
     <message>
         <location filename="../src/ConfigDialog.cpp" line="717"/>
-        <location filename="../src/ConfigDialog.cpp" line="1035"/>
+        <location filename="../src/ConfigDialog.cpp" line="1039"/>
         <source>腾讯云 ASR</source>
         <translation>腾讯云 ASR</translation>
     </message>
     <message>
         <location filename="../src/ConfigDialog.cpp" line="714"/>
-        <location filename="../src/ConfigDialog.cpp" line="1045"/>
+        <location filename="../src/ConfigDialog.cpp" line="1049"/>
         <source>应用 ID (App ID)</source>
         <translation>应用 ID</translation>
     </message>
     <message>
         <location filename="../src/ConfigDialog.cpp" line="709"/>
-        <location filename="../src/ConfigDialog.cpp" line="967"/>
+        <location filename="../src/ConfigDialog.cpp" line="971"/>
         <source>腾讯云 COS</source>
         <translation>腾讯云 COS</translation>
     </message>
     <message>
         <location filename="../src/ConfigDialog.cpp" line="715"/>
-        <location filename="../src/ConfigDialog.cpp" line="1053"/>
-        <location filename="../src/ConfigDialog.cpp" line="1597"/>
+        <location filename="../src/ConfigDialog.cpp" line="1057"/>
+        <location filename="../src/ConfigDialog.cpp" line="1601"/>
         <source>密钥 ID (Secret ID)</source>
         <translation>密钥 ID</translation>
     </message>
     <message>
         <location filename="../src/ConfigDialog.cpp" line="716"/>
-        <location filename="../src/ConfigDialog.cpp" line="1061"/>
-        <location filename="../src/ConfigDialog.cpp" line="1598"/>
+        <location filename="../src/ConfigDialog.cpp" line="1065"/>
+        <location filename="../src/ConfigDialog.cpp" line="1602"/>
         <source>密钥 (Secret Key)</source>
         <translation>密钥</translation>
     </message>
     <message>
         <location filename="../src/ConfigDialog.cpp" line="718"/>
-        <location filename="../src/ConfigDialog.cpp" line="1036"/>
+        <location filename="../src/ConfigDialog.cpp" line="1040"/>
         <source>本地 ASR (Whisper)</source>
         <translation type="unfinished">本地 ASR (Whisper)</translation>
     </message>
     <message>
         <location filename="../src/ConfigDialog.cpp" line="721"/>
-        <location filename="../src/ConfigDialog.cpp" line="1143"/>
+        <location filename="../src/ConfigDialog.cpp" line="1147"/>
         <source>模型存放目录</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../src/ConfigDialog.cpp" line="723"/>
-        <location filename="../src/ConfigDialog.cpp" line="1169"/>
+        <location filename="../src/ConfigDialog.cpp" line="1173"/>
         <source>默认模型大小</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../src/ConfigDialog.cpp" line="724"/>
-        <location filename="../src/ConfigDialog.cpp" line="1210"/>
+        <location filename="../src/ConfigDialog.cpp" line="1214"/>
         <source>默认识别语言</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../src/ConfigDialog.cpp" line="725"/>
-        <location filename="../src/ConfigDialog.cpp" line="1224"/>
+        <location filename="../src/ConfigDialog.cpp" line="1228"/>
         <source>线程数</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1103,62 +1103,62 @@
     </message>
     <message>
         <location filename="../src/ConfigDialog.cpp" line="732"/>
-        <location filename="../src/ConfigDialog.cpp" line="1192"/>
-        <location filename="../src/ConfigDialog.cpp" line="1862"/>
+        <location filename="../src/ConfigDialog.cpp" line="1196"/>
+        <location filename="../src/ConfigDialog.cpp" line="1866"/>
         <source>下载模型</source>
         <translation type="unfinished">下载模型</translation>
     </message>
     <message>
         <location filename="../src/ConfigDialog.cpp" line="735"/>
-        <location filename="../src/ConfigDialog.cpp" line="1216"/>
+        <location filename="../src/ConfigDialog.cpp" line="1220"/>
         <source>自动检测</source>
         <translation type="unfinished">自动检测</translation>
     </message>
     <message>
         <location filename="../src/ConfigDialog.cpp" line="736"/>
-        <location filename="../src/ConfigDialog.cpp" line="1217"/>
+        <location filename="../src/ConfigDialog.cpp" line="1221"/>
         <source>中文 (Chinese)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../src/ConfigDialog.cpp" line="737"/>
-        <location filename="../src/ConfigDialog.cpp" line="1218"/>
+        <location filename="../src/ConfigDialog.cpp" line="1222"/>
         <source>英文 (English)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../src/ConfigDialog.cpp" line="738"/>
-        <location filename="../src/ConfigDialog.cpp" line="1219"/>
+        <location filename="../src/ConfigDialog.cpp" line="1223"/>
         <source>日文 (Japanese)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../src/ConfigDialog.cpp" line="739"/>
-        <location filename="../src/ConfigDialog.cpp" line="1220"/>
+        <location filename="../src/ConfigDialog.cpp" line="1224"/>
         <source>韩文 (Korean)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../src/ConfigDialog.cpp" line="742"/>
-        <location filename="../src/ConfigDialog.cpp" line="1082"/>
+        <location filename="../src/ConfigDialog.cpp" line="1086"/>
         <source>说话人识别</source>
         <translation>说话人识别</translation>
     </message>
     <message>
         <location filename="../src/ConfigDialog.cpp" line="743"/>
-        <location filename="../src/ConfigDialog.cpp" line="1086"/>
+        <location filename="../src/ConfigDialog.cpp" line="1090"/>
         <source>开启说话人识别</source>
         <translation>开启说话人识别</translation>
     </message>
     <message>
         <location filename="../src/ConfigDialog.cpp" line="744"/>
-        <location filename="../src/ConfigDialog.cpp" line="1091"/>
+        <location filename="../src/ConfigDialog.cpp" line="1095"/>
         <source>单行字幕最大字数</source>
         <translation>单行字幕最大字数</translation>
     </message>
     <message>
         <location filename="../src/ConfigDialog.cpp" line="745"/>
-        <location filename="../src/ConfigDialog.cpp" line="1101"/>
+        <location filename="../src/ConfigDialog.cpp" line="1105"/>
         <source>引擎模型类型</source>
         <translation>引擎模型类型</translation>
     </message>
@@ -1284,159 +1284,161 @@
     </message>
     <message>
         <location filename="../src/ConfigDialog.cpp" line="791"/>
-        <location filename="../src/ConfigDialog.cpp" line="897"/>
+        <location filename="../src/ConfigDialog.cpp" line="901"/>
         <source>字幕设置</source>
         <translation>字幕设置</translation>
     </message>
     <message>
         <location filename="../src/ConfigDialog.cpp" line="795"/>
-        <location filename="../src/ConfigDialog.cpp" line="898"/>
+        <location filename="../src/ConfigDialog.cpp" line="902"/>
         <source>快捷键</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../src/ConfigDialog.cpp" line="798"/>
-        <location filename="../src/ConfigDialog.cpp" line="1261"/>
+        <location filename="../src/ConfigDialog.cpp" line="1265"/>
         <source>默认字体样式</source>
         <translation>默认字体样式</translation>
     </message>
     <message>
         <location filename="../src/ConfigDialog.cpp" line="800"/>
-        <location filename="../src/ConfigDialog.cpp" line="1348"/>
+        <location filename="../src/ConfigDialog.cpp" line="1352"/>
         <source>默认排版位置</source>
         <translation>默认排版位置</translation>
     </message>
     <message>
         <location filename="../src/ConfigDialog.cpp" line="802"/>
-        <location filename="../src/ConfigDialog.cpp" line="1413"/>
+        <location filename="../src/ConfigDialog.cpp" line="1417"/>
         <source>说话人设置</source>
         <translation>说话人设置</translation>
     </message>
     <message>
         <location filename="../src/ConfigDialog.cpp" line="804"/>
-        <location filename="../src/ConfigDialog.cpp" line="1269"/>
+        <location filename="../src/ConfigDialog.cpp" line="1273"/>
         <source>字体族</source>
         <translation>字体族</translation>
     </message>
     <message>
         <location filename="../src/ConfigDialog.cpp" line="805"/>
-        <location filename="../src/ConfigDialog.cpp" line="1281"/>
+        <location filename="../src/ConfigDialog.cpp" line="1285"/>
         <source>字号</source>
         <translation>字号</translation>
     </message>
     <message>
         <location filename="../src/ConfigDialog.cpp" line="806"/>
-        <location filename="../src/ConfigDialog.cpp" line="1325"/>
+        <location filename="../src/ConfigDialog.cpp" line="1329"/>
         <source>粗体</source>
         <translation>粗体</translation>
     </message>
     <message>
         <location filename="../src/ConfigDialog.cpp" line="807"/>
-        <location filename="../src/ConfigDialog.cpp" line="1330"/>
+        <location filename="../src/ConfigDialog.cpp" line="1334"/>
         <source>斜体</source>
         <translation>斜体</translation>
     </message>
     <message>
         <location filename="../src/ConfigDialog.cpp" line="808"/>
-        <location filename="../src/ConfigDialog.cpp" line="1335"/>
+        <location filename="../src/ConfigDialog.cpp" line="1339"/>
         <source>下划线</source>
         <translation>下划线</translation>
     </message>
     <message>
         <location filename="../src/ConfigDialog.cpp" line="809"/>
-        <location filename="../src/ConfigDialog.cpp" line="1302"/>
+        <location filename="../src/ConfigDialog.cpp" line="1306"/>
         <source>对齐方式</source>
         <translation>对齐方式</translation>
     </message>
     <message>
         <location filename="../src/ConfigDialog.cpp" line="812"/>
-        <location filename="../src/ConfigDialog.cpp" line="1309"/>
+        <location filename="../src/ConfigDialog.cpp" line="859"/>
+        <location filename="../src/ConfigDialog.cpp" line="1313"/>
         <source>左对齐</source>
         <translation>左对齐</translation>
     </message>
     <message>
         <location filename="../src/ConfigDialog.cpp" line="813"/>
-        <location filename="../src/ConfigDialog.cpp" line="1310"/>
+        <location filename="../src/ConfigDialog.cpp" line="1314"/>
         <source>居中</source>
         <translation>居中</translation>
     </message>
     <message>
         <location filename="../src/ConfigDialog.cpp" line="814"/>
-        <location filename="../src/ConfigDialog.cpp" line="1311"/>
+        <location filename="../src/ConfigDialog.cpp" line="857"/>
+        <location filename="../src/ConfigDialog.cpp" line="1315"/>
         <source>右对齐</source>
         <translation>右对齐</translation>
     </message>
     <message>
-        <location filename="../src/ConfigDialog.cpp" line="1634"/>
+        <location filename="../src/ConfigDialog.cpp" line="1638"/>
         <source>模型状态: 下载失败 (%1)</source>
         <translation type="unfinished">模型状态: 下载失败 (%1)</translation>
     </message>
     <message>
-        <location filename="../src/ConfigDialog.cpp" line="1643"/>
+        <location filename="../src/ConfigDialog.cpp" line="1647"/>
         <source>模型状态: 未下载</source>
         <translation type="unfinished">模型状态: 未下载</translation>
     </message>
     <message>
-        <location filename="../src/ConfigDialog.cpp" line="1683"/>
-        <location filename="../src/ConfigDialog.cpp" line="1736"/>
+        <location filename="../src/ConfigDialog.cpp" line="1687"/>
+        <location filename="../src/ConfigDialog.cpp" line="1740"/>
         <source>无法创建模型文件: %1</source>
         <translation type="unfinished">无法创建模型文件: %1</translation>
     </message>
     <message>
-        <location filename="../src/ConfigDialog.cpp" line="1701"/>
+        <location filename="../src/ConfigDialog.cpp" line="1705"/>
         <source>正在启动下载...</source>
         <translation type="unfinished">正在启动下载...</translation>
     </message>
     <message>
-        <location filename="../src/ConfigDialog.cpp" line="1720"/>
+        <location filename="../src/ConfigDialog.cpp" line="1724"/>
         <source>重定向次数过多</source>
         <translation type="unfinished">重定向次数过多</translation>
     </message>
     <message>
-        <location filename="../src/ConfigDialog.cpp" line="1787"/>
+        <location filename="../src/ConfigDialog.cpp" line="1791"/>
         <source>正在下载: %1% (%2 MB / %3 MB)</source>
         <translation type="unfinished">正在下载: %1% (%2 MB / %3 MB)</translation>
     </message>
     <message>
-        <location filename="../src/ConfigDialog.cpp" line="1840"/>
+        <location filename="../src/ConfigDialog.cpp" line="1844"/>
         <source>下载错误: %1</source>
         <translation type="unfinished">下载错误: %1</translation>
     </message>
     <message>
         <location filename="../src/ConfigDialog.cpp" line="820"/>
-        <location filename="../src/ConfigDialog.cpp" line="1418"/>
+        <location filename="../src/ConfigDialog.cpp" line="1422"/>
         <source>背景图文件夹</source>
         <translation>背景图文件夹</translation>
     </message>
     <message>
         <location filename="../src/ConfigDialog.cpp" line="722"/>
         <location filename="../src/ConfigDialog.cpp" line="821"/>
-        <location filename="../src/ConfigDialog.cpp" line="1154"/>
-        <location filename="../src/ConfigDialog.cpp" line="1428"/>
+        <location filename="../src/ConfigDialog.cpp" line="1158"/>
+        <location filename="../src/ConfigDialog.cpp" line="1432"/>
         <source>浏览...</source>
         <translation>浏览...</translation>
     </message>
     <message>
         <location filename="../src/ConfigDialog.cpp" line="822"/>
-        <location filename="../src/ConfigDialog.cpp" line="1457"/>
+        <location filename="../src/ConfigDialog.cpp" line="1461"/>
         <source>左:</source>
         <translation>左:</translation>
     </message>
     <message>
         <location filename="../src/ConfigDialog.cpp" line="823"/>
-        <location filename="../src/ConfigDialog.cpp" line="1466"/>
+        <location filename="../src/ConfigDialog.cpp" line="1470"/>
         <source>上:</source>
         <translation>上:</translation>
     </message>
     <message>
         <location filename="../src/ConfigDialog.cpp" line="824"/>
-        <location filename="../src/ConfigDialog.cpp" line="1475"/>
+        <location filename="../src/ConfigDialog.cpp" line="1479"/>
         <source>右:</source>
         <translation>右:</translation>
     </message>
     <message>
         <location filename="../src/ConfigDialog.cpp" line="825"/>
-        <location filename="../src/ConfigDialog.cpp" line="1484"/>
+        <location filename="../src/ConfigDialog.cpp" line="1488"/>
         <source>下:</source>
         <translation>下:</translation>
     </message>
@@ -1511,69 +1513,69 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ConfigDialog.cpp" line="857"/>
+        <location filename="../src/ConfigDialog.cpp" line="861"/>
         <source>吸附开关</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ConfigDialog.cpp" line="859"/>
+        <location filename="../src/ConfigDialog.cpp" line="863"/>
         <source>自适应</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ConfigDialog.cpp" line="861"/>
+        <location filename="../src/ConfigDialog.cpp" line="865"/>
         <source>时间线放大</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ConfigDialog.cpp" line="863"/>
+        <location filename="../src/ConfigDialog.cpp" line="867"/>
         <source>时间线缩小</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ConfigDialog.cpp" line="866"/>
-        <location filename="../src/ConfigDialog.cpp" line="1547"/>
+        <location filename="../src/ConfigDialog.cpp" line="870"/>
+        <location filename="../src/ConfigDialog.cpp" line="1551"/>
         <source>有未保存的更改</source>
         <translation>有未保存的更改</translation>
     </message>
     <message>
         <location filename="../src/ConfigDialog.cpp" line="731"/>
-        <location filename="../src/ConfigDialog.cpp" line="867"/>
-        <location filename="../src/ConfigDialog.cpp" line="1554"/>
-        <location filename="../src/ConfigDialog.cpp" line="1694"/>
+        <location filename="../src/ConfigDialog.cpp" line="871"/>
+        <location filename="../src/ConfigDialog.cpp" line="1558"/>
+        <location filename="../src/ConfigDialog.cpp" line="1698"/>
         <source>取消</source>
         <translation>取消</translation>
     </message>
     <message>
-        <location filename="../src/ConfigDialog.cpp" line="868"/>
-        <location filename="../src/ConfigDialog.cpp" line="1556"/>
+        <location filename="../src/ConfigDialog.cpp" line="872"/>
+        <location filename="../src/ConfigDialog.cpp" line="1560"/>
         <source>应用</source>
         <translation>应用</translation>
     </message>
     <message>
-        <location filename="../src/ConfigDialog.cpp" line="869"/>
-        <location filename="../src/ConfigDialog.cpp" line="1558"/>
+        <location filename="../src/ConfigDialog.cpp" line="873"/>
+        <location filename="../src/ConfigDialog.cpp" line="1562"/>
         <source>确定</source>
         <translation>确定</translation>
     </message>
     <message>
         <location filename="../src/ConfigDialog.cpp" line="811"/>
-        <location filename="../src/ConfigDialog.cpp" line="1317"/>
+        <location filename="../src/ConfigDialog.cpp" line="1321"/>
         <source>样式属性</source>
         <translation>样式属性</translation>
     </message>
     <message>
-        <location filename="../src/ConfigDialog.cpp" line="1162"/>
+        <location filename="../src/ConfigDialog.cpp" line="1166"/>
         <source>选择模型存放目录</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ConfigDialog.cpp" line="1433"/>
+        <location filename="../src/ConfigDialog.cpp" line="1437"/>
         <source>选择背景图文件夹</source>
         <translation>选择背景图文件夹</translation>
     </message>
     <message>
-        <location filename="../src/ConfigDialog.cpp" line="1442"/>
+        <location filename="../src/ConfigDialog.cpp" line="1446"/>
         <source>九宫格边距</source>
         <translation>九宫格边距</translation>
     </message>

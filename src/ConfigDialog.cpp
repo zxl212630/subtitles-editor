@@ -853,6 +853,10 @@ void ConfigDialog::retranslateUi() {
     shortcutLabels_["timeline_split"]->setText(tr("分割"));
   if (shortcutLabels_.contains("timeline_delete"))
     shortcutLabels_["timeline_delete"]->setText(tr("删除"));
+  if (shortcutLabels_.contains("timeline_trim_right"))
+    shortcutLabels_["timeline_trim_right"]->setText(tr("右对齐"));
+  if (shortcutLabels_.contains("timeline_trim_left"))
+    shortcutLabels_["timeline_trim_left"]->setText(tr("左对齐"));
   if (shortcutLabels_.contains("timeline_snap"))
     shortcutLabels_["timeline_snap"]->setText(tr("吸附开关"));
   if (shortcutLabels_.contains("timeline_fit"))

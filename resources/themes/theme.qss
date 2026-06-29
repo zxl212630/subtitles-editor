@@ -155,6 +155,19 @@ QLineEdit, QComboBox, QSpinBox, QDoubleSpinBox {
     max-height: 28px;
 }
 
+QKeySequenceEdit {
+    background: transparent;
+    border: none;
+    padding: 0px;
+    margin: 0px;
+}
+
+QKeySequenceEdit QLineEdit {
+    min-height: 0px;
+    max-height: 999px;
+    margin: 0px;
+}
+
 QLineEdit:disabled, QComboBox:disabled, QSpinBox:disabled, QDoubleSpinBox:disabled {
     background-color: @bg_lighter;
     color: @text_muted;
