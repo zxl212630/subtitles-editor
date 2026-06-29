@@ -116,6 +116,8 @@ struct AppWindow::Private {
   QAction *configAction = nullptr;
   QAction *openDataDirAction = nullptr;
   QAction *aboutAction = nullptr;
+  QAction *zhAction = nullptr;
+  QAction *enAction = nullptr;
 
   // ProjectManager
   ProjectManager *projectManager = nullptr;
@@ -131,6 +133,7 @@ AppWindow::AppWindow(QWidget *parent)
 
   connect(&TranslationManager::instance(), &TranslationManager::languageChanged,
           this, [this]() { retranslateUi(); });
+  retranslateUi();
 }
 
 void AppWindow::checkConfig() {
@@ -1181,6 +1184,16 @@ void AppWindow::retranslateUi() {
     d->exportAction->setText(tr("导出..."));
   if (d->langMenu)
     d->langMenu->setTitle(tr("语言"));
+  if (d->zhAction)
+    d->zhAction->setText(tr("中文"));
+  if (d->enAction)
+    d->enAction->setText("English");
+
+  QString currentLang = TranslationManager::instance().currentLanguage();
+  if (d->zhAction)
+    d->zhAction->setChecked(currentLang == "zh_CN");
+  if (d->enAction)
+    d->enAction->setChecked(currentLang == "en_US");
 
   // 文件菜单动作
   if (d->newAction)
@@ -1341,12 +1354,18 @@ void AppWindow::setupMenuBar() {
   });
 
   d->langMenu = d->settingsMenu->addMenu(tr("语言"));
-  QAction *zhAction = d->langMenu->addAction(tr("中文"));
-  connect(zhAction, &QAction::triggered, this,
-          []() { TranslationManager::instance().loadLanguage("zh_CN"); });
-  QAction *enAction = d->langMenu->addAction("English");
-  connect(enAction, &QAction::triggered, this,
-          []() { TranslationManager::instance().loadLanguage("en_US"); });
+  d->zhAction = d->langMenu->addAction(tr("中文"));
+  d->zhAction->setCheckable(true);
+  connect(d->zhAction, &QAction::triggered, this, []() {
+    TranslationManager::instance().loadLanguage("zh_CN");
+    ConfigManager::instance().setValue("", "language", "zh_CN");
+  });
+  d->enAction = d->langMenu->addAction("English");
+  d->enAction->setCheckable(true);
+  connect(d->enAction, &QAction::triggered, this, []() {
+    TranslationManager::instance().loadLanguage("en_US");
+    ConfigManager::instance().setValue("", "language", "en_US");
+  });
 
   // 帮助菜单
   d->helpMenu = d->menuBar->addMenu(tr("帮助"));
@@ -1589,7 +1608,9 @@ void AppWindow::onAbout() {
                                 "三方库:\n"
                                 "• Qt 6 - 跨平台UI框架\n"
                                 "• FFmpeg - 音视频处理\n"
-                                "• QWindowKit - 自定义窗口").arg(qApp->applicationVersion()));
+                                "• QWindowKit - 自定义窗口\n"
+                                "• whisper.cpp - 本地离线语音识别")
+                                 .arg(qApp->applicationVersion()));
 }
 
 void AppWindow::updateWindowTitle() {
