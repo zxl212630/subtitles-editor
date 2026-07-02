@@ -1,0 +1,319 @@
+[
+  {
+    "name_en": "Default White",
+    "name_zh": "默认白",
+    "style": {
+      "fillType": 0,
+      "fillColor": "#FFFFFF",
+      "textOpacity": 1.0,
+      "strokeEnabled": true,
+      "strokeWidth": 3,
+      "strokeColor": "#000000",
+      "strokeOpacity": 1.0,
+      "shadowEnabled": false,
+      "bgType": 0
+    }
+  },
+  {
+    "name_en": "Classic Yellow",
+    "name_zh": "经典黄",
+    "style": {
+      "fillType": 0,
+      "fillColor": "#FFCC00",
+      "textOpacity": 1.0,
+      "strokeEnabled": true,
+      "strokeWidth": 3,
+      "strokeColor": "#000000",
+      "strokeOpacity": 1.0,
+      "shadowEnabled": false,
+      "bgType": 0
+    }
+  },
+  {
+    "name_en": "Documentary White",
+    "name_zh": "纪录片白",
+    "style": {
+      "fillType": 0,
+      "fillColor": "#FFFFFF",
+      "textOpacity": 1.0,
+      "strokeEnabled": false,
+      "shadowEnabled": true,
+      "shadowColor": "#000000",
+      "shadowOffsetX": 2,
+      "shadowOffsetY": 2,
+      "shadowBlur": 5,
+      "shadowOpacity": 0.8,
+      "bgType": 0
+    }
+  },
+  {
+    "name_en": "Candy Sunset",
+    "name_zh": "缤纷橙红",
+    "style": {
+      "fillType": 1,
+      "fillColor": "#FF512F",
+      "fillColor2": "#DD2476",
+      "fillAngle": 45,
+      "textOpacity": 1.0,
+      "strokeEnabled": true,
+      "strokeColor": "#FFFFFF",
+      "strokeWidth": 3,
+      "strokeOpacity": 1.0,
+      "shadowEnabled": true,
+      "shadowColor": "#000000",
+      "shadowOffsetX": 2,
+      "shadowOffsetY": 3,
+      "shadowBlur": 5,
+      "shadowOpacity": 0.4,
+      "bgType": 0
+    }
+  },
+  {
+    "name_en": "Luxury Gold",
+    "name_zh": "鎏金描边",
+    "style": {
+      "fillType": 1,
+      "fillColor": "#FFE07D",
+      "fillColor2": "#C9932E",
+      "fillAngle": 90,
+      "textOpacity": 1.0,
+      "strokeEnabled": true,
+      "strokeColor": "#3D2403",
+      "strokeWidth": 3,
+      "strokeOpacity": 1.0,
+      "shadowEnabled": true,
+      "shadowColor": "#000000",
+      "shadowOffsetX": 1,
+      "shadowOffsetY": 2,
+      "shadowBlur": 3,
+      "shadowOpacity": 0.6,
+      "bgType": 0
+    }
+  },
+  {
+    "name_en": "Cyberpunk Pink",
+    "name_zh": "霓虹光影",
+    "style": {
+      "fillType": 0,
+      "fillColor": "#00FFFF",
+      "textOpacity": 1.0,
+      "strokeEnabled": true,
+      "strokeColor": "#FF00FF",
+      "strokeWidth": 4,
+      "strokeOpacity": 0.8,
+      "shadowEnabled": true,
+      "shadowColor": "#FF00FF",
+      "shadowOffsetX": 0,
+      "shadowOffsetY": 0,
+      "shadowBlur": 12,
+      "shadowOpacity": 0.95,
+      "bgType": 0
+    }
+  },
+  {
+    "name_en": "Translucent Box",
+    "name_zh": "半透背景",
+    "style": {
+      "fillType": 0,
+      "fillColor": "#FFFFFF",
+      "textOpacity": 1.0,
+      "strokeEnabled": false,
+      "shadowEnabled": false,
+      "bgType": 1,
+      "bgColor": "#000000",
+      "bgOpacity": 0.6,
+      "bgRoundness": 6,
+      "bgPaddingLeft": 16,
+      "bgPaddingRight": 16,
+      "bgPaddingTop": 8,
+      "bgPaddingBottom": 8
+    }
+  },
+  {
+    "name_en": "Hong Kong Film",
+    "name_zh": "港风硬影",
+    "style": {
+      "fillType": 0,
+      "fillColor": "#FFE83D",
+      "textOpacity": 1.0,
+      "strokeEnabled": true,
+      "strokeColor": "#000000",
+      "strokeWidth": 3,
+      "strokeOpacity": 1.0,
+      "shadowEnabled": true,
+      "shadowColor": "#000000",
+      "shadowOffsetX": 4,
+      "shadowOffsetY": 4,
+      "shadowBlur": 0,
+      "shadowOpacity": 1.0,
+      "bgType": 0
+    }
+  },
+  {
+    "name_en": "Aurora Cyan",
+    "name_zh": "极光渐变",
+    "style": {
+      "fillType": 1,
+      "fillColor": "#00F2FE",
+      "fillColor2": "#4FACFE",
+      "fillAngle": 90,
+      "textOpacity": 1.0,
+      "strokeEnabled": false,
+      "shadowEnabled": true,
+      "shadowColor": "#4FACFE",
+      "shadowOffsetX": 0,
+      "shadowOffsetY": 3,
+      "shadowBlur": 8,
+      "shadowOpacity": 0.5,
+      "bgType": 0
+    }
+  },
+  {
+    "name_en": "Cherry Blossom",
+    "name_zh": "樱花粉白",
+    "style": {
+      "fillType": 0,
+      "fillColor": "#FFFFFF",
+      "textOpacity": 1.0,
+      "strokeEnabled": true,
+      "strokeColor": "#FFB7B2",
+      "strokeWidth": 3,
+      "strokeOpacity": 1.0,
+      "shadowEnabled": true,
+      "shadowColor": "#FFB7B2",
+      "shadowOffsetX": 1,
+      "shadowOffsetY": 1,
+      "shadowBlur": 2,
+      "shadowOpacity": 0.7,
+      "bgType": 0
+    }
+  },
+  {
+    "name_en": "Cyberpunk Green",
+    "name_zh": "暗夜霓虹绿",
+    "style": {
+      "fillType": 0,
+      "fillColor": "#111111",
+      "textOpacity": 1.0,
+      "strokeEnabled": true,
+      "strokeColor": "#39FF14",
+      "strokeWidth": 3.5,
+      "strokeOpacity": 1.0,
+      "shadowEnabled": true,
+      "shadowColor": "#39FF14",
+      "shadowOffsetX": 0,
+      "shadowOffsetY": 0,
+      "shadowBlur": 10,
+      "shadowOpacity": 0.9,
+      "bgType": 0
+    }
+  },
+  {
+    "name_en": "Imperial Red Gold",
+    "name_zh": "国潮红金",
+    "style": {
+      "fillType": 1,
+      "fillColor": "#D31027",
+      "fillColor2": "#EA384D",
+      "fillAngle": 90,
+      "textOpacity": 1.0,
+      "strokeEnabled": true,
+      "strokeColor": "#FCEE21",
+      "strokeWidth": 2.5,
+      "strokeOpacity": 1.0,
+      "shadowEnabled": true,
+      "shadowColor": "#000000",
+      "shadowOffsetX": 2,
+      "shadowOffsetY": 2,
+      "shadowBlur": 3,
+      "shadowOpacity": 0.6,
+      "bgType": 0
+    }
+  },
+  {
+    "name_en": "Mint Fresh",
+    "name_zh": "清新薄荷",
+    "style": {
+      "fillType": 1,
+      "fillColor": "#A8FF78",
+      "fillColor2": "#78FFD6",
+      "fillAngle": 45,
+      "textOpacity": 1.0,
+      "strokeEnabled": true,
+      "strokeColor": "#FFFFFF",
+      "strokeWidth": 3,
+      "strokeOpacity": 1.0,
+      "shadowEnabled": true,
+      "shadowColor": "#000000",
+      "shadowOffsetX": 2,
+      "shadowOffsetY": 2,
+      "shadowBlur": 4,
+      "shadowOpacity": 0.3,
+      "bgType": 0
+    }
+  },
+  {
+    "name_en": "Banana Yellow",
+    "name_zh": "香蕉船黄",
+    "style": {
+      "fillType": 1,
+      "fillColor": "#FAD961",
+      "fillColor2": "#F76B1C",
+      "fillAngle": 90,
+      "textOpacity": 1.0,
+      "strokeEnabled": true,
+      "strokeColor": "#3D1803",
+      "strokeWidth": 3,
+      "strokeOpacity": 1.0,
+      "shadowEnabled": true,
+      "shadowColor": "#000000",
+      "shadowOffsetX": 2,
+      "shadowOffsetY": 2,
+      "shadowBlur": 3,
+      "shadowOpacity": 0.5,
+      "bgType": 0
+    }
+  },
+  {
+    "name_en": "Modern Charcoal",
+    "name_zh": "摩登极简",
+    "style": {
+      "fillType": 0,
+      "fillColor": "#2C3E50",
+      "textOpacity": 1.0,
+      "strokeEnabled": true,
+      "strokeColor": "#FFFFFF",
+      "strokeWidth": 2.5,
+      "strokeOpacity": 1.0,
+      "shadowEnabled": true,
+      "shadowColor": "#111111",
+      "shadowOffsetX": 3,
+      "shadowOffsetY": 3,
+      "shadowBlur": 0,
+      "shadowOpacity": 0.95,
+      "bgType": 0
+    }
+  },
+  {
+    "name_en": "Dreamy Violet",
+    "name_zh": "梦幻紫罗兰",
+    "style": {
+      "fillType": 1,
+      "fillColor": "#7F00FF",
+      "fillColor2": "#E100FF",
+      "fillAngle": 45,
+      "textOpacity": 1.0,
+      "strokeEnabled": true,
+      "strokeColor": "#FFFFFF",
+      "strokeWidth": 3,
+      "strokeOpacity": 1.0,
+      "shadowEnabled": true,
+      "shadowColor": "#E100FF",
+      "shadowOffsetX": 0,
+      "shadowOffsetY": 4,
+      "shadowBlur": 10,
+      "shadowOpacity": 0.5,
+      "bgType": 0
+    }
+  }
+]

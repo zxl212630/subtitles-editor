@@ -1,6 +1,7 @@
 #include "SubtitleListPanel.h"
 #include "AppMessageBox.h"
 #include "ConfigManager.h"
+#include "SubtitleRenderer.h"
 #include "SpeakerManagerDialog.h"
 #include "SubtitleListDelegate.h"
 #include "SubtitleListModel.h"
@@ -1941,10 +1942,6 @@ QWidget *SubtitleListPanel::createCustomStylePanel() {
 
 QIcon SubtitleListPanel::createPresetIcon(const SubtitleItem &style,
                                           const QSize &size) {
-  QString svgContent = generateSvgForPreset(style);
-  QByteArray svgData = svgContent.toUtf8();
-  QSvgRenderer renderer(svgData);
-
   qreal dpr = devicePixelRatio();
   QImage image(size * dpr, QImage::Format_ARGB32_Premultiplied);
   image.setDevicePixelRatio(dpr);
@@ -1954,6 +1951,21 @@ QIcon SubtitleListPanel::createPresetIcon(const SubtitleItem &style,
   painter.setRenderHint(QPainter::Antialiasing, true);
   painter.setRenderHint(QPainter::SmoothPixmapTransform, true);
 
+  // 1. Draw real bubble background if enabled
+  if (style.bubbleEnabled && !style.bubbleImagePath.isEmpty()) {
+    QImage bubbleImage(style.bubbleImagePath);
+    if (!bubbleImage.isNull()) {
+      QRect bubbleRect(4, 10, size.width() - 8, size.height() - 20);
+      QMargins margins(style.bubbleSliceLeft, style.bubbleSliceTop,
+                       style.bubbleSliceRight, style.bubbleSliceBottom);
+      SubtitleRenderer::drawNinePatch(painter, bubbleImage, bubbleRect, margins);
+    }
+  }
+
+  // 2. Draw subtitle text style using SVG
+  QString svgContent = generateSvgForPreset(style);
+  QByteArray svgData = svgContent.toUtf8();
+  QSvgRenderer renderer(svgData);
   renderer.render(&painter, QRectF(0, 0, size.width(), size.height()));
 
   return QIcon(QPixmap::fromImage(image));
@@ -2011,12 +2023,7 @@ QString SubtitleListPanel::generateSvgForPreset(const SubtitleItem &style) {
   }
 
   // 3. 背景底框与气泡
-  if (style.bubbleEnabled && !style.bubbleImagePath.isEmpty()) {
-    bgRect += QString("  <rect x=\"4\" y=\"12\" width=\"72\" height=\"56\" "
-                      "rx=\"6\" ry=\"6\" fill=\"#555555\" fill-opacity=\"0.4\" "
-                      "stroke=\"#888888\" stroke-width=\"1.5\" "
-                      "stroke-dasharray=\"3,3\" />\n");
-  }
+  // 气泡背景现在已在 C++ 层的 createPresetIcon 中直接绘制真实图片，故在此不再生成虚线占位框
 
   if (style.bgType == 1) {
     double rx = qMin(15.0, style.bgRoundness * 0.5);
@@ -2749,97 +2756,95 @@ void SubtitleListPanel::populatePresets() {
 
   int type = presetTypeCombo_ ? presetTypeCombo_->currentIndex() : 0;
   if (type == 0) {
-    // 1. Default White (默认白)
-    SubtitleItem p1;
-    p1.fillType = 0;
-    p1.fillColor = "#FFFFFF";
-    p1.textOpacity = 1.0;
-    p1.strokeEnabled = true;
-    p1.strokeWidth = 2;
-    p1.strokeColor = "#000000";
-    p1.strokeOpacity = 1.0;
-    p1.shadowEnabled = false;
-    p1.bgType = 0;
+    bool loaded = false;
+    QFile file(":/presets/system_presets.json");
+    if (file.open(QIODevice::ReadOnly | QIODevice::Text)) {
+      QByteArray jsonData = file.readAll();
+      file.close();
 
-    // 2. Classic Yellow (经典黄)
-    SubtitleItem p2;
-    p2.fillType = 0;
-    p2.fillColor = "#FFCC00";
-    p2.textOpacity = 1.0;
-    p2.strokeEnabled = true;
-    p2.strokeWidth = 2;
-    p2.strokeColor = "#000000";
-    p2.strokeOpacity = 1.0;
-    p2.shadowEnabled = false;
-    p2.bgType = 0;
+      QJsonParseError parseError;
+      QJsonDocument doc = QJsonDocument::fromJson(jsonData, &parseError);
+      if (!doc.isNull() && doc.isArray()) {
+        QJsonArray presetsArray = doc.array();
+        QString currentLang = TranslationManager::instance().currentLanguage();
+        bool isZh = (currentLang == "zh_CN");
 
-    // 3. Soft Shadow (柔和阴影)
-    SubtitleItem p3;
-    p3.fillType = 0;
-    p3.fillColor = "#FFFFFF";
-    p3.textOpacity = 1.0;
-    p3.strokeEnabled = false;
-    p3.shadowEnabled = true;
-    p3.shadowColor = "#000000";
-    p3.shadowOffsetX = 2;
-    p3.shadowOffsetY = 2;
-    p3.shadowBlur = 5;
-    p3.shadowOpacity = 0.6;
-    p3.bgType = 0;
+        for (int i = 0; i < presetsArray.size(); ++i) {
+          QJsonObject obj = presetsArray[i].toObject();
+          QString name = isZh ? obj["name_zh"].toString() : obj["name_en"].toString();
+          if (name.isEmpty()) {
+            name = obj["name_en"].toString();
+          }
 
-    // 4. Neon Glow (霓虹光)
-    SubtitleItem p4;
-    p4.fillType = 0;
-    p4.fillColor = "#00FFFF";
-    p4.textOpacity = 1.0;
-    p4.strokeEnabled = true;
-    p4.strokeColor = "#FF00FF";
-    p4.strokeWidth = 4;
-    p4.strokeOpacity = 0.8;
-    p4.shadowEnabled = true;
-    p4.shadowColor = "#FF00FF";
-    p4.shadowOffsetX = 0;
-    p4.shadowOffsetY = 0;
-    p4.shadowBlur = 10;
-    p4.shadowOpacity = 0.9;
-    p4.bgType = 0;
+          QJsonObject styleObj = obj["style"].toObject();
+          SubtitleItem item;
+          item.fillType = styleObj["fillType"].toInt(0);
+          item.fillColor = styleObj["fillColor"].toString("#FFFFFF");
+          item.fillColor2 = styleObj["fillColor2"].toString("#FFFFFF");
+          item.fillAngle = styleObj["fillAngle"].toInt(90);
+          item.fillTexturePath = styleObj["fillTexturePath"].toString("");
+          item.fillTextureTile = styleObj["fillTextureTile"].toBool(true);
+          item.textOpacity = styleObj["textOpacity"].toDouble(1.0);
 
-    // 5. Translucent Box (半透背景)
-    SubtitleItem p5;
-    p5.fillType = 0;
-    p5.fillColor = "#FFFFFF";
-    p5.textOpacity = 1.0;
-    p5.strokeEnabled = false;
-    p5.shadowEnabled = false;
-    p5.bgType = 1;
-    p5.bgColor = "#000000";
-    p5.bgOpacity = 0.6;
-    p5.bgRoundness = 4;
-    p5.bgPaddingLeft = 15;
-    p5.bgPaddingRight = 15;
-    p5.bgPaddingTop = 10;
-    p5.bgPaddingBottom = 10;
+          item.strokeEnabled = styleObj["strokeEnabled"].toBool(false);
+          item.strokeWidth = styleObj["strokeWidth"].toInt(1);
+          item.strokeColor = styleObj["strokeColor"].toString("#000000");
+          item.strokeOpacity = styleObj["strokeOpacity"].toDouble(1.0);
 
-    // 6. Silver Gradient (银渐变)
-    SubtitleItem p6;
-    p6.fillType = 1;
-    p6.fillColor = "#FFFFFF";
-    p6.fillColor2 = "#AAAAAA";
-    p6.fillAngle = 90;
-    p6.textOpacity = 1.0;
-    p6.strokeEnabled = true;
-    p6.strokeColor = "#111111";
-    p6.strokeWidth = 2;
-    p6.strokeOpacity = 1.0;
-    p6.shadowEnabled = false;
-    p6.bgType = 0;
+          item.shadowEnabled = styleObj["shadowEnabled"].toBool(false);
+          item.shadowOffsetX = styleObj["shadowOffsetX"].toInt(0);
+          item.shadowOffsetY = styleObj["shadowOffsetY"].toInt(0);
+          item.shadowBlur = styleObj["shadowBlur"].toInt(0);
+          item.shadowColor = styleObj["shadowColor"].toString("#000000");
+          item.shadowOpacity = styleObj["shadowOpacity"].toDouble(1.0);
 
-    addPresetCard(tr("Default White"), p1, false);
-    addPresetCard(tr("Classic Yellow"), p2, false);
-    addPresetCard(tr("Soft Shadow"), p3, false);
-    addPresetCard(tr("Neon Glow"), p4, false);
-    addPresetCard(tr("Translucent Box"), p5, false);
-    addPresetCard(tr("Silver Gradient"), p6, false);
+          item.bgType = styleObj["bgType"].toInt(0);
+          item.bgColor = styleObj["bgColor"].toString("#000000");
+          item.bgOpacity = styleObj["bgOpacity"].toDouble(1.0);
+          item.bgRoundness = styleObj["bgRoundness"].toInt(10);
+          item.bgPaddingLeft = styleObj["bgPaddingLeft"].toInt(0);
+          item.bgPaddingRight = styleObj["bgPaddingRight"].toInt(0);
+          item.bgPaddingTop = styleObj["bgPaddingTop"].toInt(0);
+          item.bgPaddingBottom = styleObj["bgPaddingBottom"].toInt(0);
+          item.bgImagePath = styleObj["bgImagePath"].toString("");
+          item.bgImage9Patch = styleObj["bgImage9Patch"].toBool(true);
+          item.bgOffsetX = styleObj["bgOffsetX"].toInt(0);
+          item.bgOffsetY = styleObj["bgOffsetY"].toInt(0);
+
+          item.bubbleEnabled = styleObj["bubbleEnabled"].toBool(false);
+          item.bubbleImagePath = styleObj["bubbleImagePath"].toString("");
+          item.bubblePaddingLeft = styleObj["bubblePaddingLeft"].toInt(10);
+          item.bubblePaddingRight = styleObj["bubblePaddingRight"].toInt(10);
+          item.bubblePaddingTop = styleObj["bubblePaddingTop"].toInt(10);
+          item.bubblePaddingBottom = styleObj["bubblePaddingBottom"].toInt(10);
+          item.bubbleSliceLeft = styleObj["bubbleSliceLeft"].toInt(10);
+          item.bubbleSliceRight = styleObj["bubbleSliceRight"].toInt(10);
+          item.bubbleSliceTop = styleObj["bubbleSliceTop"].toInt(10);
+          item.bubbleSliceBottom = styleObj["bubbleSliceBottom"].toInt(10);
+
+          addPresetCard(name, item, false);
+        }
+        loaded = true;
+      }
+    }
+
+    if (!loaded) {
+      SubtitleItem fallbackWhite;
+      fallbackWhite.fillType = 0;
+      fallbackWhite.fillColor = "#FFFFFF";
+      fallbackWhite.strokeEnabled = true;
+      fallbackWhite.strokeWidth = 3;
+      fallbackWhite.strokeColor = "#000000";
+      addPresetCard(tr("Default White"), fallbackWhite, false);
+
+      SubtitleItem fallbackYellow;
+      fallbackYellow.fillType = 0;
+      fallbackYellow.fillColor = "#FFCC00";
+      fallbackYellow.strokeEnabled = true;
+      fallbackYellow.strokeWidth = 3;
+      fallbackYellow.strokeColor = "#000000";
+      addPresetCard(tr("Classic Yellow"), fallbackYellow, false);
+    }
   } else {
     loadCustomPresets();
   }

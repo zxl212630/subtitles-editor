@@ -59,6 +59,7 @@
         <file>bubbles/bubble_neon.png</file>
         <file>bubbles/bubble_cute.png</file>
         <file>bubbles/bubble_outline.png</file>
+        <file>presets/system_presets.json</file>
         <file>icon.svg</file>
         <file>icon.png</file>
     </qresource>
