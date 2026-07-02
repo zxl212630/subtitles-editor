@@ -1092,7 +1092,7 @@ QWidget *SubtitleListPanel::createCustomStylePanel() {
         auto *contentFrame = new QFrame(container);
         // 去除额外白框与背景颜色，直接平铺融入面板中
         contentFrame->setStyleSheet(
-            "QFrame { background: transparent; border: none; }");
+            ".QFrame { background: transparent; border: none; }");
         contentFrame->setLayout(formLayout);
         formLayout->setContentsMargins(12, 12, 12, 12);
         formLayout->setSpacing(8);
