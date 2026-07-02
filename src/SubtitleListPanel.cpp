@@ -2286,16 +2286,18 @@ QWidget *SubtitleListPanel::createPresetStylePanel() {
               item.bgPaddingBottom = style.bgPaddingBottom;
               item.bgOffsetX = style.bgOffsetX;
               item.bgOffsetY = style.bgOffsetY;
-              item.bubbleEnabled = style.bubbleEnabled;
-              item.bubbleImagePath = style.bubbleImagePath;
-              item.bubblePaddingLeft = style.bubblePaddingLeft;
-              item.bubblePaddingRight = style.bubblePaddingRight;
-              item.bubblePaddingTop = style.bubblePaddingTop;
-              item.bubblePaddingBottom = style.bubblePaddingBottom;
-              item.bubbleSliceLeft = style.bubbleSliceLeft;
-              item.bubbleSliceRight = style.bubbleSliceRight;
-              item.bubbleSliceTop = style.bubbleSliceTop;
-              item.bubbleSliceBottom = style.bubbleSliceBottom;
+              if (style.bubbleEnabled) {
+                item.bubbleEnabled = style.bubbleEnabled;
+                item.bubbleImagePath = style.bubbleImagePath;
+                item.bubblePaddingLeft = style.bubblePaddingLeft;
+                item.bubblePaddingRight = style.bubblePaddingRight;
+                item.bubblePaddingTop = style.bubblePaddingTop;
+                item.bubblePaddingBottom = style.bubblePaddingBottom;
+                item.bubbleSliceLeft = style.bubbleSliceLeft;
+                item.bubbleSliceRight = style.bubbleSliceRight;
+                item.bubbleSliceTop = style.bubbleSliceTop;
+                item.bubbleSliceBottom = style.bubbleSliceBottom;
+              }
 
               track_->updateItem(currentSelectedId_, item);
               loadStyleFromItem(item);
@@ -2331,16 +2333,18 @@ QWidget *SubtitleListPanel::createPresetStylePanel() {
               item.bgPaddingBottom = style.bgPaddingBottom;
               item.bgOffsetX = style.bgOffsetX;
               item.bgOffsetY = style.bgOffsetY;
-              item.bubbleEnabled = style.bubbleEnabled;
-              item.bubbleImagePath = style.bubbleImagePath;
-              item.bubblePaddingLeft = style.bubblePaddingLeft;
-              item.bubblePaddingRight = style.bubblePaddingRight;
-              item.bubblePaddingTop = style.bubblePaddingTop;
-              item.bubblePaddingBottom = style.bubblePaddingBottom;
-              item.bubbleSliceLeft = style.bubbleSliceLeft;
-              item.bubbleSliceRight = style.bubbleSliceRight;
-              item.bubbleSliceTop = style.bubbleSliceTop;
-              item.bubbleSliceBottom = style.bubbleSliceBottom;
+              if (style.bubbleEnabled) {
+                item.bubbleEnabled = style.bubbleEnabled;
+                item.bubbleImagePath = style.bubbleImagePath;
+                item.bubblePaddingLeft = style.bubblePaddingLeft;
+                item.bubblePaddingRight = style.bubblePaddingRight;
+                item.bubblePaddingTop = style.bubblePaddingTop;
+                item.bubblePaddingBottom = style.bubblePaddingBottom;
+                item.bubbleSliceLeft = style.bubbleSliceLeft;
+                item.bubbleSliceRight = style.bubbleSliceRight;
+                item.bubbleSliceTop = style.bubbleSliceTop;
+                item.bubbleSliceBottom = style.bubbleSliceBottom;
+              }
 
               track_->setDefaultStyleItem(item);
               loadStyleFromItem(item);
